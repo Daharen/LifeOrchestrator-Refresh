@@ -6,21 +6,21 @@ is planned (serves scripts and weaker local models) but not yet created.
 
 - **Project phase:** MVP module build-out.
 - **Active module:** _none in progress._ **Modules 0–5 complete** (0 executor · 1 `skill.bootstrap` · 2
-  `fs.observer` · 3 `proc.observer` · 4 `uia.inspector` · 5 `uia.actor`). **Module 6 — Screenshot & Region
-  Capture (`capture.screen`) is next** (author its work order next session).
+  `fs.observer` · 3 `proc.observer` · 4 `uia.inspector` · 5 `uia.actor`). **Module 5 committed `1691d16`**
+  (on `master`, after Module 4's `18dc5fa`). **Module 6 — Screenshot & Region Capture (`capture.screen`)
+  is next** (author its work order next session).
 - **Repo / working dir:** **`C:\Users\just_\LifeOrchestrator-Refresh\`** — the clean standalone home for
   **Life Orchestrator** (near-term local-skills track; git-initialized). Layout: `core-docs/` (these docs)
   and `modules/<NN>-<name>/` (one per module). **Reference sources (separate, not built here):** the earlier
   assistant codebase `LifeOrchestrator\repo` (fold in later) and the separate **Project Proteus** game
   (`Project-Proteus-src`).
-- **Executor status:** MVP complete. **Running instance (canonical):** the Life Orchestrator executor at
-  `LifeOrchestrator-Refresh/modules/00-bootstrap-executor/` (instance `0a1f8e69…`, pwsh 7.4.6, host
-  `DESKTOP-PF5FFMF`). **⚠️ It CRASHED and stopped at 2026-07-24T06:26:36Z** with a fatal
-  `The process cannot access the file because it is being used by another process` during a task run
-  (see Known failures). **It must be restarted** (`ops/start-executor.bat`); on restart it will mark the
-  orphaned task `m5-example-001` as `abandoned_after_restart` (restart recovery) and resume the queue.
-  The original at `proteus_repo/tools/trusted-bootstrap-executor/` was stopped earlier; the physical
-  `proteus_repo/tools/` leftover removal is still pending (`ops/finish-game-cleanup.bat`).
+- **Executor status:** MVP complete, **running.** **Canonical instance:** the Life Orchestrator executor at
+  `LifeOrchestrator-Refresh/modules/00-bootstrap-executor/` (pwsh 7.4.6, host `DESKTOP-PF5FFMF`). It crashed
+  once mid-session (2026-07-24T06:26:36Z, instance `0a1f8e69…`, transient file-lock — see Known failures), was
+  **restarted** and is now instance `857d7251…` (up 13:52Z); restart recovery correctly marked the orphaned
+  `m5-example-001` as `abandoned_after_restart`. The original at `proteus_repo/tools/trusted-bootstrap-executor/`
+  was stopped earlier; the physical `proteus_repo/tools/` leftover removal is still pending
+  (`ops/finish-game-cleanup.bat`).
 
 ## Completed modules
 - **Module 0** — Trusted High-Risk Bootstrap Executor. 12/12 integration tests pass on Windows.
@@ -37,7 +37,7 @@ is planned (serves scripts and weaker local models) but not yet created.
   collapse/setvalue/focus on an element located by automation id / name / control type / inspector child-path.
   UIA control patterns only (no synthetic input); `-DryRun`/`-WhatIf` preview; `parallel_safe:false` (first
   side-effecting skill). `action.md` + `action.json` artifacts. **Tests 26/26 via executor (2026-07-24)** —
-  incl. real invoke/toggle/setvalue self-verified against a self-contained WinForms probe window.
+  incl. real invoke/toggle/setvalue self-verified against a self-contained WinForms probe window. Committed `1691d16`.
 
 ## Installed dependencies (verified this machine)
 - **PowerShell 7.4.6** — installed as a .NET global tool at
@@ -113,8 +113,9 @@ is planned (serves scripts and weaker local models) but not yet created.
   now exercised by Modules 2–5. (See DECISION_LOG D-0009.)
 
 ## Next expected action
-1. **Restart the executor** (`ops/start-executor.bat`); confirm it recovers `m5-example-001` to `failed`.
-2. **Commit Module 5** through the executor (Windows git): `git add modules/05-uia-actor core-docs && git commit`.
-3. Then author the **Module 6 work order** (`modules/06-capture-screen/WORK_ORDER.md`).
+Author the **Module 6 work order** (`modules/06-capture-screen/WORK_ORDER.md`) from the template and implement
+its MVP (screenshot / region capture: monitor / window / app / rectangle → image artifact + contract-valid
+envelope), tested through the executor. Reuse `Test-SkillManifest` / `Test-SkillResultEnvelope` and `Invoke-Skill.ps1`.
+(Consider addressing the Module 0 executor file-lock crash first if it recurs — see Known failures.)
 
-- **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 5 build session).
+- **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 5 build session; committed `1691d16`).
