@@ -1,0 +1,189 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "voice.live",
+  "skill_version": "0.1.0",
+  "contract_version": "0.1",
+  "invocation_id": "smoke-voice",
+  "status": "ok",
+  "started_at_utc": "2026-07-24T23:07:04.2628833Z",
+  "finished_at_utc": "2026-07-24T23:08:03.0743537Z",
+  "duration_ms": 58803,
+  "inputs_digest": "sha256:09edf71e9ea0dd3bd028869276b103a7f819c07390084ce362789b44d326ad42",
+  "result": {
+    "input": {
+      "path": "F:\\Local_TTS_Large_Data\\external\\whisper.cpp_cuda\\samples\\jfk.wav"
+    },
+    "speech_detected": true,
+    "transcript": {
+      "text": "And so my fellow Americans, ask not what your country can do for you, ask what you can do for your country.",
+      "utterance_count": 1,
+      "confidence": 0.8707,
+      "language": "en",
+      "artifact_dir": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\13-voice-live\\runtime\\artifacts\\smoke-voice\\stt\\6b4fce04-4359-4557-8853-4d75173df884"
+    },
+    "response": {
+      "text": "This quote by Martin Luther King Jr. encourages citizens to contribute to their country by actively serving and improving it, rather than waiting for others to act on their behalf.",
+      "model": "llm.weak.qwen2p5-1p5b",
+      "confidence": 0.7,
+      "finish_reason": "stop"
+    },
+    "reply": {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\13-voice-live\\runtime\\artifacts\\smoke-voice\\reply.wav",
+      "format": "wav",
+      "sample_rate": 24000,
+      "duration_s": 12.56,
+      "bytes": 602924,
+      "sha256": "72e6ef622aac513cbff037d60e06e2c207688d9afdc8c5f8838b76879b8cd0b0"
+    },
+    "stages": [
+      {
+        "name": "stt",
+        "status": "ok",
+        "ms": 1816,
+        "error": null
+      },
+      {
+        "name": "respond",
+        "status": "ok",
+        "ms": 2700,
+        "error": null
+      },
+      {
+        "name": "speak",
+        "status": "ok",
+        "ms": 54053,
+        "error": null
+      }
+    ],
+    "config": {
+      "respond": true,
+      "speak": true,
+      "readback_transcript": false,
+      "tier": "weak",
+      "speaker": "Ryan",
+      "language": "English"
+    },
+    "child_review_path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\13-voice-live\\runtime\\artifacts\\smoke-voice\\child_review.jsonl",
+    "child_review_count": 0
+  },
+  "confidence": 0.8707,
+  "artifacts": [
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\13-voice-live\\runtime\\artifacts\\smoke-voice\\reply.wav",
+      "kind": "wav",
+      "bytes": 602924,
+      "sha256": "72e6ef622aac513cbff037d60e06e2c207688d9afdc8c5f8838b76879b8cd0b0"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\13-voice-live\\runtime\\artifacts\\smoke-voice\\voice.json",
+      "kind": "json",
+      "bytes": 2099,
+      "sha256": "12c02238615153d93176801b3e6fe18160557d47843037cd92b05e33c07d2189"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\13-voice-live\\runtime\\artifacts\\smoke-voice\\voice.md",
+      "kind": "markdown",
+      "bytes": 696,
+      "sha256": "068cb8d93dc1f53a09f92aa5bbd2d061889dd409e0ce72936cbfc09a65e4541d"
+    }
+  ],
+  "model_provenance": [
+    {
+      "stage": "stt",
+      "model_id": "stt.whisper.base-en",
+      "name": "Whisper base.en (ggml)",
+      "family": "whisper",
+      "format": "ggml-bin",
+      "version": "ggml-base.en",
+      "engine": "whisper.cpp",
+      "engine_path": "F:\\Local_TTS_Large_Data\\external\\whisper.cpp_cuda\\build\\bin\\Release\\whisper-cli.exe",
+      "engine_build": "WHISPER : COREML = 0 | OPENVINO = 0 | CUDA : ARCHS = 750 | PEER_MAX_BATCH_SIZE = 128 | CPU : SSE3 = 1 | SSSE3 = 1 | AVX = 1 | AVX2 = 1 | F16C = 1 | FMA = 1 | OPENMP = 1 | REPACK = 1 | ",
+      "device": "cuda:0",
+      "params": {
+        "language": "en",
+        "translate": false,
+        "beam_size": 5,
+        "best_of": 5,
+        "threads": 4,
+        "no_gpu": false,
+        "max_len": 0,
+        "split_on_word": false,
+        "offset_ms": 0,
+        "duration_ms": 0,
+        "temperature": 0.0
+      },
+      "audio_duration_s": 11.0,
+      "segments": 1,
+      "tokens": 25,
+      "avg_token_p": 0.8707,
+      "runtime_ms": 720,
+      "real_time_factor": 0.0655
+    },
+    {
+      "stage": "gateway",
+      "model_id": "llm.weak.qwen2p5-1p5b",
+      "version": "Qwen2.5-1.5B-Instruct-Q4_K_M",
+      "family": "qwen2.5",
+      "format": "gguf",
+      "engine": "llama-server",
+      "engine_build": "llama.cpp b8661 (b7ad48ebd), CUDA, MSVC",
+      "device": "cuda:0",
+      "params": {
+        "gpu_layers": 99,
+        "context": 4096,
+        "max_tokens": 200,
+        "temperature": 0.7,
+        "top_p": 0.95,
+        "top_k": 40,
+        "seed": -1
+      },
+      "prompt_tokens": 58,
+      "completion_tokens": 34,
+      "total_tokens": 92,
+      "finish_reason": "stop",
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 58,
+        "prompt_ms": 31.386,
+        "prompt_per_token_ms": 0.5411379310344827,
+        "prompt_per_second": 1847.9576881412095,
+        "predicted_n": 34,
+        "predicted_ms": 202.63,
+        "predicted_per_token_ms": 5.959705882352941,
+        "predicted_per_second": 167.793515274145
+      },
+      "runtime_ms": 1613
+    },
+    {
+      "stage": "tts",
+      "model_id": "tts.weak.qwen3-0p6b",
+      "name": "Qwen3-TTS-12Hz-0.6B-CustomVoice",
+      "family": "qwen3-tts",
+      "format": "safetensors-dir",
+      "version": "",
+      "engine": "transformers",
+      "engine_env": "F:\\My_Programs\\Local_Computer_Speech_Large_Data\\python_env\\Scripts\\python.exe",
+      "device": "cuda:0",
+      "dtype": "bfloat16",
+      "attn": "sdpa",
+      "params": {
+        "speaker": "Ryan",
+        "language": "English",
+        "instruct": "",
+        "seed": -1,
+        "max_new_tokens": null
+      },
+      "sample_rate": 24000,
+      "audio_samples": 301440,
+      "audio_seconds": 12.56,
+      "runtime_ms": 52306,
+      "real_time_factor": 4.1645
+    }
+  ],
+  "diagnostics": {
+    "log": "stderr.txt",
+    "artifact_dir": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\13-voice-live\\runtime\\artifacts\\smoke-voice"
+  },
+  "warnings": [],
+  "error": null
+}

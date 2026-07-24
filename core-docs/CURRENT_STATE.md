@@ -5,9 +5,9 @@ Owns **reality as it exists now** — not intended architecture. Keep it compact
 is planned (serves scripts and weaker local models) but not yet created.
 
 - **Project phase:** MVP module build-out.
-- **Active module:** _none in progress._ **Modules 0–12 complete** (0 executor · 1 `skill.bootstrap` · 2
+- **Active module:** _none in progress._ **Modules 0–13 complete** (0 executor · 1 `skill.bootstrap` · 2
   `fs.observer` · 3 `proc.observer` · 4 `uia.inspector` · 5 `uia.actor` · 6 `capture.screen` · 7 `model.gateway` ·
-  8 `classify.batch` · 9 `review.processor` · 10 `audio.ingest` · 11 `speech.stt` · 12 `speech.tts`), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure).
+  8 `classify.batch` · 9 `review.processor` · 10 `audio.ingest` · 11 `speech.stt` · 12 `speech.tts` · 13 `voice.live`), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure). **The full audio track (10–13) is complete.**
   **Module 8 — Batch Classification & Sorting (`classify.batch`) is MVP complete** — the **first real
   consumer of `model.gateway`**: for each item in a batch it calls the gateway (default `-Tier weak` = 1.5B) with a
   mode-specific prompt (`classify` one-label / `multilabel` / `extract` fields), parses the completion, computes a
@@ -81,6 +81,22 @@ is planned (serves scripts and weaker local models) but not yet created.
   synthesized 5.52 s on CUDA (`device=cuda:0`, rtf ≈ 5.2). **Pre-shipped off-machine**: pwsh 7.4.6 AST-parse + `py_compile`,
   then the *real* skill against a stdlib mock python worker (25/25) before any bytes hit Windows. `models.json` gained
   `defaults.tts`/`tiers.tts` (additive; Module 7 re-verified 28/28). See D-0021.
+  **Module 13 — Voice Interaction Loop (`voice.live`) is MVP complete this session** — the **capstone of the audio track
+  (10–13)** and the **first skill to compose several stochastic model skills end-to-end**. Given one input speech file it
+  runs a voice turn: **`speech.stt`** transcribes (whisper segments = utterance/VAD) → optional **`model.gateway`** answer
+  (`-Respond`) → optional **`speech.tts`** reply to `reply.wav` (`-Speak`/`-ReadbackTranscript`). Children are spawned as
+  child pwsh with **overridable paths** and their `lifeorch.skill.result/0.1` envelopes parsed — **it reimplements
+  nothing** (the payoff of the shared contract: a local voice assistant turn is pure orchestration). Envelope
+  `confidence` = the STT transcript confidence; `model_provenance` = the **aggregate** of all child models (stage-tagged).
+  **Orchestrator, not a review producer** — it redirects children's review writes to an in-artifact `child_review.jsonl`
+  by default (canonical queue unchanged). `determinism:"mixed"`, `parallel_safe:false`, `batch:false`; **no new model /
+  no `models.json` change.** **Live mic capture / streaming is a non-goal** (no mic assumed; file-driven MVP); standalone
+  VAD deferred (whisper VAD tool exists but no VAD ggml model is staged — `m13-probe-001`). **Tests 21/21 via the
+  executor** (`m13-test-001`, exit 0) — a live full turn on `samples\jfk.wav` (transcript "…country…" → LLM answer →
+  `reply.wav`, `model_provenance` ≥ 3, all stages ok), readback, error path, Module 1 wrapper; live smoke
+  `m13-smoke-001` heard the JFK line, answered via the 1.5B, and produced a 12.56 s reply (stt 1.8 s / respond 2.7 s /
+  speak 54 s). **Pre-shipped off-machine** on cloud pwsh 7.4.6 with a mock-children harness driving the *real*
+  orchestrator (23/23). See D-0022.
 - **Repo / working dir:** **`C:\Users\just_\LifeOrchestrator-Refresh\`** — the clean standalone home for
   **Life Orchestrator** (near-term local-skills track; git-initialized). Layout: `core-docs/` (these docs)
   and `modules/<NN>-<name>/` (one per module). **Reference sources (separate, not built here):** the earlier
@@ -208,6 +224,7 @@ is planned (serves scripts and weaker local models) but not yet created.
 - model.gateway (direct): `pwsh -NoProfile -File modules\07-model-gateway\Invoke-ModelGateway.ps1 [-Model <id>|-Tier <tiny|weak|mid|strong>] -Prompt '<s>' [-System '<s>'] [-MaxTokens -Temperature -TopP -TopK -Seed]` (or `-InputsJson '<json {…,messages[]}>'`). Registry: `modules\07-model-gateway\models.json`.
 - speech.stt (direct): `pwsh -NoProfile -File modules\11-speech-stt\Invoke-SpeechStt.ps1 -InputFile <audio> [-Normalize <auto|always|never>] [-Language <code>] [-Translate] [-NoGpu] [-SegmentConfidenceThreshold <0..1>] [-Model <id>]` (or `-InputsJson '<json {input,normalize,language,...}>'`). Resolves whisper.cpp + `stt.whisper.base-en` from `modules\07-model-gateway\models.json`; normalizes non-ready input via `audio.ingest`.
 - speech.tts (direct): `pwsh -NoProfile -File modules\12-speech-tts\Invoke-SpeechTts.ps1 -Text '<text>' [-Speaker <Ryan|Aiden|...>] [-Language <name>] [-Instruct '<style>'] [-Seed <n>] [-Format <wav|mp3|...>] [-SampleRate <hz>] [-Model <id>]` (or `-InputsJson '<json {text,speaker,language,instruct,...}>'`). Runs the Qwen3-TTS worker `tts_infer.py` under the speech venv (registry `engine_env`); 24 kHz mono WAV, optional format/rate via `audio.ingest`.
+- voice.live (direct): `pwsh -NoProfile -File modules\13-voice-live\Invoke-VoiceLive.ps1 -InputFile <audio> [-Respond <bool>] [-Speak <bool>] [-ReadbackTranscript <bool>] [-Tier <weak|mid|...>] [-Speaker <name>] [-Format <wav|mp3|...>]` (or `-InputsJson '<json {input,respond,speak,...}>'`). Composes speech.stt → model.gateway → speech.tts; writes `voice.json`/`voice.md`/`reply.wav`.
 - User ops (click-to-run): `ops/*.bat` — start/stop/restart/status the executor and run tests; each writes
   output to `ops/out/` for the agent to read.
 - Watchdog: `ops/start-watchdog.bat` (supervise), `ops/stop-watchdog.bat`, `ops/recover-executor.bat [-Force]`;
@@ -280,6 +297,14 @@ is planned (serves scripts and weaker local models) but not yet created.
   wrapper; `m12-test-001`, exit 0, ~132 s). The harness is **dual-mode / OS-portable**: `-UseMock` runs the *real* skill
   against a stdlib mock python worker (`tests/mock-tts-infer.py`, writes a real PCM16 WAV) + a temp registry — it ran on
   the cloud Linux box (25/25) as the pre-ship gate before the identical harness ran live on the Windows executor.
+- Module 13: `modules/13-voice-live/tests/Invoke-VoiceLiveTests.ps1` — **21/21 pass** (manifest + mixed/parallel_safe/
+  batch flags; a **live** full voice turn on `samples\jfk.wav` — transcript contains "country", a non-empty LLM answer,
+  a real `reply.wav`, `model_provenance` ≥ 3 (stt+gateway+tts), all stages ok, reply artifact sha256; a
+  respond-off/readback path; `input_not_found` error path with a schema-valid envelope; the Module 1 wrapper;
+  `m13-test-001`, exit 0). The harness is **dual-mode / OS-portable**: `-UseMock` points all three children at a single
+  `tests/mock-child.ps1` (canned envelopes; the tts branch writes a real WAV) so the whole compose/aggregate/envelope
+  pipeline runs off-GPU — it ran on the cloud Linux box (23/23) as the pre-ship gate before the identical harness ran
+  live on the Windows executor.
 
 ## Known failures / gotchas
 - **Cowork `device_stage_files` can return a STALE snapshot (2026-07-24, Module 12).** Re-staging a file to an uploads
@@ -355,12 +380,13 @@ is planned (serves scripts and weaker local models) but not yet created.
   27B load (~90s) approaches the gateway's 120s default, so callers pass a longer `-LoadTimeoutSec` for the strong tier.
 
 ## Next expected action
-1. **Module 13 — `voice.live`** (compose record + VAD + STT + TTS into a voice loop) is the next roadmap module and the
-   **capstone of the audio track (10–13)**: Modules 10 (`audio.ingest`), 11 (`speech.stt`), and 12 (`speech.tts`) are all
-   MVP complete, so #13 composes them (plus audio capture / VAD). Both speech modules are review-queue producers
-   (producers 7/8/11/12 → drainer 9 → frontier for `escalated` items). `speech.tts` follow-ons (NOT this session): a warm
-   TTS worker (per-call model load ~30–40 s cold is the pressure point — shared with the gateway/classify.batch warm-worker
-   item); voice clone/design; batch/long-form/streaming; the strong 1.7B tier; calibrated confidence; SSML. See D-0021.
+1. **The audio track (Modules 10–13) is complete.** The next roadmap block is **Modules 14–18 — Image & document
+   perception** (`ocr.layout`, `image.util`, `detect.objects`, `image.interpret`, `image.index`) — expand and give a work
+   order to whichever is picked (#14 `ocr.layout` is the natural first step; **probe the machine for an OCR engine /
+   local VLM before designing**, per the probe-first discipline). Alternatively, take on the **deferred housekeeping**
+   (below). `voice.live` follow-ons (NOT this session): a mic `audio.capture` skill + a streaming/interactive loop;
+   standalone VAD (stage a VAD ggml model); multi-turn dialogue + memory; a **warm-worker pool** so a voice turn avoids
+   three cold model loads (the shared pressure point with #7/#8/#12). See D-0022.
 2. `review.processor` follow-ons (NOT this session): a frontier/`route.tasks` (#24) drain of `escalated` items;
    compaction/archival of `resolved` items to keep the live queue small; a warm/persistent gateway worker (shared
    with #8); calibrated/semantic reviewer confidence; **strong-tier prompt/max_tokens tuning** so the 27B emits a
@@ -371,4 +397,4 @@ is planned (serves scripts and weaker local models) but not yet created.
    intra-batch prompt for throughput; calibrated confidence; a side-effecting `sort.files` mover) — see D-0017; audio.ingest follow-ons (batch/directory ingest; trimming/
    segmentation → Module 13; denoise/high-pass — see D-0019).
 
-- **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 12 speech.tts build session).
+- **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 13 voice.live build session; audio track 10–13 complete).

@@ -479,3 +479,43 @@ alternatives · consequences · affects · state (provisional | locked) · revis
   de-duplication when models relocate. · **affects:** Module 12, Modules 10/11/13/9, `TOOL_MODEL_REGISTRY.md`,
   `models.json`, `REVIEW_QUEUE.md`, `MODULE_ROADMAP.md`. · **revisit-if:** a warm TTS worker, voice cloning/design,
   batch/streaming, long-form chunking, calibrated confidence, or SSML is needed (each its own scoped follow-on).
+
+### D-0022 — voice.live composes STT+LLM+TTS; orchestrator not a producer; file-driven turn (live mic deferred)
+- **date:** 2026-07-24 · **state:** locked (compose-not-reimplement + child spawn + child-review aggregation + offline scope)
+- **decision:** Module 13 `voice.live` — the **capstone of the audio track (10–13)** and the first skill that **composes
+  several stochastic model skills end-to-end** — turns one input speech file into a voice turn by orchestrating the
+  modules already built: **(1) `speech.stt`** transcribes (whisper segmentation = utterance / voice-activity detection;
+  zero segments → `speech_detected:false`, skip the rest), **(2) `model.gateway`** answers the transcript (optional,
+  `-Respond`), **(3) `speech.tts`** speaks the answer or the transcript (optional, `-Speak`/`-ReadbackTranscript`) to
+  `reply.wav`. MVP design: (1) **compose, do not reimplement** — each child is spawned as a child pwsh with an
+  overridable entrypoint path (`-SttPath`/`-GatewayPath`/`-TtsPath`) and its `lifeorch.skill.result/0.1` envelope is
+  parsed (the same child-spawn pattern as `classify.batch`→gateway and `speech.stt`→audio.ingest); a stage that errors
+  short-circuits to a structured `stage_failed` naming the stage, and partial progress (e.g. transcript but the LLM
+  failed) is still reported (`status:"partial"`). (2) **Envelope `confidence` = the STT transcript confidence** (the
+  "did we understand the user" signal); **`model_provenance` = the aggregate** of every child model used (stt + gateway
+  + tts), each entry tagged with its `stage`. (3) **Orchestrator, NOT a review producer** — the children flag their own
+  low-confidence outputs; voice.live points their `review_queue_path` at an in-artifact `child_review.jsonl` by default
+  so a transient turn does not flood the canonical queue (surfaced as `child_review_count`); `-ReviewQueuePath` routes
+  them to a canonical queue instead. It never writes its own review items (no new decision to review — it composes).
+  (4) **File-driven offline turn**; `determinism:"mixed"`, `parallel_safe:false` (children bind CUDA sequentially),
+  `batch:false`. **No new model / no `models.json` change** — it reuses the children's own registry resolution.
+- **reason:** Proves the payoff of the whole contract program: because Modules 7/11/12 all emit the same envelope, a
+  local voice assistant turn is *pure orchestration* — no model glue, no reimplementation. Composing children as
+  processes (not importing their code) keeps each independently replaceable (D-0004) and crash-isolated (D-0002).
+  Aggregating child review writes keeps interactive turns from spamming the canonical queue while still surfacing the
+  signal. STT-confidence as the turn confidence is the honest "did the turn work" number.
+- **alternatives:** re-implement STT/LLM/TTS inline or import child internals (rejected — breaks replaceability and the
+  contract's whole point); add an LLM-free readback-only loop as the only mode (rejected — the LLM bridge is the useful
+  turn; kept `-Respond`/`-Speak`/`-ReadbackTranscript` toggles so readback and transcript-only are still available);
+  make voice.live its own review producer (rejected — it adds no new decision; double-flagging would mis-attribute);
+  **live microphone capture / streaming** (rejected for the MVP — no mic can be assumed on this headless desktop and the
+  executor is not a realtime audio path; a mic `audio.capture` skill + streaming loop is a scoped follow-on); a
+  standalone VAD pre-segmentation pass (deferred — `whisper-vad-speech-segments.exe` exists but **no VAD ggml model is
+  staged**, `m13-probe-001`; whisper's own segmentation via `speech.stt` is the utterance detector).
+- **consequences:** a full turn pays **three cold model loads** (~1–2 min; observed ~58 s for a short answer — stt
+  ~1.8 s, respond ~2.7 s, speak ~54 s dominated by TTS) — a warm-worker pool is the shared follow-on pressure (with
+  #7/#8/#12). The review queue is unchanged (voice.live aggregates, does not produce). The **audio track (10–13) is now
+  complete.** This is the composition substrate a future streaming voice loop, routing (#24), and a desktop-observation
+  broker (#25) build on. · **affects:** Module 13, Modules 7/10/11/12/9, `TOOL_MODEL_REGISTRY.md`, `MODULE_ROADMAP.md`,
+  `REVIEW_QUEUE.md`. · **revisit-if:** mic capture / streaming, standalone VAD (stage a model), multi-turn dialogue +
+  memory, or a warm-worker pool is built (each its own scoped follow-on).

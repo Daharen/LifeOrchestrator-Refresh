@@ -356,6 +356,33 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   executor (**tests 25/25**; `m12-test-001`, exit 0, ~132 s; live smoke `m12-smoke-001` synthesized 5.52 s on CUDA). ·
   **skills:** `speech.tts`. See D-0021.
 
+### `voice.live` — Voice Interaction Loop (Module 13)
+- **status:** installed · **type:** skill (PowerShell orchestrator; composes other skills) ·
+  **location:** `LifeOrchestrator-Refresh/modules/13-voice-live/`
+- **invocation:** direct `pwsh -NoProfile -File .\Invoke-VoiceLive.ps1 -InputFile <audio> [-Respond <bool>] [-Speak <bool>]
+  [-ReadbackTranscript <bool>] [-System <prompt>] [-Tier <tiny|weak|mid|strong>] [-MaxTokens <n>] [-Speaker <name>]
+  [-Language <name>] [-Format <wav|mp3|...>] [-SttModel|-GatewayModel|-TtsModel <id>] [-SttPath|-GatewayPath|-TtsPath|
+  -PwshPath|-ReviewQueuePath <override>]` (or `-InputsJson '<json {input,respond,speak,readback_transcript,system,tier,
+  max_tokens,speaker,language,stt_model,gateway_model,tts_model,format,stt_path,gateway_path,tts_path,pwsh_path,
+  review_queue_path}>'`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
+- **supported tasks:** one **voice turn** from an audio file — transcribe (`speech.stt`; whisper segments = utterance/VAD)
+  → optionally answer (`model.gateway`) → optionally speak the answer/transcript (`speech.tts`) to `reply.wav`. Composes
+  the child skills (spawned as pwsh; overridable paths) and parses their envelopes; reimplements nothing.
+- **I/O:** in = an audio path + options; out = `lifeorch.skill.result/0.1` envelope (result = `{input{path},
+  speech_detected, transcript{text,utterance_count,confidence,language,artifact_dir}, response{text,model,confidence,
+  finish_reason}|null, reply{path,format,sample_rate,duration_s,bytes,sha256}|null, stages[{name,status,ms,error}],
+  config{…}, child_review_path, child_review_count}`) + `runtime/artifacts/<id>/{voice.json,voice.md,reply.wav,
+  result.json,stderr.txt,child_review.jsonl, stt/,gateway/,tts/}`.
+- **determinism:** **mixed** (deterministic orchestration; stochastic children) · **confidence:** = the STT transcript
+  confidence · **model_provenance:** aggregate of all child models (stt+gateway+tts), stage-tagged · **speed:** a full
+  turn pays three cold model loads (~1–2 min; observed ~58 s — stt ~1.8 s / respond ~2.7 s / speak ~54 s) · **CPU/GPU/mem:**
+  low / **CUDA** (via children) / ~2–4 GB+models.
+- **limitations:** **`parallel_safe:false`** (children bind CUDA sequentially); one turn per invocation (`batch:false`);
+  three cold model loads (no warm worker); **file-driven only** — no live mic capture / streaming (non-goal); standalone
+  VAD deferred (no VAD ggml model staged); it is an **orchestrator, not a review producer** (aggregates child flags to
+  an in-artifact file by default). · **last test:** 2026-07-24 via executor (**tests 21/21**; `m13-test-001`, exit 0; live
+  smoke `m13-smoke-001` — full JFK turn, 12.56 s reply). · **skills:** `voice.live`. See D-0022.
+
 ---
 
 ## Hardware profile (measured 2026-07-24 — DESKTOP-PF5FFMF)

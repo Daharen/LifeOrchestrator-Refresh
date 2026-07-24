@@ -137,6 +137,14 @@ format conversion) writes nothing to the queue, so there is no gateway-style sup
 forced too-short/failed synthesis produced a valid `speech.tts` item; `m12-test-001`). **Producers are now 7/8/11/12 →
 local drainer 9 → frontier for the residue.** See D-0021.
 
+## Composed skills aggregate child flags (Module 13)
+`voice.live` (Module 13) is an **orchestrator, not a producer** — it composes `speech.stt` + `model.gateway` +
+`speech.tts` and adds no review decision of its own. To keep a transient voice turn from flooding the canonical queue,
+it points each child's `review_queue_path` at an in-artifact **`child_review.jsonl`** by default (surfaced in the result
+as `child_review_count`); passing `-ReviewQueuePath` routes the children's flags to a canonical queue instead. This is
+the general pattern for composed skills: **redirect children's review writes to an aggregate, do not re-flag.** The four
+producers above are unchanged. See D-0022.
+
 ## Design flags to revisit (not yet actioned — for a future session/frontier pass)
 - **speech.stt confidence is mean token probability — honest but not calibrated.** A real acoustic signal (richer than
   the gateway's completeness heuristic) but not a probability the transcript is *correct*; replace with a calibrated /

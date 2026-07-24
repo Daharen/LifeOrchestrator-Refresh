@@ -1,0 +1,45 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "voice.live",
+  "name": "Voice Interaction Loop",
+  "version": "0.1.0",
+  "contract_version": "0.1",
+  "purpose": "Compose a local voice turn from one input audio file: speech.stt transcribes it (whisper segmentation = utterance/voice-activity detection), model.gateway answers the transcript (optional), and speech.tts speaks the answer to reply.wav (optional). The capstone of the audio track (10-13); it orchestrates the child skills (spawned as pwsh) and parses their result envelopes rather than reimplementing anything. Envelope confidence = the STT transcript confidence; model_provenance = the aggregate of every child model used. Children's review-queue writes are aggregated into an in-artifact child_review.jsonl by default.",
+  "determinism": "mixed",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-VoiceLive.ps1",
+    "args_spec": "Named params -InputFile <audio> (required); -Respond <bool> (def true); -Speak <bool> (def true); -ReadbackTranscript <bool> (def false); -System <prompt>; -Tier <tiny|weak|mid|strong> (def weak); -MaxTokens <n> (def 200); -Speaker <name> (def Ryan); -Language <name> (def English); -SttModel/-GatewayModel/-TtsModel <id>; -Format <wav|mp3|...> (reply audio, def wav); -SttPath/-GatewayPath/-TtsPath/-PwshPath/-ReviewQueuePath <override>. OR -InputsJson '<json {input,respond,speak,readback_transcript,system,tier,max_tokens,speaker,language,stt_model,gateway_model,tts_model,format,stt_path,gateway_path,tts_path,pwsh_path,review_queue_path}>'. Optional -ArtifactRoot, -InvocationId.",
+    "composes": ["speech.stt (Module 11)", "model.gateway (Module 7)", "speech.tts (Module 12)"]
+  },
+  "inputs": [
+    { "name": "input", "type": "string", "required": true, "description": "Path to the input speech audio file (a spoken utterance/question). speech.stt normalizes it internally." },
+    { "name": "respond", "type": "bool", "required": false, "default": true, "description": "Feed the transcript to model.gateway to generate a response." },
+    { "name": "speak", "type": "bool", "required": false, "default": true, "description": "Synthesize the response (or the transcript, with readback_transcript) to reply audio via speech.tts." },
+    { "name": "readback_transcript", "type": "bool", "required": false, "default": false, "description": "When not responding (or the response is empty), speak the transcript instead." },
+    { "name": "system", "type": "string", "required": false, "description": "System prompt for the LLM responder." },
+    { "name": "tier", "type": "string", "required": false, "default": "weak", "description": "LLM tier for the response (tiny|weak|mid|strong)." },
+    { "name": "max_tokens", "type": "int", "required": false, "default": 200, "description": "Max tokens for the LLM response." },
+    { "name": "speaker", "type": "string", "required": false, "default": "Ryan", "description": "TTS speaker for the reply." },
+    { "name": "language", "type": "string", "required": false, "default": "English", "description": "TTS language for the reply." },
+    { "name": "format", "type": "string", "required": false, "default": "wav", "description": "Reply audio format (wav|mp3|flac|opus|ogg|m4a)." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ input{path}, speech_detected, transcript{text,utterance_count,confidence,language,artifact_dir}, response{text,model,confidence,finish_reason}|null, reply{path,format,sample_rate,duration_s,bytes,sha256}|null, stages[{name,status,ms,error}], config{respond,speak,readback_transcript,tier,speaker,language}, child_review_path, child_review_count }"
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4"],
+    "models": ["stt.whisper.base-en", "a wired LLM (default weak)", "tts.weak.qwen3-0p6b"],
+    "libraries": [],
+    "cpu": "any", "gpu": "cuda", "memory_mb": 4096,
+    "network": false, "filesystem": "read-write", "audio": true, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 1200, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": false,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

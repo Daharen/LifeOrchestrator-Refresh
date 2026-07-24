@@ -118,7 +118,7 @@ Needs refactor · Deprecated · Replaced.
   See D-0018. Follow-on: frontier drain of `escalated` items (routing #24); resolved-item compaction; warm worker;
   strong-tier prompt/max_tokens tuning for parseable verdicts.
 
-## Modules 10–13 — Audio (provisional; Module 10 MVP complete)
+## Modules 10–13 — Audio (**all MVP complete** — the full audio track: ingest → STT → TTS → voice loop)
 - **10 `audio.ingest`** — Audio Ingest / Normalize & Convert. ***MVP complete*** — the **first audio-track
   module** and the first skill to **wrap an external binary** (`ffmpeg`/`ffprobe`). Normalizes+converts one
   audio/media file (first audio stream; audio extracted from video) to a requested `-Format` (wav/mp3/flac/opus/
@@ -163,7 +163,21 @@ Needs refactor · Deprecated · Replaced.
   a live synthesis before coding. `models.json` gained `defaults.tts`/`tiers.tts` (additive; Module 7 re-verified 28/28).
   Work order: `modules/12-speech-tts/WORK_ORDER.md`. See D-0021. Follow-on: warm TTS worker; voice clone/design;
   batch/long-form; the strong 1.7B tier; calibrated confidence; SSML.
-- **13 `voice.live`** compose record+VAD+STT+TTS (after 10–12 work). *(provisional)*
+- **13 `voice.live`** — Voice Interaction Loop. ***MVP complete*** — the **capstone of the audio track** and the first
+  skill to **compose several stochastic model skills end-to-end**. Given one input speech file it runs a voice turn:
+  `speech.stt` transcribes (whisper segmentation = utterance/VAD; zero segments → `speech_detected:false`) → optional
+  `model.gateway` answer (`-Respond`) → optional `speech.tts` reply to `reply.wav` (`-Speak`/`-ReadbackTranscript`).
+  Children are spawned as pwsh with overridable paths and their envelopes parsed — **it reimplements nothing**. Envelope
+  `confidence` = STT transcript confidence; `model_provenance` = the aggregate of all child models (stage-tagged).
+  **Orchestrator, not a review producer** — it redirects children's review writes to an in-artifact `child_review.jsonl`
+  by default. `determinism:"mixed"`, `parallel_safe:false`, `batch:false`; no new model / no `models.json` change.
+  **Live mic capture / streaming is a non-goal** (no mic assumed; file-driven MVP); standalone VAD deferred (no VAD ggml
+  model staged). **Tests 21/21 via the executor** (`m13-test-001`, exit 0) — a live full turn on `samples\jfk.wav`
+  (transcript → LLM answer → `reply.wav`, `model_provenance` ≥ 3, all stages ok), readback, error path, Module 1
+  wrapper; live smoke `m13-smoke-001` (heard the JFK line, answered, 12.56 s reply; stt 1.8 s / respond 2.7 s / speak
+  54 s). **Pre-shipped off-machine** on cloud pwsh 7.4.6 with a mock-children harness driving the real orchestrator
+  (23/23). Work order: `modules/13-voice-live/WORK_ORDER.md`. See D-0022. Follow-on: mic `audio.capture` + streaming
+  loop; standalone VAD (stage a model); multi-turn + memory; a warm-worker pool so a turn avoids three cold model loads.
 
 ## Modules 14–18 — Image & document perception (provisional)
 - **14 `ocr.layout`** OCR + boxes + reading order · **15 `image.util`** resize/crop/meta/hash/similarity/
