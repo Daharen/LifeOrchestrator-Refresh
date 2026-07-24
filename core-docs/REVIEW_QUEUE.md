@@ -74,6 +74,36 @@ double-written or mis-attributed. Verified end-to-end by the Module 8 tests (a t
 `classify.batch` item and the gateway wrote nothing to the canonical queue). **Module 9 (`review.processor`) must
 therefore handle both `flagged_by` values (`model.gateway`, `classify.batch`).**
 
+## First consumer/drainer wired (Module 9)
+`review.processor` is the **first skill that drains** `review_queue.jsonl`. Per pass it selects **OPEN** items
+(bounded by `-MaxItems`, default 25; optional `-FlaggedBy`/`-Reason`/`-Ids` filters; both producers handled) and
+adjudicates each **single** item with a **stronger** local model (default `-Tier mid`=Qwen2.5-3B; `strong`=27B) via
+`model.gateway`. The reviewer receives **only** the distilled item — its `reason`/`requested`/`weak_result` plus a
+**bounded fragment resolved from `source_ref`** (for `classify.batch`: `classified.json#<id>` → the closed label set
++ that one item, which recovers the label set `weak_result` lacks; for `model.gateway`: `exchange.json` → a bounded
+request/output preview) — **never the whole batch** (keeps escalation cheap). It parses a small JSON verdict
+(`{verdict, answer, confidence, escalate, rationale}`), computes a **structural reviewer confidence** (valid JSON +
+in-set corrected answer + generation completeness; a `finish_reason=length` truncation caps ≤0.4), then:
+- **resolves** the item — sets `status:"resolved"` and fills `resolution = {by:"review.processor:<model>", decision,
+  at_utc, note, verdict, reviewer_confidence, model_self_confidence, …}` — when confident; or
+- **escalates** — sets `status:"escalated"`, `escalated_to:"frontier"` — when the reviewer confidence is
+  `< -EscalateThreshold` (default 0.5), the model asks to escalate, or its output is unparseable. **Escalation is a
+  status transition, not a frontier call**; the frontier (this Cowork agent, or a future `route.tasks` #24) drains
+  `escalated` items separately, seeing only the distilled item.
+
+**Write model (answers the "append vs update-in-place" question).** Only a reviewer sets `resolution`/`status`. The
+skill **updates the live queue in place** — it re-reads the file immediately before an atomic replace, rewrites only
+the lines it adjudicated (still `open`) with the same object plus the updated `status`/`resolution`/`escalated_to`,
+and passes every other line (producer appends during the run, already-resolved items, and **malformed lines**)
+through **verbatim**; the original flagging fields (`schema,id,created_at_utc,flagged_by,reason,confidence,
+source_ref,weak_result,requested`) are never mutated. It **also** appends an immutable
+`lifeorch.review.resolution/0.1` record per adjudication to `review_resolved.jsonl` (beside the queue). So the live
+queue reflects current status (re-runs skip resolved items; the queue stays small) **and** history survives.
+`-DryRun` writes neither. Like `classify.batch`, it **suppresses the child gateway's own review writes** (points the
+gateway `-ReviewQueuePath` at an in-artifact file) so draining never grows the queue. `determinism:"mixed"`,
+`batch:true`, `parallel_safe:false`. Verified end-to-end by the Module 9 tests (34/34; `m9-test-003`). See D-0018.
+**The review-queue loop is now closed: producers (7/8) → local drainer (9) → frontier for the residue.**
+
 ## Design flags to revisit (not yet actioned — for a future session/frontier pass)
 - **classify.batch confidence is also a heuristic (completeness + in-set/JSON validity), not calibrated
   correctness.** It is richer than the gateway's completeness signal but still not a probability the label is right.
@@ -89,5 +119,15 @@ therefore handle both `flagged_by` values (`model.gateway`, `classify.batch`).**
 - **Staged llama.cpp engine depends on a system CUDA runtime.** The portable `_engines\llama.cpp\bin\` copy
   (72 MB) runs today but links to a CUDA runtime installed outside `F:\Qwen3.5-27B`. Confirm the runtime's
   home before that folder is torn down; if it lived only there, restage the CUDA DLLs too.
-- **27B GGUF gpu_layers is a guess (28).** ~16 GB Q4 > 11 GB VRAM → partial offload; the value was not
-  load-tested this session. Tune when the strong tier is first exercised (Module 9).
+- **27B GGUF gpu_layers — TUNED 28 → 32 (Module 9, 2026-07-24).** Swept `gpu_layers ∈ {20, 28, 36}` on an idle
+  GPU via the gateway (`m9-tune27b-001`): **all three loaded (no OOM)** and generated; throughput rose monotonically
+  (1.43 / 1.67 / 1.93 tok/s). Raised the registry default to **32** (`models.json`) — strictly fewer offloaded layers
+  than the `36` that fit, so it fits with headroom for the RTX 2080 Ti's desktop-display VRAM. **Cold first load ~90s**
+  (16 GB read from F:), warm ~7–9s (OS file cache). Because a cold load approaches the gateway's default 120s
+  `LoadTimeoutSec` (which bounds BOTH load and the completion request, and the 27B runs ~2 tok/s), `review.processor`
+  now exposes a **`-LoadTimeoutSec` passthrough** — use `~300` for strong-tier runs. Still slow (~2 tok/s): reserve
+  `strong` for the hardest items; `mid` (3B, full GPU offload, ~5s load) is the routine default.
+- **Strong-tier verdict parseability (new follow-on).** In `m9-test-003` the 27B (a thinking-style model) spent its
+  token budget on reasoning and hit `max_tokens` before emitting the `{verdict,…}` JSON, so `review.processor`
+  correctly **escalated** it (unparseable → frontier). Follow-on: tune the strong-tier prompt / raise its
+  `max_tokens` / add a no-reasoning directive so the 27B returns a parseable verdict and resolves more items locally.

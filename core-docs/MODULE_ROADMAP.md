@@ -82,7 +82,7 @@ Needs refactor · Deprecated · Replaced.
   window capture self-verified against a WinForms probe (2026-07-24). Work order:
   `modules/06-capture-screen/WORK_ORDER.md`. See DECISION_LOG D-0014.
 
-## Modules 7–9 — Local model foundation (provisional)  ← Module 9 (`review.processor`) next
+## Modules 7–9 — Local model foundation (provisional)  ← all MVP complete
 - **7 `model.gateway`** — Local Model Gateway. ***MVP complete*** — common interface that runs local **LLMs**
   (GGUF) via the llama.cpp **`llama-server`** (start→/health→/v1/chat/completions→kill), selected from a
   declarative `models.json` by `-Model` id or a `-Tier` alias. Declares STT/TTS/embedding (staged, wired in
@@ -100,9 +100,23 @@ Needs refactor · Deprecated · Replaced.
   **Tests 33/33 via executor (2026-07-24)** — error paths, live classify/extract, tier+explicit-model resolve,
   review routing + suppression, wrapper, no orphaned server. Work order: `modules/08-classify-batch/WORK_ORDER.md`.
   See D-0017. Follow-on: warm-worker/intra-batch prompt for throughput; calibrated confidence; a `sort.files` mover.
-- **9 `review.processor`** — Review Queue Processor: stronger local model adjudicates only flagged/
-  low-confidence/contradictory items from the queue (now fed by both `model.gateway` and `classify.batch`). *Proposed,
-  P2. Depends on 7, 8, `REVIEW_QUEUE`. **← next.***
+- **9 `review.processor`** — Review Queue Processor. ***MVP complete*** — the **first consumer/drainer** of the
+  review queue (now fed by both `model.gateway` and `classify.batch`). Selects OPEN items (bounded by `-MaxItems`;
+  `-FlaggedBy`/`-Reason`/`-Ids` filters) and, for each, feeds a **stronger** local model (default `-Tier mid`=3B;
+  `strong`=27B) via `model.gateway` **only** the distilled item — its `reason`/`requested`/`weak_result` plus a
+  bounded fragment resolved from `source_ref` (classify.batch `classified.json#id` → the closed label set + that
+  item; model.gateway `exchange.json` → bounded request/output) — **never the whole batch** (D-0007). Parses a
+  small JSON verdict, computes a structural reviewer confidence, then **resolves** the item (fills `resolution`+
+  `status`) or **escalates** it (`status:"escalated"`, `escalated_to:"frontier"` — a status transition, not a
+  frontier call) when unsure/unparseable. Writes the live queue **in place** (re-read-before-atomic-replace;
+  original flagging fields preserved; producer/malformed lines verbatim) **plus** an append-only
+  `review_resolved.jsonl` (`lifeorch.review.resolution/0.1`); `-DryRun` writes nothing. Suppresses the child
+  gateway's own review writes. `determinism:"mixed"`, `batch:true`, `parallel_safe:false`. **Tests 34/34 via the
+  executor (2026-07-24)** incl. live `mid`(3B) adjudication, forced escalation, dry-run no-op, source-ref
+  resolver, and a live `strong`(27B) end-to-end at the tuned `gpu_layers=32`. Also **tuned the 27B**
+  (`gpu_layers` 28→32; sweep + timings recorded). Work order: `modules/09-review-processor/WORK_ORDER.md`.
+  See D-0018. Follow-on: frontier drain of `escalated` items (routing #24); resolved-item compaction; warm worker;
+  strong-tier prompt/max_tokens tuning for parseable verdicts.
 
 ## Modules 10–13 — Audio (provisional, unlocked)
 - **10 `audio.ingest`** normalize/convert · **11 `speech.stt`** transcription (timestamped) ·

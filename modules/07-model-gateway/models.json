@@ -58,9 +58,9 @@
       "version": "Qwen_Qwen3.5-27B-Q4_K_M",
       "path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\_pending-model-storage\\llm\\Qwen3.5-27B-Q4_K_M\\Qwen_Qwen3.5-27B-Q4_K_M.gguf",
       "engine": "llama-server",
-      "context": 4096, "gpu_layers": 28,
+      "context": 4096, "gpu_layers": 32,
       "params": { "params_b": 27, "size_bytes": 17128621600 },
-      "notes": "Strong tier: review/adjudication (Module 9). ~16 GB Q4 > 11 GB VRAM, so PARTIAL GPU offload — gpu_layers=28 is a conservative starting value; tune to fit VRAM. Slower; not exercised in the Module 7 MVP smoke."
+      "notes": "Strong tier: review/adjudication (Module 9). ~16 GB Q4 > 11 GB VRAM, so PARTIAL GPU offload. Tuned by Module 9 (2026-07-24): swept gpu_layers {20,28,36} on an idle GPU — all loaded (no OOM), throughput monotonic 1.43/1.67/1.93 tok/s; raised 28 -> 32 (strictly fewer layers than the 36 that fit, so it fits with headroom for desktop display VRAM). Cold first load ~90s (16 GB read from F:), warm ~7-9s (OS cache); callers should pass a longer load timeout for a cold strong load (review.processor -LoadTimeoutSec). Still slow (~2 tok/s) — reserve for the hardest items."
     },
     {
       "model_id": "stt.whisper.base-en",

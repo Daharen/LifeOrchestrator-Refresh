@@ -302,3 +302,47 @@ alternatives · consequences · affects · state (provisional | locked) · revis
   · **affects:** Module 8, Modules 7/9/24, `REVIEW_QUEUE.md`, `TOOL_MODEL_REGISTRY.md`. · **revisit-if:** load latency
   forces a warm worker / intra-batch prompt; a calibrated confidence is needed; a side-effecting file-sorter is built;
   routing (Module 24) subsumes tier selection.
+
+### D-0018 — review.processor: single-item adjudication, update-in-place + append-log, escalation-as-status-transition
+- **date:** 2026-07-24 · **state:** locked (adjudication scope + write model + escalation), provisional (reviewer confidence heuristic)
+- **decision:** Module 9 `review.processor` is the **first consumer/drainer** of `review_queue.jsonl` and sets the
+  pattern for how flagged items are resolved. MVP design: (1) **single-item adjudication** — it selects OPEN items
+  (bounded `-MaxItems`; `-FlaggedBy`/`-Reason`/`-Ids` filters; handles **both** `flagged_by` producers) and, per item,
+  calls `model.gateway` **once** with a **stronger** model (default `-Tier mid`=Qwen2.5-3B; `strong`=27B), feeding it
+  **only** the distilled item: `reason`/`requested`/`weak_result` + a **bounded fragment resolved from `source_ref`**
+  (`classify.batch` `classified.json#<id>` → the closed label set + that one item; `model.gateway` `exchange.json` →
+  bounded request/output), **never the whole batch** (honors D-0007 / `REVIEW_QUEUE.md`). (2) **A structural reviewer
+  confidence** (valid-JSON `{verdict,answer,confidence,escalate,rationale}` + in-set corrected answer + generation
+  completeness; a `length` truncation caps ≤0.4), NOT calibrated correctness. (3) **Escalation is a status
+  transition, not a frontier call** — below `-EscalateThreshold` (default 0.5), or an explicit model-escalate, or an
+  unparseable verdict → `status:"escalated"`, `escalated_to:"frontier"`; the frontier drains those separately. (4)
+  **Write model:** the live queue is **updated in place** (re-read immediately before an atomic
+  `[System.IO.File]::Move(...,overwrite)`; only adjudicated still-`open` lines change to carry `status`+`resolution`+
+  `escalated_to`; original flagging fields and all other/producer/**malformed** lines pass through verbatim) **and**
+  an immutable `lifeorch.review.resolution/0.1` record per adjudication is appended to `review_resolved.jsonl`. This
+  is the deliberate answer to "append vs update-in-place": **update the live status in place** (so re-runs skip
+  resolved items and the queue stays small) **plus an append-only history log** (so nothing is destroyed). `-DryRun`
+  writes neither. (5) It **suppresses the child gateway's own review writes** (in-artifact `-ReviewQueuePath`) so
+  draining never grows the queue, and exposes a **`-LoadTimeoutSec` passthrough** for the slow strong tier.
+  `determinism:"mixed"`, `batch:true`, `parallel_safe:false`.
+- **reason:** Closes the two-tier loop (D-0007) cheaply: a stronger local model settles most flagged items from a
+  single distilled record, and only genuine residue reaches the frontier. In-place status keeps the live queue small
+  and re-runnable; the append-only log preserves the audit trail the "never rewrite history" convention protects.
+  Going *through* the gateway (not `llama-server` directly) keeps model choice a one-line config change and mirrors
+  the Module 8 consumer pattern.
+- **alternatives:** append a resolution record and leave the item open (rejected — re-runs would re-pick the open
+  line forever / duplicate ids; the schema's `status`+`resolution` slots intend in-place transition); rewrite the
+  whole queue destructively (rejected — loses producer appends during the run and the original flagging fields; the
+  re-read-before-atomic-replace + verbatim passthrough avoids this); have `review.processor` call a frontier model
+  itself (rejected — that is routing, Module 24; escalation stays a status transition); a real lock / `in_review`
+  claim protocol for concurrent drainers (deferred — the single-background-drainer case is covered; noted follow-on);
+  calibrated/semantic reviewer confidence (deferred — heuristic first, per the stochastic-then-harden doctrine).
+- **consequences:** The 27B **`gpu_layers` was tuned 28→32** and a cold 27B load (~90s, ~2 tok/s) can exceed the
+  gateway's 120s default, hence the `-LoadTimeoutSec` passthrough (see REVIEW_QUEUE). A thinking-style strong model
+  may exhaust `max_tokens` before emitting the JSON verdict → it is safely **escalated** rather than mis-resolved
+  (observed in `m9-test-003`); a strong-tier prompt/token follow-on is logged. The write-back re-reads immediately
+  before an atomic replace but is **not** a full concurrency protocol — fine for the single background drainer this
+  phase intends; a lock is a noted follow-on. · **affects:** Module 9, Modules 7/8/24, `REVIEW_QUEUE.md`,
+  `TOOL_MODEL_REGISTRY.md`, `models.json` (27B gpu_layers). · **revisit-if:** concurrent drainers/producers need a
+  lock; a frontier `route.tasks` (#24) drains `escalated`; resolved-item compaction is built; a calibrated reviewer
+  confidence is needed; a warm gateway worker lands.

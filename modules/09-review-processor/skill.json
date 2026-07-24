@@ -1,0 +1,54 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "review.processor",
+  "name": "Review Queue Processor",
+  "version": "0.1.0",
+  "contract_version": "0.1",
+  "purpose": "Drain review_queue.jsonl by adjudicating flagged items one at a time with a STRONGER local model via model.gateway (default tier mid = Qwen2.5-3B; strong = 27B). The queue has two producers (model.gateway, classify.batch). For each open item the reviewer consumes ONLY the distilled item (reason/requested/weak_result) plus a bounded fragment resolved from source_ref — never the whole batch — parses a small JSON verdict, and either resolves the item (fills resolution + status) or escalates it to the frontier (a status transition). Resolutions are written to the live queue in place (original flagging fields preserved) and to an append-only resolution log. First consumer/drainer of the review queue.",
+  "determinism": "mixed",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-ReviewProcessor.ps1",
+    "args_spec": "Named params: -QueuePath <file> (or -ReviewQueuePath alias); -MaxItems <int>; -FlaggedBy <model.gateway|classify.batch>; -Reason <s>; -Ids <array>; -Tier <tiny|weak|mid|strong> | -Model <model_id>; -GpuLayers <int> (tune the 27B) -LoadTimeoutSec <int> (raise for a cold strong-tier load); sampling -MaxTokens -Temperature -Seed; -EscalateThreshold <0..1>; -MaxFragmentChars <int>; -DryRun; -ResolutionLogPath <file>; plumbing -Registry -GatewayPath -PwshPath. OR -InputsJson '<json {queue_path,review_queue_path,max_items,flagged_by,reason,ids,tier,model,gpu_layers,load_timeout_s,max_tokens,temperature,seed,escalate_threshold,max_fragment_chars,dry_run,resolution_log_path,registry,gateway_path,pwsh_path}>'. Optional -ArtifactRoot, -InvocationId.",
+    "calls": ["model.gateway"]
+  },
+  "inputs": [
+    { "name": "queue_path", "type": "string", "required": false, "description": "Path to review_queue.jsonl (default: repo-root). -ReviewQueuePath is accepted as an alias." },
+    { "name": "max_items", "type": "int", "required": false, "default": 25, "description": "Max open items to adjudicate in one pass (drains slowly in the background)." },
+    { "name": "flagged_by", "type": "string", "required": false, "description": "Only adjudicate items from this producer: model.gateway | classify.batch." },
+    { "name": "reason", "type": "string", "required": false, "description": "Only adjudicate items whose reason matches (low_confidence|contradiction|malformed|uncategorized|duplicate|needs_strong_review|failed_transform)." },
+    { "name": "ids", "type": "array", "required": false, "description": "Adjudicate only these review-item ids. Via InputsJson." },
+    { "name": "tier", "type": "string", "required": false, "default": "mid", "description": "Gateway LLM tier for the reviewer: tiny|weak|mid|strong. Default mid = Qwen2.5-3B (stronger than the weak producer). strong = 27B." },
+    { "name": "model", "type": "string", "required": false, "description": "Explicit gateway model_id (overrides tier)." },
+    { "name": "gpu_layers", "type": "int", "required": false, "description": "Override the gateway's gpu_layers for this run — the knob to tune the 27B (strong) partial offload for 11 GB VRAM." },
+    { "name": "load_timeout_s", "type": "int", "required": false, "description": "Override the gateway's server load timeout (default 120s). Raise it for a COLD strong-tier (27B) load, which reads ~16 GB from disk (~90s cold, ~8s warm)." },
+    { "name": "max_tokens", "type": "int", "required": false, "default": 384, "description": "Per-item reviewer generation cap." },
+    { "name": "temperature", "type": "number", "required": false, "default": 0.0, "description": "Sampling temperature (0 = deterministic/greedy)." },
+    { "name": "seed", "type": "int", "required": false, "default": 42, "description": "RNG seed passed to the gateway for reproducibility." },
+    { "name": "escalate_threshold", "type": "number", "required": false, "default": 0.5, "description": "Reviewer confidence below this (or an unparseable/uncertain verdict, or the model asking to escalate) sends the item to the frontier." },
+    { "name": "max_fragment_chars", "type": "int", "required": false, "default": 1500, "description": "Cap on the source fragment / previews shown to the reviewer, to keep adjudication cheap." },
+    { "name": "dry_run", "type": "bool", "required": false, "default": false, "description": "Adjudicate and report intended transitions but write NOTHING back (no queue rewrite, no log append)." },
+    { "name": "resolution_log_path", "type": "string", "required": false, "description": "Append-only resolution history log (default: review_resolved.jsonl beside the queue)." },
+    { "name": "registry", "type": "string", "required": false, "description": "Path to the gateway's models.json (passed through to model.gateway)." },
+    { "name": "gateway_path", "type": "string", "required": false, "description": "Path to Invoke-ModelGateway.ps1 (default: resolved from modules/07-model-gateway)." },
+    { "name": "pwsh_path", "type": "string", "required": false, "description": "pwsh executable used to spawn the gateway child (default the dotnet-tool pwsh)." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ queue_path, dry_run, tier, reviewer_model, selected_from, escalate_threshold, selected_count, resolved_count, escalated_count, error_count, skipped_malformed, open_remaining, queue_written, items[ {id, flagged_by, reason, requested, kind, prior_status, new_status, verdict, decision, reviewer_confidence, model_self_confidence, escalated_to, finish_reason, source_fragment_resolved, error} ], resolution_log_path, resolution_count }"
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4"],
+    "models": ["a stronger GGUF LLM via model.gateway (default the mid tier = Qwen2.5-3B; strong = 27B)"],
+    "libraries": [],
+    "cpu": "any", "gpu": "nvidia (CUDA) via the gateway", "memory_mb": 4096,
+    "network": false, "filesystem": "write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 1800, "on_timeout": "kill_tree_and_report" },
+  "batch": true,
+  "streaming": false,
+  "parallel_safe": false,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

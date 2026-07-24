@@ -228,6 +228,39 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   · **last test:** 2026-07-24 via executor (**tests 33/33**; `m8-test-001`, exit 0, ~26s). · **skills:**
   `classify.batch`. See D-0017.
 
+### `review.processor` — Review Queue Processor (Module 9)
+- **status:** installed · **type:** skill (PowerShell; **consumes `model.gateway`**) ·
+  **location:** `LifeOrchestrator-Refresh/modules/09-review-processor/`
+- **invocation:** direct `pwsh -NoProfile -File .\Invoke-ReviewProcessor.ps1 [-QueuePath <file> | -ReviewQueuePath]
+  [-MaxItems <n>] [-FlaggedBy <model.gateway|classify.batch>] [-Reason <s>] [-Tier <tiny|weak|mid|strong> | -Model <id>]
+  [-GpuLayers <n>] [-LoadTimeoutSec <s>] [-EscalateThreshold <0..1>] [-DryRun] [-ResolutionLogPath <file>]` (or
+  `-InputsJson '<json {queue_path,max_items,flagged_by,reason,ids,tier,model,gpu_layers,load_timeout_s,max_tokens,
+  temperature,seed,escalate_threshold,max_fragment_chars,dry_run,resolution_log_path,registry,gateway_path,pwsh_path}>'`);
+  wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
+- **supported tasks:** **drain `review_queue.jsonl`** — select OPEN flagged items (both producers) and adjudicate each
+  **single** item with a **stronger** local model (default `-Tier mid`=3B; `strong`=27B) via `model.gateway`, consuming
+  only the item + its `source_ref` fragment + `weak_result`. Resolves (`resolution`+`status:"resolved"`) or escalates
+  (`status:"escalated"`, `escalated_to:"frontier"`). Updates the queue **in place** (history preserved) + appends
+  `review_resolved.jsonl` (`lifeorch.review.resolution/0.1`); `-DryRun` writes nothing.
+- **I/O:** in = the JSON above (queue on disk); out = `lifeorch.skill.result/0.1` envelope (result = `{queue_path,
+  dry_run, tier, reviewer_model, selected_from, escalate_threshold, selected_count, resolved_count, escalated_count,
+  error_count, skipped_malformed, open_remaining, queue_written, items[{id,flagged_by,reason,requested,kind,
+  prior_status,new_status,verdict,decision,reviewer_confidence,model_self_confidence,escalated_to,finish_reason,
+  source_fragment_resolved,error}], resolution_log_path, resolution_count}`) + `runtime/artifacts/<id>/{review.json,
+  review.md,result.json,stderr.txt, gateway/…, _gateway_review_suppressed.jsonl}`.
+- **determinism:** **mixed** (deterministic select/parse/queue-rewrite; stochastic reviewer output) · **confidence:**
+  structural reviewer heuristic (valid JSON verdict + in-set corrected answer + generation completeness; `length` caps
+  ≤0.4; envelope = mean over adjudicated items) · **speed:** `mid`(3B) ~5s load + fast; `strong`(27B) slow (~2 tok/s,
+  cold load ~90s — pass `-LoadTimeoutSec 300`) · **CPU/GPU/mem:** low / CUDA (via gateway) / ~2–4 GB+model ·
+  **network:** none · **cost:** local only.
+- **limitations:** **`parallel_safe:false`** (drives the gateway + rewrites the shared queue file); **one gateway call
+  per item** with per-call model load (no warm worker — D-0002/D-0016); heuristic (not calibrated) reviewer confidence;
+  escalation is a **status transition**, not a frontier call (the frontier / #24 drains `escalated`); the in-place
+  write re-reads immediately before an atomic replace but is not a full concurrency protocol (single background drainer
+  assumed); a thinking-style `strong` model may exhaust `max_tokens` before the JSON verdict → safely escalated (tune
+  follow-on); no compaction/archival of resolved items (follow-on). · **last test:** 2026-07-24 via executor
+  (**tests 34/34**; `m9-test-003`, exit 0, ~150s incl. the 27B). · **skills:** `review.processor`. See D-0018.
+
 ---
 
 ## Hardware profile (measured 2026-07-24 — DESKTOP-PF5FFMF)
@@ -260,7 +293,7 @@ All staged under `F:\My_Programs\LifeOrchestrator-Refresh_Large_Data\_pending-mo
 | `llm.weak.qwen2p5-0p5b` | llm | `llm\Qwen2.5-0.5B-Instruct-Q4_K_M\…gguf` | 0.38 GB | llama-server | **yes** |
 | `llm.weak.qwen2p5-1p5b` | llm | `llm\Qwen2.5-1.5B-Instruct-Q4_K_M\…gguf` | 0.94 GB | llama-server | **yes** (default) |
 | `llm.weak.qwen2p5-3b` | llm | `llm\Qwen2.5-3B-Instruct-IQ4_XS\…gguf` | 1.66 GB | llama-server | **yes** |
-| `llm.strong.qwen3p5-27b` | llm | `llm\Qwen3.5-27B-Q4_K_M\…gguf` | 16.3 GB | llama-server | **yes** (partial GPU) |
+| `llm.strong.qwen3p5-27b` | llm | `llm\Qwen3.5-27B-Q4_K_M\…gguf` | 16.3 GB | llama-server | **yes** (partial GPU, ngl=32 tuned M9) |
 | `stt.whisper.base-en` | stt | `stt\whisper-ggml-base.en\ggml-base.en.bin` | 0.14 GB | whisper.cpp | no → M11 |
 | `tts.tokenizer.qwen3-12hz` | tts-comp | `tts\Qwen3-TTS-Tokenizer-12Hz\` | 0.65 GB | transformers | no → M12 |
 | `tts.weak.qwen3-0p6b` | tts | `tts\Qwen3-TTS-12Hz-0.6B-CustomVoice\` | 2.38 GB | transformers | no → M12 |

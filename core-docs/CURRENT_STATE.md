@@ -5,18 +5,33 @@ Owns **reality as it exists now** — not intended architecture. Keep it compact
 is planned (serves scripts and weaker local models) but not yet created.
 
 - **Project phase:** MVP module build-out.
-- **Active module:** _none in progress._ **Modules 0–8 complete** (0 executor · 1 `skill.bootstrap` · 2
+- **Active module:** _none in progress._ **Modules 0–9 complete** (0 executor · 1 `skill.bootstrap` · 2
   `fs.observer` · 3 `proc.observer` · 4 `uia.inspector` · 5 `uia.actor` · 6 `capture.screen` · 7 `model.gateway` ·
-  8 `classify.batch`), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure).
-  **Module 8 — Batch Classification & Sorting (`classify.batch`) is MVP complete this session** — the **first real
+  8 `classify.batch` · 9 `review.processor`), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure).
+  **Module 8 — Batch Classification & Sorting (`classify.batch`) is MVP complete** — the **first real
   consumer of `model.gateway`**: for each item in a batch it calls the gateway (default `-Tier weak` = 1.5B) with a
   mode-specific prompt (`classify` one-label / `multilabel` / `extract` fields), parses the completion, computes a
   classification confidence (completeness+validity heuristic), groups the items, and routes below-threshold items to
   `review_queue.jsonl` (`flagged_by:"classify.batch"`; it **suppresses** the gateway's own review writes to keep the
   canonical queue correctly attributed). `determinism:"mixed"`, `batch:true`, `parallel_safe:false`. **Tests 33/33 via
-  the executor** (`m8-test-001`, exit 0, ~26s). **Module 9 — Review Queue Processor (`review.processor`) is next**
-  (author its work order next session). Note: **the review queue now has two producers** — `model.gateway` and
+  the executor** (`m8-test-001`, exit 0, ~26s). Note: **the review queue now has two producers** — `model.gateway` and
   `classify.batch`.
+  **Module 9 — Review Queue Processor (`review.processor`) is MVP complete this session** — the **first consumer/
+  drainer** of `review_queue.jsonl`. It selects OPEN items (bounded by `-MaxItems`; `-FlaggedBy`/`-Reason`/`-Ids`
+  filters; both producers handled) and, per item, feeds a **stronger** local model (default `-Tier mid`=3B; `strong`=27B)
+  via `model.gateway` **only** the distilled item — `reason`/`requested`/`weak_result` + a bounded fragment resolved
+  from `source_ref` (classify.batch `classified.json#id` → the closed label set + that item; model.gateway
+  `exchange.json` → bounded request/output) — **never the whole batch** (D-0007). It parses a small JSON verdict,
+  computes a structural reviewer confidence, and either **resolves** the item (fills `resolution`+`status`) or
+  **escalates** it (`status:"escalated"`, `escalated_to:"frontier"` — a status transition, NOT a frontier call) when
+  unsure/unparseable/below `-EscalateThreshold`. Writes the live queue **in place** (re-read-before-atomic-replace;
+  original flagging fields preserved; producer/malformed lines verbatim) **plus** an append-only `review_resolved.jsonl`
+  (`lifeorch.review.resolution/0.1`); `-DryRun` writes nothing; suppresses the child gateway's own review writes.
+  `determinism:"mixed"`, `batch:true`, `parallel_safe:false`. **Tests 34/34 via the executor** (`m9-test-003`, exit 0,
+  ~150s incl. the 27B) — live `mid`(3B) resolve-in-place + history preservation + resolution log, forced escalation,
+  `-DryRun` no-op, source-ref resolver, wrapper, and a live `strong`(27B) end-to-end at the **tuned `gpu_layers=32`**.
+  Also **tuned the 27B** (`gpu_layers` 28→32; `model.gateway` now supports a `-LoadTimeoutSec` passthrough via
+  `review.processor` for the slow strong tier — see REVIEW_QUEUE). See D-0018.
 - **Repo / working dir:** **`C:\Users\just_\LifeOrchestrator-Refresh\`** — the clean standalone home for
   **Life Orchestrator** (near-term local-skills track; git-initialized). Layout: `core-docs/` (these docs)
   and `modules/<NN>-<name>/` (one per module). **Reference sources (separate, not built here):** the earlier
@@ -84,6 +99,18 @@ is planned (serves scripts and weaker local models) but not yet created.
   gateway suppression, wrapper, no orphaned `llama-server`; smoke `m8-smoke-001` labeled animal/vehicle correctly.
   See D-0017. **Throughput caveat:** one gateway call per item × per-call model load (D-0002/D-0016) — fine for
   small/unattended batches; warm-worker/intra-batch-prompt is a follow-on.
+- **Module 9** — Review Queue Processor (`review.processor`). **First consumer/drainer of the review queue.** Selects
+  OPEN items (bounded `-MaxItems`; `-FlaggedBy`/`-Reason`/`-Ids` filters; both `flagged_by` producers) and adjudicates
+  each **single** item with a **stronger** local model (default `-Tier mid`=3B; `strong`=27B) via `model.gateway`,
+  consuming only `reason`/`requested`/`weak_result` + a bounded `source_ref` fragment — **not** the whole batch (D-0007).
+  Parses a JSON verdict → **resolves** (`resolution`+`status`) or **escalates** (`escalated_to:"frontier"` — a status
+  transition, not a frontier call). Writes the live queue **in place** (re-read-before-atomic-replace; original flagging
+  fields preserved; producer/malformed lines verbatim) **plus** an append-only `review_resolved.jsonl`
+  (`lifeorch.review.resolution/0.1`); `-DryRun` writes nothing; suppresses the child gateway's own review writes;
+  `-LoadTimeoutSec` passthrough for the slow strong tier. `determinism:"mixed"`, `batch:true`, `parallel_safe:false`.
+  **Tests 34/34 via the executor (2026-07-24, `m9-test-003`, exit 0)** incl. live `mid`(3B) and a live `strong`(27B)
+  end-to-end at the tuned `gpu_layers=32`; a cloud-only mock-gateway harness validated the select/parse/adjudicate/
+  queue-rewrite/escalation logic off-GPU first. **Tuned the 27B `gpu_layers` 28→32** (see REVIEW_QUEUE). See D-0018.
 
 ## Installed dependencies (verified this machine)
 - **PowerShell 7.4.6** — installed as a .NET global tool at
@@ -160,6 +187,16 @@ is planned (serves scripts and weaker local models) but not yet created.
   per-item `source_ref` and the gateway's writes suppressed from the canonical queue; Module 1 wrapper; no orphaned
   `llama-server`; run 2026-07-24 via the executor as `m8-test-001`, exit 0, ~26s). A cloud-only mock-gateway harness
   (`tests/mock-gateway.ps1`) validated the parse/confidence/group logic off-GPU before shipping.
+- Module 9: `modules/09-review-processor/tests/Invoke-ReviewProcessorTests.ps1` — **34/34 pass** (manifest +
+  `batch`/`parallel_safe`/`determinism` flags; missing-queue→ok-empty; `gateway_not_found` error path w/o queue
+  mutation; **live** `mid`(3B) adjudication that resolves a seeded classify.batch item **in place** — `resolution.by`=
+  `review.processor:llm.weak.qwen2p5-3b`, in-set `decision`, original `weak_result`/`source_ref` preserved, malformed
+  line preserved, already-resolved item untouched, `review.json` sha256 verified — + an append-only
+  `review_resolved.jsonl` `lifeorch.review.resolution/0.1`; forced **escalation** (`escalate_threshold` 0.99) →
+  `escalated_to:"frontier"`; `-DryRun` no-op (queue+log byte-identical); source-ref resolver true/false; Module 1
+  wrapper; a live **`strong`(27B)** end-to-end at `gpu_layers=32` with `-LoadTimeoutSec 300`; no orphaned
+  `llama-server`; run 2026-07-24 via the executor as `m9-test-003`, exit 0, ~150s). A cloud-only mock-gateway harness
+  (`tests/mock-gateway.ps1`) validated the select/parse/adjudicate/queue-rewrite/escalation/log logic off-GPU first.
 
 ## Known failures / gotchas
 - **Executor fatal-crashed on a transient file lock (2026-07-24T06:26:36Z).** While task `m5-example-001`
@@ -220,16 +257,20 @@ is planned (serves scripts and weaker local models) but not yet created.
 - **Model relocation:** the staged models in `_pending-model-storage\` must eventually move into their owning
   modules' F: folders (Modules 7/11/12/23) and the pending folder be deleted when empty (see its `MIGRATION.md`).
 - **model.gateway follow-ons:** semantic (not just completeness) confidence; a warm/persistent server if load
-  latency dominates; tune the 27B `gpu_layers` for 11 GB VRAM (see REVIEW_QUEUE.md).
+  latency dominates. The 27B `gpu_layers` is now **tuned to 32** (Module 9 sweep — see REVIEW_QUEUE.md); a cold
+  27B load (~90s) approaches the gateway's 120s default, so callers pass a longer `-LoadTimeoutSec` for the strong tier.
 
 ## Next expected action
-1. Author the **Module 9 work order** (`modules/09-review-processor/WORK_ORDER.md`) and implement `review.processor`:
-   a **stronger** local model (via `model.gateway`, tier `mid`/`strong`) that drains `review_queue.jsonl` — the items
-   `model.gateway` and now `classify.batch` flag — adjudicating each single flagged item (setting `resolution`/
-   `status`), NOT redoing whole batches. Depends on Modules 7, 8, and `REVIEW_QUEUE`.
-2. Housekeeping (deferred): fold the D-0009 conventions into `SKILL_CONTRACT.md` and bump the contract version
-   (now exercised by Modules 2–8; DECISION_LOG D-0009/D-0011); relocate staged models per `MIGRATION.md`; the pending
+1. **Module 10 — `audio.ingest`** (normalize/convert) is the next roadmap module (audio track, Modules 10–13),
+   OR pick up any deferred housekeeping below. Module 9 (`review.processor`) is MVP complete this session; the
+   review-queue loop is now closed (producers 7/8 → drainer 9 → frontier for `escalated` items).
+2. `review.processor` follow-ons (NOT this session): a frontier/`route.tasks` (#24) drain of `escalated` items;
+   compaction/archival of `resolved` items to keep the live queue small; a warm/persistent gateway worker (shared
+   with #8); calibrated/semantic reviewer confidence; **strong-tier prompt/max_tokens tuning** so the 27B emits a
+   parseable JSON verdict instead of being escalated on truncated reasoning (observed in `m9-test-003`).
+3. Housekeeping (deferred): fold the D-0009 conventions into `SKILL_CONTRACT.md` and bump the contract version
+   (now exercised by Modules 2–9; DECISION_LOG D-0009/D-0011); relocate staged models per `MIGRATION.md`; the pending
    `proteus_repo/tools/` leftover removal (`ops/finish-game-cleanup.bat`); classify.batch follow-ons (warm-worker /
    intra-batch prompt for throughput; calibrated confidence; a side-effecting `sort.files` mover) — see D-0017.
 
-- **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 8 classify.batch build session).
+- **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 9 review.processor build session).
