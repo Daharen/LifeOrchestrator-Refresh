@@ -5,9 +5,9 @@ Owns **reality as it exists now** — not intended architecture. Keep it compact
 is planned (serves scripts and weaker local models) but not yet created.
 
 - **Project phase:** MVP module build-out.
-- **Active module:** _none in progress._ **Modules 0–11 complete** (0 executor · 1 `skill.bootstrap` · 2
+- **Active module:** _none in progress._ **Modules 0–12 complete** (0 executor · 1 `skill.bootstrap` · 2
   `fs.observer` · 3 `proc.observer` · 4 `uia.inspector` · 5 `uia.actor` · 6 `capture.screen` · 7 `model.gateway` ·
-  8 `classify.batch` · 9 `review.processor` · 10 `audio.ingest` · 11 `speech.stt`), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure).
+  8 `classify.batch` · 9 `review.processor` · 10 `audio.ingest` · 11 `speech.stt` · 12 `speech.tts`), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure).
   **Module 8 — Batch Classification & Sorting (`classify.batch`) is MVP complete** — the **first real
   consumer of `model.gateway`**: for each item in a batch it calls the gateway (default `-Tier weak` = 1.5B) with a
   mode-specific prompt (`classify` one-label / `multilabel` / `extract` fields), parses the completion, computes a
@@ -64,6 +64,23 @@ is planned (serves scripts and weaker local models) but not yet created.
   Linux box AST-parse-checked all three `.ps1` and ran the *real* skill against a mock `whisper-cli` + a **captured real
   jfk fixture** (27/27) before any bytes hit Windows. `models.json` gained `defaults.stt`/`tiers.stt` (additive; Module 7
   re-verified 28/28). See D-0020.
+  **Module 12 — Text-to-Speech Synthesis (`speech.tts`) is MVP complete this session** — the **third audio-track module**
+  and the **first skill to drive a Python model** (Qwen3-TTS CustomVoice via the `qwen_tts` package, vs. the whisper.cpp/
+  llama.cpp binaries). **Probe-first** (`m12-probe-001/002`): confirmed the speech venv (torch 2.11+cu128, transformers
+  4.57.3, `qwen_tts`, CUDA on the RTX 2080 Ti) and the real inference API by doing a **live synthesis** before coding —
+  `qwen_tts.Qwen3TTSModel.generate_custom_voice(text, speaker, language, instruct)` → `(wavs, sr=24000)`, loaded bf16 +
+  `sdpa` (flash-attn absent). A **Python worker** (`tts_infer.py`, under the venv) loads+synthesizes and writes a WAV +
+  meta file; a **PowerShell wrapper** (`Invoke-SpeechTts.ps1`) reads the **meta file** (robust to ML-library stdout
+  chatter) and builds the envelope. Produces 24 kHz mono PCM16 `speech.wav`; optional `-Format`/`-SampleRate` via a
+  child `audio.ingest`. Registry-driven (`tts.weak.qwen3-0p6b` default / `tts.strong.qwen3-1p7b`; engine `transformers`,
+  `engine_env`=venv python). **Confidence** = a synthesis-completeness heuristic (duration vs. input length);
+  **fourth review-queue producer** (flags failed/too-short synthesis, `verify_synthesis`). `determinism:"mixed"`,
+  `parallel_safe:false` (binds CUDA), `batch:false`. Artifacts `speech.wav` + `tts.json`/`tts.md`. **Tests 25/25 via the
+  executor** (`m12-test-001`, exit 0, ~132 s) — live English synthesis (speaker Ryan, 24 kHz mono, conf 0.9), review
+  routing, mp3 conversion via the real `audio.ingest` child, error paths, Module 1 wrapper; live smoke `m12-smoke-001`
+  synthesized 5.52 s on CUDA (`device=cuda:0`, rtf ≈ 5.2). **Pre-shipped off-machine**: pwsh 7.4.6 AST-parse + `py_compile`,
+  then the *real* skill against a stdlib mock python worker (25/25) before any bytes hit Windows. `models.json` gained
+  `defaults.tts`/`tiers.tts` (additive; Module 7 re-verified 28/28). See D-0021.
 - **Repo / working dir:** **`C:\Users\just_\LifeOrchestrator-Refresh\`** — the clean standalone home for
   **Life Orchestrator** (near-term local-skills track; git-initialized). Layout: `core-docs/` (these docs)
   and `modules/<NN>-<name>/` (one per module). **Reference sources (separate, not built here):** the earlier
@@ -163,8 +180,9 @@ is planned (serves scripts and weaker local models) but not yet created.
   `model.gateway`), 1 STT (Whisper base.en), 2 TTS voices + 1 tokenizer (Qwen3-TTS 0.6B/1.7B), 1 embedding
   (Qwen3-Embedding-0.6B). **All copied to portable F: storage** (`…\LifeOrchestrator-Refresh_Large_Data\
   _pending-model-storage\`, ~27.4 GB). Full inventory + sizes + engines in `TOOL_MODEL_REGISTRY.md`; relocation plan
-  in that folder's `MIGRATION.md`. **STT (Whisper base.en) is now wired — consumed by `speech.stt` (Module 11)**;
-  the remaining non-LLM models (TTS, embedding) are declared but wired in their own modules (12/23).
+  in that folder's `MIGRATION.md`. **STT (Whisper base.en) is wired via `speech.stt` (M11); the TTS voices
+  (Qwen3-TTS 0.6B/1.7B) are wired via `speech.tts` (M12)** (they run under the speech venv, not the gateway). Only the
+  **embedding** model remains declared-but-unwired (its own Module 23).
 
 ## Available hardware (measured 2026-07-24)
 - **CPU** Intel i9-9900KF (8c/16t @3.6GHz) · **RAM** 64 GB · **GPU** NVIDIA RTX 2080 Ti **11 GB VRAM** (CUDA,
@@ -189,6 +207,7 @@ is planned (serves scripts and weaker local models) but not yet created.
 - capture.screen (direct): `pwsh -NoProfile -File modules\06-capture-screen\Invoke-CaptureScreen.ps1 [-Target <monitor|window|app|region>] [-Monitor <index|all|primary>] [-Hwnd|-ProcessId|-Title <loc>] [-App <glob>] [-X -Y -Width -Height] [-Format <png|jpg>]` (or `-InputsJson '<json>'`).
 - model.gateway (direct): `pwsh -NoProfile -File modules\07-model-gateway\Invoke-ModelGateway.ps1 [-Model <id>|-Tier <tiny|weak|mid|strong>] -Prompt '<s>' [-System '<s>'] [-MaxTokens -Temperature -TopP -TopK -Seed]` (or `-InputsJson '<json {…,messages[]}>'`). Registry: `modules\07-model-gateway\models.json`.
 - speech.stt (direct): `pwsh -NoProfile -File modules\11-speech-stt\Invoke-SpeechStt.ps1 -InputFile <audio> [-Normalize <auto|always|never>] [-Language <code>] [-Translate] [-NoGpu] [-SegmentConfidenceThreshold <0..1>] [-Model <id>]` (or `-InputsJson '<json {input,normalize,language,...}>'`). Resolves whisper.cpp + `stt.whisper.base-en` from `modules\07-model-gateway\models.json`; normalizes non-ready input via `audio.ingest`.
+- speech.tts (direct): `pwsh -NoProfile -File modules\12-speech-tts\Invoke-SpeechTts.ps1 -Text '<text>' [-Speaker <Ryan|Aiden|...>] [-Language <name>] [-Instruct '<style>'] [-Seed <n>] [-Format <wav|mp3|...>] [-SampleRate <hz>] [-Model <id>]` (or `-InputsJson '<json {text,speaker,language,instruct,...}>'`). Runs the Qwen3-TTS worker `tts_infer.py` under the speech venv (registry `engine_env`); 24 kHz mono WAV, optional format/rate via `audio.ingest`.
 - User ops (click-to-run): `ops/*.bat` — start/stop/restart/status the executor and run tests; each writes
   output to `ops/out/` for the agent to read.
 - Watchdog: `ops/start-watchdog.bat` (supervise), `ops/stop-watchdog.bat`, `ops/recover-executor.bat [-Force]`;
@@ -253,8 +272,22 @@ is planned (serves scripts and weaker local models) but not yet created.
   **dual-mode / OS-portable**: `-UseMock` runs the *real* skill against a mock `whisper-cli` (`tests/mock-whisper.ps1` +
   the captured real `tests/fixtures/jfk.whisper.json`) — it ran on the cloud Linux box (27/27) as the pre-ship gate before
   the identical harness ran live on the Windows executor.
+- Module 12: `modules/12-speech-tts/tests/Invoke-SpeechTtsTests.ps1` — **25/25 pass** (manifest + mixed/parallel_safe/
+  batch flags; a **live** English synthesis (speaker Ryan) → a real 24 kHz mono WAV with duration > 0, overall confidence
+  0.9 in (0,1], `model_provenance[1]` engine transformers, speech.wav/tts.json/tts.md artifacts with sha256; review
+  routing (forced threshold) → a valid `speech.tts` review item; **mp3 conversion** via the real `audio.ingest` child
+  (`converted=true`, mp3 artifact); `no_text` + `model_not_found` error paths with schema-valid envelopes; the Module 1
+  wrapper; `m12-test-001`, exit 0, ~132 s). The harness is **dual-mode / OS-portable**: `-UseMock` runs the *real* skill
+  against a stdlib mock python worker (`tests/mock-tts-infer.py`, writes a real PCM16 WAV) + a temp registry — it ran on
+  the cloud Linux box (25/25) as the pre-ship gate before the identical harness ran live on the Windows executor.
 
 ## Known failures / gotchas
+- **Cowork `device_stage_files` can return a STALE snapshot (2026-07-24, Module 12).** Re-staging a file to an uploads
+  path that was already staged earlier in the session returned the **old** bytes (pre-edit) even though the reported
+  `mtimeMs` was current — nearly caused a revert of Module 11's committed doc edits. **Fix/workaround:** to reliably read
+  the *current* on-disk content into the cloud, first copy it (via the executor) to a **fresh, never-staged path** (e.g.
+  `modules\<mod>\runtime\docsrc\`) and stage that; or verify staged content by a marker (grep) before editing. The
+  on-disk repo is always canonical — trust a direct executor read over a re-stage.
 - **`ffprobe` on PATH is shadowed by a Python shim (2026-07-24).** `where.exe ffprobe` returns
   `…\Python310\Scripts\ffprobe.exe` *before* the real `…\WinGet\Links\ffprobe.exe`; the Python shim is not the
   real ffprobe. Resolve ffprobe as the **sibling of the resolved ffmpeg** (as `audio.ingest` does), or filter out any
@@ -322,12 +355,12 @@ is planned (serves scripts and weaker local models) but not yet created.
   27B load (~90s) approaches the gateway's 120s default, so callers pass a longer `-LoadTimeoutSec` for the strong tier.
 
 ## Next expected action
-1. **Module 12 — `speech.tts`** (local text-to-speech, Qwen3-TTS voices under the speech venv) is the next roadmap
-   module (audio track, Modules 10–13). Module 11 (`speech.stt`) is MVP complete this session — timestamped whisper.cpp
-   transcription that consumes `audio.ingest` output and is the **third review-queue producer** (producers 7/8/11 →
-   drainer 9 → frontier for `escalated` items). `speech.stt` follow-ons (NOT this session): a warm whisper-server if load
-   latency dominates; batch/directory transcription; VAD/segmentation/diarization (→ Module 13); calibrated/semantic
-   confidence; word-level artifacts; a larger/multilingual STT model + `tiers.stt`. See D-0020.
+1. **Module 13 — `voice.live`** (compose record + VAD + STT + TTS into a voice loop) is the next roadmap module and the
+   **capstone of the audio track (10–13)**: Modules 10 (`audio.ingest`), 11 (`speech.stt`), and 12 (`speech.tts`) are all
+   MVP complete, so #13 composes them (plus audio capture / VAD). Both speech modules are review-queue producers
+   (producers 7/8/11/12 → drainer 9 → frontier for `escalated` items). `speech.tts` follow-ons (NOT this session): a warm
+   TTS worker (per-call model load ~30–40 s cold is the pressure point — shared with the gateway/classify.batch warm-worker
+   item); voice clone/design; batch/long-form/streaming; the strong 1.7B tier; calibrated confidence; SSML. See D-0021.
 2. `review.processor` follow-ons (NOT this session): a frontier/`route.tasks` (#24) drain of `escalated` items;
    compaction/archival of `resolved` items to keep the live queue small; a warm/persistent gateway worker (shared
    with #8); calibrated/semantic reviewer confidence; **strong-tier prompt/max_tokens tuning** so the 27B emits a
@@ -338,4 +371,4 @@ is planned (serves scripts and weaker local models) but not yet created.
    intra-batch prompt for throughput; calibrated confidence; a side-effecting `sort.files` mover) — see D-0017; audio.ingest follow-ons (batch/directory ingest; trimming/
    segmentation → Module 13; denoise/high-pass — see D-0019).
 
-- **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 11 speech.stt build session).
+- **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 12 speech.tts build session).

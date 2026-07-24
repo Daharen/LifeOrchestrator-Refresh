@@ -146,7 +146,24 @@ Needs refactor · Deprecated · Replaced.
   + a mock-whisper harness driving the *real* skill against a captured jfk fixture, 27/27) before any bytes shipped.
   Work order: `modules/11-speech-stt/WORK_ORDER.md`. See D-0020. Follow-on: warm whisper-server; batch/directory;
   VAD/diarization (→ #13); calibrated/semantic confidence; larger/multilingual model + `tiers.stt`.
-- **12 `speech.tts`** local TTS · **13 `voice.live`** compose record+VAD+STT+TTS (after 10–12 work). *(provisional)*
+- **12 `speech.tts`** — Text-to-Speech Synthesis (Qwen3-TTS CustomVoice). ***MVP complete*** — the **third audio module**
+  and the **first skill to drive a Python model** (vs. the whisper.cpp / llama.cpp binaries). A Python worker
+  (`tts_infer.py`, under the speech venv) drives `qwen_tts.Qwen3TTSModel.generate_custom_voice(text, speaker, language,
+  instruct)` (bf16 + `sdpa` on the RTX 2080 Ti → `(wavs, sr=24000)`); a PowerShell wrapper (`Invoke-SpeechTts.ps1`)
+  reads the worker's **meta file** (robust to ML-library stdout chatter) and builds the envelope. Produces a 24 kHz mono
+  PCM16 `speech.wav` (optional `-Format`/`-SampleRate` via `audio.ingest`). Registry-driven model resolution
+  (`tts.weak.qwen3-0p6b` default, `tts.strong.qwen3-1p7b`; engine `transformers`, `engine_env` = venv python).
+  **Confidence** = a synthesis-completeness heuristic (duration vs. input length); **fourth review-queue producer**
+  (flags failed/too-short synthesis, `verify_synthesis`). `determinism:"mixed"`, `parallel_safe:false` (binds CUDA),
+  `batch:false`. Artifacts `speech.wav` + `tts.json`/`tts.md`. **Tests 25/25 via the executor** (`m12-test-001`, exit 0,
+  ~132 s) — live English synthesis (speaker Ryan, 24 kHz mono, conf 0.9), review routing, mp3 conversion via the real
+  `audio.ingest` child, error paths, and the Module 1 wrapper; live smoke `m12-smoke-001` (5.52 s, rtf ≈ 5.2, cuda:0).
+  **Pre-shipped off-machine** on cloud pwsh 7.4.6 (AST-parse + `py_compile`) with a stdlib mock python worker driving the
+  *real* skill (25/25) before any bytes shipped. Probe-first (`m12-probe-001/002`) confirmed the venv + inference API by
+  a live synthesis before coding. `models.json` gained `defaults.tts`/`tiers.tts` (additive; Module 7 re-verified 28/28).
+  Work order: `modules/12-speech-tts/WORK_ORDER.md`. See D-0021. Follow-on: warm TTS worker; voice clone/design;
+  batch/long-form; the strong 1.7B tier; calibrated confidence; SSML.
+- **13 `voice.live`** compose record+VAD+STT+TTS (after 10–12 work). *(provisional)*
 
 ## Modules 14–18 — Image & document perception (provisional)
 - **14 `ocr.layout`** OCR + boxes + reading order · **15 `image.util`** resize/crop/meta/hash/similarity/

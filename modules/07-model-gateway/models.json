@@ -8,7 +8,7 @@
     "llama-server": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\_pending-model-storage\\_engines\\llama.cpp\\bin\\llama-server.exe",
     "_comment": "Staged, verified to run standalone (health + chat) 2026-07-24. Depends on a system CUDA runtime (not on the source folder). If torn down, restage from F:\\Qwen3.5-27B\\llama.cpp\\build\\bin."
   },
-  "defaults": { "llm": "llm.weak.qwen2p5-1p5b", "stt": "stt.whisper.base-en" },
+  "defaults": { "llm": "llm.weak.qwen2p5-1p5b", "stt": "stt.whisper.base-en", "tts": "tts.weak.qwen3-0p6b" },
   "tiers": {
     "llm": {
       "tiny": "llm.weak.qwen2p5-0p5b",
@@ -18,6 +18,10 @@
     },
     "stt": {
       "base": "stt.whisper.base-en"
+    },
+    "tts": {
+      "weak": "tts.weak.qwen3-0p6b",
+      "strong": "tts.strong.qwen3-1p7b"
     }
   },
   "models": [
@@ -96,7 +100,7 @@
       "engine": "transformers",
       "engine_env": "F:\\My_Programs\\Local_Computer_Speech_Large_Data\\python_env\\Scripts\\python.exe",
       "params": { "params_b": 0.6, "size_bytes": 2498389790 },
-      "notes": "DECLARED only. Weak TTS voice. Runs under the speech venv (torch 2.11+cu128, transformers 4.57). Wire in Module 12 (speech.tts)."
+      "notes": "Consumed by speech.tts (Module 11's sibling, Module 12), which reads this entry's path + engine_env directly. Still wired:false for model.gateway on purpose (the gateway MVP runs type=llm only). Default weak TTS voice. Runs under the speech venv (torch 2.11+cu128, transformers 4.57.3, qwen_tts). Verified 2026-07-24 (m12-probe-002 live synthesis; m12-test-001 27→25/25). English speakers Ryan/Aiden; 24 kHz mono output."
     },
     {
       "model_id": "tts.strong.qwen3-1p7b",
@@ -106,7 +110,7 @@
       "engine": "transformers",
       "engine_env": "F:\\My_Programs\\Local_Computer_Speech_Large_Data\\python_env\\Scripts\\python.exe",
       "params": { "params_b": 1.7, "size_bytes": 4520220350 },
-      "notes": "DECLARED only. Stronger TTS voice. Runs under the speech venv. Wire in Module 12 (speech.tts)."
+      "notes": "Consumed by speech.tts (Module 12) as the strong tier (-Tier strong / -Model tts.strong.qwen3-1p7b). Still wired:false for model.gateway (type=llm only). Stronger TTS voice; runs under the speech venv. Slower per-call load (3.8 GB); reserve for higher-quality synthesis."
     },
     {
       "model_id": "embedding.qwen3-0p6b",

@@ -122,6 +122,21 @@ the gateway), and its `audio.ingest` child is deterministic and writes nothing t
 threshold produced a valid `speech.stt` review item; `m11-test-001`). **Producers are now 7/8/11 → local drainer 9 →
 frontier for the residue.** See D-0020.
 
+## Fourth producer wired (Module 12)
+`speech.tts` is the **fourth skill that appends** to `review_queue.jsonl` (after `model.gateway`, `classify.batch`,
+`speech.stt`), and the second from the audio track. It synthesizes speech via Qwen3-TTS and flags a **failed or
+suspiciously-short synthesis**: when its **synthesis-completeness confidence** — a documented heuristic over produced
+audio + duration vs. input length (empty/near-silent 0.1, far-too-short-for-the-text 0.3, short 0.5, plausible 0.9) —
+falls below `-ConfidenceThreshold` (default 0.5), it appends one `lifeorch.review.item/0.1` with
+`flagged_by:"speech.tts"`, `reason` = `failed_transform` (confidence ≤ 0.15) or `low_confidence` otherwise,
+`source_ref:"artifact://<invDir>/tts.json"`, `weak_result = {model, speaker, text_preview, duration_s, chars,
+confidence_reason}`, `requested:"verify_synthesis"`. It is a **synthesis-failure guard** (empty/garbled/truncated audio),
+not an audio-quality judge. Like the deterministic `audio.ingest`, its child (`audio.ingest`, used only for optional
+format conversion) writes nothing to the queue, so there is no gateway-style suppression to do. Module 9 selects by
+`flagged_by` and handles the new `verify_synthesis` verb by construction. Verified end-to-end by the Module 12 tests (a
+forced too-short/failed synthesis produced a valid `speech.tts` item; `m12-test-001`). **Producers are now 7/8/11/12 →
+local drainer 9 → frontier for the residue.** See D-0021.
+
 ## Design flags to revisit (not yet actioned — for a future session/frontier pass)
 - **speech.stt confidence is mean token probability — honest but not calibrated.** A real acoustic signal (richer than
   the gateway's completeness heuristic) but not a probability the transcript is *correct*; replace with a calibrated /

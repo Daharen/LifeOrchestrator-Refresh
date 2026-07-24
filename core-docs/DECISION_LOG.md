@@ -430,3 +430,52 @@ alternatives · consequences · affects · state (provisional | locked) · revis
   `MODULE_ROADMAP.md`. · **revisit-if:** a warm whisper worker, batch/streaming, calibrated/semantic confidence, VAD/
   diarization, or a larger/multilingual STT model is needed (each its own scoped follow-on); a unified model gateway ever
   subsumes STT execution.
+
+### D-0021 — speech.tts wraps Qwen3-TTS via a Python worker; mixed determinism; synthesis-completeness confidence; fourth review producer
+- **date:** 2026-07-24 · **state:** locked (Python-worker + wrap + registry-read + review model), provisional (confidence heuristic)
+- **decision:** Module 12 `speech.tts` — the third audio-track module and the **first skill to drive a Python model**
+  (vs. the whisper.cpp / llama.cpp *binaries*) — synthesizes speech from text with the **Qwen3-TTS CustomVoice** models
+  (`qwen_tts` package / transformers, under the speech venv). MVP design, settled after a **probe-first** pass
+  (`m12-probe-001/002` confirmed the venv (torch 2.11+cu128, transformers 4.57.3, `qwen_tts`, soundfile, CUDA on the
+  RTX 2080 Ti), the model layout, and — critically — the real inference API by *doing a live synthesis* before writing
+  the skill: `qwen_tts.Qwen3TTSModel.from_pretrained(path, device_map="cuda:0", dtype=bfloat16, attn_implementation=
+  "sdpa")` then `generate_custom_voice(text, speaker, language, instruct) -> (List[np.ndarray], sr=24000)`; flash-attn is
+  absent so `sdpa` is the attn; no local `*.py`/trust_remote_code). Design: (1) a **two-part** skill — a Python worker
+  (`tts_infer.py`, run under the venv) loads the model + synthesizes + writes the WAV and a small JSON meta; a
+  **PowerShell wrapper** (`Invoke-SpeechTts.ps1`) builds the contract envelope. The wrapper spawns python and reads the
+  **meta file** (not stdout) so transformers/qwen_tts console chatter can never corrupt the parsed result. (2) Output is
+  a **24 kHz mono PCM16 `speech.wav`** at the model's native rate; a requested non-wav `-Format` or non-24k
+  `-SampleRate` is produced by composing **`audio.ingest`** (Module 10) — the audio track wired the other direction
+  (11 consumes audio.ingest; 12 feeds it). (3) **Confidence = a documented synthesis-completeness heuristic** (audio
+  produced + plausible duration vs. input length: empty/near-silent 0.1, far-too-short 0.3, short 0.5, plausible 0.9) —
+  NOT audio quality; a conservative lower bound (~0.03 s/char) so only clearly-failed synthesis flags. (4) **Fourth
+  review-queue producer** — a synthesis below `-ConfidenceThreshold` (default 0.5) appends one `lifeorch.review.item/0.1`
+  (`flagged_by:"speech.tts"`, `reason` `failed_transform`≤0.15 else `low_confidence`, `requested:"verify_synthesis"`) —
+  a failed-synthesis guard. (5) **Registry-driven, decoupled from the gateway's `wired` gate** (mirrors D-0020): resolves
+  the model `path` + `engine_env` (the venv python) from `models.json`, but the TTS entries stay **`wired:false`** there
+  (the gateway MVP runs `type=llm` only). Added `defaults.tts`/`tiers.tts` (additive; Module 7 re-verified 28/28).
+  `determinism:"mixed"` (deterministic orchestration; the model samples with `do_sample=true`, seedable via `-Seed`),
+  `parallel_safe:false` (binds the CUDA context + loads a model), `batch:false`.
+- **reason:** Smallest useful MVP that gives the system a voice and completes the STT↔TTS pair (with Module 11) that a
+  future `voice.live` (#13) composes. Wrapping the present `qwen_tts` package (not reimplementing a TTS stack) fits the
+  language policy (Python for model ecosystems); the worker+wrapper split keeps the contract envelope in PowerShell (like
+  every other skill) while the model lives in its native Python. The meta-file hand-off is the robust answer to
+  "stdout gets polluted by ML libraries". Composing `audio.ingest` for format conversion reuses Module 10 rather than
+  re-encoding in Python.
+- **alternatives:** parse the worker's stdout for the result (rejected — transformers/qwen_tts print freely to stdout/
+  stderr; a meta file is deterministic); reimplement TTS or call transformers `AutoModel` directly (rejected —
+  transformers 4.57 lacks `Qwen3TTSForConditionalGeneration`; `qwen_tts` is the supported path and is installed); encode
+  non-wav formats in Python via soundfile/ffmpeg-python (rejected — `audio.ingest` already solves it, deterministically);
+  flip the TTS entries `wired:true` (rejected — misstates that the *gateway* runs them and risks the Module 7 posture;
+  speech.tts reads them directly); a calibrated audio-quality confidence, voice cloning/design, batch, streaming
+  (deferred — heuristic-first; scoped follow-ons / Module 13). `bfloat16` on the Turing GPU works (torch handles it);
+  `float16` is the documented fallback.
+- **consequences:** the review queue now has **four** producers (`model.gateway`, `classify.batch`, `speech.stt`,
+  `speech.tts`); Module 9 selects by `flagged_by` and handles the new `verify_synthesis` verb by construction. Per-call
+  model load is **~30–40 s cold** (1.8 GB read + qwen_tts import) and synthesis runs at ~5× real-time on this GPU (rtf
+  ≈ 5.2 for the 0.6B) — fine for unattended use; a warm/persistent TTS worker is the concrete follow-on pressure (shared
+  with the gateway/#8 warm-worker item). Registry gains `defaults.tts`/`tiers.tts` + a `speech.tts` skill entry + a
+  qwen_tts/speech-venv runtime note. The triplicated 12 Hz speech tokenizer (REVIEW_QUEUE note) is still pending
+  de-duplication when models relocate. · **affects:** Module 12, Modules 10/11/13/9, `TOOL_MODEL_REGISTRY.md`,
+  `models.json`, `REVIEW_QUEUE.md`, `MODULE_ROADMAP.md`. · **revisit-if:** a warm TTS worker, voice cloning/design,
+  batch/streaming, long-form chunking, calibrated confidence, or SSML is needed (each its own scoped follow-on).

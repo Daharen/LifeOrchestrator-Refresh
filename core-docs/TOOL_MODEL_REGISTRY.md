@@ -329,6 +329,33 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   not calibrated correctness. · **last test:** 2026-07-24 via executor (**tests 27/27**; `m11-test-001`, exit 0, ~14 s;
   live smoke `m11-smoke-001` transcribed jfk.wav on CUDA). · **skills:** `speech.stt`. See D-0020.
 
+### `speech.tts` — Text-to-Speech Synthesis (Module 12)
+- **status:** installed · **type:** skill (PowerShell wrapper + Python worker `tts_infer.py` under the speech venv) ·
+  **location:** `LifeOrchestrator-Refresh/modules/12-speech-tts/`
+- **invocation:** direct `pwsh -NoProfile -File .\Invoke-SpeechTts.ps1 -Text <string> [-Speaker <name>] [-Language <name>]
+  [-Instruct <style>] [-Seed <int>] [-Dtype <bfloat16|float16|float32>] [-SampleRate <hz|0>] [-Format <wav|mp3|flac|opus|
+  ogg|m4a>] [-MaxNewTokens <n>] [-ConfidenceThreshold <0..1>] [-Model <id>] [-Registry|-PythonPath|-TtsInferPath|
+  -AudioIngestPath|-PwshPath|-ReviewQueuePath <override>]` (or `-InputsJson '<json {text,speaker,language,instruct,seed,
+  dtype,sample_rate,format,max_new_tokens,confidence_threshold,model,registry,python_path,tts_infer_path,audio_ingest_path,
+  pwsh_path,review_queue_path}>'`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
+- **supported tasks:** synthesize one utterance of speech from text using Qwen3-TTS CustomVoice (preset speakers).
+  Resolves the TTS model + venv python from `models.json`; produces 24 kHz mono PCM16 WAV; optional format/rate conversion
+  via `audio.ingest`. English speakers Ryan/Aiden (+ Chinese/Japanese/Korean voices — use the text's native language).
+- **I/O:** in = text + options; out = `lifeorch.skill.result/0.1` envelope (result = `{input{text,chars}, model{id,name,
+  engine,engine_env,device,dtype,attn}, params{speaker,language,instruct,seed,max_new_tokens}, audio{path,sample_rate,
+  channels,samples,duration_s,bytes,sha256,format,native_sample_rate,converted}, confidence{overall,reason}, review{
+  threshold,flagged,queue_path}, synthesis{runtime_ms,real_time_factor}}`) + `runtime/artifacts/<id>/{speech.wav,tts.json,
+  tts.md,result.json,stderr.txt,py.log,tts_args.json,tts_meta.json, convert/…}`.
+- **determinism:** **mixed** (deterministic orchestration; the model samples with `do_sample=true`, seedable via `-Seed`) ·
+  **confidence:** synthesis-completeness heuristic (audio produced + duration vs. input length; `< -ConfidenceThreshold`
+  0.5 → `review_queue.jsonl`, `flagged_by:"speech.tts"`) · **speed:** per-call model load ~30–40 s cold; synthesis ~5×
+  real-time on the RTX 2080 Ti (rtf ≈ 5.2 for the 0.6B) · **CPU/GPU/mem:** low / **CUDA (RTX 2080 Ti)** / ~2–4 GB+model.
+- **limitations:** **`parallel_safe:false`** (binds the CUDA context + loads a model); one utterance per invocation
+  (`batch:false`); per-call model load (no warm worker yet); GPU (CUDA) required; preset-speaker CustomVoice only (no
+  voice clone/design in the MVP); confidence is a completeness signal, not audio quality. · **last test:** 2026-07-24 via
+  executor (**tests 25/25**; `m12-test-001`, exit 0, ~132 s; live smoke `m12-smoke-001` synthesized 5.52 s on CUDA). ·
+  **skills:** `speech.tts`. See D-0021.
+
 ---
 
 ## Hardware profile (measured 2026-07-24 — DESKTOP-PF5FFMF)
@@ -352,8 +379,11 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   `-np`, `-l <lang>`, `-ng`, `-t`, `-bs`/`-bo` (`m11-probe-002` transcribed the bundled `samples\jfk.wav`, base.en on
   CUDA ≈ 0.07 rtf). `whisper-cli` accepts flac/mp3/ogg/wav; `speech.stt` still normalizes to 16 kHz mono s16 WAV via
   `audio.ingest` by default for determinism. `llama-cli`-style interactive gotchas do **not** apply here.
-- **Speech Python venv** — `F:\My_Programs\Local_Computer_Speech_Large_Data\python_env\` (Python 3.12.10; torch
-  2.11.0+cu128, torchaudio, transformers 4.57.3, accelerate, safetensors, soundfile, librosa, onnxruntime). *For Module 12.*
+- **Speech Python venv** — `F:\My_Programs\Local_Computer_Speech_Large_Data\python_env\Scripts\python.exe` (Python
+  3.12.10; torch 2.11.0+cu128, torchaudio, transformers 4.57.3, accelerate, safetensors, soundfile 0.13.1, librosa 0.11,
+  onnxruntime, **`qwen_tts`**). **Verified + wired by `speech.tts` (Module 12), 2026-07-24** (`m12-probe-001/002`): CUDA
+  available on the RTX 2080 Ti; `qwen_tts.Qwen3TTSModel.generate_custom_voice(...)` loads bf16 + `sdpa` (flash-attn absent)
+  and returns `(List[np.ndarray], sr=24000)`. This is the venv the TTS models run under (registry `engine_env`).
 - **System Python** 3.12.10 (`…\AppData\Local\Programs\Python\Python312`) with torch 2.2.1 + onnxruntime-gpu/directml.
 - Ollama / LM Studio: **not installed.** git / winget / .NET SDK 9 / node: present (see above).
 
@@ -368,9 +398,9 @@ All staged under `F:\My_Programs\LifeOrchestrator-Refresh_Large_Data\_pending-mo
 | `llm.weak.qwen2p5-3b` | llm | `llm\Qwen2.5-3B-Instruct-IQ4_XS\…gguf` | 1.66 GB | llama-server | **yes** |
 | `llm.strong.qwen3p5-27b` | llm | `llm\Qwen3.5-27B-Q4_K_M\…gguf` | 16.3 GB | llama-server | **yes** (partial GPU, ngl=32 tuned M9) |
 | `stt.whisper.base-en` | stt | `stt\whisper-ggml-base.en\ggml-base.en.bin` | 0.14 GB | whisper.cpp | **via `speech.stt`** (M11) |
-| `tts.tokenizer.qwen3-12hz` | tts-comp | `tts\Qwen3-TTS-Tokenizer-12Hz\` | 0.65 GB | transformers | no → M12 |
-| `tts.weak.qwen3-0p6b` | tts | `tts\Qwen3-TTS-12Hz-0.6B-CustomVoice\` | 2.38 GB | transformers | no → M12 |
-| `tts.strong.qwen3-1p7b` | tts | `tts\Qwen3-TTS-12Hz-1.7B-CustomVoice\` | 4.31 GB | transformers | no → M12 |
+| `tts.tokenizer.qwen3-12hz` | tts-comp | `tts\Qwen3-TTS-Tokenizer-12Hz\` | 0.65 GB | transformers | via bundle (M12) |
+| `tts.weak.qwen3-0p6b` | tts | `tts\Qwen3-TTS-12Hz-0.6B-CustomVoice\` | 2.38 GB | transformers | **via `speech.tts`** (M12, default) |
+| `tts.strong.qwen3-1p7b` | tts | `tts\Qwen3-TTS-12Hz-1.7B-CustomVoice\` | 4.31 GB | transformers | **via `speech.tts`** (M12) |
 | `embedding.qwen3-0p6b` | embedding | `embedding\Qwen3-Embedding-0.6B\` | 1.12 GB | transformers | no → M23 |
 
 Tiers (`models.json`): `tiny`=0.5B, `weak`=1.5B (default), `mid`=3B, `strong`=27B. Source originals (may be

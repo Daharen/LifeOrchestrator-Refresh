@@ -1,0 +1,46 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "speech.tts",
+  "name": "Text-to-Speech Synthesis (Qwen3-TTS CustomVoice)",
+  "version": "0.1.0",
+  "contract_version": "0.1",
+  "purpose": "Synthesize speech audio from text using the Qwen3-TTS CustomVoice models (transformers / the qwen_tts package) under the speech venv. Resolves the TTS model + venv python from models.json; a Python worker (tts_infer.py) drives qwen_tts.Qwen3TTSModel.generate_custom_voice, and a PowerShell wrapper builds the contract envelope. Produces a 24 kHz mono PCM16 WAV (optionally re-encoded via audio.ingest). Populates confidence (synthesis-completeness heuristic) + model_provenance and routes failed/too-short synthesis to the review queue.",
+  "determinism": "mixed",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-SpeechTts.ps1",
+    "args_spec": "Named params -Text <string> (required); -Speaker <name> (def Ryan); -Language <name> (def English); -Instruct <style>; -Seed <int> (def -1=random); -Dtype <bfloat16|float16|float32>; -SampleRate <hz|0=native 24000>; -Format <wav|mp3|flac|opus|ogg|m4a>; -MaxNewTokens <n>; -ConfidenceThreshold <0..1>; -Model <id>; -Registry/-PythonPath/-TtsInferPath/-AudioIngestPath/-PwshPath/-ReviewQueuePath <override>. OR -InputsJson '<json {text,speaker,language,instruct,seed,dtype,sample_rate,format,max_new_tokens,confidence_threshold,model,registry,python_path,tts_infer_path,audio_ingest_path,pwsh_path,review_queue_path}>'. Optional -ArtifactRoot, -InvocationId.",
+    "worker": "tts_infer.py (run under the speech venv python)"
+  },
+  "inputs": [
+    { "name": "text", "type": "string", "required": true, "description": "The text to speak." },
+    { "name": "speaker", "type": "string", "required": false, "default": "Ryan", "description": "Preset CustomVoice speaker. 0.6B set: Vivian, Serena, Uncle_Fu, Dylan, Eric (Chinese); Ryan, Aiden (English); Ono_Anna (Japanese); Sohee (Korean). Use a speaker in the text's native language for best results." },
+    { "name": "language", "type": "string", "required": false, "default": "English", "description": "Spoken language name (English, Chinese, Japanese, Korean, German, French, Russian, Portuguese, Spanish, Italian)." },
+    { "name": "instruct", "type": "string", "required": false, "description": "Optional natural-language style instruction, e.g. 'Speak in a calm, clear tone.'" },
+    { "name": "seed", "type": "int", "required": false, "default": -1, "description": "Random seed for reproducibility; -1 = random (the model samples with do_sample=true)." },
+    { "name": "dtype", "type": "string", "required": false, "default": "bfloat16", "description": "Compute dtype: bfloat16 (default) | float16 | float32." },
+    { "name": "sample_rate", "type": "int", "required": false, "default": 0, "description": "Output sample rate in Hz; 0 keeps the native 24000. Non-native rates are produced via audio.ingest." },
+    { "name": "format", "type": "string", "required": false, "default": "wav", "description": "Output format: wav (native) | mp3 | flac | opus | ogg | m4a (non-wav produced via audio.ingest)." },
+    { "name": "max_new_tokens", "type": "int", "required": false, "default": 0, "description": "Cap on generated codec tokens (0 = model default 8192)." },
+    { "name": "confidence_threshold", "type": "double", "required": false, "default": 0.5, "description": "Below this synthesis-completeness confidence, the synthesis is flagged to the review queue." },
+    { "name": "model", "type": "string", "required": false, "default": "tts.weak.qwen3-0p6b", "description": "TTS model id in models.json (type=tts, engine=transformers). Also tts.strong.qwen3-1p7b." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ input{text,chars}, model{id,name,engine,engine_env,device,dtype,attn}, params{speaker,language,instruct,seed,max_new_tokens}, audio{path,sample_rate,channels,samples,duration_s,bytes,sha256,format,native_sample_rate,converted}, confidence{overall,reason}, review{threshold,flagged,queue_path}, synthesis{runtime_ms,real_time_factor} }"
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4", "python (speech venv)", "qwen_tts", "ffmpeg>=6 (via audio.ingest, only for non-wav/non-24k output)"],
+    "models": ["tts.weak.qwen3-0p6b (or tts.strong.qwen3-1p7b)"],
+    "libraries": ["torch>=2.11+cu128", "transformers>=4.57", "soundfile"],
+    "cpu": "any", "gpu": "cuda", "memory_mb": 4096,
+    "network": false, "filesystem": "read-write", "audio": true, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 900, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": false,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}
