@@ -346,3 +346,36 @@ alternatives · consequences · affects · state (provisional | locked) · revis
   `TOOL_MODEL_REGISTRY.md`, `models.json` (27B gpu_layers). · **revisit-if:** concurrent drainers/producers need a
   lock; a frontier `route.tasks` (#24) drains `escalated`; resolved-item compaction is built; a calibrated reviewer
   confidence is needed; a warm gateway worker lands.
+
+### D-0019 — audio.ingest wraps ffmpeg/ffprobe; deterministic; whisper-ready defaults; sibling-ffprobe resolution
+- **date:** 2026-07-24 · **state:** locked (wrap-the-binary + resolution + defaults), provisional (format/loudness surface)
+- **decision:** Module 10 `audio.ingest` — the first audio-track module and the **first skill to wrap an external
+  executable** rather than reimplement — normalizes+converts one audio/media file by driving `ffmpeg` (+`ffprobe`).
+  MVP design: (1) **one input → one output**; the **first audio stream** is used (audio extracted from video via
+  `-vn -map 0:a:0`); target `-Format` ∈ {wav,mp3,flac,opus,ogg,m4a} with the right codec per container, plus
+  `-SampleRate`/`-Channels`/`-SampleFormat` (wav) normalization and optional `-Loudness` (`none` | `peak`, a two-pass
+  `volumedetect`→`volume` gain to `-PeakDb` | `ebu`, EBU R128 `loudnorm`). (2) **Defaults are whisper-ready** —
+  wav / 16000 Hz / mono / s16 / no loudness — so Module 11 (`speech.stt`, whisper.cpp) consumes the output directly
+  with no flags. (3) **`ffprobe` is resolved as the sibling of the resolved `ffmpeg`** (param → `Get-Command ffmpeg`
+  → known dirs; ffprobe = sibling → non-`Python\Scripts` `Get-Command`), deliberately dodging the Python
+  `…\Python310\Scripts\ffprobe.exe` shim that shadows the real ffprobe on this machine's PATH. (4)
+  `determinism:"deterministic"` (a fixed transcode of fixed bytes by a fixed tool — `confidence` null,
+  `model_provenance` empty) and **`parallel_safe:true`** (reads an input, writes only its own invocation artifact
+  dir; no shared external state, unlike `uia.actor`/`model.gateway` — it is CPU-bound, so heavy fan-out contends CPU
+  only). (5) Child ffmpeg/ffprobe run via `ProcessStartInfo.ArgumentList` (per-arg escaping; spaces safe) with both
+  streams drained asynchronously (avoids the documented pipe-fill deadlock); the exact `argv` is recorded in the
+  envelope. `-map_metadata -1` (+`-bitexact` for wav) drops input metadata for clean, reproducible output.
+- **reason:** Smallest useful MVP that unblocks the whole audio track: a reliable normalize/convert primitive the
+  STT/TTS/voice modules can assume. Wrapping the present, full-featured ffmpeg (rather than a PCM library) fits the
+  language policy (wrap existing binaries) and covers every needed codec at once. Whisper-ready defaults make the
+  very next module a one-liner. Sibling-ffprobe resolution is the honest fix for a real PATH hazard on this box.
+- **alternatives:** reimplement decode/resample in a library (rejected — ffmpeg already solves it, portably);
+  trust `Get-Command ffprobe` (rejected — returns the Python shim first); make it `parallel_safe:false` like the
+  GPU/port skills (rejected — no shared resource is bound; CPU contention is a scheduling concern, not correctness);
+  bundle trimming/denoise/segmentation now (rejected — scope; → Module 13 / follow-ons); pipe ffmpeg stdout to
+  capture the audio (rejected — file output + async stderr drain is simpler and deadlock-free).
+- **consequences:** the review queue is untouched (a deterministic skill flags nothing). Throughput is per-call
+  ffmpeg spawn (fine; no warm worker needed for a CPU transcode). Registry gains an `ffmpeg`/`ffprobe` tool entry
+  and an `audio.ingest` skill entry. · **affects:** Module 10, Modules 11–13, `TOOL_MODEL_REGISTRY.md`,
+  `MODULE_ROADMAP.md`. · **revisit-if:** a batch/streaming path, trimming/segmentation, or denoise/EQ is needed
+  (each its own scoped follow-on); ffmpeg is upgraded/relocated (resolution already dynamic).

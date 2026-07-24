@@ -1,0 +1,47 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "audio.ingest",
+  "name": "Audio Ingest (Normalize & Convert)",
+  "version": "0.1.0",
+  "contract_version": "0.1",
+  "purpose": "Normalize and convert a single audio (or media) file to a requested format, sample rate, channel count, sample format, and optional loudness normalization, by wrapping ffmpeg/ffprobe. The front door for the audio track: defaults produce whisper-ready 16 kHz mono s16 WAV. Deterministic transcode; no model. Reads one input, writes one fresh audio artifact plus a machine/human record.",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-AudioIngest.ps1",
+    "args_spec": "Named params -InputFile <path> (required); -Format <wav|mp3|flac|opus|ogg|m4a>; -SampleRate <hz|0=keep>; -Channels <1|2|0=keep>; -SampleFormat <s16|s24|s32|flt> (wav only); -Loudness <none|peak|ebu>; -PeakDb <dBFS>; -LoudnessI/-LoudnessTP/-LoudnessLRA <EBU targets>; -Bitrate <e.g. 192k> (lossy); -FfmpegPath/-FfprobePath <override>. OR -InputsJson '<json {input,format,sample_rate,channels,sample_fmt,loudness,peak_db,loudness_i,loudness_tp,loudness_lra,bitrate,ffmpeg_path,ffprobe_path}>'. Optional -ArtifactRoot, -InvocationId."
+  },
+  "inputs": [
+    { "name": "input", "type": "string", "required": true, "description": "Path to the source audio/media file. The first audio stream is used (audio extracted from video containers)." },
+    { "name": "format", "type": "string", "required": false, "default": "wav", "description": "Target format/container: wav | mp3 | flac | opus | ogg | m4a." },
+    { "name": "sample_rate", "type": "int", "required": false, "default": 16000, "description": "Output sample rate in Hz. 0 keeps the source rate." },
+    { "name": "channels", "type": "int", "required": false, "default": 1, "description": "Output channel count: 1 (mono) or 2 (stereo). 0 keeps the source layout." },
+    { "name": "sample_fmt", "type": "string", "required": false, "default": "s16", "description": "PCM sample format for wav only: s16 | s24 | s32 | flt. Ignored (with a warning) for other formats." },
+    { "name": "loudness", "type": "string", "required": false, "default": "none", "description": "Loudness normalization: none | peak (two-pass to -PeakDb) | ebu (EBU R128 loudnorm)." },
+    { "name": "peak_db", "type": "double", "required": false, "default": -1.0, "description": "Target peak in dBFS for loudness=peak." },
+    { "name": "loudness_i", "type": "double", "required": false, "default": -16.0, "description": "EBU integrated loudness target (LUFS) for loudness=ebu." },
+    { "name": "loudness_tp", "type": "double", "required": false, "default": -1.5, "description": "EBU true-peak target (dBTP) for loudness=ebu." },
+    { "name": "loudness_lra", "type": "double", "required": false, "default": 11.0, "description": "EBU loudness range target (LU) for loudness=ebu." },
+    { "name": "bitrate", "type": "string", "required": false, "description": "Audio bitrate for lossy formats (mp3/opus/ogg/m4a), e.g. 192k. Per-format default when omitted." },
+    { "name": "ffmpeg_path", "type": "string", "required": false, "description": "Explicit ffmpeg.exe path override (else resolved from PATH / known locations)." },
+    { "name": "ffprobe_path", "type": "string", "required": false, "description": "Explicit ffprobe.exe path override (else the sibling of the resolved ffmpeg)." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ input{path,exists,audio_stream_present,probe}, output{path,format,container,codec,sample_rate,channels,sample_fmt,bitrate,duration_s,bytes,sha256,probe}, normalization{sample_rate,channels,sample_fmt,loudness}, ffmpeg{path,version,argv[]}, ffprobe{path} }"
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4", "ffmpeg>=6", "ffprobe>=6"],
+    "models": [],
+    "libraries": [],
+    "cpu": "any", "gpu": "none", "memory_mb": 256,
+    "network": false, "filesystem": "read-write", "audio": true, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 300, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

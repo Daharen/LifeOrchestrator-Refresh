@@ -118,9 +118,21 @@ Needs refactor · Deprecated · Replaced.
   See D-0018. Follow-on: frontier drain of `escalated` items (routing #24); resolved-item compaction; warm worker;
   strong-tier prompt/max_tokens tuning for parseable verdicts.
 
-## Modules 10–13 — Audio (provisional, unlocked)
-- **10 `audio.ingest`** normalize/convert · **11 `speech.stt`** transcription (timestamped) ·
-  **12 `speech.tts`** local TTS · **13 `voice.live`** compose record+VAD+STT+TTS (after 10–12 work).
+## Modules 10–13 — Audio (provisional; Module 10 MVP complete)
+- **10 `audio.ingest`** — Audio Ingest / Normalize & Convert. ***MVP complete*** — the **first audio-track
+  module** and the first skill to **wrap an external binary** (`ffmpeg`/`ffprobe`). Normalizes+converts one
+  audio/media file (first audio stream; audio extracted from video) to a requested `-Format` (wav/mp3/flac/opus/
+  ogg/m4a) + `-SampleRate` + `-Channels` + `-SampleFormat` (wav) with optional `-Loudness` (`none`/`peak`/`ebu`
+  R128). **Defaults = whisper-ready 16 kHz mono s16 WAV** (so Module 11 consumes it directly). `ffprobe` resolved
+  as the **sibling of the resolved `ffmpeg`** to dodge the Python `Scripts\ffprobe.exe` shim.
+  `determinism:"deterministic"` (confidence null), `parallel_safe:true`, `batch:false`. `audio.<ext>`/`ingest.json`/
+  `ingest.md` artifacts. **Tests 43/43 via the executor** (`m10-test-001`, exit 0, ~17s) incl. all six formats
+  (codec + magic verified), keep-source, EBU + peak loudness, five error paths, and the Module 1 wrapper;
+  pre-shipped off-machine on cloud ffmpeg 6.1 (same portable harness, 43/43). Work order:
+  `modules/10-audio-ingest/WORK_ORDER.md`. See D-0019. Follow-on: batch/directory ingest; trimming/segmentation/VAD
+  (→ #13); denoise/high-pass.
+- **11 `speech.stt`** transcription (timestamped, whisper.cpp) · **12 `speech.tts`** local TTS ·
+  **13 `voice.live`** compose record+VAD+STT+TTS (after 10–12 work). *(provisional)*
 
 ## Modules 14–18 — Image & document perception (provisional)
 - **14 `ocr.layout`** OCR + boxes + reading order · **15 `image.util`** resize/crop/meta/hash/similarity/

@@ -54,6 +54,21 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
 - **supported tasks:** install software. **limitation:** system-wide installs need a UAC/admin approval
   the automation cannot click. · **last test:** availability confirmed 2026-07-24.
 
+### `ffmpeg` / `ffprobe` — media transcode + probe (Gyan.dev full build)
+- **status:** installed · **type:** executable · **location:** `ffmpeg` on PATH at
+  `C:\Users\just_\AppData\Local\Microsoft\WinGet\Links\ffmpeg.exe` (WinGet `Gyan.FFmpeg`; real package bin
+  `…\WinGet\Packages\Gyan.FFmpeg_*\ffmpeg-8.1-full_build\bin\`). **Version 8.1-full_build.**
+- **invocation:** `ffmpeg -hide_banner -nostdin -y -i <in> [filters] [-ar -ac -c:a -b:a] -map_metadata -1 <out>`;
+  `ffprobe -v error -print_format json -show_format -show_streams <file>`.
+- **supported tasks:** decode/encode/transcode/resample/rechannel/loudness-normalize audio (and general A/V); probe
+  media metadata. Full encoder set: libmp3lame, aac, flac, libopus, libvorbis, pcm_s16le/s24le/s32le/f32le, +video.
+- **quality:** deterministic transcode · **speed:** fast (CPU; NVENC/CUDA available) · **network:** none · **cost:** local only.
+- **limitation / gotcha:** **`ffprobe` on PATH is shadowed** — `where.exe ffprobe` returns a Python
+  `…\Python310\Scripts\ffprobe.exe` shim *before* the real `…\WinGet\Links\ffprobe.exe`. Resolve ffprobe as the
+  **sibling of the resolved ffmpeg** (or exclude `\Python*\Scripts\`). The Linux device-mount cannot `stat` the
+  WinGet `Links\*.exe` reparse points (Windows `Test-Path`/`where.exe` resolve them fine). · **last test:**
+  2026-07-24 (`m10-ffprobe-001`; used by Module 10). · **skills:** `audio.ingest`.
+
 ### `ref.echo` — Reference Echo Skill (Module 1)
 - **status:** installed · **type:** skill (PowerShell) ·
   **location:** `LifeOrchestrator-Refresh/modules/01-skill-bootstrap/skills/ref.echo/`
@@ -260,6 +275,30 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   assumed); a thinking-style `strong` model may exhaust `max_tokens` before the JSON verdict → safely escalated (tune
   follow-on); no compaction/archival of resolved items (follow-on). · **last test:** 2026-07-24 via executor
   (**tests 34/34**; `m9-test-003`, exit 0, ~150s incl. the 27B). · **skills:** `review.processor`. See D-0018.
+
+### `audio.ingest` — Audio Ingest / Normalize & Convert (Module 10)
+- **status:** installed · **type:** skill (PowerShell wrapping `ffmpeg`/`ffprobe`) ·
+  **location:** `LifeOrchestrator-Refresh/modules/10-audio-ingest/`
+- **invocation:** direct `pwsh -NoProfile -File .\Invoke-AudioIngest.ps1 -InputFile <path> [-Format <wav|mp3|flac|
+  opus|ogg|m4a>] [-SampleRate <hz|0>] [-Channels <1|2|0>] [-SampleFormat <s16|s24|s32|flt>] [-Loudness <none|peak|
+  ebu>] [-PeakDb -LoudnessI -LoudnessTP -LoudnessLRA] [-Bitrate <e.g. 192k>] [-FfmpegPath -FfprobePath]` (or
+  `-InputsJson '<json {input,format,sample_rate,channels,sample_fmt,loudness,peak_db,loudness_i,loudness_tp,
+  loudness_lra,bitrate,ffmpeg_path,ffprobe_path}>'`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`;
+  or an `exec.bootstrap` task.
+- **supported tasks:** normalize+convert one audio/media file (first audio stream; audio extracted from video) to a
+  target format/rate/channels/sample-format with optional peak or EBU R128 loudness. **Defaults produce whisper-ready
+  16 kHz mono s16 WAV** — the front door for the audio track (feeds Module 11 `speech.stt`).
+- **I/O:** in = a file path + options; out = `lifeorch.skill.result/0.1` envelope (result = `{input{path,exists,
+  audio_stream_present,probe}, output{path,format,container,codec,sample_rate,channels,sample_fmt,bitrate,duration_s,
+  bytes,sha256,probe}, normalization{sample_rate,channels,sample_fmt,loudness}, ffmpeg{path,version,argv[]},
+  ffprobe{path}}`) + `runtime/artifacts/<id>/{audio.<ext>,ingest.json,ingest.md,result.json,stderr.txt}`.
+- **determinism:** deterministic (confidence null; no model) · **speed:** ~0.5–2 s for short clips (CPU) ·
+  **CPU/GPU/mem:** CPU / none / ~256 MB · **network:** none · **cost:** local only.
+- **limitations:** one input → one output (`batch:false`; no directory/batch); audio only (video dropped, `-vn`); no
+  trimming/segmentation/VAD/concat/mix/denoise/EQ (→ Module 13 / follow-ons); `sample_fmt` applies to wav only;
+  requires `ffmpeg`/`ffprobe` (present). `parallel_safe:true` (CPU-bound; heavy fan-out contends CPU only). · **last
+  test:** 2026-07-24 via executor (**tests 43/43**; `m10-test-001`, exit 0, ~17s; pre-shipped on cloud ffmpeg 6.1
+  43/43). · **skills:** `audio.ingest`. See D-0019.
 
 ---
 

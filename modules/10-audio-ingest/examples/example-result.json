@@ -1,0 +1,123 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "audio.ingest",
+  "skill_version": "0.1.0",
+  "contract_version": "0.1",
+  "invocation_id": "df61a6c9-5a19-4891-9c5c-7debf222047b",
+  "status": "ok",
+  "started_at_utc": "2026-07-24T19:54:06.6810854Z",
+  "finished_at_utc": "2026-07-24T19:54:07.2296784Z",
+  "duration_ms": 539,
+  "inputs_digest": "sha256:0e450a85d17b2ece9eb524e7bd6eff8a10a32ab1fdd5e81e294e448542b53c52",
+  "result": {
+    "input": {
+      "path": "C:\\Users\\just_\\AppData\\Local\\Temp\\m10smoke-746be63c\\tone.wav",
+      "exists": true,
+      "audio_stream_present": true,
+      "probe": {
+        "audio_stream_present": true,
+        "format_name": "wav",
+        "duration_s": 2.0,
+        "size_bytes": 352878,
+        "bit_rate": 1411512,
+        "audio": {
+          "codec": "pcm_s16le",
+          "sample_rate": 44100,
+          "channels": 2,
+          "channel_layout": "",
+          "bit_rate": 1411200
+        }
+      }
+    },
+    "output": {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\10-audio-ingest\\runtime\\artifacts\\df61a6c9-5a19-4891-9c5c-7debf222047b\\audio.wav",
+      "format": "wav",
+      "container": "wav",
+      "codec": "pcm_s16le",
+      "sample_rate": 16000,
+      "channels": 1,
+      "sample_fmt": "s16",
+      "bitrate": null,
+      "duration_s": 2.0,
+      "bytes": 64044,
+      "sha256": "cc9701a30f42c11fb5e964a3694aa2a1604372c709d5f0d27187e410f01fd732",
+      "probe": {
+        "audio_stream_present": true,
+        "format_name": "wav",
+        "duration_s": 2.0,
+        "size_bytes": 64044,
+        "bit_rate": 256176,
+        "audio": {
+          "codec": "pcm_s16le",
+          "sample_rate": 16000,
+          "channels": 1,
+          "channel_layout": "",
+          "bit_rate": 256000
+        }
+      }
+    },
+    "normalization": {
+      "sample_rate": 16000,
+      "channels": 1,
+      "sample_fmt": "s16",
+      "loudness": {
+        "mode": "none"
+      }
+    },
+    "ffmpeg": {
+      "path": "C:\\Users\\just_\\AppData\\Local\\Microsoft\\WinGet\\Links\\ffmpeg.exe",
+      "version": "ffmpeg version 8.1-full_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers",
+      "argv": [
+        "-hide_banner",
+        "-nostdin",
+        "-y",
+        "-i",
+        "C:\\Users\\just_\\AppData\\Local\\Temp\\m10smoke-746be63c\\tone.wav",
+        "-vn",
+        "-map",
+        "0:a:0",
+        "-ar",
+        "16000",
+        "-ac",
+        "1",
+        "-c:a",
+        "pcm_s16le",
+        "-map_metadata",
+        "-1",
+        "-bitexact",
+        "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\10-audio-ingest\\runtime\\artifacts\\df61a6c9-5a19-4891-9c5c-7debf222047b\\audio.wav"
+      ]
+    },
+    "ffprobe": {
+      "path": "C:\\Users\\just_\\AppData\\Local\\Microsoft\\WinGet\\Links\\ffprobe.exe"
+    }
+  },
+  "confidence": null,
+  "artifacts": [
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\10-audio-ingest\\runtime\\artifacts\\df61a6c9-5a19-4891-9c5c-7debf222047b\\audio.wav",
+      "kind": "wav",
+      "bytes": 64044,
+      "sha256": "cc9701a30f42c11fb5e964a3694aa2a1604372c709d5f0d27187e410f01fd732"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\10-audio-ingest\\runtime\\artifacts\\df61a6c9-5a19-4891-9c5c-7debf222047b\\ingest.md",
+      "kind": "markdown",
+      "bytes": 762,
+      "sha256": "0c61c71d8432a8bfa520bb9a01c72e50f803454c9281e2195fde5afdd8f83ebd"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\10-audio-ingest\\runtime\\artifacts\\df61a6c9-5a19-4891-9c5c-7debf222047b\\ingest.json",
+      "kind": "json",
+      "bytes": 2643,
+      "sha256": "edb0cec87b597fdc0a4108e14367f586cf7631512560f277500c7f346504233b"
+    }
+  ],
+  "model_provenance": [],
+  "diagnostics": {
+    "log": "stderr.txt",
+    "artifact_dir": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\10-audio-ingest\\runtime\\artifacts\\df61a6c9-5a19-4891-9c5c-7debf222047b"
+  },
+  "warnings": [],
+  "error": null
+}

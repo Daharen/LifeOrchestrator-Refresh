@@ -5,9 +5,9 @@ Owns **reality as it exists now** — not intended architecture. Keep it compact
 is planned (serves scripts and weaker local models) but not yet created.
 
 - **Project phase:** MVP module build-out.
-- **Active module:** _none in progress._ **Modules 0–9 complete** (0 executor · 1 `skill.bootstrap` · 2
+- **Active module:** _none in progress._ **Modules 0–10 complete** (0 executor · 1 `skill.bootstrap` · 2
   `fs.observer` · 3 `proc.observer` · 4 `uia.inspector` · 5 `uia.actor` · 6 `capture.screen` · 7 `model.gateway` ·
-  8 `classify.batch` · 9 `review.processor`), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure).
+  8 `classify.batch` · 9 `review.processor` · 10 `audio.ingest`), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure).
   **Module 8 — Batch Classification & Sorting (`classify.batch`) is MVP complete** — the **first real
   consumer of `model.gateway`**: for each item in a batch it calls the gateway (default `-Tier weak` = 1.5B) with a
   mode-specific prompt (`classify` one-label / `multilabel` / `extract` fields), parses the completion, computes a
@@ -32,6 +32,20 @@ is planned (serves scripts and weaker local models) but not yet created.
   `-DryRun` no-op, source-ref resolver, wrapper, and a live `strong`(27B) end-to-end at the **tuned `gpu_layers=32`**.
   Also **tuned the 27B** (`gpu_layers` 28→32; `model.gateway` now supports a `-LoadTimeoutSec` passthrough via
   `review.processor` for the slow strong tier — see REVIEW_QUEUE). See D-0018.
+- **Module 10 — Audio Ingest / Normalize & Convert (`audio.ingest`) is MVP complete this session** — the
+  **first module of the audio track (10–13)** and the first skill to **wrap an external executable**
+  (`ffmpeg`/`ffprobe`). It normalizes+converts one audio/media file (first audio stream; audio extracted from
+  video via `-vn -map 0:a:0`) to a requested `-Format` (wav/mp3/flac/opus/ogg/m4a) + `-SampleRate` + `-Channels`
+  + `-SampleFormat` (wav) with optional `-Loudness` (`none` / `peak` two-pass volumedetect→gain / `ebu` R128
+  loudnorm). **Defaults = whisper-ready 16 kHz mono s16 WAV**, so Module 11 (`speech.stt`) consumes its output
+  directly. `ffmpeg` resolved from `-FfmpegPath`→PATH→known dirs; **`ffprobe` resolved as the sibling of the
+  resolved `ffmpeg`** (dodges the Python `Scripts\ffprobe.exe` shim that shadows the real one on PATH — confirmed:
+  it picked `…\WinGet\Links\ffprobe.exe`). `determinism:"deterministic"` (confidence null), `parallel_safe:true`,
+  `batch:false`. Artifacts `audio.<ext>`/`ingest.json`/`ingest.md`. **Tests 43/43 via the executor** (`m10-test-001`,
+  exit 0, ~17s) — real conversions across all six formats (codec + magic-byte verified), keep-source, EBU + peak
+  loudness, five error paths, and the Module 1 wrapper; a smoke run (`m10-smoke-001`) produced a real 16 kHz mono
+  s16 WAV. **Pre-shipped off-machine**: pwsh 7.4.6 on the cloud Linux box AST-parse-checked both scripts and ran the
+  *same* portable harness against cloud ffmpeg 6.1 (43/43) before any bytes hit Windows. See D-0019.
 - **Repo / working dir:** **`C:\Users\just_\LifeOrchestrator-Refresh\`** — the clean standalone home for
   **Life Orchestrator** (near-term local-skills track; git-initialized). Layout: `core-docs/` (these docs)
   and `modules/<NN>-<name>/` (one per module). **Reference sources (separate, not built here):** the earlier
@@ -117,6 +131,11 @@ is planned (serves scripts and weaker local models) but not yet created.
   `C:\Users\just_\.dotnet\tools\pwsh.exe`. (Was **not** present before; installed 2026-07-24.)
 - **.NET SDK 9.0.100** — `C:\Program Files\dotnet\dotnet.exe`.
 - **git** — on PATH. **winget** — present (user WindowsApps). **choco** — not installed.
+- **ffmpeg / ffprobe 8.1** (Gyan.dev `full_build`) — `ffmpeg` on PATH at
+  `C:\Users\just_\AppData\Local\Microsoft\WinGet\Links\ffmpeg.exe` (WinGet `Gyan.FFmpeg`); full encoder set
+  (libmp3lame, aac, flac, libopus, libvorbis, pcm_*). **Gotcha:** `ffprobe` on PATH resolves *first* to a Python
+  `…\Python310\Scripts\ffprobe.exe` shim — resolve the real one as the **sibling of `ffmpeg`**. Verified
+  2026-07-24 (`m10-ffprobe-001`); used by Module 10.
 - **WinForms + STA runspace** work in the dotnet-tool pwsh (`System.Windows.Forms` loads; an STA runspace
   can host a Form + `Application.Run`) — verified 2026-07-24 (used by the Module 5 probe test).
 - Not admin. No system-wide `pwsh` (only the user `~\.dotnet\tools` entry — resolves in new shells).
@@ -197,8 +216,20 @@ is planned (serves scripts and weaker local models) but not yet created.
   wrapper; a live **`strong`(27B)** end-to-end at `gpu_layers=32` with `-LoadTimeoutSec 300`; no orphaned
   `llama-server`; run 2026-07-24 via the executor as `m9-test-003`, exit 0, ~150s). A cloud-only mock-gateway harness
   (`tests/mock-gateway.ps1`) validated the select/parse/adjudicate/queue-rewrite/escalation/log logic off-GPU first.
+- Module 10: `modules/10-audio-ingest/tests/Invoke-AudioIngestTests.ps1` — **43/43 pass** (manifest;
+  a real default WAV — codec pcm_s16le / 16000 Hz / mono / ~2 s via ffprobe, WAV magic, sha256 == file; the full
+  format matrix mp3/flac/opus/ogg/m4a with per-codec magic bytes; keep-source 44100/stereo; EBU + peak loudness;
+  five error paths `input_not_found`/`invalid_format`/`invalid_channels`/`no_audio_stream`/`ffmpeg_not_found`; the
+  Module 1 wrapper). The harness is **OS-portable** (`[IO.Path]::GetTempPath()` + `Get-Command ffmpeg`, fixtures
+  generated by ffmpeg): it ran on the cloud Linux box (ffmpeg 6.1, 43/43) as the pre-ship gate and unchanged on
+  the Windows executor (ffmpeg 8.1) — `m10-test-001`, exit 0, ~17s.
 
 ## Known failures / gotchas
+- **`ffprobe` on PATH is shadowed by a Python shim (2026-07-24).** `where.exe ffprobe` returns
+  `…\Python310\Scripts\ffprobe.exe` *before* the real `…\WinGet\Links\ffprobe.exe`; the Python shim is not the
+  real ffprobe. Resolve ffprobe as the **sibling of the resolved ffmpeg** (as `audio.ingest` does), or filter out any
+  `\Python*\Scripts\` source. Also: the Linux device-mount cannot `stat` the WinGet `Links\*.exe` reparse points, so
+  `ls` on the mount shows them absent though Windows `where.exe`/`Test-Path` resolve them fine.
 - **Executor fatal-crashed on a transient file lock (2026-07-24T06:26:36Z).** While task `m5-example-001`
   was running (a task that launched a GUI subprocess and where the agent was also reading `runtime/` over
   the device-bridge mount), the executor died with `The process cannot access the file because it is being
@@ -261,16 +292,18 @@ is planned (serves scripts and weaker local models) but not yet created.
   27B load (~90s) approaches the gateway's 120s default, so callers pass a longer `-LoadTimeoutSec` for the strong tier.
 
 ## Next expected action
-1. **Module 10 — `audio.ingest`** (normalize/convert) is the next roadmap module (audio track, Modules 10–13),
-   OR pick up any deferred housekeeping below. Module 9 (`review.processor`) is MVP complete this session; the
-   review-queue loop is now closed (producers 7/8 → drainer 9 → frontier for `escalated` items).
+1. **Module 11 — `speech.stt`** (timestamped transcription via whisper.cpp) is the next roadmap module (audio
+   track, Modules 10–13). Module 10 (`audio.ingest`) is MVP complete this session — it produces whisper-ready
+   16 kHz mono s16 WAV by default, so Module 11 can consume its output directly. The review-queue loop remains
+   closed (producers 7/8 → drainer 9 → frontier for `escalated` items).
 2. `review.processor` follow-ons (NOT this session): a frontier/`route.tasks` (#24) drain of `escalated` items;
    compaction/archival of `resolved` items to keep the live queue small; a warm/persistent gateway worker (shared
    with #8); calibrated/semantic reviewer confidence; **strong-tier prompt/max_tokens tuning** so the 27B emits a
    parseable JSON verdict instead of being escalated on truncated reasoning (observed in `m9-test-003`).
 3. Housekeeping (deferred): fold the D-0009 conventions into `SKILL_CONTRACT.md` and bump the contract version
-   (now exercised by Modules 2–9; DECISION_LOG D-0009/D-0011); relocate staged models per `MIGRATION.md`; the pending
+   (now exercised by Modules 2–10; DECISION_LOG D-0009/D-0011); relocate staged models per `MIGRATION.md`; the pending
    `proteus_repo/tools/` leftover removal (`ops/finish-game-cleanup.bat`); classify.batch follow-ons (warm-worker /
-   intra-batch prompt for throughput; calibrated confidence; a side-effecting `sort.files` mover) — see D-0017.
+   intra-batch prompt for throughput; calibrated confidence; a side-effecting `sort.files` mover) — see D-0017; audio.ingest follow-ons (batch/directory ingest; trimming/
+   segmentation → Module 13; denoise/high-pass — see D-0019).
 
-- **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 9 review.processor build session).
+- **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 10 audio.ingest build session).
