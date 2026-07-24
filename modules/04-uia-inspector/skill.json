@@ -1,0 +1,40 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "uia.inspector",
+  "name": "UI Automation Inspector",
+  "version": "0.1.0",
+  "contract_version": "0.1",
+  "purpose": "Read the UI Automation accessible control tree of a target window (or the desktop): per-element control type, name, automation id, class, bounds, supported patterns, and state. Read-only — no actions.",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-UiaInspector.ps1",
+    "args_spec": "Named params -Hwnd <int> | -ProcessId <int> | -Title <glob> (else the desktop root); -Depth <int> -MaxElements <int> -NameFilter <glob>. OR -InputsJson '<json {hwnd,pid,title,depth,max_elements,name_filter}>'. Optional -ArtifactRoot, -InvocationId."
+  },
+  "inputs": [
+    { "name": "hwnd", "type": "int", "required": false, "description": "Target window handle (highest precedence)." },
+    { "name": "pid", "type": "int", "required": false, "description": "Target by process id (uses its main window)." },
+    { "name": "title", "type": "string", "required": false, "description": "Target by top-level window title (glob)." },
+    { "name": "depth", "type": "int", "required": false, "default": 4, "description": "Max tree depth from the target." },
+    { "name": "max_elements", "type": "int", "required": false, "default": 500, "description": "Cap on elements; exceeding sets status=partial." },
+    { "name": "name_filter", "type": "string", "required": false, "description": "Optional glob on element Name for a matches list." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ target, depth, element_count, truncated, name_filter, match_count, matches[], elements[] }"
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4"],
+    "models": [],
+    "libraries": ["UIAutomationClient", "UIAutomationTypes"],
+    "cpu": "any", "gpu": "none", "memory_mb": 256,
+    "network": false, "filesystem": "read", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 120, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

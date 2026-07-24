@@ -97,6 +97,19 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
 - **limitations:** point-in-time (no diffing/stream); interactive session only (sees the desktop it runs in);
   protected-process Path/StartTime may be null. · **last test:** 2026-07-24 via executor (tests 16/16; capture = 319 procs / 16 windows). · **skills:** `proc.observer`.
 
+### `uia.inspector` — UI Automation Inspector (Module 4)
+- **status:** installed · **type:** skill (PowerShell + managed UI Automation) ·
+  **location:** `LifeOrchestrator-Refresh/modules/04-uia-inspector/`
+- **invocation:** direct `pwsh -NoProfile -File .\Invoke-UiaInspector.ps1 [-Hwnd <n>|-ProcessId <n>|-Title <glob>] [-Depth <n>] [-NameFilter <glob>]`
+  (else the desktop root; or `-InputsJson '<json>'`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
+- **supported tasks:** read-only UIA control-tree walk of a target window (control type, name, automation id, class, bounds, patterns, state).
+- **I/O:** in = `{hwnd, pid, title, depth, max_elements, name_filter}`; out = `lifeorch.skill.result/0.1` envelope +
+  `runtime/artifacts/<id>/{tree.md,elements.json,stderr.txt,result.json}`.
+- **quality:** deterministic read of live UI state (confidence null) · **speed:** ~1–5s (depth/element bound) · **CPU/GPU/mem:** low/none/~256MB ·
+  **network:** none · **cost:** local only.
+- **limitations:** read-only (no actions — see Module 5); point-in-time; some apps (e.g. Unity games) expose no UIA tree; bounded by depth/max_elements.
+  · **last test:** 2026-07-24 via executor (tests 16/16; capture = 22 elements from desktop root). · **skills:** `uia.inspector`.
+
 ---
 
 ### Planned / not yet present (do not assume these exist)
