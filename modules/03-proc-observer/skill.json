@@ -1,0 +1,37 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "proc.observer",
+  "name": "Process & Window Observer",
+  "version": "0.1.0",
+  "contract_version": "0.1",
+  "purpose": "Snapshot running processes and top-level windows (pids, titles, paths, positions/size, minimized/maximized, the foreground window) via structured OS queries — no screenshots or image processing.",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-ProcObserver.ps1",
+    "args_spec": "Named params -VisibleOnly <bool> -NameFilter <glob> -MaxItems <int>, OR -InputsJson '<json {visible_only,name_filter,max_items}>'. Optional -ArtifactRoot, -InvocationId."
+  },
+  "inputs": [
+    { "name": "visible_only", "type": "bool", "required": false, "default": true, "description": "Only enumerate visible top-level windows that have a title." },
+    { "name": "name_filter", "type": "string", "required": false, "description": "Optional glob on process name to narrow processes and windows." },
+    { "name": "max_items", "type": "int", "required": false, "default": 2000, "description": "Cap on processes/windows; exceeding sets status=partial." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ host, generated_at_utc, name_filter, visible_only, process_count, window_count, foreground, windows[] }"
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4"],
+    "models": [],
+    "libraries": [],
+    "cpu": "any", "gpu": "none", "memory_mb": 128,
+    "network": false, "filesystem": "read", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 60, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

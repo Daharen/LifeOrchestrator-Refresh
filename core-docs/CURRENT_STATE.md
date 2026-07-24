@@ -5,9 +5,9 @@ Owns **reality as it exists now** — not intended architecture. Keep it compact
 is planned (serves scripts and weaker local models) but not yet created.
 
 - **Project phase:** MVP module build-out.
-- **Active module:** _none in progress._ **Modules 0–2 complete** (0 executor · 1 `skill.bootstrap` · 2
-  `fs.observer`). **Module 3 — Process & Window Observer (`proc.observer`) is next** (author its work order
-  next session).
+- **Active module:** _none in progress._ **Modules 0–3 complete** (0 executor · 1 `skill.bootstrap` · 2
+  `fs.observer` · 3 `proc.observer`). **Module 4 — UI Automation Inspector (`uia.inspector`) is next**
+  (author its work order next session).
 - **Repo / working dir:** **`C:\Users\just_\LifeOrchestrator-Refresh\`** — the clean standalone home for
   **Life Orchestrator** (near-term local-skills track; git-initialized). Layout: `core-docs/` (these docs)
   and `modules/<NN>-<name>/` (one per module). **Reference sources (separate, not built here):** the earlier
@@ -29,6 +29,8 @@ is planned (serves scripts and weaker local models) but not yet created.
   and through the executor; emits schema-valid `lifeorch.skill.result/0.1`. Module tests 11/11 (2026-07-24).
 - **Module 2** — Filesystem Observer (`fs.observer`). Deterministic depth-bounded tree + name/glob search;
   `tree.md` + `index.json` artifacts; contract-valid envelope; runs direct/wrapped/executor. Tests 16/16 (2026-07-24).
+- **Module 3** — Process & Window Observer (`proc.observer`). Snapshot of processes + top-level windows +
+  foreground (Win32); `report.md` + `processes.json` + `windows.json`. Tests 16/16 (2026-07-24).
 
 ## Installed dependencies (verified this machine)
 - **PowerShell 7.4.6** — installed as a .NET global tool at
@@ -67,6 +69,8 @@ is planned (serves scripts and weaker local models) but not yet created.
   (manifest, direct, wrapper, and error-path envelope validation; run 2026-07-24 via the executor).
 - Module 2: `modules/02-fs-observer/tests/Invoke-FsObserverTests.ps1` — 16/16 pass
   (manifest, tree, artifacts, search, error path, wrapper; run 2026-07-24 via the executor).
+- Module 3: `modules/03-proc-observer/tests/Invoke-ProcObserverTests.ps1` — 16/16 pass
+  (manifest, processes+windows+foreground, artifacts, name filter, wrapper; run 2026-07-24 via the executor).
 
 ## Known failures / gotchas
 - The dotnet-tool `pwsh` shim reports its process path as `dotnet.exe`, so `(Get-Process -Id $PID).Path`
@@ -86,8 +90,9 @@ is planned (serves scripts and weaker local models) but not yet created.
   (Module 2) confirms them, then bump the contract version. (See DECISION_LOG D-0009.)
 
 ## Next expected action
-Author the **Module 3 work order** (`modules/03-proc-observer/WORK_ORDER.md`) from the template and implement
-its MVP (running processes + windows: pids, titles, active window, positions — no image processing), tested
-through the executor. Reuse `Test-SkillManifest` / `Test-SkillResultEnvelope` and `Invoke-Skill.ps1`.
+Author the **Module 4 work order** (`modules/04-uia-inspector/WORK_ORDER.md`) from the template and implement
+its MVP (UI Automation inspector: read accessible controls for a target window/app, return stable element
+info — read-only, no actions), tested through the executor. Reuse `Test-SkillManifest` /
+`Test-SkillResultEnvelope` and `Invoke-Skill.ps1`.
 
-- **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 2 build session).
+- **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 3 build session).

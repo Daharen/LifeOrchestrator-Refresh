@@ -84,6 +84,19 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
 - **limitations:** point-in-time snapshot (no diffing); symlinks listed but not traversed; name-glob only (no content grep).
   · **last test:** 2026-07-24 via executor (tests 16/16; capture over the repo = 27 entries / 10 md matches). · **skills:** `fs.observer`.
 
+### `proc.observer` — Process & Window Observer (Module 3)
+- **status:** installed · **type:** skill (PowerShell + Win32 via Add-Type) ·
+  **location:** `LifeOrchestrator-Refresh/modules/03-proc-observer/`
+- **invocation:** direct `pwsh -NoProfile -File .\Invoke-ProcObserver.ps1 [-NameFilter <glob>] [-VisibleOnly <bool>]`
+  (or `-InputsJson '<json>'`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
+- **supported tasks:** snapshot running processes + top-level windows (titles, owning pid/name, bounds, min/max, foreground); no screenshots.
+- **I/O:** in = `{visible_only, name_filter, max_items}`; out = `lifeorch.skill.result/0.1` envelope +
+  `runtime/artifacts/<id>/{report.md,processes.json,windows.json,stderr.txt,result.json}`.
+- **quality:** deterministic read of live state (confidence null; snapshot) · **speed:** ~1–3s (Win32 compile on first Add-Type) · **CPU/GPU/mem:** low/none/~128MB ·
+  **network:** none · **cost:** local only.
+- **limitations:** point-in-time (no diffing/stream); interactive session only (sees the desktop it runs in);
+  protected-process Path/StartTime may be null. · **last test:** 2026-07-24 via executor (tests 16/16; capture = 319 procs / 16 windows). · **skills:** `proc.observer`.
+
 ---
 
 ### Planned / not yet present (do not assume these exist)

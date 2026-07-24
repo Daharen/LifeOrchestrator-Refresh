@@ -47,9 +47,11 @@ Needs refactor · Deprecated · Replaced.
 - **Implementation:** `modules/02-fs-observer/` (`Invoke-FsObserver.ps1`, `skill.json`, tests). **Work
   order:** `modules/02-fs-observer/WORK_ORDER.md`.
 
-## Modules 3–6 — Desktop observation & control (provisional)  ← Module 3 (`proc.observer`) next
+## Modules 3–6 — Desktop observation & control (provisional)  ← Module 4 (`uia.inspector`) next
 - **3 `proc.observer`** — Process & Window Observer: running apps, windows, active window, positions,
-  titles, state changes (no image processing). *Proposed, P1.*
+  titles, state changes (no image processing). ***MVP complete*** — processes + top-level windows +
+  foreground; `report.md`/`processes.json`/`windows.json`; tests 16/16 (2026-07-24). Work order:
+  `modules/03-proc-observer/WORK_ORDER.md`.
 - **4 `uia.inspector`** — UI Automation Inspector: read accessible controls, return stable element info.
   *Proposed, P1.*
 - **5 `uia.actor`** — UI Automation Actor: invoke/select/expand/type on identified elements. Kept
