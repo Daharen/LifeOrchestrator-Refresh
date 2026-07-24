@@ -62,8 +62,10 @@ agents submit PowerShell task packages to a filesystem queue and receive machine
 
 ## Long-horizon note (deliberately brief)
 
-The broader Proteus vision may eventually incorporate: canonical collapse, deterministic replay,
-structured memory, coordinated local + remote model orchestration, world simulation, and the
-progressive replacement of stochastic processes with deterministic systems. **None of that is
-near-term work.** Its detailed architecture lives in `cold-reference/` and must not be loaded into
-ordinary module sessions.
+Life Orchestrator's own long-horizon aims may include a persistent structured memory, coordinated
+local + remote model orchestration, and the progressive replacement of stochastic workflows with cheaper
+deterministic tools where they earn it. **None of that is near-term work.**
+
+Two things this project is explicitly **not**: the earlier assistant codebase in `LifeOrchestrator\repo`
+(kept as reference material to fold in later, not a dependency now) and the separate **Project Proteus**
+game (a systemic RPG with its own deterministic player-identity engine — no overlap with this project).

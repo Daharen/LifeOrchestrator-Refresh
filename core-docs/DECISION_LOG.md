@@ -54,7 +54,7 @@ alternatives · consequences · affects · state (provisional | locked) · revis
 - **affects:** `SKILL_CONTRACT.md`, Module 1. · **revisit-if:** each new contract change.
 
 ### D-0006 — Long-horizon Proteus deferred to cold reference
-- **date:** 2026-07-24 · **state:** locked (for the near-term track)
+- **date:** 2026-07-24 · **state:** **superseded by D-0010** (was: locked)
 - **decision:** Deterministic canonical collapse, world simulation, projection, and structured memory
   are **not** near-term admission requirements. Their architecture lives in `cold-reference/` and is not
   loaded into ordinary module sessions.
@@ -67,7 +67,7 @@ alternatives · consequences · affects · state (provisional | locked) · revis
 - **decision:** Weak local models do bulk classification/sorting/extraction; a stronger local model
   reviews only flagged/low-confidence/contradictory items via `REVIEW_QUEUE.md`; frontier models handle
   the hardest judgment and adjudication.
-- **reason:** Proven cheaper in the prior Proteus database work than having strong models redo whole sets.
+- **reason:** Proven cheaper in prior database work (on the separate Proteus game) than having strong models redo whole sets.
 - **affects:** Modules 7–9, 24; `REVIEW_QUEUE.md`. · **revisit-if:** local model quality shifts enough to
   change the tier boundaries.
 
@@ -96,3 +96,19 @@ alternatives · consequences · affects · state (provisional | locked) · revis
   README + this entry. Fold them in (and bump the contract version) once Module 2 (`fs.observer`) exercises
   them. · **affects:** `SKILL_CONTRACT.md`, Module 1, Module 2. · **revisit-if:** Module 2 needs a different
   arg-passing or artifact-root rule.
+
+
+### D-0010 — Disentangle: this project is Life Orchestrator, separate from the Proteus game
+- **date:** 2026-07-24 · **state:** locked
+- **decision:** This refresh repo is **Life Orchestrator** (an AI assistant / local-skills control plane),
+  not Project Proteus. "Project Proteus" is a separate systemic-RPG game; the two were accidentally
+  cross-named. Actions taken: rebrand project + repo folder to Life Orchestrator (folder
+  `Project-Proteus-Refresh` -> `LifeOrchestrator-Refresh`), rename schema IDs `proteus.skill.*`/`proteus.review.*`
+  -> `lifeorch.*`, remove the game "long-horizon vision" and delete the `cold-reference/` slot.
+- **reason:** Genuinely different projects with no overlapping subject matter; the only shared thing was the
+  engineering *value* of determinism. Correct the labels now, while only one module exists.
+- **reference sources (kept, not built here):** the earlier assistant codebase `LifeOrchestrator\repo` — to
+  fold in later when implementation makes sense; the Proteus game (`Project-Proteus-src`) — unrelated.
+- **supersedes:** D-0006 (the long-horizon Proteus / cold-reference deferral was game vision, now out of scope).
+- **affects:** all docs, `SKILL_CONTRACT.md` schema IDs, Module 1 code, repo/folder name. · **revisit-if:**
+  we ever intentionally re-import game concepts (not expected).

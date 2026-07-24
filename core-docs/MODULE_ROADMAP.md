@@ -17,7 +17,7 @@ Needs refactor · Deprecated · Replaced.
 - **MVP acceptance:** 12/12 integration checks (success, failure, timeout kill, concurrency,
   staging-ignored, atomic claim, no double-exec, abandoned-after-restart, duplicate rejection,
   orderly stop, single-instance lock, file preservation). **Met — 12/12 on Windows (pwsh 7.4.6).**
-- **Current implementation:** working copy at `Project-Proteus-Refresh/modules/00-bootstrap-executor/`;
+- **Current implementation:** working copy at `LifeOrchestrator-Refresh/modules/00-bootstrap-executor/`;
   original (running) at `proteus_repo/tools/trusted-bootstrap-executor/`, commit `c4e90c4`.
 - **Work order:** n/a (built ahead of this doc set). **Blockers:** none. **Deprecation:** none.
 

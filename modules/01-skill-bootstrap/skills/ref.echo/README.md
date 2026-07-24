@@ -1,6 +1,6 @@
 # ref.echo — Reference Echo Skill
 
-The canonical worked example for the Proteus skill contract (v0.1) and a trivial
+The canonical worked example for the Life Orchestrator skill contract (v0.1) and a trivial
 health-check for the skill channel. Given a `message` and a `repeat` count it echoes the
 message back N times, writes an `echo.txt` artifact, and emits a schema-valid
 `lifeorch.skill.result/0.1` envelope on stdout.

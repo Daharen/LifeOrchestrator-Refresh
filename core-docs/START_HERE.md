@@ -1,6 +1,6 @@
 # START_HERE
 
-**You are a fresh Claude instance joining Project Proteus (near-term "local skills" track).**
+**You are a fresh Claude instance joining Life Orchestrator (near-term "local skills" track).**
 Read this first. It routes you; it does not contain the project's substance.
 
 ## What this project is (one line)
@@ -12,13 +12,13 @@ cloud onto the local computer. Skills are built and run **one module at a time**
 ## What phase we are in
 
 **Phase: MVP module build-out.** Speed, practical usefulness, and modularity come first.
-Deterministic/canonical "Proteus" architecture is a long-term goal, **not** a current requirement.
+A deterministic control-plane architecture is a long-term goal, **not** a current requirement.
 Module 0 (the Trusted High-Risk Bootstrap Executor) is complete; it is how your work gets run
 locally.
 
 ## Source of truth (docs & state)
 
-**The on-disk repo is canonical** — `C:\Users\just_\Project-Proteus-Refresh\` (`core-docs/` + `modules/`).
+**The on-disk repo is canonical** — `C:\Users\just_\LifeOrchestrator-Refresh\` (`core-docs/` + `modules/`).
 That is what the executor and local models read, and what we commit to git.
 
 **The attached Claude Project mirrors `core-docs/`.** The frontier agent keeps it current (via the Project
@@ -45,8 +45,6 @@ have full context. Rules:
 - `DECISION_LOG.md` — only when a prior architectural decision may bear on your task.
 - `MODULE_WORK_ORDER_TEMPLATE.md` — only when authoring a new work order.
 - `REVIEW_QUEUE.md` — only when producing or consuming flagged/low-confidence items.
-- `cold-reference/` (long-horizon Proteus: simulation, canonicalization, projection) — **do not load**
-  unless your active work concerns those systems.
 
 ## How you identify the current module
 
@@ -61,8 +59,7 @@ or `Active` in `MODULE_ROADMAP.md`. Open **that module's work order** (`modules/
 - `SKILL_CONTRACT.md` **only** when your module genuinely exposes a missing contract requirement
   (bump its version and log the change in `DECISION_LOG.md`).
 
-Do **not** rearchitect other modules, expand scope beyond the work order, or import the cold-reference
-Proteus architecture into near-term work.
+Do **not** rearchitect other modules or expand scope beyond the work order.
 
 ## Before you end a work session (mandatory)
 

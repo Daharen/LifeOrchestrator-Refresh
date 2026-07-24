@@ -1,7 +1,7 @@
 #requires -Version 7.0
 <#
 .SYNOPSIS
-  ref.echo — trivial reference skill for Project Proteus (skill contract v0.1).
+  ref.echo — trivial reference skill for Life Orchestrator (skill contract v0.1).
 .DESCRIPTION
   Echoes a message N times and emits a single schema-valid lifeorch.skill.result/0.1
   envelope on stdout (and to <ArtifactRoot>/<InvocationId>/result.json). Deterministic.

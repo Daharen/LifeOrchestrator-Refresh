@@ -1,5 +1,5 @@
 #requires -Version 7.0
-# SkillContract.psm1 — validators for the Proteus skill contract (v0.1).
+# SkillContract.psm1 — validators for the Life Orchestrator skill contract (v0.1).
 # Provides Test-SkillManifest and Test-SkillResultEnvelope. No external dependencies.
 Set-StrictMode -Version Latest
 

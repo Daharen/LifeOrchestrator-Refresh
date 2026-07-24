@@ -120,11 +120,11 @@ Required at minimum: `skill_id`, `name`, `version`, `contract_version`, `purpose
 
 **Invocation** (through the executor or directly):
 ```powershell
-pwsh -NoProfile -File .\Invoke-FsObserver.ps1 -path 'C:\Users\just_\Project-Proteus-src' -depth 2
+pwsh -NoProfile -File .\Invoke-FsObserver.ps1 -path 'C:\Users\just_\LifeOrchestrator-Refresh' -depth 2
 ```
 
 **Result** (`result.json`, abbreviated): see `lifeorch.skill.result/0.1` above with
-`result` = `{ "root": "C:\\Users\\just_\\Project-Proteus-src", "entries": [ ... ] }`.
+`result` = `{ "root": "C:\\Users\\just_\\LifeOrchestrator-Refresh", "entries": [ ... ] }`.
 
 ---
 

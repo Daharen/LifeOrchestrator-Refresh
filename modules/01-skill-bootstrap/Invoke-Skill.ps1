@@ -1,7 +1,7 @@
 #requires -Version 7.0
 <#
 .SYNOPSIS
-  Invoke-Skill.ps1 — generic invocation wrapper for Proteus skills (contract v0.1).
+  Invoke-Skill.ps1 — generic invocation wrapper for Life Orchestrator skills (contract v0.1).
 .DESCRIPTION
   validate manifest -> run entrypoint in an isolated pwsh process -> validate result envelope.
   Emits a single lifeorch.skill.invocation_report/0.1 JSON object to stdout (or, with

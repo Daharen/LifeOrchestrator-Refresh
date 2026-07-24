@@ -8,14 +8,15 @@ is planned (serves scripts and weaker local models) but not yet created.
 - **Active module:** _none in progress._ **Module 1 — Skill Contract & Registry Bootstrap (`skill.bootstrap`)
   is MVP complete.** **Module 2 — Filesystem Observer (`fs.observer`) is next** (author its work order next
   session). (Modules 0 and 1 complete.)
-- **Repo / working dir:** **`C:\Users\just_\Project-Proteus-Refresh\`** — the clean standalone home for
-  this track (git-initialized). Layout: `core-docs/` (these docs) and `modules/<NN>-<name>/` (one per
-  module). The old `Project-Proteus-src\proteus_repo` holds the *original* executor and the defunct legacy
-  Proteus; treat it as legacy and do not build there.
+- **Repo / working dir:** **`C:\Users\just_\LifeOrchestrator-Refresh\`** — the clean standalone home for
+  **Life Orchestrator** (near-term local-skills track; git-initialized). Layout: `core-docs/` (these docs)
+  and `modules/<NN>-<name>/` (one per module). **Reference sources (separate, not built here):** the earlier
+  assistant codebase `LifeOrchestrator\repo` (fold in later) and the separate **Project Proteus** game
+  (`Project-Proteus-src`).
 - **Executor status:** MVP complete. **Running instance:** the original at
   `proteus_repo/tools/trusted-bootstrap-executor/` (commit `c4e90c4`), kept running for continuity — used
   this session to run Module 1's tests (instance `98b7f774…`, pwsh 7.4.6, host `DESKTOP-PF5FFMF`).
-  **Working copy for this repo:** `Project-Proteus-Refresh/modules/00-bootstrap-executor/` — run future
+  **Working copy for this repo:** `LifeOrchestrator-Refresh/modules/00-bootstrap-executor/` — run future
   instances from here. Launch/submit/stop via `pwsh` (see registry).
 
 ## Completed modules

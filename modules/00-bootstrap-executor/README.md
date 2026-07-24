@@ -6,9 +6,9 @@ dropping them into a filesystem queue. The executor polls the queue, claims
 tasks atomically, runs them concurrently in isolated PowerShell 7 processes, and
 writes back compact machine-readable results.
 
-It is the first-pass MVP bootstrap mechanism for Project Proteus. It lives under
+It is the first-pass MVP bootstrap mechanism for Life Orchestrator. It lives under
 `tools/trusted-bootstrap-executor/` and is intentionally self-contained and
-replaceable — it does **not** integrate with the older Proteus simulation,
+replaceable — it does **not** integrate with the separate Project Proteus game's simulation,
 canonicalization, database, or responder architecture.
 
 ---

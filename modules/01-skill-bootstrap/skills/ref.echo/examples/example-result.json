@@ -21,7 +21,7 @@
   "confidence": null,
   "artifacts": [
     {
-      "path": "C:\\Users\\just_\\Project-Proteus-Refresh\\modules\\01-skill-bootstrap\\skills\\ref.echo\\runtime\\artifacts\\8878c5ec-9ac8-44ea-b7d2-33aa6703e787\\echo.txt",
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\01-skill-bootstrap\\skills\\ref.echo\\runtime\\artifacts\\8878c5ec-9ac8-44ea-b7d2-33aa6703e787\\echo.txt",
       "kind": "text",
       "bytes": 79,
       "sha256": "9c223254a57e5128118253683c06ec35a96b6d53cc42655badfefcf1641b07e1"
@@ -30,7 +30,7 @@
   "model_provenance": [],
   "diagnostics": {
     "log": "stderr.txt",
-    "artifact_dir": "C:\\Users\\just_\\Project-Proteus-Refresh\\modules\\01-skill-bootstrap\\skills\\ref.echo\\runtime\\artifacts\\8878c5ec-9ac8-44ea-b7d2-33aa6703e787"
+    "artifact_dir": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\01-skill-bootstrap\\skills\\ref.echo\\runtime\\artifacts\\8878c5ec-9ac8-44ea-b7d2-33aa6703e787"
   },
   "warnings": [],
   "error": null

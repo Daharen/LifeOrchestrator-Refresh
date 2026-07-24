@@ -1,7 +1,9 @@
-# Project Proteus — Refresh
+# Life Orchestrator — Refresh
 
-Clean, standalone home for the near-term **local skills** track. Deliberately separate and self-contained,
-away from the legacy Proteus framework (which lives under `Project-Proteus-src` and is **not** used here).
+Clean, standalone home for the near-term **local skills** track of **Life Orchestrator** — an AI assistant
+that offloads work onto this local machine. A fresh, self-contained restart: the earlier assistant codebase
+(`LifeOrchestrator\repo`) is kept as reference to fold in later, and the separate **Project Proteus** game
+(`Project-Proteus-src`) is unrelated and **not** used here.
 
 ## Layout
 - **`core-docs/`** — the control plane. **Start at [`core-docs/START_HERE.md`](core-docs/START_HERE.md).**

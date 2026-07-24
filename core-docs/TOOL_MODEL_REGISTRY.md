@@ -12,7 +12,7 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
 
 ### `exec.bootstrap` — Trusted High-Risk Bootstrap Executor
 - **status:** installed · **type:** skill/service (PowerShell) ·
-  **location:** `Project-Proteus-Refresh/modules/00-bootstrap-executor/` (working copy; original running instance still at `proteus_repo/tools/trusted-bootstrap-executor/`)
+  **location:** `LifeOrchestrator-Refresh/modules/00-bootstrap-executor/` (working copy; original running instance still at `proteus_repo/tools/trusted-bootstrap-executor/`)
 - **invocation:** `pwsh -NoProfile -File .\Start-BootstrapExecutor.ps1` (+ `Submit-`/`Stop-`); tasks are
   directories atomically published into `runtime/pending/`.
 - **supported tasks:** run arbitrary local PowerShell task packages with concurrency, timeout,
@@ -48,7 +48,7 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
 
 ### `ref.echo` — Reference Echo Skill (Module 1)
 - **status:** installed · **type:** skill (PowerShell) ·
-  **location:** `Project-Proteus-Refresh/modules/01-skill-bootstrap/skills/ref.echo/`
+  **location:** `LifeOrchestrator-Refresh/modules/01-skill-bootstrap/skills/ref.echo/`
 - **invocation:** direct `pwsh -NoProfile -File .\Invoke-RefEcho.ps1 -Message <s> -Repeat <n>` (or
   `-InputsJson '<json>'`); wrapped `pwsh -File ..\..\Invoke-Skill.ps1 -SkillDir . -InputsJson '<json>'`;
   or as an `exec.bootstrap` task package.
@@ -62,7 +62,7 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
 
 ### `skill.bootstrap` — Skill contract tooling (Module 1)
 - **status:** installed · **type:** library/tooling (PowerShell) ·
-  **location:** `Project-Proteus-Refresh/modules/01-skill-bootstrap/` (`lib/SkillContract.psm1`, `Invoke-Skill.ps1`)
+  **location:** `LifeOrchestrator-Refresh/modules/01-skill-bootstrap/` (`lib/SkillContract.psm1`, `Invoke-Skill.ps1`)
 - **invocation:** `Import-Module .\lib\SkillContract.psm1` → `Test-SkillManifest` / `Test-SkillResultEnvelope`;
   generic runner `pwsh -File .\Invoke-Skill.ps1 -SkillDir <dir> [-InputsJson '<json>']`.
 - **supported tasks:** validate a `lifeorch.skill.manifest/0.1` manifest and a `lifeorch.skill.result/0.1`
