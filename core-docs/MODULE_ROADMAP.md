@@ -82,12 +82,16 @@ Needs refactor · Deprecated · Replaced.
   window capture self-verified against a WinForms probe (2026-07-24). Work order:
   `modules/06-capture-screen/WORK_ORDER.md`. See DECISION_LOG D-0014.
 
-## Modules 7–9 — Local model foundation (provisional)  ← Module 7 (`model.gateway`) next
-- **7 `model.gateway`** — Local Model Gateway: common interface to installed local LLM/vision/speech/
-  embedding models; may wrap existing servers/CLIs; records model id/version/params/io/runtime/resources/
-  failure. *Proposed, P1. **← next.***
+## Modules 7–9 — Local model foundation (provisional)  ← Module 8 (`classify.batch`) next
+- **7 `model.gateway`** — Local Model Gateway. ***MVP complete*** — common interface that runs local **LLMs**
+  (GGUF) via the llama.cpp **`llama-server`** (start→/health→/v1/chat/completions→kill), selected from a
+  declarative `models.json` by `-Model` id or a `-Tier` alias. Declares STT/TTS/embedding (staged, wired in
+  their own modules; `model_not_wired` otherwise). First **stochastic/mixed** skill — populates
+  `model_provenance` + a generation-completeness `confidence` (→ review queue when < 0.5). `parallel_safe:false`.
+  **Tests 28/28 via executor (2026-07-24)** incl. live generation on staged 0.5B/1.5B, truncation→review-queue,
+  wrapper, and clean server teardown. Work order: `modules/07-model-gateway/WORK_ORDER.md`. See D-0015, D-0016.
 - **8 `classify.batch`** — Batch Classification & Sorting: weak-local-model categorization/labeling/
-  extraction/routing; early proof that local models do useful unattended work. *Proposed, P2. Depends on 7.*
+  extraction/routing; early proof that local models do useful unattended work. *Proposed, P2. Depends on 7. **← next.***
 - **9 `review.processor`** — Review Queue Processor: stronger local model adjudicates only flagged/
   low-confidence/contradictory items from the queue. *Proposed, P2. Depends on 7, 8, `REVIEW_QUEUE`.*
 

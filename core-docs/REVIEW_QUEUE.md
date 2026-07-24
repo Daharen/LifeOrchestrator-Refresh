@@ -46,3 +46,23 @@ This keeps escalation cheap: reviewers adjudicate single items, they do not redo
   add a new record or update status + resolution.
 - One item = one decision. If a source needs many decisions, emit many records with distinct `source_ref`s.
 - Resolved items may be compacted to an archive later; keep the live file small.
+
+## First producer wired (Module 7)
+`model.gateway` is the **first skill that appends to `review_queue.jsonl`**. It flags a run when its
+generation-completeness `confidence` falls below **0.5** (empty output → 0.1; truncated at `max_tokens`
+`finish_reason=length` → 0.4), with `reason:"low_confidence"`, `flagged_by:"model.gateway"`,
+`requested:"review_generation_quality"`, and a `source_ref` to that invocation's `exchange.json`. The queue
+path defaults to the repo root (`review_queue.jsonl`) or `-ReviewQueuePath`. Verified end-to-end by the
+Module 7 tests (a forced-truncation run produced a valid `lifeorch.review.item/0.1`).
+
+## Design flags to revisit (not yet actioned — for a future session/frontier pass)
+- **model.gateway confidence is a heuristic, not semantic.** It measures generation *completeness*
+  (finish_reason/empty), NOT whether the answer is *correct*. Replace with a logprob- or self-consistency-based
+  **semantic** confidence when Module 9 (`review.processor`) needs a real signal. (D-0016.)
+- **TTS tokenizer triplication (~650 MB × 3).** `Qwen3-TTS-Tokenizer-12Hz` is duplicated inside both
+  CustomVoice models' `speech_tokenizer\`. De-duplicate when Module 12 (`speech.tts`) is built.
+- **Staged llama.cpp engine depends on a system CUDA runtime.** The portable `_engines\llama.cpp\bin\` copy
+  (72 MB) runs today but links to a CUDA runtime installed outside `F:\Qwen3.5-27B`. Confirm the runtime's
+  home before that folder is torn down; if it lived only there, restage the CUDA DLLs too.
+- **27B GGUF gpu_layers is a guess (28).** ~16 GB Q4 > 11 GB VRAM → partial offload; the value was not
+  load-tested this session. Tune when the strong tier is first exercised (Module 9).

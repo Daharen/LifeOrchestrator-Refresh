@@ -5,12 +5,14 @@ Owns **reality as it exists now** — not intended architecture. Keep it compact
 is planned (serves scripts and weaker local models) but not yet created.
 
 - **Project phase:** MVP module build-out.
-- **Active module:** _none in progress._ **Modules 0–6 complete** (0 executor · 1 `skill.bootstrap` · 2
-  `fs.observer` · 3 `proc.observer` · 4 `uia.inspector` · 5 `uia.actor` · 6 `capture.screen`), plus
-  **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure). **Module 6 — Screenshot &
-  Region Capture (`capture.screen`) is MVP complete this session** (monitor/window/app/rectangle → PNG/JPG;
-  tests 39/39 via the executor). **Module 7 — Local Model Gateway (`model.gateway`) is next** (author its work
-  order next session).
+- **Active module:** _none in progress._ **Modules 0–7 complete** (0 executor · 1 `skill.bootstrap` · 2
+  `fs.observer` · 3 `proc.observer` · 4 `uia.inspector` · 5 `uia.actor` · 6 `capture.screen` · 7 `model.gateway`),
+  plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure). **Module 7 — Local Model
+  Gateway (`model.gateway`) is MVP complete this session** (runs local LLMs via llama.cpp `llama-server`; declarative
+  `models.json`; first stochastic/mixed skill with `model_provenance` + heuristic `confidence`; tests 28/28 via the
+  executor). Groundwork done this session: **hardware measured, all local models discovered + copied to portable F:
+  storage** (see registry + `_pending-model-storage\MIGRATION.md`). **Module 8 — Batch Classification
+  (`classify.batch`) is next** (author its work order next session).
 - **Repo / working dir:** **`C:\Users\just_\LifeOrchestrator-Refresh\`** — the clean standalone home for
   **Life Orchestrator** (near-term local-skills track; git-initialized). Layout: `core-docs/` (these docs)
   and `modules/<NN>-<name>/` (one per module). **Reference sources (separate, not built here):** the earlier
@@ -55,6 +57,14 @@ is planned (serves scripts and weaker local models) but not yet created.
   restarts the executor on crash/hang (no approval), stands down on an authorized graceful stop; on-demand
   `Recover-Executor.ps1 -Force`. Not perpetual, no boot persistence, visible + self-killable (D-0013, honors
   D-0001). Adds `heartbeat.json`/`last-exit.json` to Module 0 (additive; 12/12 unaffected). Tests 22/22 (2026-07-24).
+- **Module 7** — Local Model Gateway (`model.gateway`). Common interface that runs local **LLMs** (GGUF) via the
+  llama.cpp **`llama-server`** (start → `/health` → `/v1/chat/completions` → kill), model chosen from a declarative
+  `models.json` by `-Model` id / `-Tier` alias (tiny/weak/mid/strong) / default. Declares STT/TTS/embedding (staged;
+  `model_not_wired` until Modules 11/12/23). **First stochastic/mixed skill:** populates `model_provenance` (tokens/
+  timings/finish_reason/device) + a generation-completeness `confidence` (stop→0.7, length→0.4, empty→0.1; `<0.5` →
+  `review_queue.jsonl`). `parallel_safe:false`. Artifacts `output.txt`/`exchange.json`. **Tests 28/28 via executor
+  (2026-07-24)** — live gen on staged 0.5B/1.5B, truncation→review-queue, error paths, wrapper, clean server teardown.
+  See D-0015 (large-data), D-0016 (gateway design).
 
 ## Installed dependencies (verified this machine)
 - **PowerShell 7.4.6** — installed as a .NET global tool at
@@ -66,16 +76,22 @@ is planned (serves scripts and weaker local models) but not yet created.
 - Not admin. No system-wide `pwsh` (only the user `~\.dotnet\tools` entry — resolves in new shells).
 
 ## Installed local models
-- **None registered yet.** (To be discovered/registered — see Unresolved questions and Module 7.)
+- **Discovered + registered (2026-07-24).** 4 LLM GGUF (Qwen2.5 0.5B/1.5B/3B + Qwen3.5-27B; all `wired` via
+  `model.gateway`), 1 STT (Whisper base.en), 2 TTS voices + 1 tokenizer (Qwen3-TTS 0.6B/1.7B), 1 embedding
+  (Qwen3-Embedding-0.6B). **All copied to portable F: storage** (`…\LifeOrchestrator-Refresh_Large_Data\
+  _pending-model-storage\`, ~27.4 GB). Full inventory + sizes + engines in `TOOL_MODEL_REGISTRY.md`; relocation plan
+  in that folder's `MIGRATION.md`. Non-LLM models are declared but wired in their own modules (11/12/23).
 
-## Available hardware (partly inferred — needs a detection pass)
-- Windows 10 x64 workstation; fixed drives **C, D, E** and **F** (F: used for large-data storage).
-- **NVIDIA GPU present** (inferred: NVIDIA Ansel + GPU-class apps installed); exact model, VRAM, CPU,
-  and RAM **not yet measured**. A hardware-detection step should populate these.
-- Host confirmed this session: `DESKTOP-PF5FFMF`, user `just_`.
+## Available hardware (measured 2026-07-24)
+- **CPU** Intel i9-9900KF (8c/16t @3.6GHz) · **RAM** 64 GB · **GPU** NVIDIA RTX 2080 Ti **11 GB VRAM** (CUDA,
+  driver 591.74, cc 7.5) · **OS** Windows 10 Pro 19045 x64. Host `DESKTOP-PF5FFMF`, user `just_`.
+- **Drives (fixed):** C: 893 GB (**~67 GB / 7.5% free — constrained**), E: "Game Drive" 858 GB (~534 GB free),
+  **F: "Storage space" 3.72 TB (~1.78 TB free)** = the large-data home. (No D: on this box.)
+- Full profile + runtimes in `TOOL_MODEL_REGISTRY.md` (Hardware profile).
 
 ## Active model servers
-- None known.
+- None persistent. `model.gateway` starts a **transient `llama-server`** on a free loopback port per call and kills
+  it when done (no warm/persistent worker yet — D-0002).
 
 ## Known working invocation paths
 - Executor: `pwsh -NoProfile -File .\Start-BootstrapExecutor.ps1` /
@@ -87,6 +103,7 @@ is planned (serves scripts and weaker local models) but not yet created.
   envelope from `runtime/completed/<task_id>/stdout.txt`.
 - uia.actor (direct): `pwsh -NoProfile -File modules\05-uia-actor\Invoke-UiaActor.ps1 -Title '<glob>' -Action <invoke|toggle|select|expand|collapse|setvalue|focus> [-AutomationId|-Name|-ControlType|-Path <loc>] [-Value <s>] [-DryRun]`.
 - capture.screen (direct): `pwsh -NoProfile -File modules\06-capture-screen\Invoke-CaptureScreen.ps1 [-Target <monitor|window|app|region>] [-Monitor <index|all|primary>] [-Hwnd|-ProcessId|-Title <loc>] [-App <glob>] [-X -Y -Width -Height] [-Format <png|jpg>]` (or `-InputsJson '<json>'`).
+- model.gateway (direct): `pwsh -NoProfile -File modules\07-model-gateway\Invoke-ModelGateway.ps1 [-Model <id>|-Tier <tiny|weak|mid|strong>] -Prompt '<s>' [-System '<s>'] [-MaxTokens -Temperature -TopP -TopK -Seed]` (or `-InputsJson '<json {…,messages[]}>'`). Registry: `modules\07-model-gateway\models.json`.
 - User ops (click-to-run): `ops/*.bat` — start/stop/restart/status the executor and run tests; each writes
   output to `ops/out/` for the agent to read.
 - Watchdog: `ops/start-watchdog.bat` (supervise), `ops/stop-watchdog.bat`, `ops/recover-executor.bat [-Force]`;
@@ -110,6 +127,12 @@ is planned (serves scripts and weaker local models) but not yet created.
   monitor primary/all; region png+jpg with PNG/JPEG magic-byte + sha256 checks; six error paths; wrapper; and
   a live window capture self-verified against a WinForms probe; run 2026-07-24 via the executor as
   `m6-test-001`, exit 0, ~138s).
+- Module 7: `modules/07-model-gateway/tests/Invoke-ModelGatewayTests.ps1` — **28/28 pass** (manifest; registry
+  declares all modalities + 4 wired LLMs; five error paths incl. `model_not_found`/`model_not_wired`/
+  `registry_not_found`; **live** generation on the staged 0.5B via `-Tier tiny` — status ok, finish_reason stop,
+  confidence 0.7, provenance with token counts, artifact sha256 verified; wrapper ran the 1.5B; a forced
+  truncation → confidence 0.4 → a valid review-queue item; no orphaned `llama-server`; run 2026-07-24 via the
+  executor as `m7-test-002`, exit 0, ~15s).
 
 ## Known failures / gotchas
 - **Executor fatal-crashed on a transient file lock (2026-07-24T06:26:36Z).** While task `m5-example-001`
@@ -134,6 +157,16 @@ is planned (serves scripts and weaker local models) but not yet created.
   drives a probe reliably; prefer side-effect-free dry-runs when capturing examples to avoid GUI-in-task risk.
 - Skill scripts must write **only** the JSON envelope to stdout (diagnostics to stderr); the executor
   captures stdout verbatim into `stdout.txt`, which is parsed as the envelope.
+- **PowerShell empty-array unroll (pwsh 7.4.6, StrictMode):** `$x = if(cond){@($y)}else{@()}` assigns **`$null`**
+  when the empty-array branch is taken (an empty array written from a block unrolls to nothing), so a later
+  `$x.Count` throws "The property 'Count' cannot be found." Assign the array first (`$x=@(); if(cond){$x=@($y)}`).
+  Hit + fixed in `model.gateway` (empty `-Stop`).
+- **This llama.cpp build (b8661) `llama-cli` is interactive-only** — it rejects `-no-cnv` ("use llama-completion
+  instead", which isn't built) and decorates stdout with a banner/`>`/timing footer. Script LLMs via **`llama-server`**
+  (`/v1/chat/completions` → clean JSON with `finish_reason`/`usage`/`timings`), as `model.gateway` does.
+- **Child-process pipe deadlock:** reading a child's stdout to end while its stderr pipe fills (llama.cpp logs a lot)
+  deadlocks. Drain both streams async (`ReadToEndAsync`) or redirect to files, and close the child's stdin. (The
+  gateway uses `Start-Process` with file-redirected server logs; probes used async reads.)
 - `capture.screen` uses screen-pixel copy (`CopyFromScreen`): an **occluded** window captures whatever covers
   it and a **minimized** window returns a `window_minimized` error — it does **not** raise/activate windows
   (read-only). Per-Monitor-V2 DPI awareness is set once per process (ignored if already set). Off-screen /
@@ -143,24 +176,22 @@ is planned (serves scripts and weaker local models) but not yet created.
   then ran it on the Windows executor.
 
 ## Unresolved questions
-- Exact GPU/CPU/RAM; which local models (LLM/vision/speech/embedding) are installed or wanted.
 - Root cause of the executor file-lock crash (see Known failures) — reproduce and harden Module 0.
 - Install pwsh system-wide (winget, needs UAC) vs. keep the per-user dotnet-tool build.
 - Contract finalization: fold the provisional Module 1 conventions (artifact-root resolution, `-InputsJson`
   generic arg passing, `lifeorch.skill.invocation_report/0.1`) into `SKILL_CONTRACT.md` and bump the version —
-  now exercised by Modules 2–6. (See DECISION_LOG D-0009.)
+  now exercised by Modules 2–7. (See DECISION_LOG D-0009.)
+- **Model relocation:** the staged models in `_pending-model-storage\` must eventually move into their owning
+  modules' F: folders (Modules 7/11/12/23) and the pending folder be deleted when empty (see its `MIGRATION.md`).
+- **model.gateway follow-ons:** semantic (not just completeness) confidence; a warm/persistent server if load
+  latency dominates; tune the 27B `gpu_layers` for 11 GB VRAM (see REVIEW_QUEUE.md).
 
 ## Next expected action
-1. Author the **Module 7 work order** (`modules/07-model-gateway/WORK_ORDER.md`) from the template and implement
-   its MVP: a **Local Model Gateway** (`model.gateway`) — a common interface to whatever local LLM/vision/speech/
-   embedding models exist here (may wrap an existing server/CLI), recording model id/version/params/io/runtime/
-   resources/failure. This unblocks Modules 8–9 (batch classification + review processor). Reuse
-   `Test-SkillManifest` / `Test-SkillResultEnvelope` and `Invoke-Skill.ps1`.
-2. A **local-model / hardware detection pass** is likely needed before/within Module 7 — **no models are
-   registered yet** and exact GPU/CPU/RAM are unmeasured (see Unresolved questions). Discover what is installed
-   (Ollama / LM Studio / llama.cpp / ONNX / etc.) and register it in `TOOL_MODEL_REGISTRY.md`.
-3. Housekeeping (deferred): fold the D-0009 conventions into `SKILL_CONTRACT.md` and bump the contract version
-   (now exercised by Modules 2–6; DECISION_LOG D-0009/D-0011); the pending `proteus_repo/tools/` leftover
-   removal (`ops/finish-game-cleanup.bat`).
+1. Author the **Module 8 work order** (`modules/08-classify-batch/WORK_ORDER.md`) and implement `classify.batch`:
+   weak-local-model batch categorization/labeling/extraction. It **calls `model.gateway`** (tier `weak` = 1.5B) and
+   uses `REVIEW_QUEUE` for low-confidence items — the first real consumer of the gateway.
+2. Housekeeping (deferred): fold the D-0009 conventions into `SKILL_CONTRACT.md` and bump the contract version
+   (now exercised by Modules 2–7; DECISION_LOG D-0009/D-0011); relocate staged models per `MIGRATION.md`; the pending
+   `proteus_repo/tools/` leftover removal (`ops/finish-game-cleanup.bat`).
 
-- **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 6 capture.screen build session).
+- **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 7 model.gateway build session).

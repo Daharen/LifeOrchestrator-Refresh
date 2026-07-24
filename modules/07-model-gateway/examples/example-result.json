@@ -1,0 +1,56 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "model.gateway",
+  "skill_version": "0.1.0",
+  "contract_version": "0.1",
+  "invocation_id": "b1e7c0a2-0000-4a11-9c33-example00001",
+  "status": "ok",
+  "started_at_utc": "2026-07-24T16:40:00.0000000Z",
+  "finished_at_utc": "2026-07-24T16:40:02.1000000Z",
+  "duration_ms": 2100,
+  "inputs_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "result": {
+    "model": "llm.weak.qwen2p5-0p5b",
+    "engine": "llama-server",
+    "mode": "chat",
+    "selected_from": "tier:tiny",
+    "request": {
+      "messages": [{ "role": "user", "content": "Reply with exactly one word: PONG" }],
+      "max_tokens": 16, "temperature": 0.1, "top_p": 0.95, "top_k": 40, "seed": 42, "stop": []
+    },
+    "output": { "role": "assistant", "text": "PONG!" },
+    "generation": {
+      "finish_reason": "stop",
+      "prompt_tokens": 27,
+      "completion_tokens": 4,
+      "total_tokens": 31,
+      "timings": { "prompt_ms": 37.4, "predicted_ms": 18.4, "predicted_per_second": 217.6 }
+    },
+    "server": { "port": 8140, "health_ms": 1299, "gpu_layers": 99, "context": 4096 }
+  },
+  "confidence": 0.7,
+  "artifacts": [
+    { "path": "…/runtime/artifacts/b1e7…/output.txt", "kind": "text", "bytes": 5, "sha256": "…" },
+    { "path": "…/runtime/artifacts/b1e7…/exchange.json", "kind": "json", "bytes": 512, "sha256": "…" }
+  ],
+  "model_provenance": [
+    {
+      "model_id": "llm.weak.qwen2p5-0p5b",
+      "version": "Qwen2.5-0.5B-Instruct-Q4_K_M",
+      "family": "qwen2.5",
+      "format": "gguf",
+      "engine": "llama-server",
+      "engine_build": "llama.cpp b8661 (b7ad48ebd), CUDA, MSVC",
+      "device": "cuda:0",
+      "params": { "gpu_layers": 99, "context": 4096, "max_tokens": 16, "temperature": 0.1, "top_p": 0.95, "top_k": 40, "seed": 42 },
+      "prompt_tokens": 27,
+      "completion_tokens": 4,
+      "total_tokens": 31,
+      "finish_reason": "stop",
+      "runtime_ms": 1299
+    }
+  ],
+  "diagnostics": { "log": "stderr.txt", "artifact_dir": "…/runtime/artifacts/b1e7…" },
+  "warnings": [],
+  "error": null
+}

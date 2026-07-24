@@ -177,12 +177,81 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   (verify on your machine; else stop via Ctrl+C / `stop-executor.bat`). · **last test:** 2026-07-24 via executor
   (tests **22/22**; Module 0 regression re-run 12/12). · **skills:** `exec.watchdog`. See DECISION_LOG D-0013.
 
+### `model.gateway` — Local Model Gateway (Module 7)
+- **status:** installed · **type:** skill (PowerShell wrapping llama.cpp `llama-server`) ·
+  **location:** `LifeOrchestrator-Refresh/modules/07-model-gateway/`
+- **invocation:** direct `pwsh -NoProfile -File .\Invoke-ModelGateway.ps1 [-Model <id>|-Tier <tiny|weak|mid|strong>]
+  -Prompt <s> [-System <s>] [-MaxTokens -Temperature -TopP -TopK -Seed -Stop] [-Registry -Port -GpuLayers -Context
+  -LoadTimeoutSec -ReviewQueuePath]` (or `-InputsJson '<json {…,messages[]}>'`); wrapped via
+  `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
+- **supported tasks:** run a local **LLM** (GGUF text) and return the completion + token counts + timings +
+  finish_reason, with full `model_provenance` and a `confidence`. Model chosen from `models.json` by id/tier/default.
+  Declares STT/TTS/embedding (staged) but returns `model_not_wired` for them (wired in Modules 11/12/23).
+- **I/O:** in = `{model|tier, prompt|messages, system, max_tokens, temperature, top_p, top_k, seed, stop, …}`;
+  out = `lifeorch.skill.result/0.1` envelope (result = `{model, engine, mode, selected_from, request, output{text},
+  generation{finish_reason,prompt_tokens,completion_tokens,total_tokens,timings}, server{port,health_ms,gpu_layers,
+  context}}`) + `runtime/artifacts/<id>/{output.txt,exchange.json,result.json,stderr.txt,server.*.log}`.
+- **determinism:** **mixed** (deterministic wrapping; stochastic output) · **confidence:** heuristic
+  (stop→0.7, length→0.4, empty→0.1; `<0.5` → review queue) · **speed:** small models load+gen in ~1–2 s
+  (GPU); 27B slower (partial offload) · **CPU/GPU/mem:** low / **CUDA (RTX 2080 Ti)** / ~2 GB+model ·
+  **network:** none (loopback only) · **cost:** local only.
+- **limitations:** **`parallel_safe:false`** (per-call server binds a port + most of VRAM); one server per call
+  (no warm worker — D-0002); LLM text only in the MVP; no streaming; no auto model selection (routing = Module 24).
+  · **last test:** 2026-07-24 via executor (**tests 28/28**, live 0.5B/1.5B). · **skills:** `model.gateway`. See D-0016.
+
 ---
 
+## Hardware profile (measured 2026-07-24 — DESKTOP-PF5FFMF)
+- **CPU:** Intel Core i9-9900KF — 8 cores / 16 threads @ 3.6 GHz.
+- **RAM:** 64 GB (63.9 GB total; ~38 GB free at measure).
+- **GPU:** **NVIDIA GeForce RTX 2080 Ti, 11 GB VRAM** (11264 MiB), driver 591.74, compute cap 7.5, CUDA present
+  (nvidia-smi). (Two DisplayLink USB "adapters" are not compute GPUs.)
+- **OS:** Windows 10 Pro 19045 (x64). **Drives (fixed):** C: 893 GB (**~67 GB / 7.5% free — constrained**);
+  E: "Game Drive" 858 GB (~534 GB free); **F: "Storage space" 3.72 TB (~1.78 TB free)** — large-data home. (No D:.)
+
+## Local model runtimes (verified on this machine)
+- **llama.cpp `llama-server` / `llama-cli`** — CUDA build **b8661 (b7ad48ebd)**, at
+  `F:\Qwen3.5-27B\llama.cpp\build\bin\`; **portable copy staged** at
+  `F:\…\LifeOrchestrator-Refresh_Large_Data\_pending-model-storage\_engines\llama.cpp\bin\` (runs standalone;
+  needs a system CUDA runtime). `model.gateway` uses `llama-server` (chat completions). Note: this build's
+  `llama-cli` is interactive-only (rejects `-no-cnv`); use `llama-server` for scripting.
+- **whisper.cpp** — CUDA + CPU builds with `whisper-cli.exe`/`whisper-server.exe` under
+  `F:\Local_TTS_Large_Data\external\whisper.cpp_{cuda,cpu_backup_2026_04_17}\build\bin\Release\`. *For Module 11.*
+- **Speech Python venv** — `F:\My_Programs\Local_Computer_Speech_Large_Data\python_env\` (Python 3.12.10; torch
+  2.11.0+cu128, torchaudio, transformers 4.57.3, accelerate, safetensors, soundfile, librosa, onnxruntime). *For Module 12.*
+- **System Python** 3.12.10 (`…\AppData\Local\Programs\Python\Python312`) with torch 2.2.1 + onnxruntime-gpu/directml.
+- Ollama / LM Studio: **not installed.** git / winget / .NET SDK 9 / node: present (see above).
+
+## Installed local models (inventory — DO NOT re-download; portable copies staged on F:)
+All staged under `F:\My_Programs\LifeOrchestrator-Refresh_Large_Data\_pending-model-storage\` (see that folder's
+`MIGRATION.md`). `wired` = runnable by `model.gateway` today.
+
+| model_id | type | file/dir (staged) | size | engine | wired |
+|---|---|---|---|---|---|
+| `llm.weak.qwen2p5-0p5b` | llm | `llm\Qwen2.5-0.5B-Instruct-Q4_K_M\…gguf` | 0.38 GB | llama-server | **yes** |
+| `llm.weak.qwen2p5-1p5b` | llm | `llm\Qwen2.5-1.5B-Instruct-Q4_K_M\…gguf` | 0.94 GB | llama-server | **yes** (default) |
+| `llm.weak.qwen2p5-3b` | llm | `llm\Qwen2.5-3B-Instruct-IQ4_XS\…gguf` | 1.66 GB | llama-server | **yes** |
+| `llm.strong.qwen3p5-27b` | llm | `llm\Qwen3.5-27B-Q4_K_M\…gguf` | 16.3 GB | llama-server | **yes** (partial GPU) |
+| `stt.whisper.base-en` | stt | `stt\whisper-ggml-base.en\ggml-base.en.bin` | 0.14 GB | whisper.cpp | no → M11 |
+| `tts.tokenizer.qwen3-12hz` | tts-comp | `tts\Qwen3-TTS-Tokenizer-12Hz\` | 0.65 GB | transformers | no → M12 |
+| `tts.weak.qwen3-0p6b` | tts | `tts\Qwen3-TTS-12Hz-0.6B-CustomVoice\` | 2.38 GB | transformers | no → M12 |
+| `tts.strong.qwen3-1p7b` | tts | `tts\Qwen3-TTS-12Hz-1.7B-CustomVoice\` | 4.31 GB | transformers | no → M12 |
+| `embedding.qwen3-0p6b` | embedding | `embedding\Qwen3-Embedding-0.6B\` | 1.12 GB | transformers | no → M23 |
+
+Tiers (`models.json`): `tiny`=0.5B, `weak`=1.5B (default), `mid`=3B, `strong`=27B. Source originals (may be
+removed by the user) are listed in `_pending-model-storage\MIGRATION.md`.
+
+## Large-data storage (F:)
+- **Root:** `F:\My_Programs\LifeOrchestrator-Refresh_Large_Data\` — home for all module data >~50 MB (D-0015).
+  Contains `_engines\` (staged llama.cpp), `_pending-model-storage\` (~27.4 GB, all models pending relocation),
+  `README.md`, and a `.lnk` back to the repo `modules\`. A `.lnk` in the repo `modules\` folder points here.
+- **Rule:** the C: repo never stores model weights; skills reference models by absolute F: paths in their registry.
+  As owning modules are built, models move into `…_Large_Data\<NN>-<module>\` and `_pending-model-storage\` shrinks
+  (delete it when empty). See `_pending-model-storage\MIGRATION.md`.
+
 ### Planned / not yet present (do not assume these exist)
-- Local LLM / vision / speech / embedding models — **none registered.** Add under Module 7
-  (`model.gateway`) as they are installed, with real quality/speed/resource numbers.
-- A C++ toolchain for native modules — verify (CMake/MSVC) before the first C++ module; register when confirmed.
+- **Vision / multimodal** models — none yet (Modules 16–17). C++ toolchain for native modules — verify
+  (CMake/MSVC) before the first C++ module; register when confirmed.
 
 **Discipline:** never list a tool as `installed` you have not actually invoked on this machine. Prefer
 `planned` until verified, and record the `last successful test` date on every status change.

@@ -1,0 +1,118 @@
+{
+  "schema": "lifeorch.model_registry/0.1",
+  "_comment": "Declarative model registry for model.gateway. The gateway resolves a requested model (by -Model id, -Tier alias, or the default) against `models`, and runs it if `wired` and its type/engine are supported (MVP: type=llm via engine=llama-server). Non-wired / non-LLM entries are DECLARED so later modules can wire them without rediscovering the machine. Paths point at PORTABLE STAGED COPIES under _pending-model-storage (decoupled from the obsolete source folders). To swap which model a tier uses, change `tiers`/`defaults` below — no code change.",
+  "updated_utc": "2026-07-24T00:00:00.0000000Z",
+  "host": "DESKTOP-PF5FFMF",
+  "engine_build": "llama.cpp b8661 (b7ad48ebd), CUDA, MSVC",
+  "engines": {
+    "llama-server": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\_pending-model-storage\\_engines\\llama.cpp\\bin\\llama-server.exe",
+    "_comment": "Staged, verified to run standalone (health + chat) 2026-07-24. Depends on a system CUDA runtime (not on the source folder). If torn down, restage from F:\\Qwen3.5-27B\\llama.cpp\\build\\bin."
+  },
+  "defaults": { "llm": "llm.weak.qwen2p5-1p5b" },
+  "tiers": {
+    "llm": {
+      "tiny": "llm.weak.qwen2p5-0p5b",
+      "weak": "llm.weak.qwen2p5-1p5b",
+      "mid": "llm.weak.qwen2p5-3b",
+      "strong": "llm.strong.qwen3p5-27b"
+    }
+  },
+  "models": [
+    {
+      "model_id": "llm.weak.qwen2p5-0p5b",
+      "type": "llm", "wired": true,
+      "name": "Qwen2.5-0.5B-Instruct", "family": "qwen2.5", "format": "gguf", "quant": "Q4_K_M",
+      "version": "Qwen2.5-0.5B-Instruct-Q4_K_M",
+      "path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\_pending-model-storage\\llm\\Qwen2.5-0.5B-Instruct-Q4_K_M\\Qwen2.5-0.5B-Instruct-Q4_K_M.gguf",
+      "engine": "llama-server",
+      "context": 4096, "gpu_layers": 99,
+      "params": { "params_b": 0.5, "size_bytes": 397808192 },
+      "notes": "Fastest; smoke tests / trivial labeling. Fully GPU-offloaded on the RTX 2080 Ti."
+    },
+    {
+      "model_id": "llm.weak.qwen2p5-1p5b",
+      "type": "llm", "wired": true,
+      "name": "Qwen2.5-1.5B-Instruct", "family": "qwen2.5", "format": "gguf", "quant": "Q4_K_M",
+      "version": "Qwen2.5-1.5B-Instruct-Q4_K_M",
+      "path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\_pending-model-storage\\llm\\Qwen2.5-1.5B-Instruct-Q4_K_M\\Qwen2.5-1.5B-Instruct-Q4_K_M.gguf",
+      "engine": "llama-server",
+      "context": 4096, "gpu_layers": 99,
+      "params": { "params_b": 1.5, "size_bytes": 986048768 },
+      "notes": "Default weak tier: bulk classification/labeling/extraction. Fully GPU-offloaded."
+    },
+    {
+      "model_id": "llm.weak.qwen2p5-3b",
+      "type": "llm", "wired": true,
+      "name": "Qwen2.5-3B-Instruct", "family": "qwen2.5", "format": "gguf", "quant": "IQ4_XS",
+      "version": "Qwen2.5-3B-Instruct-IQ4_XS",
+      "path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\_pending-model-storage\\llm\\Qwen2.5-3B-Instruct-IQ4_XS\\Qwen2.5-3B-Instruct-IQ4_XS.gguf",
+      "engine": "llama-server",
+      "context": 4096, "gpu_layers": 99,
+      "params": { "params_b": 3, "size_bytes": 1739095200 },
+      "notes": "Mid tier: harder labeling; still fully GPU-offloaded."
+    },
+    {
+      "model_id": "llm.strong.qwen3p5-27b",
+      "type": "llm", "wired": true,
+      "name": "Qwen3.5-27B", "family": "qwen3.5", "format": "gguf", "quant": "Q4_K_M",
+      "version": "Qwen_Qwen3.5-27B-Q4_K_M",
+      "path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\_pending-model-storage\\llm\\Qwen3.5-27B-Q4_K_M\\Qwen_Qwen3.5-27B-Q4_K_M.gguf",
+      "engine": "llama-server",
+      "context": 4096, "gpu_layers": 28,
+      "params": { "params_b": 27, "size_bytes": 17128621600 },
+      "notes": "Strong tier: review/adjudication (Module 9). ~16 GB Q4 > 11 GB VRAM, so PARTIAL GPU offload — gpu_layers=28 is a conservative starting value; tune to fit VRAM. Slower; not exercised in the Module 7 MVP smoke."
+    },
+    {
+      "model_id": "stt.whisper.base-en",
+      "type": "stt", "wired": false,
+      "name": "Whisper base.en (ggml)", "family": "whisper", "format": "ggml-bin",
+      "version": "ggml-base.en",
+      "path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\_pending-model-storage\\stt\\whisper-ggml-base.en\\ggml-base.en.bin",
+      "engine": "whisper.cpp",
+      "engine_candidates": [
+        "F:\\Local_TTS_Large_Data\\external\\whisper.cpp_cuda\\build\\bin\\Release\\whisper-cli.exe",
+        "F:\\Local_TTS_Large_Data\\external\\whisper.cpp_cpu_backup_2026_04_17\\build\\bin\\Release\\whisper-cli.exe"
+      ],
+      "params": { "size_bytes": 147964211 },
+      "notes": "DECLARED only. Wire in Module 11 (speech.stt). whisper.cpp CLI (CUDA + CPU builds) exists on this machine."
+    },
+    {
+      "model_id": "tts.tokenizer.qwen3-12hz",
+      "type": "tts-component", "wired": false,
+      "name": "Qwen3-TTS-Tokenizer-12Hz", "family": "qwen3-tts", "format": "safetensors-dir",
+      "path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\_pending-model-storage\\tts\\Qwen3-TTS-Tokenizer-12Hz",
+      "engine": "transformers",
+      "params": { "size_bytes": 682301387 },
+      "notes": "DECLARED only. Shared speech tokenizer used by the Qwen3-TTS voices (also bundled inside each voice's speech_tokenizer/ — see REVIEW_QUEUE re: triplication). Wire in Module 12 (speech.tts)."
+    },
+    {
+      "model_id": "tts.weak.qwen3-0p6b",
+      "type": "tts", "wired": false,
+      "name": "Qwen3-TTS-12Hz-0.6B-CustomVoice", "family": "qwen3-tts", "format": "safetensors-dir",
+      "path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\_pending-model-storage\\tts\\Qwen3-TTS-12Hz-0.6B-CustomVoice",
+      "engine": "transformers",
+      "engine_env": "F:\\My_Programs\\Local_Computer_Speech_Large_Data\\python_env\\Scripts\\python.exe",
+      "params": { "params_b": 0.6, "size_bytes": 2498389790 },
+      "notes": "DECLARED only. Weak TTS voice. Runs under the speech venv (torch 2.11+cu128, transformers 4.57). Wire in Module 12 (speech.tts)."
+    },
+    {
+      "model_id": "tts.strong.qwen3-1p7b",
+      "type": "tts", "wired": false,
+      "name": "Qwen3-TTS-12Hz-1.7B-CustomVoice", "family": "qwen3-tts", "format": "safetensors-dir",
+      "path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\_pending-model-storage\\tts\\Qwen3-TTS-12Hz-1.7B-CustomVoice",
+      "engine": "transformers",
+      "engine_env": "F:\\My_Programs\\Local_Computer_Speech_Large_Data\\python_env\\Scripts\\python.exe",
+      "params": { "params_b": 1.7, "size_bytes": 4520220350 },
+      "notes": "DECLARED only. Stronger TTS voice. Runs under the speech venv. Wire in Module 12 (speech.tts)."
+    },
+    {
+      "model_id": "embedding.qwen3-0p6b",
+      "type": "embedding", "wired": false,
+      "name": "Qwen3-Embedding-0.6B", "family": "qwen3", "format": "safetensors-dir",
+      "path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\_pending-model-storage\\embedding\\Qwen3-Embedding-0.6B",
+      "engine": "transformers",
+      "params": { "params_b": 0.6, "size_bytes": 1191500000 },
+      "notes": "DECLARED only. Discovered under an ACE-Step music suite; copied for portability. Wire in Module 23 (artifact.search). Could also run via llama.cpp llama-server --embedding if converted to GGUF."
+    }
+  ]
+}

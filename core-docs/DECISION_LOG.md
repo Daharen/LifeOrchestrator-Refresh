@@ -212,3 +212,56 @@ alternatives · consequences · affects · state (provisional | locked) · revis
   (`screen:true` + `filesystem:write` requirements; `parallel_safe:true` for a sensor). · **revisit-if:** a real
   need appears for off-screen/occluded compositing, window activation, cursor inclusion, or capture-time
   downscaling — each gets its own scoped work order.
+
+### D-0015 — Large model/data lives on F: as portable per-module copies; C: repo stays small
+- **date:** 2026-07-24 · **state:** locked
+- **decision:** Model weights and any module data >~50 MB do **not** live in the C: repo (C: is space-constrained:
+  ~67 GB / 7.5% free). They live on the **F:** drive under `F:\My_Programs\LifeOrchestrator-Refresh_Large_Data\`
+  (matching the user's existing `<App>_Large_Data` convention), mirroring the repo's `modules\` layout for big data.
+  Skills resolve models by **absolute F: paths** recorded in their registry (config, not code) — not via links —
+  so a moved model is a one-line path edit. Human navigation is served by two `.lnk` shortcuts (repo `modules\` →
+  F: root, and back). Because several **original** model folders are obsolete side-projects the user may delete
+  (`F:\Qwen3.5-27B`, `F:\Local_TTS_Large_Data`, the ACE-Step suite), models are **copied** (non-destructive) into a
+  staging area `…\_pending-model-storage\` so nothing depends on those originals. As each **owning** module is built,
+  its model(s) move from staging into `…\LifeOrchestrator-Refresh_Large_Data\<NN>-<module>\`; **when
+  `_pending-model-storage\` is empty it is deleted** (see its `MIGRATION.md`). The **inference engines** are staged
+  too (the llama.cpp `build\bin\`, verified to run standalone) for the same portability reason.
+- **reason:** Keep the git repo lean and portable; decouple the project from doomed source folders; make model
+  selection/relocation trivial (paths in a registry). Copies (not in-place references) are the user's explicit
+  requirement — stale references to torn-down folders would silently break skills.
+- **alternatives:** reference models in place on F: (rejected — couples to obsolete folders); copy into the C: repo
+  (rejected — no space, and git would try to track GBs); OS symlinks/junctions for resolution (rejected — abs paths
+  in the registry are simpler and inspectable; `.lnk` shortcuts are for humans only).
+- **consequences:** `_pending-model-storage\` currently holds ~27.4 GB (engine + 4 LLM GGUF + whisper + 2 TTS +
+  tokenizer + embedding). A future session must actually relocate + de-stage as modules are built. The staged engine
+  depends on a system CUDA runtime (see REVIEW_QUEUE). · **affects:** `TOOL_MODEL_REGISTRY.md` (inventory + large-data
+  section), Modules 7/11/12/23, repo `.gitignore` (`*.lnk`). · **revisit-if:** C: space is freed, or a module needs a
+  large-data layout the `<NN>-<module>\` scheme doesn't cover.
+
+### D-0016 — model.gateway wraps llama-server per call; declares all modalities, wires LLM; heuristic confidence
+- **date:** 2026-07-24 · **state:** locked (engine choice), provisional (confidence heuristic)
+- **decision:** Module 7 `model.gateway` is the common local-model interface. MVP design: (1) **run local LLMs via
+  the llama.cpp `llama-server`** — start a server on a free loopback port → wait for `/health` → POST
+  `/v1/chat/completions` → parse → **always kill the server** (one isolated server per call, D-0002). Chosen over
+  `llama-cli` because this build (b8661) made `llama-cli` an interactive chat tool (rejects `-no-cnv`, decorates
+  stdout); the server returns **clean structured JSON** (content, `finish_reason`, token `usage`, `timings`) — better
+  for provenance and confidence. (2) A **declarative registry** (`models.json`) **declares every discovered model**
+  (LLM×4, STT, TTS×2 + tokenizer, embedding) but only **wired LLMs execute**; non-wired/non-LLM returns a structured
+  `model_not_wired` error naming the future module (STT→11, TTS→12, embed→23). Selection is explicit (`model_id` or a
+  `tier` alias) — **no auto "which model is best"** (that is routing, Module 24). (3) First **stochastic/mixed** skill:
+  populate `model_provenance[]` (id/version/params/tokens/timings/finish_reason/device) and **`confidence`** via a
+  **documented generation-completeness heuristic** (stop→0.7, length→0.4, empty→0.1), NOT semantic correctness;
+  `< 0.5` → append to the review queue.
+- **reason:** Smallest useful MVP that unblocks Modules 8–9 (they need local LLM text). Wrapping the existing server
+  (not reimplementing) fits the language policy; structured JSON gives honest provenance. Declaring-but-not-wiring the
+  other modalities keeps scope tight while recording what exists.
+- **alternatives:** `llama-cli --single-turn` + stdout parsing (rejected — decorated/fragile output, no token/stop
+  metadata); a persistent warm server shared across calls (deferred — D-0002; revisit if load latency dominates, e.g.
+  the 27B); wiring STT/TTS/embedding now (deferred to their modules); logprob/self-consistency semantic confidence
+  (deferred — heuristic first, per the stochastic-then-harden doctrine).
+- **consequences:** `parallel_safe:false` (a per-call server binds a port + most of VRAM); `determinism:"mixed"`;
+  per-call model-load cost (fine for small models; the 27B is slow + partial-offload). The confidence number is only a
+  completeness signal — consumers should read `model_provenance` for the real detail. · **affects:** Module 7,
+  Modules 8/9/24, `SKILL_CONTRACT.md` (`confidence`/`model_provenance` first real use), `REVIEW_QUEUE.md`.
+  · **revisit-if:** load latency forces warm workers; a semantic confidence is needed; routing (Module 24) subsumes
+  tier selection.

@@ -1,0 +1,50 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "model.gateway",
+  "name": "Local Model Gateway",
+  "version": "0.1.0",
+  "contract_version": "0.1",
+  "purpose": "A common interface for local and frontier agents to run local models on this machine. MVP runs local LLMs (GGUF text) through the built llama.cpp llama-server, selected from a declarative registry (models.json) by model id or tier alias. The registry also declares STT/TTS/embedding models (staged, but wired in their own later modules). First stochastic/mixed skill: records full model_provenance and a generation-completeness confidence.",
+  "determinism": "mixed",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-ModelGateway.ps1",
+    "args_spec": "Named params: -Model <model_id> | -Tier <tiny|weak|mid|strong>; -Prompt <s> [-System <s>]; sampling -MaxTokens -Temperature -TopP -TopK -Seed [-Stop <s[]>]; -Registry <models.json> -Port <int> -GpuLayers <int> -Context <int> -LoadTimeoutSec <int> -ReviewQueuePath <path>. OR -InputsJson '<json {model,tier,prompt,system,messages,max_tokens,temperature,top_p,top_k,seed,stop,registry,port,gpu_layers,context,load_timeout_s,review_queue_path}>'. Optional -ArtifactRoot, -InvocationId."
+  },
+  "inputs": [
+    { "name": "model", "type": "string", "required": false, "description": "Explicit registry model_id (e.g. llm.weak.qwen2p5-1p5b). Highest precedence." },
+    { "name": "tier", "type": "string", "required": false, "description": "LLM tier alias mapped by the registry: tiny|weak|mid|strong. Used when model is omitted." },
+    { "name": "prompt", "type": "string", "required": false, "description": "User prompt (required unless messages[] is supplied via InputsJson)." },
+    { "name": "system", "type": "string", "required": false, "description": "Optional system message prepended to a prompt." },
+    { "name": "messages", "type": "array", "required": false, "description": "Optional [{role,content}] chat array (overrides system+prompt). InputsJson only." },
+    { "name": "max_tokens", "type": "int", "required": false, "default": 256, "description": "Max tokens to generate." },
+    { "name": "temperature", "type": "number", "required": false, "default": 0.7, "description": "Sampling temperature." },
+    { "name": "top_p", "type": "number", "required": false, "default": 0.95, "description": "Top-p nucleus sampling." },
+    { "name": "top_k", "type": "int", "required": false, "default": 40, "description": "Top-k sampling." },
+    { "name": "seed", "type": "int", "required": false, "default": -1, "description": "RNG seed (-1 = random)." },
+    { "name": "stop", "type": "array", "required": false, "description": "Optional stop strings." },
+    { "name": "registry", "type": "string", "required": false, "description": "Path to models.json (default: the skill's own models.json)." },
+    { "name": "port", "type": "int", "required": false, "description": "Loopback port for llama-server (default: auto-pick a free port from 8140)." },
+    { "name": "gpu_layers", "type": "int", "required": false, "description": "Override the registry's gpu_layers for this run." },
+    { "name": "context", "type": "int", "required": false, "description": "Override the registry's context window for this run." },
+    { "name": "load_timeout_s", "type": "int", "required": false, "default": 120, "description": "Max seconds to wait for the server to become healthy." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ model, engine, mode, selected_from, request{messages,sampling}, output{role,text}, generation{finish_reason,prompt_tokens,completion_tokens,total_tokens,timings}, server{port,health_ms,gpu_layers,context} }"
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4", "llama-server (llama.cpp CUDA b8661)"],
+    "models": ["a GGUF LLM declared in models.json"],
+    "libraries": [],
+    "cpu": "any", "gpu": "nvidia (CUDA)", "memory_mb": 2048,
+    "network": false, "filesystem": "write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 300, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": false,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}
