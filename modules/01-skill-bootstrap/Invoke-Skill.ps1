@@ -4,7 +4,7 @@
   Invoke-Skill.ps1 — generic invocation wrapper for Proteus skills (contract v0.1).
 .DESCRIPTION
   validate manifest -> run entrypoint in an isolated pwsh process -> validate result envelope.
-  Emits a single proteus.skill.invocation_report/0.1 JSON object to stdout (or, with
+  Emits a single lifeorch.skill.invocation_report/0.1 JSON object to stdout (or, with
   -PassThruEnvelope, the skill's raw result envelope). Exits 0 only when the manifest is
   valid, the skill exited 0, and the emitted envelope validates; otherwise exits 1.
 .EXAMPLE
@@ -24,7 +24,7 @@ $ProgressPreference = 'SilentlyContinue'
 
 Import-Module (Join-Path $PSScriptRoot 'lib/SkillContract.psm1') -Force
 
-$REPORT_SCHEMA = 'proteus.skill.invocation_report/0.1'
+$REPORT_SCHEMA = 'lifeorch.skill.invocation_report/0.1'
 function Emit([object]$obj) { [Console]::Out.WriteLine(($obj | ConvertTo-Json -Depth 20)) }
 
 $manifestPath  = Join-Path $SkillDir 'skill.json'

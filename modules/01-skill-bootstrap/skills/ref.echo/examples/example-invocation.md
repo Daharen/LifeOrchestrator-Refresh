@@ -20,5 +20,5 @@ Submit a task whose `task.ps1` calls the entrypoint; the single JSON envelope la
 `runtime/completed/<task_id>/stdout.txt`, and the skill also writes it to
 `<skill>/runtime/artifacts/<invocation_id>/result.json`.
 
-The result envelope conforms to `proteus.skill.result/0.1`. A representative envelope
+The result envelope conforms to `lifeorch.skill.result/0.1`. A representative envelope
 is in `example-result.json`.

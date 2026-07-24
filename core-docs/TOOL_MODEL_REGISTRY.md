@@ -53,7 +53,7 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   `-InputsJson '<json>'`); wrapped `pwsh -File ..\..\Invoke-Skill.ps1 -SkillDir . -InputsJson '<json>'`;
   or as an `exec.bootstrap` task package.
 - **supported tasks:** trivial echo / skill-channel health-check + canonical contract worked example.
-- **I/O:** in = `{message:string, repeat:int}`; out = `proteus.skill.result/0.1` envelope on stdout +
+- **I/O:** in = `{message:string, repeat:int}`; out = `lifeorch.skill.result/0.1` envelope on stdout +
   `runtime/artifacts/<invocation_id>/{echo.txt,result.json,stderr.txt}`.
 - **quality:** deterministic (confidence null) · **speed:** ~0.1s · **CPU/GPU/mem:** low/none/~64MB ·
   **network:** none · **cost:** local only.
@@ -65,8 +65,8 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   **location:** `Project-Proteus-Refresh/modules/01-skill-bootstrap/` (`lib/SkillContract.psm1`, `Invoke-Skill.ps1`)
 - **invocation:** `Import-Module .\lib\SkillContract.psm1` → `Test-SkillManifest` / `Test-SkillResultEnvelope`;
   generic runner `pwsh -File .\Invoke-Skill.ps1 -SkillDir <dir> [-InputsJson '<json>']`.
-- **supported tasks:** validate a `proteus.skill.manifest/0.1` manifest and a `proteus.skill.result/0.1`
-  envelope; run any conforming skill and emit a `proteus.skill.invocation_report/0.1`.
+- **supported tasks:** validate a `lifeorch.skill.manifest/0.1` manifest and a `lifeorch.skill.result/0.1`
+  envelope; run any conforming skill and emit a `lifeorch.skill.invocation_report/0.1`.
 - **I/O:** in = skill dir + optional inputs JSON; out = invocation-report JSON.
 - **limitations:** field/type/enum checks (not full JSON-Schema); pwsh path defaults to the pinned
   dotnet-tool build. · **last test:** 2026-07-24 (11/11 module tests via executor). · **skills:** n/a (harness).

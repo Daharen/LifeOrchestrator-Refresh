@@ -3,8 +3,8 @@
 # Provides Test-SkillManifest and Test-SkillResultEnvelope. No external dependencies.
 Set-StrictMode -Version Latest
 
-$script:MANIFEST_SCHEMA = 'proteus.skill.manifest/0.1'
-$script:RESULT_SCHEMA   = 'proteus.skill.result/0.1'
+$script:MANIFEST_SCHEMA = 'lifeorch.skill.manifest/0.1'
+$script:RESULT_SCHEMA   = 'lifeorch.skill.result/0.1'
 
 function Test-SkillManifest {
     [CmdletBinding(DefaultParameterSetName = 'Object')]

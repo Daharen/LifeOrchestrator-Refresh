@@ -14,7 +14,7 @@ Placed at the skill's root. Minimum fields:
 
 ```json
 {
-  "schema": "proteus.skill.manifest/0.1",
+  "schema": "lifeorch.skill.manifest/0.1",
   "skill_id": "fs.observer",                     // stable, dotted, lowercase; never reused for a different skill
   "name": "Filesystem Observer",
   "version": "0.1.0",                            // semver of THIS skill
@@ -59,12 +59,12 @@ Required at minimum: `skill_id`, `name`, `version`, `contract_version`, `purpose
 
 ## 2. Every invocation returns one Result Envelope (JSON)
 
-`schema = "proteus.skill.result/0.1"`. Written to stdout as a single JSON object **and** to
+`schema = "lifeorch.skill.result/0.1"`. Written to stdout as a single JSON object **and** to
 `result.json` in the artifact directory. Weaker local models and scripts consume this; keep it stable.
 
 ```json
 {
-  "schema": "proteus.skill.result/0.1",
+  "schema": "lifeorch.skill.result/0.1",
   "skill_id": "fs.observer",
   "skill_version": "0.1.0",
   "contract_version": "0.1",
@@ -123,7 +123,7 @@ Required at minimum: `skill_id`, `name`, `version`, `contract_version`, `purpose
 pwsh -NoProfile -File .\Invoke-FsObserver.ps1 -path 'C:\Users\just_\Project-Proteus-src' -depth 2
 ```
 
-**Result** (`result.json`, abbreviated): see `proteus.skill.result/0.1` above with
+**Result** (`result.json`, abbreviated): see `lifeorch.skill.result/0.1` above with
 `result` = `{ "root": "C:\\Users\\just_\\Project-Proteus-src", "entries": [ ... ] }`.
 
 ---

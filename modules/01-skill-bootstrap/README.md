@@ -6,10 +6,10 @@ It deliberately is **not** a plugin framework.
 
 ## What this module delivers
 - `lib/SkillContract.psm1` — dependency-free validators `Test-SkillManifest` and
-  `Test-SkillResultEnvelope` for `proteus.skill.manifest/0.1` and `proteus.skill.result/0.1`.
+  `Test-SkillResultEnvelope` for `lifeorch.skill.manifest/0.1` and `lifeorch.skill.result/0.1`.
 - `skills/ref.echo/` — the reference skill (`skill.json` + `Invoke-RefEcho.ps1` + examples).
 - `Invoke-Skill.ps1` — the generic wrapper: **validate manifest -> run in an isolated pwsh
-  process -> validate the result envelope**, emitting a `proteus.skill.invocation_report/0.1`.
+  process -> validate the result envelope**, emitting a `lifeorch.skill.invocation_report/0.1`.
 - `tests/Invoke-SkillBootstrapTests.ps1` — regression tests (direct, wrapped, error path).
 
 ## How to run
@@ -28,7 +28,7 @@ read the envelope from `runtime/completed/<task_id>/stdout.txt`.
 
 ## Adding a new skill (the pattern this module proves)
 1. Create `skills/<skill.id>/` with a `skill.json` (see `SKILL_CONTRACT.md`) and an entrypoint.
-2. Entrypoint writes exactly one `proteus.skill.result/0.1` envelope to stdout; artifacts to
+2. Entrypoint writes exactly one `lifeorch.skill.result/0.1` envelope to stdout; artifacts to
    `runtime/artifacts/<invocation_id>/`.
 3. Validate with `Test-SkillManifest` / `Test-SkillResultEnvelope` (or run via `Invoke-Skill.ps1`).
 4. Add a `TOOL_MODEL_REGISTRY.md` entry for the skill.
@@ -38,7 +38,7 @@ read the envelope from `runtime/completed/<task_id>/stdout.txt`.
   always reports absolute artifact paths.
 - **Generic argument passing**: a skill accepts `-InputsJson '<json object>'` so a generic
   wrapper need not know each skill's parameters. Named params may also be offered.
-- **Wrapper report**: `proteus.skill.invocation_report/0.1` = `{ manifest_valid, manifest_errors,
+- **Wrapper report**: `lifeorch.skill.invocation_report/0.1` = `{ manifest_valid, manifest_errors,
   invoked, exit_code, envelope_valid, envelope_errors, envelope, stderr_tail }`.
 
 These are recorded in `DECISION_LOG.md` (D-0009) as provisional, to be folded into the

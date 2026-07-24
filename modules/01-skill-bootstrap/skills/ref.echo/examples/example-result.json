@@ -1,36 +1,36 @@
 {
-  "schema": "proteus.skill.result/0.1",
+  "schema": "lifeorch.skill.result/0.1",
   "skill_id": "ref.echo",
   "skill_version": "0.1.0",
   "contract_version": "0.1",
-  "invocation_id": "25f7d13d-3293-4fca-b8ac-2f128f4bb79e",
+  "invocation_id": "8878c5ec-9ac8-44ea-b7d2-33aa6703e787",
   "status": "ok",
-  "started_at_utc": "2026-07-24T03:00:12.9254070Z",
-  "finished_at_utc": "2026-07-24T03:00:13.0422785Z",
-  "duration_ms": 111,
-  "inputs_digest": "sha256:00c38f4e9056bf5fc319343015ad10a8a12bfe8cb77ba387310cfe6b8bdb39c6",
+  "started_at_utc": "2026-07-24T03:40:39.1995992Z",
+  "finished_at_utc": "2026-07-24T03:40:39.3143392Z",
+  "duration_ms": 113,
+  "inputs_digest": "sha256:b43fd078c6e9d66995b9f54b2e34f22aefb0352f47a6e1659c468277fea7887c",
   "result": {
-    "echoed": "Hello from ref.echo through the executor\nHello from ref.echo through the executor",
-    "message": "Hello from ref.echo through the executor",
+    "echoed": "Hello from ref.echo (Life Orchestrator)\nHello from ref.echo (Life Orchestrator)",
+    "message": "Hello from ref.echo (Life Orchestrator)",
     "repeat": 2,
     "host": "DESKTOP-PF5FFMF",
     "user": "just_",
     "pwsh_version": "7.4.6",
-    "pid": 4340
+    "pid": 9564
   },
   "confidence": null,
   "artifacts": [
     {
-      "path": "C:\\Users\\just_\\Project-Proteus-Refresh\\modules\\01-skill-bootstrap\\skills\\ref.echo\\runtime\\artifacts\\25f7d13d-3293-4fca-b8ac-2f128f4bb79e\\echo.txt",
+      "path": "C:\\Users\\just_\\Project-Proteus-Refresh\\modules\\01-skill-bootstrap\\skills\\ref.echo\\runtime\\artifacts\\8878c5ec-9ac8-44ea-b7d2-33aa6703e787\\echo.txt",
       "kind": "text",
-      "bytes": 81,
-      "sha256": "6fd5491d1396dc30152bb0a2afae3854411d089df0392dea879feb2c740206aa"
+      "bytes": 79,
+      "sha256": "9c223254a57e5128118253683c06ec35a96b6d53cc42655badfefcf1641b07e1"
     }
   ],
   "model_provenance": [],
   "diagnostics": {
     "log": "stderr.txt",
-    "artifact_dir": "C:\\Users\\just_\\Project-Proteus-Refresh\\modules\\01-skill-bootstrap\\skills\\ref.echo\\runtime\\artifacts\\25f7d13d-3293-4fca-b8ac-2f128f4bb79e"
+    "artifact_dir": "C:\\Users\\just_\\Project-Proteus-Refresh\\modules\\01-skill-bootstrap\\skills\\ref.echo\\runtime\\artifacts\\8878c5ec-9ac8-44ea-b7d2-33aa6703e787"
   },
   "warnings": [],
   "error": null

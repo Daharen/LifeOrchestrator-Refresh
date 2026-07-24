@@ -13,7 +13,7 @@ plus a generic wrapper that runs any conforming skill and confirms its envelope 
 invoked and trusted through the Module 0 executor this week.
 
 ### Explicit scope (in)
-- Dependency-free validators for `proteus.skill.manifest/0.1` and `proteus.skill.result/0.1`.
+- Dependency-free validators for `lifeorch.skill.manifest/0.1` and `lifeorch.skill.result/0.1`.
 - One trivial reference skill (`ref.echo`) with `skill.json`, entrypoint, README, and examples.
 - A simple invocation wrapper: validate manifest -> run entrypoint (isolated process) -> validate envelope.
 - Proof it runs **directly** and **through the executor**, emitting a schema-valid envelope.

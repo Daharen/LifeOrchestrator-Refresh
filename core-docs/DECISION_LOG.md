@@ -86,7 +86,7 @@ alternatives · consequences · affects · state (provisional | locked) · revis
   (`$PSScriptRoot/runtime/artifacts/<invocation_id>/`), and the envelope always reports **absolute**
   artifact paths; (2) skills accept a generic `-InputsJson '<json object>'` argument (in addition to any
   named params) so a generic wrapper need not know each skill's parameters; (3) the wrapper emits a
-  `proteus.skill.invocation_report/0.1` object `{manifest_valid, manifest_errors, invoked, exit_code,
+  `lifeorch.skill.invocation_report/0.1` object `{manifest_valid, manifest_errors, invoked, exit_code,
   envelope_valid, envelope_errors, envelope, stderr_tail}`.
 - **reason:** Needed to make `ref.echo` and the generic `Invoke-Skill.ps1` interoperate without expanding
   the contract prematurely (D-0005). Kept out of the normative contract until a second skill confirms them.

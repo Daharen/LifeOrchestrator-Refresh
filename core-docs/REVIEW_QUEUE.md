@@ -17,7 +17,7 @@ local model (Module 9) drains it slowly in the background; frontier models see o
 ## Record schema (`review_queue.jsonl`, one object per line)
 ```json
 {
-  "schema": "proteus.review.item/0.1",
+  "schema": "lifeorch.review.item/0.1",
   "id": "rq-000001",
   "created_at_utc": "2026-07-24T02:15:00.0000000Z",
   "flagged_by": "classify.batch",            // producing skill_id

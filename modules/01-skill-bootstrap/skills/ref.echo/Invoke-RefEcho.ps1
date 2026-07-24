@@ -3,7 +3,7 @@
 .SYNOPSIS
   ref.echo — trivial reference skill for Project Proteus (skill contract v0.1).
 .DESCRIPTION
-  Echoes a message N times and emits a single schema-valid proteus.skill.result/0.1
+  Echoes a message N times and emits a single schema-valid lifeorch.skill.result/0.1
   envelope on stdout (and to <ArtifactRoot>/<InvocationId>/result.json). Deterministic.
   Only the JSON envelope is written to stdout; all human/diagnostic logging goes to stderr.
   Exits 0 whenever a valid envelope is produced (including logical status=error), per contract.
@@ -28,7 +28,7 @@ $ProgressPreference = 'SilentlyContinue'
 $SKILL_ID       = 'ref.echo'
 $SKILL_VERSION  = '0.1.0'
 $CONTRACT       = '0.1'
-$RESULT_SCHEMA  = 'proteus.skill.result/0.1'
+$RESULT_SCHEMA  = 'lifeorch.skill.result/0.1'
 
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 $startedAt = [DateTime]::UtcNow

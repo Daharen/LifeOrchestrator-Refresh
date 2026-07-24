@@ -33,7 +33,7 @@ Needs refactor · Deprecated · Replaced.
 - **Implementation:** `modules/01-skill-bootstrap/` — validators (`lib/SkillContract.psm1`), generic
   wrapper (`Invoke-Skill.ps1`), reference skill (`skills/ref.echo/`).
 - **MVP acceptance:** **Met — `ref.echo` validates and runs directly + through the executor, emitting a
-  schema-valid `proteus.skill.result/0.1`; the wrapper validates manifest+envelope; module tests 11/11
+  schema-valid `lifeorch.skill.result/0.1`; the wrapper validates manifest+envelope; module tests 11/11
   (2026-07-24).** Contract-finalization of the adopted conventions deferred (DECISION_LOG D-0009).
 - **Work order:** `modules/01-skill-bootstrap/WORK_ORDER.md`. **Blockers:** none.
 

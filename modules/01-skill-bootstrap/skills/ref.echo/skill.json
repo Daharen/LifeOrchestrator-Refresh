@@ -1,5 +1,5 @@
 {
-  "schema": "proteus.skill.manifest/0.1",
+  "schema": "lifeorch.skill.manifest/0.1",
   "skill_id": "ref.echo",
   "name": "Reference Echo Skill",
   "version": "0.1.0",

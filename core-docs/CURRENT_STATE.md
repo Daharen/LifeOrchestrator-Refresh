@@ -22,7 +22,7 @@ is planned (serves scripts and weaker local models) but not yet created.
 - **Module 0** — Trusted High-Risk Bootstrap Executor. 12/12 integration tests pass on Windows.
 - **Module 1** — Skill Contract & Registry Bootstrap (`skill.bootstrap`). Reference skill `ref.echo`,
   contract validators (`lib/SkillContract.psm1`), and a generic wrapper (`Invoke-Skill.ps1`). Runs directly
-  and through the executor; emits schema-valid `proteus.skill.result/0.1`. Module tests 11/11 (2026-07-24).
+  and through the executor; emits schema-valid `lifeorch.skill.result/0.1`. Module tests 11/11 (2026-07-24).
 
 ## Installed dependencies (verified this machine)
 - **PowerShell 7.4.6** — installed as a .NET global tool at
@@ -72,7 +72,7 @@ is planned (serves scripts and weaker local models) but not yet created.
 - Exact GPU/CPU/RAM; which local models (LLM/vision/speech/embedding) are installed or wanted.
 - Install pwsh system-wide (winget, needs UAC) vs. keep the per-user dotnet-tool build.
 - Contract finalization: fold Module 1's provisional conventions (artifact-root resolution, `-InputsJson`
-  generic arg passing, `proteus.skill.invocation_report/0.1`) into `SKILL_CONTRACT.md` once a second skill
+  generic arg passing, `lifeorch.skill.invocation_report/0.1`) into `SKILL_CONTRACT.md` once a second skill
   (Module 2) confirms them, then bump the contract version. (See DECISION_LOG D-0009.)
 
 ## Next expected action
