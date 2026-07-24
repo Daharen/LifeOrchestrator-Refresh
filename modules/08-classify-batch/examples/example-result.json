@@ -1,0 +1,67 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "classify.batch",
+  "skill_version": "0.1.0",
+  "contract_version": "0.1",
+  "invocation_id": "eebc2e98-2de9-40c0-8d33-1c8ca4e2a36c",
+  "status": "ok",
+  "started_at_utc": "2026-07-24T18:02:11.4210000Z",
+  "finished_at_utc": "2026-07-24T18:02:20.9880000Z",
+  "duration_ms": 9567,
+  "inputs_digest": "sha256:f51a9741ad6dcb573430788ebd8a5cf9185cdb532e415669528aee9cebd5c5f3",
+  "result": {
+    "mode": "classify",
+    "model": "llm.weak.qwen2p5-1p5b",
+    "selected_from": "model_id",
+    "count": 3,
+    "ok_count": 3,
+    "flagged_count": 0,
+    "error_count": 0,
+    "confidence_threshold": 0.5,
+    "max_tokens": 24,
+    "temperature": 0.0,
+    "seed": 42,
+    "items": [
+      { "id": "a", "input_preview": "a golden retriever puppy playing in the yard", "status": "ok", "confidence": 0.8, "finish_reason": "stop", "parsed": true, "in_set": true, "prompt_tokens": 71, "completion_tokens": 1, "raw_preview": "animal", "flagged": false, "flag_reason": null, "review_id": null, "error": null, "label": "animal" },
+      { "id": "b", "input_preview": "a red pickup truck on the highway", "status": "ok", "confidence": 0.8, "finish_reason": "stop", "parsed": true, "in_set": true, "prompt_tokens": 69, "completion_tokens": 1, "raw_preview": "vehicle", "flagged": false, "flag_reason": null, "review_id": null, "error": null, "label": "vehicle" },
+      { "id": "c", "input_preview": "a steaming bowl of ramen noodles", "status": "ok", "confidence": 0.8, "finish_reason": "stop", "parsed": true, "in_set": true, "prompt_tokens": 69, "completion_tokens": 1, "raw_preview": "food", "flagged": false, "flag_reason": null, "review_id": null, "error": null, "label": "food" }
+    ],
+    "groups": {
+      "animal": ["a"],
+      "vehicle": ["b"],
+      "food": ["c"]
+    },
+    "review_count": 0,
+    "labels": ["animal", "vehicle", "food"],
+    "review_queue_path": null
+  },
+  "confidence": 0.8,
+  "artifacts": [
+    { "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\08-classify-batch\\runtime\\artifacts\\eebc2e98-2de9-40c0-8d33-1c8ca4e2a36c\\classified.json", "kind": "json", "bytes": 1735, "sha256": "e417a99f08d63ad3b0258c8232628a759b7e90485274063a4ff87f22d05498ca" },
+    { "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\08-classify-batch\\runtime\\artifacts\\eebc2e98-2de9-40c0-8d33-1c8ca4e2a36c\\classified.md", "kind": "markdown", "bytes": 749, "sha256": "53c032bb3b6c565bdce0cdd09db96ecf66b8add7fe266bb482c62f44ed0a2862" }
+  ],
+  "model_provenance": [
+    {
+      "model_id": "llm.weak.qwen2p5-1p5b",
+      "version": "Qwen2.5-1.5B-Instruct-Q4_K_M",
+      "family": "qwen2.5",
+      "engine": "llama-server",
+      "engine_build": "llama.cpp b8661 (b7ad48ebd), CUDA, MSVC",
+      "device": "cuda:0",
+      "mode": "batch",
+      "calls": 3,
+      "prompt_tokens_total": 209,
+      "completion_tokens_total": 3,
+      "total_tokens_total": 212,
+      "runtime_ms_total": 1140,
+      "params": { "tier": "weak", "model": "llm.weak.qwen2p5-1p5b", "temperature": 0.0, "seed": 42, "max_tokens": 24 }
+    }
+  ],
+  "diagnostics": {
+    "log": "stderr.txt",
+    "artifact_dir": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\08-classify-batch\\runtime\\artifacts\\eebc2e98-2de9-40c0-8d33-1c8ca4e2a36c",
+    "gateway_reviews_suppressed_to": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\08-classify-batch\\runtime\\artifacts\\eebc2e98-2de9-40c0-8d33-1c8ca4e2a36c\\_gateway_review_suppressed.jsonl"
+  },
+  "warnings": [],
+  "error": null
+}

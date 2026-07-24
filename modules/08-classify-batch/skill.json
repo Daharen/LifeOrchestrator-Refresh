@@ -1,0 +1,51 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "classify.batch",
+  "name": "Batch Classification & Sorting",
+  "version": "0.1.0",
+  "contract_version": "0.1",
+  "purpose": "Batch categorize / label / extract over a list of text items using a weak local model, via model.gateway (Module 7). For each item it builds a mode-specific prompt, calls the gateway (default tier weak = Qwen2.5-1.5B), parses the completion into a structured per-item result, computes a classification-appropriate confidence (a documented completeness+validity heuristic, NOT calibrated correctness), groups the results, and routes below-threshold items to review_queue.jsonl. First real consumer of model.gateway.",
+  "determinism": "mixed",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-ClassifyBatch.ps1",
+    "args_spec": "Named params: -Mode <classify|multilabel|extract>; -Tier <tiny|weak|mid|strong> | -Model <model_id>; -Labels <array> (classify/multilabel) | -Fields <array> (extract); -Items <array> | -ItemsPath <file>; sampling/limits -MaxTokens -Temperature -Seed -MaxInputChars -ConfidenceThreshold; plumbing -Registry -GatewayPath -PwshPath -ReviewQueuePath. OR -InputsJson '<json {mode,tier,model,labels,fields,items,items_path,max_tokens,temperature,seed,max_input_chars,confidence_threshold,registry,gateway_path,pwsh_path,review_queue_path}>'. Optional -ArtifactRoot, -InvocationId.",
+    "calls": ["model.gateway"]
+  },
+  "inputs": [
+    { "name": "mode", "type": "string", "required": false, "default": "classify", "description": "classify (one label) | multilabel (zero+ labels) | extract (named fields)." },
+    { "name": "items", "type": "array", "required": false, "description": "Batch of items: [{id?,text}] or [string]. Via InputsJson. Provide this or items_path." },
+    { "name": "items_path", "type": "string", "required": false, "description": "Path to a .jsonl (one {id?,text}/string per line) or .json array of items." },
+    { "name": "labels", "type": "array", "required": false, "description": "Closed label set for classify/multilabel: [string] or [{name,description?}]. Descriptions steer the model." },
+    { "name": "fields", "type": "array", "required": false, "description": "Named fields to pull for extract: [string] or [{name,description?}]." },
+    { "name": "tier", "type": "string", "required": false, "default": "weak", "description": "Gateway LLM tier: tiny|weak|mid|strong. Default weak = Qwen2.5-1.5B." },
+    { "name": "model", "type": "string", "required": false, "description": "Explicit gateway model_id (overrides tier)." },
+    { "name": "max_tokens", "type": "int", "required": false, "description": "Per-item generation cap. Mode defaults: classify 24, multilabel 48, extract 220." },
+    { "name": "temperature", "type": "number", "required": false, "default": 0.0, "description": "Sampling temperature (0 = deterministic/greedy)." },
+    { "name": "seed", "type": "int", "required": false, "default": 42, "description": "RNG seed passed to the gateway for reproducibility." },
+    { "name": "max_input_chars", "type": "int", "required": false, "default": 2000, "description": "Truncate each item's text to this many chars before prompting." },
+    { "name": "confidence_threshold", "type": "number", "required": false, "default": 0.5, "description": "Per-item confidence below this is flagged to the review queue." },
+    { "name": "registry", "type": "string", "required": false, "description": "Path to the gateway's models.json (passed through to model.gateway)." },
+    { "name": "gateway_path", "type": "string", "required": false, "description": "Path to Invoke-ModelGateway.ps1 (default: resolved from modules/07-model-gateway)." },
+    { "name": "pwsh_path", "type": "string", "required": false, "description": "pwsh executable used to spawn the gateway child (default the dotnet-tool pwsh)." },
+    { "name": "review_queue_path", "type": "string", "required": false, "description": "Where THIS skill writes flagged items (default: repo-root review_queue.jsonl)." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ mode, model, selected_from, labels?|fields?, count, ok_count, flagged_count, error_count, confidence_threshold, max_tokens, temperature, seed, items[ {id,input_preview,status,label?|labels?|extracted?,confidence,finish_reason,parsed,in_set,prompt_tokens,completion_tokens,raw_preview,flagged,flag_reason,review_id,error} ], groups{label->[ids]}, review_queue_path, review_count }"
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4"],
+    "models": ["a GGUF LLM via model.gateway (default the weak tier)"],
+    "libraries": [],
+    "cpu": "any", "gpu": "nvidia (CUDA) via the gateway", "memory_mb": 2048,
+    "network": false, "filesystem": "write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 900, "on_timeout": "kill_tree_and_report" },
+  "batch": true,
+  "streaming": false,
+  "parallel_safe": false,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

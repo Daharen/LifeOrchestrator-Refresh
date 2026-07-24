@@ -265,3 +265,40 @@ alternatives · consequences · affects · state (provisional | locked) · revis
   Modules 8/9/24, `SKILL_CONTRACT.md` (`confidence`/`model_provenance` first real use), `REVIEW_QUEUE.md`.
   · **revisit-if:** load latency forces warm workers; a semantic confidence is needed; routing (Module 24) subsumes
   tier selection.
+
+### D-0017 — classify.batch: per-item gateway calls, suppress the gateway's review writes, classification confidence
+- **date:** 2026-07-24 · **state:** locked (gateway-consumption + suppression), provisional (confidence heuristic)
+- **decision:** Module 8 `classify.batch` is the **first real consumer of `model.gateway`** and sets the pattern for
+  every downstream skill that runs a local model over many inputs. MVP design: (1) **one gateway call per item** —
+  for each `{id?,text}` it builds a mode-specific prompt (`classify` = exactly one label from a closed set, also
+  routing/sorting; `multilabel` = zero+ labels; `extract` = named fields → JSON), spawns `Invoke-ModelGateway.ps1`
+  as a child (default `-Tier weak`=1.5B, temp 0, fixed seed), and parses the completion. It **never** binds a port or
+  loads a model itself — it goes *through* the gateway (the point of being the first consumer). (2) **A
+  classification-appropriate confidence**, distinct from the gateway's generation-completeness signal: a documented
+  completeness+validity heuristic combining in-set match / valid JSON with the gateway's `finish_reason` (classify
+  in-set+stop 0.8 / fuzzy 0.6 / out-of-set 0.2 / empty 0.1; multilabel 0.75/0.7/0.5/0.15; extract 0.75/0.5/0.3/0.1;
+  a `length` truncation caps the item ≤0.4). `< threshold` (default 0.5) → one `lifeorch.review.item/0.1` per item
+  with a per-item `source_ref`. (3) **classify.batch is the sole, correctly-attributed author of the batch's review
+  items** — it points the gateway's `-ReviewQueuePath` at a discardable in-artifact `_gateway_review_suppressed.jsonl`
+  so the gateway's own `<0.5`-completeness appends do **not** land in the canonical queue (which would double-flag and
+  mis-attribute). (4) `determinism:"mixed"`, `batch:true`, `parallel_safe:false` (it drives the gateway → GPU/port
+  contention). Envelope `confidence` = mean per-item; `model_provenance[]` = one **aggregate** entry (summed tokens,
+  call count, total runtime) to keep the envelope bounded.
+- **reason:** Smallest useful MVP that proves weak local models do useful unattended bulk work, and does it *through*
+  the gateway so model choice stays a one-line config change (D-0016). Per-item calls give honest per-item confidence,
+  provenance, and review routing; batching many items into one prompt is fragile on 0.5B/1.5B models and muddies
+  per-item confidence. Suppressing the gateway's review writes keeps the queue single-authored per producer, which
+  Module 9 relies on.
+- **alternatives:** batch all items into one gateway prompt (rejected for the MVP — unreliable multi-item JSON on weak
+  models, harder per-item confidence/truncation; a documented follow-on behind a warm gateway); talk to `llama-server`
+  directly from classify.batch (rejected — reimplements + bypasses the gateway, breaks modularity); let the gateway
+  write to the canonical queue too (rejected — double-flag + wrong `flagged_by`); calibrated/logprob confidence
+  (deferred — heuristic first, per the stochastic-then-harden doctrine); physically moving files into per-label folders
+  (rejected — that flips filesystem to write and changes the safety posture; belongs to a separate `sort.files` skill).
+- **consequences:** batch throughput is bounded by the gateway's per-call model load (D-0002/D-0016) — fine for
+  small/unattended batches, and it creates concrete pressure to build a warm/persistent gateway worker. The review
+  queue now has **two producers** (`model.gateway`, `classify.batch`); Module 9 must handle both `flagged_by` values.
+  The confidence is a completeness+validity signal, not correctness — consumers should read the per-item fields.
+  · **affects:** Module 8, Modules 7/9/24, `REVIEW_QUEUE.md`, `TOOL_MODEL_REGISTRY.md`. · **revisit-if:** load latency
+  forces a warm worker / intra-batch prompt; a calibrated confidence is needed; a side-effecting file-sorter is built;
+  routing (Module 24) subsumes tier selection.

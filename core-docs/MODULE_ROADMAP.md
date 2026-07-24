@@ -82,7 +82,7 @@ Needs refactor · Deprecated · Replaced.
   window capture self-verified against a WinForms probe (2026-07-24). Work order:
   `modules/06-capture-screen/WORK_ORDER.md`. See DECISION_LOG D-0014.
 
-## Modules 7–9 — Local model foundation (provisional)  ← Module 8 (`classify.batch`) next
+## Modules 7–9 — Local model foundation (provisional)  ← Module 9 (`review.processor`) next
 - **7 `model.gateway`** — Local Model Gateway. ***MVP complete*** — common interface that runs local **LLMs**
   (GGUF) via the llama.cpp **`llama-server`** (start→/health→/v1/chat/completions→kill), selected from a
   declarative `models.json` by `-Model` id or a `-Tier` alias. Declares STT/TTS/embedding (staged, wired in
@@ -90,10 +90,19 @@ Needs refactor · Deprecated · Replaced.
   `model_provenance` + a generation-completeness `confidence` (→ review queue when < 0.5). `parallel_safe:false`.
   **Tests 28/28 via executor (2026-07-24)** incl. live generation on staged 0.5B/1.5B, truncation→review-queue,
   wrapper, and clean server teardown. Work order: `modules/07-model-gateway/WORK_ORDER.md`. See D-0015, D-0016.
-- **8 `classify.batch`** — Batch Classification & Sorting: weak-local-model categorization/labeling/
-  extraction/routing; early proof that local models do useful unattended work. *Proposed, P2. Depends on 7. **← next.***
+- **8 `classify.batch`** — Batch Classification & Sorting. ***MVP complete*** — the **first real consumer of
+  `model.gateway`**. Three modes over a list of `{id?,text}` items: `classify` (exactly one label from a closed set,
+  = routing/sorting), `multilabel` (zero+ labels), `extract` (named fields → JSON). Calls the gateway **once per
+  item** (`-Tier weak` default) at temp 0 / fixed seed; parses the completion; computes a per-item classification
+  **confidence** (documented completeness+validity heuristic, NOT calibrated); groups items (`label→[ids]`); appends
+  below-threshold items to `review_queue.jsonl` (`flagged_by:"classify.batch"`, per-item `source_ref`) and
+  **suppresses** the gateway's own review writes. `determinism:"mixed"`, `batch:true`, `parallel_safe:false`.
+  **Tests 33/33 via executor (2026-07-24)** — error paths, live classify/extract, tier+explicit-model resolve,
+  review routing + suppression, wrapper, no orphaned server. Work order: `modules/08-classify-batch/WORK_ORDER.md`.
+  See D-0017. Follow-on: warm-worker/intra-batch prompt for throughput; calibrated confidence; a `sort.files` mover.
 - **9 `review.processor`** — Review Queue Processor: stronger local model adjudicates only flagged/
-  low-confidence/contradictory items from the queue. *Proposed, P2. Depends on 7, 8, `REVIEW_QUEUE`.*
+  low-confidence/contradictory items from the queue (now fed by both `model.gateway` and `classify.batch`). *Proposed,
+  P2. Depends on 7, 8, `REVIEW_QUEUE`. **← next.***
 
 ## Modules 10–13 — Audio (provisional, unlocked)
 - **10 `audio.ingest`** normalize/convert · **11 `speech.stt`** transcription (timestamped) ·

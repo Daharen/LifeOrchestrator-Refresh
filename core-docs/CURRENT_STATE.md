@@ -5,14 +5,18 @@ Owns **reality as it exists now** — not intended architecture. Keep it compact
 is planned (serves scripts and weaker local models) but not yet created.
 
 - **Project phase:** MVP module build-out.
-- **Active module:** _none in progress._ **Modules 0–7 complete** (0 executor · 1 `skill.bootstrap` · 2
-  `fs.observer` · 3 `proc.observer` · 4 `uia.inspector` · 5 `uia.actor` · 6 `capture.screen` · 7 `model.gateway`),
-  plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure). **Module 7 — Local Model
-  Gateway (`model.gateway`) is MVP complete this session** (runs local LLMs via llama.cpp `llama-server`; declarative
-  `models.json`; first stochastic/mixed skill with `model_provenance` + heuristic `confidence`; tests 28/28 via the
-  executor). Groundwork done this session: **hardware measured, all local models discovered + copied to portable F:
-  storage** (see registry + `_pending-model-storage\MIGRATION.md`). **Module 8 — Batch Classification
-  (`classify.batch`) is next** (author its work order next session).
+- **Active module:** _none in progress._ **Modules 0–8 complete** (0 executor · 1 `skill.bootstrap` · 2
+  `fs.observer` · 3 `proc.observer` · 4 `uia.inspector` · 5 `uia.actor` · 6 `capture.screen` · 7 `model.gateway` ·
+  8 `classify.batch`), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure).
+  **Module 8 — Batch Classification & Sorting (`classify.batch`) is MVP complete this session** — the **first real
+  consumer of `model.gateway`**: for each item in a batch it calls the gateway (default `-Tier weak` = 1.5B) with a
+  mode-specific prompt (`classify` one-label / `multilabel` / `extract` fields), parses the completion, computes a
+  classification confidence (completeness+validity heuristic), groups the items, and routes below-threshold items to
+  `review_queue.jsonl` (`flagged_by:"classify.batch"`; it **suppresses** the gateway's own review writes to keep the
+  canonical queue correctly attributed). `determinism:"mixed"`, `batch:true`, `parallel_safe:false`. **Tests 33/33 via
+  the executor** (`m8-test-001`, exit 0, ~26s). **Module 9 — Review Queue Processor (`review.processor`) is next**
+  (author its work order next session). Note: **the review queue now has two producers** — `model.gateway` and
+  `classify.batch`.
 - **Repo / working dir:** **`C:\Users\just_\LifeOrchestrator-Refresh\`** — the clean standalone home for
   **Life Orchestrator** (near-term local-skills track; git-initialized). Layout: `core-docs/` (these docs)
   and `modules/<NN>-<name>/` (one per module). **Reference sources (separate, not built here):** the earlier
@@ -27,8 +31,8 @@ is planned (serves scripts and weaker local models) but not yet created.
   (`ops/finish-game-cleanup.bat`). **Now covered by the watchdog (Module 00.1):** launch `ops/start-watchdog.bat`
   for unattended resilience — it auto-restarts the executor on crash/hang and stands down on a graceful stop.
   **The live executor was restarted onto the marker code and is now instance `51061264…` (pid 4844), emitting
-  `control/heartbeat.json`/`last-exit.json` (verified 2026-07-24T15:08Z; it ran the Module 6 tasks
-  `m6-smoke-001`/`m6-test-001`). The earlier "restart it once" action is resolved.**
+  `control/heartbeat.json`/`last-exit.json` (heartbeat fresh 2026-07-24T17:26Z; it has since run the Module 7 and
+  Module 8 tasks — `m8-smoke-001`/`m8-test-001`, both `completed` exit 0). The earlier "restart it once" action is resolved.**
 
 ## Completed modules
 - **Module 0** — Trusted High-Risk Bootstrap Executor. 12/12 integration tests pass on Windows.
@@ -65,6 +69,21 @@ is planned (serves scripts and weaker local models) but not yet created.
   `review_queue.jsonl`). `parallel_safe:false`. Artifacts `output.txt`/`exchange.json`. **Tests 28/28 via executor
   (2026-07-24)** — live gen on staged 0.5B/1.5B, truncation→review-queue, error paths, wrapper, clean server teardown.
   See D-0015 (large-data), D-0016 (gateway design).
+- **Module 8** — Batch Classification & Sorting (`classify.batch`). **First real consumer of `model.gateway`.** Three
+  modes over a list of `{id?,text}` items: `classify` (exactly one label from a closed set — also routing/sorting),
+  `multilabel` (zero+ labels), `extract` (named fields → JSON). Calls the gateway **once per item** (`-Tier weak`
+  default) with a mode-specific prompt at temp 0 / fixed seed; parses the completion; computes a per-item
+  classification **confidence** (documented completeness+validity heuristic, NOT calibrated — classify: in-set+stop
+  0.8 / fuzzy 0.6 / out-of-set 0.2; multilabel 0.75/0.7/0.5/0.15; extract 0.75/0.5/0.3/0.1; `length` caps ≤0.4);
+  groups items (`label→[ids]`); appends below-threshold items (default 0.5) to `review_queue.jsonl` as
+  `lifeorch.review.item/0.1` `flagged_by:"classify.batch"` with per-item `source_ref`. **Suppresses the gateway's own
+  review writes** to an in-artifact `_gateway_review_suppressed.jsonl`. Envelope `confidence` = mean per-item;
+  `model_provenance[]` = one aggregate entry (summed tokens, call count, total runtime). `determinism:"mixed"`,
+  `batch:true`, `parallel_safe:false`. Artifacts `classified.json`/`classified.md`. **Tests 33/33 via executor
+  (2026-07-24)** — five error paths, live classify(0.5B)/extract, explicit-model(1.5B) resolve, review routing +
+  gateway suppression, wrapper, no orphaned `llama-server`; smoke `m8-smoke-001` labeled animal/vehicle correctly.
+  See D-0017. **Throughput caveat:** one gateway call per item × per-call model load (D-0002/D-0016) — fine for
+  small/unattended batches; warm-worker/intra-batch-prompt is a follow-on.
 
 ## Installed dependencies (verified this machine)
 - **PowerShell 7.4.6** — installed as a .NET global tool at
@@ -133,6 +152,14 @@ is planned (serves scripts and weaker local models) but not yet created.
   confidence 0.7, provenance with token counts, artifact sha256 verified; wrapper ran the 1.5B; a forced
   truncation → confidence 0.4 → a valid review-queue item; no orphaned `llama-server`; run 2026-07-24 via the
   executor as `m7-test-002`, exit 0, ~15s).
+- Module 8: `modules/08-classify-batch/tests/Invoke-ClassifyBatchTests.ps1` — **33/33 pass** (manifest +
+  batch/parallel_safe/determinism flags; five setup error paths `no_labels`/`no_items`/`invalid_mode`/`no_fields`/
+  `gateway_not_found`; **live** `classify` batch of 3 on `-Tier tiny` (each item labeled in-set, groups partition,
+  aggregate provenance calls=3, `classified.json` sha256 verified); explicit `-Model` 1.5B resolves; **live**
+  `extract` returns the requested keys; review routing at threshold 0.99 → a `classify.batch` review item with
+  per-item `source_ref` and the gateway's writes suppressed from the canonical queue; Module 1 wrapper; no orphaned
+  `llama-server`; run 2026-07-24 via the executor as `m8-test-001`, exit 0, ~26s). A cloud-only mock-gateway harness
+  (`tests/mock-gateway.ps1`) validated the parse/confidence/group logic off-GPU before shipping.
 
 ## Known failures / gotchas
 - **Executor fatal-crashed on a transient file lock (2026-07-24T06:26:36Z).** While task `m5-example-001`
@@ -161,6 +188,15 @@ is planned (serves scripts and weaker local models) but not yet created.
   when the empty-array branch is taken (an empty array written from a block unrolls to nothing), so a later
   `$x.Count` throws "The property 'Count' cannot be found." Assign the array first (`$x=@(); if(cond){$x=@($y)}`).
   Hit + fixed in `model.gateway` (empty `-Stop`).
+- **PowerShell array double-wrap (pwsh 7.4.6):** a helper that does `return ,$out` (comma to prevent unrolling) and
+  is then collected with `@(helper)` yields a **1-element array whose single element is the inner array**, not the
+  N elements — so a later `foreach`/lookup silently iterates once over the whole array (no error; wrong results). In
+  `classify.batch` this made label matching quietly fail while the labels list still *looked* right in the envelope.
+  Fix: build into a `List[object]` and `return $acc.ToArray()` (no leading comma); let `@(...)` re-collect normally.
+- **`$var:` in a double-quoted string** (e.g. `"item $id: done"`) parses `$id:` as a scope/drive reference and is a
+  **syntax error** — delimit with `${id}` (`"item ${id}: done"`). Cheap to catch: parse every shipped `.ps1` with
+  `[System.Management.Automation.Language.Parser]::ParseFile` before submitting (the cloud agent installed pwsh 7.4.6
+  on Linux purely to parse-check + run a mock-gateway logic harness off-GPU before shipping Module 8).
 - **This llama.cpp build (b8661) `llama-cli` is interactive-only** — it rejects `-no-cnv` ("use llama-completion
   instead", which isn't built) and decorates stdout with a banner/`>`/timing footer. Script LLMs via **`llama-server`**
   (`/v1/chat/completions` → clean JSON with `finish_reason`/`usage`/`timings`), as `model.gateway` does.
@@ -187,11 +223,13 @@ is planned (serves scripts and weaker local models) but not yet created.
   latency dominates; tune the 27B `gpu_layers` for 11 GB VRAM (see REVIEW_QUEUE.md).
 
 ## Next expected action
-1. Author the **Module 8 work order** (`modules/08-classify-batch/WORK_ORDER.md`) and implement `classify.batch`:
-   weak-local-model batch categorization/labeling/extraction. It **calls `model.gateway`** (tier `weak` = 1.5B) and
-   uses `REVIEW_QUEUE` for low-confidence items — the first real consumer of the gateway.
+1. Author the **Module 9 work order** (`modules/09-review-processor/WORK_ORDER.md`) and implement `review.processor`:
+   a **stronger** local model (via `model.gateway`, tier `mid`/`strong`) that drains `review_queue.jsonl` — the items
+   `model.gateway` and now `classify.batch` flag — adjudicating each single flagged item (setting `resolution`/
+   `status`), NOT redoing whole batches. Depends on Modules 7, 8, and `REVIEW_QUEUE`.
 2. Housekeeping (deferred): fold the D-0009 conventions into `SKILL_CONTRACT.md` and bump the contract version
-   (now exercised by Modules 2–7; DECISION_LOG D-0009/D-0011); relocate staged models per `MIGRATION.md`; the pending
-   `proteus_repo/tools/` leftover removal (`ops/finish-game-cleanup.bat`).
+   (now exercised by Modules 2–8; DECISION_LOG D-0009/D-0011); relocate staged models per `MIGRATION.md`; the pending
+   `proteus_repo/tools/` leftover removal (`ops/finish-game-cleanup.bat`); classify.batch follow-ons (warm-worker /
+   intra-batch prompt for throughput; calibrated confidence; a side-effecting `sort.files` mover) — see D-0017.
 
-- **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 7 model.gateway build session).
+- **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 8 classify.batch build session).

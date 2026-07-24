@@ -199,6 +199,35 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   (no warm worker — D-0002); LLM text only in the MVP; no streaming; no auto model selection (routing = Module 24).
   · **last test:** 2026-07-24 via executor (**tests 28/28**, live 0.5B/1.5B). · **skills:** `model.gateway`. See D-0016.
 
+### `classify.batch` — Batch Classification & Sorting (Module 8)
+- **status:** installed · **type:** skill (PowerShell; **consumes `model.gateway`**) ·
+  **location:** `LifeOrchestrator-Refresh/modules/08-classify-batch/`
+- **invocation:** direct `pwsh -NoProfile -File .\Invoke-ClassifyBatch.ps1 -InputsJson '<json {mode,tier|model,
+  labels|fields,items|items_path,max_tokens,temperature,seed,max_input_chars,confidence_threshold,...}>'` (or named
+  params `-Mode -Tier -Labels -Fields -Items ...`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`;
+  or an `exec.bootstrap` task. Spawns the gateway child with `-PwshPath` (default the dotnet-tool pwsh).
+- **supported tasks:** batch **categorize / label / extract** over a list of `{id?,text}` items. `mode=classify`
+  (exactly one label from a closed `labels` set — also routing/sorting), `multilabel` (zero+ labels), `extract`
+  (named `fields` → JSON object). Calls `model.gateway` once per item (default `-Tier weak`=1.5B), groups results
+  (`label→[ids]`), routes low-confidence items to the review queue.
+- **I/O:** in = the JSON above (items inline or via `items_path` .jsonl/.json); out = `lifeorch.skill.result/0.1`
+  envelope (result = `{mode, model, selected_from, labels?|fields?, count, ok_count, flagged_count, error_count,
+  confidence_threshold, items[{id,label?|labels?|extracted?,confidence,finish_reason,in_set,flagged,flag_reason,
+  review_id,...}], groups{}, review_queue_path, review_count}`) + `runtime/artifacts/<id>/{classified.json,
+  classified.md,result.json,stderr.txt, gateway/…, _gateway_review_suppressed.jsonl}`.
+- **determinism:** **mixed** (deterministic orchestration/parsing/grouping; stochastic model labels) ·
+  **confidence:** per-item completeness+validity **heuristic** (classify in-set+stop 0.8 / fuzzy 0.6 / out-of-set 0.2;
+  multilabel 0.75/0.7/0.5/0.15; extract 0.75/0.5/0.3/0.1; `length` caps ≤0.4); envelope confidence = mean per-item;
+  `<threshold` (default 0.5) → `review_queue.jsonl` (`flagged_by:"classify.batch"`) · **speed:** per-item ×
+  gateway per-call model load (small models ~2–5 s/item) · **CPU/GPU/mem:** low / CUDA (via gateway) / ~2 GB+model ·
+  **network:** none · **cost:** local only.
+- **limitations:** **`parallel_safe:false`** (drives the gateway → GPU/port contention); **one gateway call per item**
+  with per-call model load (no warm worker — throughput caveat; D-0002/D-0016); closed label/field sets only (no
+  open-vocabulary/taxonomy learning); heuristic (not calibrated) confidence; grouping/index only — **no physical file
+  moving** (a `sort.files` mover is a follow-on); suppresses the gateway's own review-queue writes to the artifact dir.
+  · **last test:** 2026-07-24 via executor (**tests 33/33**; `m8-test-001`, exit 0, ~26s). · **skills:**
+  `classify.batch`. See D-0017.
+
 ---
 
 ## Hardware profile (measured 2026-07-24 — DESKTOP-PF5FFMF)

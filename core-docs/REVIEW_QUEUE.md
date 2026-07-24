@@ -55,7 +55,32 @@ generation-completeness `confidence` falls below **0.5** (empty output → 0.1; 
 path defaults to the repo root (`review_queue.jsonl`) or `-ReviewQueuePath`. Verified end-to-end by the
 Module 7 tests (a forced-truncation run produced a valid `lifeorch.review.item/0.1`).
 
+## Second producer wired (Module 8)
+`classify.batch` is the **second skill that appends to `review_queue.jsonl`** (and the first that flags real
+*content* decisions, not just generation completeness). It flags a per-**item** batch result when its
+**classification confidence** (a completeness+validity heuristic — see D-0017) falls below `-ConfidenceThreshold`
+(default 0.5), one `lifeorch.review.item/0.1` per item, `flagged_by:"classify.batch"`, with:
+- `reason` ∈ `uncategorized` (answer not in the label set), `malformed` (empty/unparseable model output),
+  `failed_transform` (a gateway/item error, or extract yielded no fields), or `low_confidence` (below threshold
+  otherwise);
+- `source_ref` = `artifact://<invDir>/classified.json#<item_id>` (points at the single item, not the batch);
+- `weak_result` = the item's `{mode, model, label|labels|extracted, finish_reason, text_preview}`;
+- `requested` = `adjudicate_category` (classify/multilabel) or `verify_extraction` (extract).
+
+Crucially, `classify.batch` **suppresses `model.gateway`'s own review-queue writes** (it points the child gateway's
+`-ReviewQueuePath` at a discardable in-artifact `_gateway_review_suppressed.jsonl`) so each batch item is flagged
+**once**, by `classify.batch`, with a classification-appropriate reason — the canonical queue is never
+double-written or mis-attributed. Verified end-to-end by the Module 8 tests (a threshold-0.99 run produced a valid
+`classify.batch` item and the gateway wrote nothing to the canonical queue). **Module 9 (`review.processor`) must
+therefore handle both `flagged_by` values (`model.gateway`, `classify.batch`).**
+
 ## Design flags to revisit (not yet actioned — for a future session/frontier pass)
+- **classify.batch confidence is also a heuristic (completeness + in-set/JSON validity), not calibrated
+  correctness.** It is richer than the gateway's completeness signal but still not a probability the label is right.
+  Replace with a calibrated / logprob / self-consistency signal alongside the gateway's (D-0017).
+- **classify.batch throughput = one gateway call per item × per-call model load** (no warm worker — D-0002/D-0016).
+  Fine for small/unattended batches; when it dominates, add a warm/persistent gateway worker or an intra-batch
+  single-prompt mode. This module is the concrete pressure to do so.
 - **model.gateway confidence is a heuristic, not semantic.** It measures generation *completeness*
   (finish_reason/empty), NOT whether the answer is *correct*. Replace with a logprob- or self-consistency-based
   **semantic** confidence when Module 9 (`review.processor`) needs a real signal. (D-0016.)
