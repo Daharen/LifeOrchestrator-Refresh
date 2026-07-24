@@ -16,6 +16,21 @@ Deterministic/canonical "Proteus" architecture is a long-term goal, **not** a cu
 Module 0 (the Trusted High-Risk Bootstrap Executor) is complete; it is how your work gets run
 locally.
 
+## Source of truth (docs & state)
+
+**The on-disk repo is canonical** — `C:\Users\just_\Project-Proteus-Refresh\` (`core-docs/` + `modules/`).
+That is what the executor and local models read, and what we commit to git.
+
+**The attached Claude Project mirrors `core-docs/`.** The frontier agent keeps it current (via the Project
+tools) so sessions with no desktop connected — scheduled, mobile, or before the folder is granted — still
+have full context. Rules:
+
+- Edit the **on-disk** docs first; they are what git tracks.
+- Before ending a session, **refresh the Project from disk** so the two match (see the end-of-session checklist).
+- If the two ever disagree, **disk wins** — re-mirror disk → Project.
+- The executor can maintain on-disk files (PowerShell tasks) but **cannot** touch the Project; only the
+  frontier agent updates the Project.
+
 ## Reading order (route, don't load everything)
 
 **Always read (hot context for any module session):**
@@ -57,7 +72,9 @@ Proteus architecture into near-term work.
 3. Update `TOOL_MODEL_REGISTRY.md` (anything you installed, wrapped, or verified).
 4. Record any significant architectural decision in `DECISION_LOG.md`.
 5. Add unresolved uncertainties to `REVIEW_QUEUE.md`.
-6. **Stop. Do not begin the next module.** One scoped module or work order per session.
+6. **Mirror `core-docs/` → the attached Claude Project** (`project_write` each changed doc) so the Project
+   matches disk — disk is canonical; the Project is a mirror for desktop-less (scheduled/mobile) sessions.
+7. **Stop. Do not begin the next module.** One scoped module or work order per session.
 
 ## Two rules that override cleverness
 
