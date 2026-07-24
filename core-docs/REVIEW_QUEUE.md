@@ -104,7 +104,28 @@ gateway `-ReviewQueuePath` at an in-artifact file) so draining never grows the q
 `batch:true`, `parallel_safe:false`. Verified end-to-end by the Module 9 tests (34/34; `m9-test-003`). See D-0018.
 **The review-queue loop is now closed: producers (7/8) → local drainer (9) → frontier for the residue.**
 
+## Third producer wired (Module 11)
+`speech.stt` is the **third skill that appends** to `review_queue.jsonl` (after `model.gateway` and `classify.batch`),
+and the first from the audio track. It transcribes audio via whisper.cpp and flags **low-confidence transcription
+segments**: a segment whose confidence — the **mean whisper token probability `p`** over its content tokens (whisper
+special tokens `[_…_]` excluded) — falls below `-SegmentConfidenceThreshold` (default 0.5) becomes one
+`lifeorch.review.item/0.1` with `flagged_by:"speech.stt"`, `reason:"low_confidence"`,
+`source_ref:"artifact://<invDir>/transcript.json#seg<index>"`, `weak_result = {model, t0_ms, t1_ms, text, token_count}`,
+`requested:"verify_transcription"`. It is **bounded** by `-MaxReviewSegments` (default 25; worst-confidence segments
+first; truncation recorded in `warnings` + `result.review.truncated`) so a long, noisy file cannot flood the queue.
+A **zero-segment** result from audio of at least `-MinSpeechSeconds` (default 1.0) emits one `reason:"uncategorized"`,
+`requested:"verify_no_speech"` item (a silent-STT-failure guard; `confidence:null`). A **text** reviewer (Module 9) can
+judge whether a flagged segment reads as coherent speech even without re-listening; genuinely audio-bound cases escalate
+to the frontier as usual. Unlike the model consumers, `speech.stt` has **no child gateway** to suppress (whisper is not
+the gateway), and its `audio.ingest` child is deterministic and writes nothing to the queue. Module 9 already selects by
+`flagged_by` and handles the new producer by construction. Verified end-to-end by the Module 11 tests (a forced 0.999
+threshold produced a valid `speech.stt` review item; `m11-test-001`). **Producers are now 7/8/11 → local drainer 9 →
+frontier for the residue.** See D-0020.
+
 ## Design flags to revisit (not yet actioned — for a future session/frontier pass)
+- **speech.stt confidence is mean token probability — honest but not calibrated.** A real acoustic signal (richer than
+  the gateway's completeness heuristic) but not a probability the transcript is *correct*; replace with a calibrated /
+  `avg_logprob`+`no_speech_prob` / self-consistency signal when a consumer needs it (D-0020).
 - **classify.batch confidence is also a heuristic (completeness + in-set/JSON validity), not calibrated
   correctness.** It is richer than the gateway's completeness signal but still not a probability the label is right.
   Replace with a calibrated / logprob / self-consistency signal alongside the gateway's (D-0017).

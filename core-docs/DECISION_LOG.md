@@ -379,3 +379,54 @@ alternatives · consequences · affects · state (provisional | locked) · revis
   and an `audio.ingest` skill entry. · **affects:** Module 10, Modules 11–13, `TOOL_MODEL_REGISTRY.md`,
   `MODULE_ROADMAP.md`. · **revisit-if:** a batch/streaming path, trimming/segmentation, or denoise/EQ is needed
   (each its own scoped follow-on); ffmpeg is upgraded/relocated (resolution already dynamic).
+
+### D-0020 — speech.stt wraps whisper.cpp; mixed determinism; token-probability confidence; per-segment review producer
+- **date:** 2026-07-24 · **state:** locked (wrap-the-binary + normalization + registry-read + review model), provisional (confidence heuristic)
+- **decision:** Module 11 `speech.stt` — the second audio-track module and the first **stochastic/mixed** skill to wrap a
+  local **model** binary (vs. Module 7's server) — transcribes one audio file with timestamps by driving the whisper.cpp
+  `whisper-cli`. MVP design, settled after a **probe-first** pass (`m11-probe-001/002` confirmed this build's exact flags
+  and JSON before any code — the CUDA build loads headless and prints the RTX 2080 Ti; both CUDA + CPU builds support
+  `-oj/-ojf/-osrt/-otxt/-of/-np/-l/-ng`; do **not** assume flags, per the llama.cpp interactive-only lesson): (1) **run
+  `whisper-cli -ojf`** (full JSON incl. per-token linear probability `p`) `-osrt -otxt -of <base>` and parse the
+  `transcription[]` into timestamped segments `{index,t0_ms,t1_ms,t0,t1,text,confidence,token_count,low_confidence}`.
+  (2) **Confidence = mean whisper token probability `p`** over content tokens (whisper special tokens `[_…_]` excluded),
+  per segment and overall — a genuine **acoustic** signal (richer than the gateway's generation-completeness heuristic),
+  but NOT calibrated correctness. Populate envelope `confidence` (overall) + `model_provenance[1]` (id/engine/build/device,
+  decode params, audio duration, segment/token counts, runtime, real-time factor, whisper systeminfo). (3) **Review-queue
+  producer on low-confidence segments** (the **third** producer, after 7/8): one `lifeorch.review.item/0.1` per segment
+  below `-SegmentConfidenceThreshold` (default 0.5), `flagged_by:"speech.stt"`, `requested:"verify_transcription"`,
+  `source_ref:"…/transcript.json#seg<i>"`, **bounded** by `-MaxReviewSegments` (default 25, worst-first, truncation
+  noted) so a long noisy file cannot flood the queue; a zero-segment result from ≥`-MinSpeechSeconds` audio emits one
+  `uncategorized`/`verify_no_speech` item (silent-failure guard). A **text** reviewer (Module 9) can judge transcript
+  plausibility even without the audio. (4) **Input normalization via `audio.ingest`** (`-Normalize auto|always|never`):
+  `auto` probes the input (sibling-of-ffmpeg ffprobe, per D-0019) and only re-encodes when it is not already WAV/16 kHz/
+  mono/s16, feeding whisper-ready audio directly otherwise — composing the audio track (Module 10 → 11) exactly as
+  intended. `speech.stt` spawns `audio.ingest` as a child `pwsh` (mirroring `classify.batch`'s gateway spawn). (5)
+  **Registry-driven, but decoupled from the gateway's `wired` gate:** it resolves the model `path` + whisper
+  `engine_candidates` (CUDA build preferred, CPU fallback) from `models.json` — but the STT entry stays **`wired:false`**
+  there on purpose (the gateway MVP runs `type=llm` only, so it still returns `model_not_wired` for STT; Module 7's tests
+  assert exactly that). Added `defaults.stt`/`tiers.stt` (additive; llm resolution untouched — Module 7 re-verified 28/28).
+  `determinism:"mixed"`, `parallel_safe:false` (binds the CUDA context, like `model.gateway`), `batch:false`.
+- **reason:** Smallest useful MVP that unblocks the rest of the audio/voice track (TTS #12, voice.live #13) and feeds text
+  consumers (`classify.batch`/`review.processor`): a reliable timestamped transcript with an honest per-segment confidence
+  and cheap review routing. Wrapping the present whisper.cpp (not reimplementing) fits the language policy; token-`p`
+  confidence is a real signal the gateway lacked. Reading the model from the registry keeps model choice a one-line config
+  change (D-0016 philosophy) without touching the gateway's execution gate. Auto-normalization makes the common case a
+  one-liner while staying robust to arbitrary inputs.
+- **alternatives:** feed arbitrary audio straight to whisper and rely on its internal resampling (rejected for the default —
+  `auto` normalization via the proven `audio.ingest` is deterministic and container-agnostic; `never` remains for callers
+  who know their input is ready); flip the STT entry `wired:true` (rejected — breaks Module 7's `model_not_wired`
+  assertion and misstates that the *gateway* can run it; speech.stt reads the entry directly instead); flag the whole
+  invocation once rather than per segment (rejected — per-segment matches the producer pattern of 7/8 and gives a reviewer
+  a concrete unit; bounded to avoid flooding); one review item per low token rather than per segment (rejected — too
+  granular for a text reviewer); calibrated/semantic confidence, word-level artifacts, VAD/diarization/batch (deferred —
+  heuristic-first per the stochastic-then-harden doctrine; segmentation → Module 13).
+- **consequences:** the review queue now has **three** producers (`model.gateway`, `classify.batch`, `speech.stt`); Module 9
+  already drains by `flagged_by` and handles new producers by construction (the new `requested:"verify_transcription"`/
+  `"verify_no_speech"` verbs and a null-confidence no-speech item are passthrough for the adjudicator). Throughput is a
+  per-call `whisper-cli` spawn (base.en on CUDA ≈ 0.07 real-time factor — 11 s of audio in ~0.7 s; a warm whisper-server
+  is a follow-on if load latency ever dominates). Registry gains `defaults.stt`/`tiers.stt` + a whisper.cpp runtime entry.
+  · **affects:** Module 11, Modules 10/12/13/9, `TOOL_MODEL_REGISTRY.md`, `models.json`, `REVIEW_QUEUE.md`,
+  `MODULE_ROADMAP.md`. · **revisit-if:** a warm whisper worker, batch/streaming, calibrated/semantic confidence, VAD/
+  diarization, or a larger/multilingual STT model is needed (each its own scoped follow-on); a unified model gateway ever
+  subsumes STT execution.

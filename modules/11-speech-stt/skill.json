@@ -1,0 +1,50 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "speech.stt",
+  "name": "Speech-to-Text Transcription (whisper.cpp)",
+  "version": "0.1.0",
+  "contract_version": "0.1",
+  "purpose": "Transcribe one audio/media file into timestamped text segments with per-segment and overall confidence, by wrapping the whisper.cpp whisper-cli. Resolves the STT model + CLI from models.json; consumes whisper-ready 16 kHz mono s16 WAV directly and can normalize other inputs first through audio.ingest (Module 10). First stochastic/mixed skill wrapping a local model binary: populates confidence + model_provenance and routes low-confidence segments to the review queue.",
+  "determinism": "mixed",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-SpeechStt.ps1",
+    "args_spec": "Named params -InputFile <path> (required); -Normalize <auto|always|never>; -Language <code>; -Translate; -Threads <n>; -NoGpu; -BeamSize <n>; -BestOf <n>; -MaxLen <n>; -SplitOnWord; -OffsetMs <ms>; -DurationMs <ms>; -SegmentConfidenceThreshold <0..1>; -MaxReviewSegments <n>; -MinSpeechSeconds <s>; -Model <id>; -Registry/-WhisperCliPath/-AudioIngestPath/-PwshPath/-ReviewQueuePath <override>. OR -InputsJson '<json {input,normalize,language,translate,threads,no_gpu,beam_size,best_of,max_len,split_on_word,offset_ms,duration_ms,segment_confidence_threshold,max_review_segments,min_speech_seconds,model,registry,whisper_cli_path,audio_ingest_path,pwsh_path,review_queue_path}>'. Optional -ArtifactRoot, -InvocationId."
+  },
+  "inputs": [
+    { "name": "input", "type": "string", "required": true, "description": "Path to the source audio/media file (first audio stream). Non-whisper-ready inputs are normalized via audio.ingest per -Normalize." },
+    { "name": "normalize", "type": "string", "required": false, "default": "auto", "description": "auto (normalize only if not already WAV/16kHz/mono/s16) | always (force audio.ingest) | never (feed input straight to whisper)." },
+    { "name": "language", "type": "string", "required": false, "default": "en", "description": "Spoken language code passed to whisper (-l). The staged model is base.en (English-only)." },
+    { "name": "translate", "type": "bool", "required": false, "default": false, "description": "Translate to English (-tr)." },
+    { "name": "threads", "type": "int", "required": false, "default": 4, "description": "CPU threads for whisper (-t)." },
+    { "name": "no_gpu", "type": "bool", "required": false, "default": false, "description": "Disable GPU / force CPU decoding (-ng)." },
+    { "name": "beam_size", "type": "int", "required": false, "default": 5, "description": "Beam size for beam search (-bs)." },
+    { "name": "best_of", "type": "int", "required": false, "default": 5, "description": "Number of best candidates to keep (-bo)." },
+    { "name": "max_len", "type": "int", "required": false, "default": 0, "description": "Maximum segment length in characters (-ml); 0 = unlimited." },
+    { "name": "split_on_word", "type": "bool", "required": false, "default": false, "description": "Split segments on word rather than token (-sow)." },
+    { "name": "offset_ms", "type": "int", "required": false, "default": 0, "description": "Start offset into the audio in ms (-ot)." },
+    { "name": "duration_ms", "type": "int", "required": false, "default": 0, "description": "Duration of audio to process in ms (-d); 0 = all." },
+    { "name": "segment_confidence_threshold", "type": "double", "required": false, "default": 0.5, "description": "Segments with mean-token-probability confidence below this are flagged low_confidence and routed to the review queue." },
+    { "name": "max_review_segments", "type": "int", "required": false, "default": 25, "description": "Cap on review-queue items emitted per invocation (worst-confidence segments first)." },
+    { "name": "min_speech_seconds", "type": "double", "required": false, "default": 1.0, "description": "If zero segments are produced from audio at least this long, emit one 'verify_no_speech' review item (silent-failure guard)." },
+    { "name": "model", "type": "string", "required": false, "default": "stt.whisper.base-en", "description": "STT model id in models.json (type=stt, engine=whisper.cpp)." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ input{path,exists,normalized,normalize_mode,source_probe}, audio{path,sample_rate,channels,duration_s}, model{id,name,engine,engine_path,build,device,multilingual}, params{language,translate,beam_size,best_of,threads,no_gpu,max_len,split_on_word,offset_ms,duration_ms}, language, text, segment_count, token_count, confidence{overall,min_segment,low_confidence_segments}, segments[{index,t0_ms,t1_ms,t0,t1,text,confidence,token_count,low_confidence}], review{threshold,flagged_count,truncated,queue_path}, whisper{cli,systeminfo,runtime_ms,real_time_factor} }"
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4", "whisper.cpp (whisper-cli)", "ffmpeg>=6 (via audio.ingest, for normalization/probe)"],
+    "models": ["stt.whisper.base-en (ggml)"],
+    "libraries": [],
+    "cpu": "any", "gpu": "cuda-optional", "memory_mb": 1024,
+    "network": false, "filesystem": "read-write", "audio": true, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 900, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": false,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

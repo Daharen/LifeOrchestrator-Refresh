@@ -131,8 +131,22 @@ Needs refactor · Deprecated · Replaced.
   pre-shipped off-machine on cloud ffmpeg 6.1 (same portable harness, 43/43). Work order:
   `modules/10-audio-ingest/WORK_ORDER.md`. See D-0019. Follow-on: batch/directory ingest; trimming/segmentation/VAD
   (→ #13); denoise/high-pass.
-- **11 `speech.stt`** transcription (timestamped, whisper.cpp) · **12 `speech.tts`** local TTS ·
-  **13 `voice.live`** compose record+VAD+STT+TTS (after 10–12 work). *(provisional)*
+- **11 `speech.stt`** — Speech-to-Text Transcription (timestamped, whisper.cpp). ***MVP complete*** — the **second audio
+  module** and the first **stochastic/mixed** skill to wrap a local **model binary**. Wraps `whisper-cli -ojf` to turn one
+  audio file into timestamped segments `{index,t0_ms,t1_ms,t0,t1,text,confidence,token_count,low_confidence}`; resolves the
+  model (`stt.whisper.base-en`) + CLI (CUDA build preferred, CPU fallback) from `models.json`; **normalizes input via
+  `audio.ingest`** (`-Normalize auto|always|never` — `auto` re-encodes only when not already WAV/16 kHz/mono/s16).
+  **Confidence = mean whisper token probability `p`** over content tokens (per-segment + overall); populates
+  `confidence` + `model_provenance`. **Third review-queue producer** — flags low-confidence segments
+  (`flagged_by:"speech.stt"`, bounded by `-MaxReviewSegments`; `verify_no_speech` guard on empty results).
+  `determinism:"mixed"`, `parallel_safe:false` (binds CUDA), `batch:false`. Artifacts `whisper.json`/`.srt`/`.txt` +
+  `transcript.json`/`.md`. **Tests 27/27 via the executor** (`m11-test-001`, exit 0, ~14 s) — live jfk.wav transcription
+  (base.en on CUDA, rtf ≈ 0.07), per-segment confidence, review routing, both normalization branches (real `audio.ingest`
+  child), error paths, and the Module 1 wrapper; **pre-shipped off-machine** on the cloud Linux box (pwsh 7.4.6 AST-parse
+  + a mock-whisper harness driving the *real* skill against a captured jfk fixture, 27/27) before any bytes shipped.
+  Work order: `modules/11-speech-stt/WORK_ORDER.md`. See D-0020. Follow-on: warm whisper-server; batch/directory;
+  VAD/diarization (→ #13); calibrated/semantic confidence; larger/multilingual model + `tiers.stt`.
+- **12 `speech.tts`** local TTS · **13 `voice.live`** compose record+VAD+STT+TTS (after 10–12 work). *(provisional)*
 
 ## Modules 14–18 — Image & document perception (provisional)
 - **14 `ocr.layout`** OCR + boxes + reading order · **15 `image.util`** resize/crop/meta/hash/similarity/

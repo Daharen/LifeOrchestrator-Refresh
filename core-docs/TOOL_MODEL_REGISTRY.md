@@ -300,6 +300,35 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   test:** 2026-07-24 via executor (**tests 43/43**; `m10-test-001`, exit 0, ~17s; pre-shipped on cloud ffmpeg 6.1
   43/43). · **skills:** `audio.ingest`. See D-0019.
 
+### `speech.stt` — Speech-to-Text Transcription (Module 11)
+- **status:** installed · **type:** skill (PowerShell wrapping the whisper.cpp `whisper-cli`) ·
+  **location:** `LifeOrchestrator-Refresh/modules/11-speech-stt/`
+- **invocation:** direct `pwsh -NoProfile -File .\Invoke-SpeechStt.ps1 -InputFile <path> [-Normalize <auto|always|never>]
+  [-Language <code>] [-Translate] [-Threads <n>] [-NoGpu] [-BeamSize <n>] [-BestOf <n>] [-MaxLen <n>] [-SplitOnWord]
+  [-OffsetMs <ms>] [-DurationMs <ms>] [-SegmentConfidenceThreshold <0..1>] [-MaxReviewSegments <n>] [-Model <id>]
+  [-Registry|-WhisperCliPath|-AudioIngestPath|-PwshPath|-ReviewQueuePath <override>]` (or `-InputsJson '<json {input,
+  normalize,language,translate,threads,no_gpu,beam_size,best_of,max_len,split_on_word,offset_ms,duration_ms,
+  segment_confidence_threshold,max_review_segments,min_speech_seconds,model,registry,whisper_cli_path,audio_ingest_path,
+  pwsh_path,review_queue_path}>'`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an
+  `exec.bootstrap` task.
+- **supported tasks:** timestamped transcription of one audio/media file. Resolves the STT model + whisper CLI from
+  `models.json`; consumes whisper-ready 16 kHz mono s16 WAV directly and **normalizes other inputs via `audio.ingest`**
+  (Module 10). Emits timestamped segments with per-segment + overall confidence (mean whisper token probability).
+- **I/O:** in = a file path + options; out = `lifeorch.skill.result/0.1` envelope (result = `{input,audio,model,params,
+  language,text,segment_count,token_count,confidence{overall,min_segment,low_confidence_segments},
+  segments[{index,t0_ms,t1_ms,t0,t1,text,confidence,token_count,low_confidence}],review{threshold,flagged_count,truncated,
+  queue_path},whisper{cli,systeminfo,runtime_ms,real_time_factor}}`) + `runtime/artifacts/<id>/{whisper.json,whisper.srt,
+  whisper.txt,transcript.json,transcript.md,result.json,stderr.txt,whisper.log, normalize/…}`.
+- **determinism:** **mixed** (deterministic orchestration/parse; stochastic model output) · **confidence:** mean whisper
+  per-token probability over content tokens (per-segment + overall); `< -SegmentConfidenceThreshold` (0.5) → `review_queue.jsonl`
+  (`flagged_by:"speech.stt"`, bounded by `-MaxReviewSegments`) · **speed:** base.en on **CUDA (RTX 2080 Ti)** ≈ 0.07
+  real-time factor (11 s audio in ~0.7 s) · **CPU/GPU/mem:** low / CUDA (CPU fallback via `-NoGpu`/CPU build) / ~1 GB.
+- **limitations:** **`parallel_safe:false`** (binds the CUDA context, like `model.gateway`); one file per invocation
+  (`batch:false` — no directory/batch); no VAD/segmentation/diarization/word-level artifacts (→ Module 13 / follow-ons);
+  `base.en` is English-only; per-call CLI spawn (no warm whisper-server yet); confidence is a token-probability signal,
+  not calibrated correctness. · **last test:** 2026-07-24 via executor (**tests 27/27**; `m11-test-001`, exit 0, ~14 s;
+  live smoke `m11-smoke-001` transcribed jfk.wav on CUDA). · **skills:** `speech.stt`. See D-0020.
+
 ---
 
 ## Hardware profile (measured 2026-07-24 — DESKTOP-PF5FFMF)
@@ -317,7 +346,12 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   needs a system CUDA runtime). `model.gateway` uses `llama-server` (chat completions). Note: this build's
   `llama-cli` is interactive-only (rejects `-no-cnv`); use `llama-server` for scripting.
 - **whisper.cpp** — CUDA + CPU builds with `whisper-cli.exe`/`whisper-server.exe` under
-  `F:\Local_TTS_Large_Data\external\whisper.cpp_{cuda,cpu_backup_2026_04_17}\build\bin\Release\`. *For Module 11.*
+  `F:\Local_TTS_Large_Data\external\whisper.cpp_{cuda,cpu_backup_2026_04_17}\build\bin\Release\`. **Verified + wired by
+  `speech.stt` (Module 11), 2026-07-24.** Both builds load headless (`m11-probe-001`; the CUDA build initializes the RTX
+  2080 Ti); flags confirmed on this build: `-oj`/`-ojf` (full JSON incl. per-token `p`), `-osrt`/`-otxt`, `-of <base>`,
+  `-np`, `-l <lang>`, `-ng`, `-t`, `-bs`/`-bo` (`m11-probe-002` transcribed the bundled `samples\jfk.wav`, base.en on
+  CUDA ≈ 0.07 rtf). `whisper-cli` accepts flac/mp3/ogg/wav; `speech.stt` still normalizes to 16 kHz mono s16 WAV via
+  `audio.ingest` by default for determinism. `llama-cli`-style interactive gotchas do **not** apply here.
 - **Speech Python venv** — `F:\My_Programs\Local_Computer_Speech_Large_Data\python_env\` (Python 3.12.10; torch
   2.11.0+cu128, torchaudio, transformers 4.57.3, accelerate, safetensors, soundfile, librosa, onnxruntime). *For Module 12.*
 - **System Python** 3.12.10 (`…\AppData\Local\Programs\Python\Python312`) with torch 2.2.1 + onnxruntime-gpu/directml.
@@ -333,7 +367,7 @@ All staged under `F:\My_Programs\LifeOrchestrator-Refresh_Large_Data\_pending-mo
 | `llm.weak.qwen2p5-1p5b` | llm | `llm\Qwen2.5-1.5B-Instruct-Q4_K_M\…gguf` | 0.94 GB | llama-server | **yes** (default) |
 | `llm.weak.qwen2p5-3b` | llm | `llm\Qwen2.5-3B-Instruct-IQ4_XS\…gguf` | 1.66 GB | llama-server | **yes** |
 | `llm.strong.qwen3p5-27b` | llm | `llm\Qwen3.5-27B-Q4_K_M\…gguf` | 16.3 GB | llama-server | **yes** (partial GPU, ngl=32 tuned M9) |
-| `stt.whisper.base-en` | stt | `stt\whisper-ggml-base.en\ggml-base.en.bin` | 0.14 GB | whisper.cpp | no → M11 |
+| `stt.whisper.base-en` | stt | `stt\whisper-ggml-base.en\ggml-base.en.bin` | 0.14 GB | whisper.cpp | **via `speech.stt`** (M11) |
 | `tts.tokenizer.qwen3-12hz` | tts-comp | `tts\Qwen3-TTS-Tokenizer-12Hz\` | 0.65 GB | transformers | no → M12 |
 | `tts.weak.qwen3-0p6b` | tts | `tts\Qwen3-TTS-12Hz-0.6B-CustomVoice\` | 2.38 GB | transformers | no → M12 |
 | `tts.strong.qwen3-1p7b` | tts | `tts\Qwen3-TTS-12Hz-1.7B-CustomVoice\` | 4.31 GB | transformers | no → M12 |

@@ -5,9 +5,9 @@ Owns **reality as it exists now** — not intended architecture. Keep it compact
 is planned (serves scripts and weaker local models) but not yet created.
 
 - **Project phase:** MVP module build-out.
-- **Active module:** _none in progress._ **Modules 0–10 complete** (0 executor · 1 `skill.bootstrap` · 2
+- **Active module:** _none in progress._ **Modules 0–11 complete** (0 executor · 1 `skill.bootstrap` · 2
   `fs.observer` · 3 `proc.observer` · 4 `uia.inspector` · 5 `uia.actor` · 6 `capture.screen` · 7 `model.gateway` ·
-  8 `classify.batch` · 9 `review.processor` · 10 `audio.ingest`), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure).
+  8 `classify.batch` · 9 `review.processor` · 10 `audio.ingest` · 11 `speech.stt`), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure).
   **Module 8 — Batch Classification & Sorting (`classify.batch`) is MVP complete** — the **first real
   consumer of `model.gateway`**: for each item in a batch it calls the gateway (default `-Tier weak` = 1.5B) with a
   mode-specific prompt (`classify` one-label / `multilabel` / `extract` fields), parses the completion, computes a
@@ -46,6 +46,24 @@ is planned (serves scripts and weaker local models) but not yet created.
   loudness, five error paths, and the Module 1 wrapper; a smoke run (`m10-smoke-001`) produced a real 16 kHz mono
   s16 WAV. **Pre-shipped off-machine**: pwsh 7.4.6 on the cloud Linux box AST-parse-checked both scripts and ran the
   *same* portable harness against cloud ffmpeg 6.1 (43/43) before any bytes hit Windows. See D-0019.
+  **Module 11 — Speech-to-Text Transcription (`speech.stt`) is MVP complete this session** — the **second audio-track
+  module** and the **first stochastic/mixed skill to wrap a local model binary** (whisper.cpp `whisper-cli`, vs. Module
+  7's server). **Probe-first** (`m11-probe-001/002`): confirmed this build's exact flags + JSON before writing code — both
+  CUDA + CPU builds load headless (CUDA sees the RTX 2080 Ti) and support `-oj/-ojf/-osrt/-otxt/-of/-np/-l/-ng`. It
+  resolves the model (`stt.whisper.base-en`) + CLI (CUDA preferred, CPU fallback) from `models.json`; **normalizes input
+  via `audio.ingest`** (`-Normalize auto|always|never` — `auto` re-encodes only when not already WAV/16 kHz/mono/s16,
+  spawning Module 10 as a child `pwsh`); runs `whisper-cli -ojf` and parses timestamped segments. **Confidence = mean
+  whisper token probability `p`** over content tokens (special tokens excluded), per-segment + overall → populates
+  `confidence` + `model_provenance`; **third review-queue producer** — flags low-confidence segments
+  (`flagged_by:"speech.stt"`, `requested:"verify_transcription"`, bounded by `-MaxReviewSegments`=25; a `verify_no_speech`
+  item guards silent failures). `determinism:"mixed"`, `parallel_safe:false` (binds CUDA), `batch:false`. Artifacts
+  `whisper.json`/`.srt`/`.txt` + `transcript.json`/`.md`. **Tests 27/27 via the executor** (`m11-test-001`, exit 0, ~14 s)
+  — live jfk.wav transcription (base.en on CUDA, rtf ≈ 0.07, confidence 0.8707), per-segment confidence, review routing,
+  both normalization branches (real `audio.ingest` child), error paths, and the Module 1 wrapper; live smoke
+  `m11-smoke-001` transcribed jfk.wav on CUDA (`device=cuda:0`). **Pre-shipped off-machine**: pwsh 7.4.6 on the cloud
+  Linux box AST-parse-checked all three `.ps1` and ran the *real* skill against a mock `whisper-cli` + a **captured real
+  jfk fixture** (27/27) before any bytes hit Windows. `models.json` gained `defaults.stt`/`tiers.stt` (additive; Module 7
+  re-verified 28/28). See D-0020.
 - **Repo / working dir:** **`C:\Users\just_\LifeOrchestrator-Refresh\`** — the clean standalone home for
   **Life Orchestrator** (near-term local-skills track; git-initialized). Layout: `core-docs/` (these docs)
   and `modules/<NN>-<name>/` (one per module). **Reference sources (separate, not built here):** the earlier
@@ -145,7 +163,8 @@ is planned (serves scripts and weaker local models) but not yet created.
   `model.gateway`), 1 STT (Whisper base.en), 2 TTS voices + 1 tokenizer (Qwen3-TTS 0.6B/1.7B), 1 embedding
   (Qwen3-Embedding-0.6B). **All copied to portable F: storage** (`…\LifeOrchestrator-Refresh_Large_Data\
   _pending-model-storage\`, ~27.4 GB). Full inventory + sizes + engines in `TOOL_MODEL_REGISTRY.md`; relocation plan
-  in that folder's `MIGRATION.md`. Non-LLM models are declared but wired in their own modules (11/12/23).
+  in that folder's `MIGRATION.md`. **STT (Whisper base.en) is now wired — consumed by `speech.stt` (Module 11)**;
+  the remaining non-LLM models (TTS, embedding) are declared but wired in their own modules (12/23).
 
 ## Available hardware (measured 2026-07-24)
 - **CPU** Intel i9-9900KF (8c/16t @3.6GHz) · **RAM** 64 GB · **GPU** NVIDIA RTX 2080 Ti **11 GB VRAM** (CUDA,
@@ -169,6 +188,7 @@ is planned (serves scripts and weaker local models) but not yet created.
 - uia.actor (direct): `pwsh -NoProfile -File modules\05-uia-actor\Invoke-UiaActor.ps1 -Title '<glob>' -Action <invoke|toggle|select|expand|collapse|setvalue|focus> [-AutomationId|-Name|-ControlType|-Path <loc>] [-Value <s>] [-DryRun]`.
 - capture.screen (direct): `pwsh -NoProfile -File modules\06-capture-screen\Invoke-CaptureScreen.ps1 [-Target <monitor|window|app|region>] [-Monitor <index|all|primary>] [-Hwnd|-ProcessId|-Title <loc>] [-App <glob>] [-X -Y -Width -Height] [-Format <png|jpg>]` (or `-InputsJson '<json>'`).
 - model.gateway (direct): `pwsh -NoProfile -File modules\07-model-gateway\Invoke-ModelGateway.ps1 [-Model <id>|-Tier <tiny|weak|mid|strong>] -Prompt '<s>' [-System '<s>'] [-MaxTokens -Temperature -TopP -TopK -Seed]` (or `-InputsJson '<json {…,messages[]}>'`). Registry: `modules\07-model-gateway\models.json`.
+- speech.stt (direct): `pwsh -NoProfile -File modules\11-speech-stt\Invoke-SpeechStt.ps1 -InputFile <audio> [-Normalize <auto|always|never>] [-Language <code>] [-Translate] [-NoGpu] [-SegmentConfidenceThreshold <0..1>] [-Model <id>]` (or `-InputsJson '<json {input,normalize,language,...}>'`). Resolves whisper.cpp + `stt.whisper.base-en` from `modules\07-model-gateway\models.json`; normalizes non-ready input via `audio.ingest`.
 - User ops (click-to-run): `ops/*.bat` — start/stop/restart/status the executor and run tests; each writes
   output to `ops/out/` for the agent to read.
 - Watchdog: `ops/start-watchdog.bat` (supervise), `ops/stop-watchdog.bat`, `ops/recover-executor.bat [-Force]`;
@@ -223,6 +243,16 @@ is planned (serves scripts and weaker local models) but not yet created.
   Module 1 wrapper). The harness is **OS-portable** (`[IO.Path]::GetTempPath()` + `Get-Command ffmpeg`, fixtures
   generated by ffmpeg): it ran on the cloud Linux box (ffmpeg 6.1, 43/43) as the pre-ship gate and unchanged on
   the Windows executor (ffmpeg 8.1) — `m10-test-001`, exit 0, ~17s.
+- Module 11: `modules/11-speech-stt/tests/Invoke-SpeechSttTests.ps1` — **27/27 pass** (manifest + mixed/parallel_safe/
+  batch flags; a **live** jfk.wav transcription — text contains "country", ≥1 timestamped segment, overall confidence
+  0.8707 in (0,1], per-segment confidence, `model_provenance[1]` engine whisper.cpp, whisper.json/.srt/.txt +
+  transcript.json/.md artifacts with sha256, whisper.json sha == file; review routing at threshold 0.999 → a valid
+  `speech.stt` review item; `normalize auto` feeds a ready WAV directly / `always` re-encodes via the real `audio.ingest`
+  child to 16 kHz and still transcribes; `input_not_found` + `whisper_cli_not_found` error paths with schema-valid
+  envelopes; the Module 1 wrapper; no orphaned `whisper-cli`/`llama-server`; `m11-test-001`, exit 0, ~14s). The harness is
+  **dual-mode / OS-portable**: `-UseMock` runs the *real* skill against a mock `whisper-cli` (`tests/mock-whisper.ps1` +
+  the captured real `tests/fixtures/jfk.whisper.json`) — it ran on the cloud Linux box (27/27) as the pre-ship gate before
+  the identical harness ran live on the Windows executor.
 
 ## Known failures / gotchas
 - **`ffprobe` on PATH is shadowed by a Python shim (2026-07-24).** `where.exe ffprobe` returns
@@ -292,10 +322,12 @@ is planned (serves scripts and weaker local models) but not yet created.
   27B load (~90s) approaches the gateway's 120s default, so callers pass a longer `-LoadTimeoutSec` for the strong tier.
 
 ## Next expected action
-1. **Module 11 — `speech.stt`** (timestamped transcription via whisper.cpp) is the next roadmap module (audio
-   track, Modules 10–13). Module 10 (`audio.ingest`) is MVP complete this session — it produces whisper-ready
-   16 kHz mono s16 WAV by default, so Module 11 can consume its output directly. The review-queue loop remains
-   closed (producers 7/8 → drainer 9 → frontier for `escalated` items).
+1. **Module 12 — `speech.tts`** (local text-to-speech, Qwen3-TTS voices under the speech venv) is the next roadmap
+   module (audio track, Modules 10–13). Module 11 (`speech.stt`) is MVP complete this session — timestamped whisper.cpp
+   transcription that consumes `audio.ingest` output and is the **third review-queue producer** (producers 7/8/11 →
+   drainer 9 → frontier for `escalated` items). `speech.stt` follow-ons (NOT this session): a warm whisper-server if load
+   latency dominates; batch/directory transcription; VAD/segmentation/diarization (→ Module 13); calibrated/semantic
+   confidence; word-level artifacts; a larger/multilingual STT model + `tiers.stt`. See D-0020.
 2. `review.processor` follow-ons (NOT this session): a frontier/`route.tasks` (#24) drain of `escalated` items;
    compaction/archival of `resolved` items to keep the live queue small; a warm/persistent gateway worker (shared
    with #8); calibrated/semantic reviewer confidence; **strong-tier prompt/max_tokens tuning** so the 27B emits a
@@ -306,4 +338,4 @@ is planned (serves scripts and weaker local models) but not yet created.
    intra-batch prompt for throughput; calibrated confidence; a side-effecting `sort.files` mover) — see D-0017; audio.ingest follow-ons (batch/directory ingest; trimming/
    segmentation → Module 13; denoise/high-pass — see D-0019).
 
-- **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 10 audio.ingest build session).
+- **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 11 speech.stt build session).

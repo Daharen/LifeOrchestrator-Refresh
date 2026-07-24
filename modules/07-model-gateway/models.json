@@ -8,13 +8,16 @@
     "llama-server": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\_pending-model-storage\\_engines\\llama.cpp\\bin\\llama-server.exe",
     "_comment": "Staged, verified to run standalone (health + chat) 2026-07-24. Depends on a system CUDA runtime (not on the source folder). If torn down, restage from F:\\Qwen3.5-27B\\llama.cpp\\build\\bin."
   },
-  "defaults": { "llm": "llm.weak.qwen2p5-1p5b" },
+  "defaults": { "llm": "llm.weak.qwen2p5-1p5b", "stt": "stt.whisper.base-en" },
   "tiers": {
     "llm": {
       "tiny": "llm.weak.qwen2p5-0p5b",
       "weak": "llm.weak.qwen2p5-1p5b",
       "mid": "llm.weak.qwen2p5-3b",
       "strong": "llm.strong.qwen3p5-27b"
+    },
+    "stt": {
+      "base": "stt.whisper.base-en"
     }
   },
   "models": [
@@ -74,7 +77,7 @@
         "F:\\Local_TTS_Large_Data\\external\\whisper.cpp_cpu_backup_2026_04_17\\build\\bin\\Release\\whisper-cli.exe"
       ],
       "params": { "size_bytes": 147964211 },
-      "notes": "DECLARED only. Wire in Module 11 (speech.stt). whisper.cpp CLI (CUDA + CPU builds) exists on this machine."
+      "notes": "Consumed by speech.stt (Module 11), which reads this entry's path + engine_candidates directly. Still wired:false for model.gateway on purpose — the gateway MVP runs type=llm only, so it correctly returns model_not_wired for STT. whisper.cpp CLI (CUDA + CPU builds) verified 2026-07-24 (m11-probe-001/002); live base.en transcription passed 27/27 via the executor (m11-test-001)."
     },
     {
       "model_id": "tts.tokenizer.qwen3-12hz",
