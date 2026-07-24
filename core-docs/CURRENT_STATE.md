@@ -16,8 +16,11 @@ is planned (serves scripts and weaker local models) but not yet created.
 - **Executor status:** MVP complete. **Running instance (canonical):** the Life Orchestrator executor at
   `LifeOrchestrator-Refresh/modules/00-bootstrap-executor/` (instance `0a1f8e69…`, pwsh 7.4.6, host
   `DESKTOP-PF5FFMF`) — started this session; the only executor we operate. The original at
-  `proteus_repo/tools/trusted-bootstrap-executor/` (was `98b7f774…`) has been **stopped**; removing it from
-  the game repo is pending user confirmation. Launch/submit/stop via `pwsh` or the `ops/` batch files.
+  `proteus_repo/tools/trusted-bootstrap-executor/` (was `98b7f774…`) has been **stopped**, and the game repo
+  `proteus_repo` was reset to `51fbd0d` (its last game commit — working tree clean, executor untracked).
+  **Pending:** the physical `proteus_repo/tools/` leftover couldn't be deleted this session (this bridge session
+  holds it open); remove it via `ops/finish-game-cleanup.bat` after closing the desktop app, or from a session
+  that does not mount that folder. Launch/submit/stop via `pwsh` or the `ops/` batch files.
 
 ## Completed modules
 - **Module 0** — Trusted High-Risk Bootstrap Executor. 12/12 integration tests pass on Windows.
