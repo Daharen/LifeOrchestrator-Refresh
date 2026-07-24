@@ -20,10 +20,10 @@ Needs refactor · Deprecated · Replaced.
 - **Current implementation:** working copy at `LifeOrchestrator-Refresh/modules/00-bootstrap-executor/`;
   original (running) at `proteus_repo/tools/trusted-bootstrap-executor/`, commit `c4e90c4`.
 - **Work order:** n/a (built ahead of this doc set). **Blockers:** none. **Deprecation:** none.
-- **Known issue (2026-07-24):** fatal-crashed once on a transient file-sharing violation during a task run
-  (`CURRENT_STATE.md → Known failures`). Now **externally recovered** by Module 00.1 (watchdog). In-process
-  self-heal (retry queue moves / state writes on IOException) is still a worthwhile **hardening candidate** —
-  deferred to a dedicated Module 0 pass.
+- **Known issue (2026-07-24), now fixed:** fatal-crashed once on a transient file-sharing violation during a
+  task run (`CURRENT_STATE.md → Known failures`). Addressed two ways — **externally recovered** by Module 00.1
+  (watchdog) **and** an **in-process self-heal** (`Invoke-WithFileRetry` around state-writes + finalization
+  moves, plus a per-loop `IOException`/`UnauthorizedAccessException` guard). Module 0 tests remain 12/12.
 - **Additive (2026-07-24):** now emits `control/heartbeat.json` (each loop) and `control/last-exit.json`
   (`stop_requested`|`signal`|`fatal_error`, in `finally`) so a supervisor can tell a hang/crash from an
   authorized stop. Module 0 tests remain 12/12 with these. See Module 00.1 and DECISION_LOG D-0013.

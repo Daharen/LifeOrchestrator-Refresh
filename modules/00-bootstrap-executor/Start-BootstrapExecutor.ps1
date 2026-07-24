@@ -40,6 +40,24 @@ function Format-Utc {
     return $Value.ToUniversalTime().ToString("o")
 }
 
+function Invoke-WithFileRetry {
+    # In-process self-heal: retry a filesystem operation that hits a transient sharing violation
+    # (the class of error that fatal-crashed the executor on 2026-07-24) instead of letting it bubble.
+    # Only IOException / UnauthorizedAccessException are retried; anything else rethrows immediately.
+    param(
+        [Parameter(Mandatory)] [scriptblock]$Action,
+        [int]$MaxAttempts = 6,
+        [int]$DelayMs = 150
+    )
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        try { return (& $Action) }
+        catch [System.IO.IOException], [System.UnauthorizedAccessException] {
+            if ($attempt -ge $MaxAttempts) { throw }
+            Start-Sleep -Milliseconds ($DelayMs * $attempt)   # linear backoff
+        }
+    }
+}
+
 function Write-JsonAtomic {
     param(
         [Parameter(Mandatory)] [string]$Path,
@@ -49,8 +67,10 @@ function Write-JsonAtomic {
     $temporaryPath = "$Path.tmp"
     $json = $Value | ConvertTo-Json -Depth 20
     $utf8WithoutBom = [System.Text.UTF8Encoding]::new($false)
-    [System.IO.File]::WriteAllText($temporaryPath, $json, $utf8WithoutBom)
-    Move-Item -LiteralPath $temporaryPath -Destination $Path -Force
+    Invoke-WithFileRetry -Action {
+        [System.IO.File]::WriteAllText($temporaryPath, $json, $utf8WithoutBom)
+        Move-Item -LiteralPath $temporaryPath -Destination $Path -Force
+    }
 }
 
 function Get-OptionalProperty {
@@ -254,7 +274,7 @@ function Move-FinalizedTask {
     if (Test-Path -LiteralPath $destination) {
         $destination = Join-Path $destinationRoot ("{0}-{1}" -f $taskName, [Guid]::NewGuid().ToString("N"))
     }
-    Move-Item -LiteralPath $RunningDirectory -Destination $destination
+    Invoke-WithFileRetry -Action { Move-Item -LiteralPath $RunningDirectory -Destination $destination }
     return $destination
 }
 
@@ -472,6 +492,7 @@ try {
     $nextQueueScan = Get-UtcNow
 
     while ($true) {
+      try {
         if (Test-Path -LiteralPath $stopRequestedPath) {
             Write-ExecutorLog "Stop request detected (control/stop.requested)." "WARN"
             $script:sawStopRequest = $true
@@ -532,6 +553,12 @@ try {
             }
             $nextQueueScan = (Get-UtcNow).AddSeconds($QueuePollSeconds)
         }
+      }
+      catch [System.IO.IOException], [System.UnauthorizedAccessException] {
+          # Belt-and-suspenders for the 2026-07-24 crash class: a transient sharing violation that
+          # slipped past the per-operation retry does not kill the executor - log it and keep polling.
+          Write-ExecutorLog "Transient IO error in poll loop; continuing: $($_.Exception.Message)" "WARN"
+      }
 
         Start-Sleep -Milliseconds $ProcessPollMilliseconds
     }

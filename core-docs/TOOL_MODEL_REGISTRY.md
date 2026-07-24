@@ -24,9 +24,10 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
 - **quality:** n/a (deterministic harness) · **speed:** poll-bounded (30s queue poll in the running instance) ·
   **CPU/GPU/mem:** low / none / low · **network:** none · **cost:** local only.
 - **limitations:** trust-based (not a sandbox); Windows-focused (`taskkill`); no orphan-child reaping
-  after crash; polling latency; **fatal on file-sharing violations** (does not yet retry queue moves/state
-  writes — externally recovered by the watchdog; in-process self-heal deferred to a Module 0 hardening pass).
-  · **last test:** 2026-07-24, 12/12 (pwsh 7.4.6, with the additive markers). · **skills:** `exec.bootstrap`.
+  after crash; polling latency. **File-sharing violations are now self-healed in-process** (`Invoke-WithFileRetry`
+  around state-writes + finalization moves, + a per-loop `IOException`/`UnauthorizedAccessException` guard) and
+  also externally recovered by the watchdog. · **last test:** 2026-07-24, 12/12 (pwsh 7.4.6, with markers +
+  self-heal). · **skills:** `exec.bootstrap`.
 
 ### `pwsh` — PowerShell 7.4.6 (runtime)
 - **status:** installed · **type:** executable ·

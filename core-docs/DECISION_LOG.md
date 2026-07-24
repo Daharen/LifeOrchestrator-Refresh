@@ -174,7 +174,8 @@ alternatives · consequences · affects · state (provisional | locked) · revis
 - **consequences:** the executor gains two additive markers (Module 0 12/12 unchanged); to fully stop the
   system, stop the executor *gracefully* (the watchdog then stands down on its own) or stop the watchdog first.
   A separate **Module 0 in-process self-heal** (retrying the internal IO op whose sharing-violation caused the
-  06:26 crash) is still worth doing and is deferred to a Module 0 hardening pass — the watchdog already recovers
-  that crash externally. · **affects:** Modules 0 and 00.1, `PROJECT_DIRECTION.md` (execution channel),
+  06:26 crash) was **added the same session** (`Invoke-WithFileRetry` around state-writes + finalization moves,
+  plus a per-loop `IOException`/`UnauthorizedAccessException` guard; Module 0 still 12/12) — complementing the
+  watchdog's external recovery (defense in depth). · **affects:** Modules 0 and 00.1, `PROJECT_DIRECTION.md` (execution channel),
   `D-0001`. · **revisit-if:** untrusted submitters become possible, or anyone proposes boot persistence / an
   ignore-manual-stop mode (do not add without revisiting D-0001).

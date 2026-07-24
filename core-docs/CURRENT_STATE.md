@@ -102,11 +102,12 @@ is planned (serves scripts and weaker local models) but not yet created.
   the device-bridge mount), the executor died with `The process cannot access the file because it is being
   used by another process` and `Error during cancellation: ...`, then `Executor stopped`. Likely a
   directory-move (running→completed/failed) or state-write colliding with an open handle (possibly the
-  Linux-mount reader, or the task's own child process). **Now auto-recovered externally by the watchdog
-  (Module 00.1).** Still-open **Module 0 hardening candidate:** make queue moves and state writes retry on
-  `IOException`/sharing violations in-process instead of treating them as fatal (belt-and-suspenders with the
-  watchdog). Mitigation meanwhile: avoid holding handles on `runtime/` from the mount while tasks run; keep
-  polling reads brief.
+  Linux-mount reader, or the task's own child process). **Fixed two ways (2026-07-24):** (1) externally
+  auto-recovered by the watchdog (Module 00.1); (2) **in-process self-heal** — `Invoke-WithFileRetry` now
+  wraps the atomic state-writes (`Write-JsonAtomic`) and the queue finalization move (`Move-FinalizedTask`),
+  and a per-iteration loop guard catches `IOException`/`UnauthorizedAccessException` and continues, so this
+  crash class no longer kills the executor. Module 0 tests remain **12/12** with the self-heal. Operational
+  note still worth keeping: avoid holding handles on `runtime/` from the mount while tasks run; keep polls brief.
 - The dotnet-tool `pwsh` shim reports its process path as `dotnet.exe`, so `(Get-Process -Id $PID).Path`
   is **not** a reliable pwsh locator. Pass explicit pwsh paths. Executor/harness already accept `-PwshPath`.
 - **`@($list)` on a raw `System.Collections.Generic.List[object]` throws "Argument types do not match"**
@@ -134,6 +135,6 @@ is planned (serves scripts and weaker local models) but not yet created.
 2. Author the **Module 6 work order** (`modules/06-capture-screen/WORK_ORDER.md`) from the template and implement
    its MVP (screenshot / region capture: monitor / window / app / rectangle → image artifact + contract-valid
    envelope), tested through the executor. Reuse `Test-SkillManifest` / `Test-SkillResultEnvelope` and `Invoke-Skill.ps1`.
-3. Optional Module 0 hardening: in-process retry-on-IOException self-heal (belt-and-suspenders with the watchdog).
+3. ~~Module 0 in-process self-heal~~ — **done this session** (retry-on-IOException + per-loop guard; 12/12).
 
 - **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 00.1 watchdog build session).
