@@ -78,3 +78,21 @@ alternatives · consequences · affects · state (provisional | locked) · revis
 - **consequences:** pwsh only on the per-user PATH; the shim reports as `dotnet.exe` (pass explicit
   `-PwshPath`). · **affects:** `CURRENT_STATE.md`, `TOOL_MODEL_REGISTRY.md`, Module 0. · **revisit-if:**
   a system-wide winget/MSI install is preferred for broader use.
+
+### D-0009 — Module 1 skill conventions (provisional, pending contract absorption)
+- **date:** 2026-07-24 · **state:** provisional
+- **decision:** Building the first reference skill (`ref.echo`) settled three conventions not spelled out
+  in `SKILL_CONTRACT.md` v0.1: (1) a skill's artifact root resolves relative to the skill folder
+  (`$PSScriptRoot/runtime/artifacts/<invocation_id>/`), and the envelope always reports **absolute**
+  artifact paths; (2) skills accept a generic `-InputsJson '<json object>'` argument (in addition to any
+  named params) so a generic wrapper need not know each skill's parameters; (3) the wrapper emits a
+  `proteus.skill.invocation_report/0.1` object `{manifest_valid, manifest_errors, invoked, exit_code,
+  envelope_valid, envelope_errors, envelope, stderr_tail}`.
+- **reason:** Needed to make `ref.echo` and the generic `Invoke-Skill.ps1` interoperate without expanding
+  the contract prematurely (D-0005). Kept out of the normative contract until a second skill confirms them.
+- **alternatives:** amend `SKILL_CONTRACT.md` now (risked over-fitting to one skill); per-skill bespoke
+  arg passing (defeats a generic wrapper).
+- **consequences:** `SKILL_CONTRACT.md` stays v0.1 unchanged; these conventions live in the Module 1
+  README + this entry. Fold them in (and bump the contract version) once Module 2 (`fs.observer`) exercises
+  them. · **affects:** `SKILL_CONTRACT.md`, Module 1, Module 2. · **revisit-if:** Module 2 needs a different
+  arg-passing or artifact-root rule.

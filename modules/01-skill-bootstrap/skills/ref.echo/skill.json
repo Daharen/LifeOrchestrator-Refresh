@@ -1,0 +1,36 @@
+{
+  "schema": "proteus.skill.manifest/0.1",
+  "skill_id": "ref.echo",
+  "name": "Reference Echo Skill",
+  "version": "0.1.0",
+  "contract_version": "0.1",
+  "purpose": "Trivial reference skill: echoes a message N times and emits a schema-valid result envelope. Serves as the canonical worked example and health-check for the skill contract.",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-RefEcho.ps1",
+    "args_spec": "Named params '-Message <string> -Repeat <int>', OR the generic convention '-InputsJson '<json object {message,repeat}>''. Optional '-ArtifactRoot <dir>' and '-InvocationId <guid>'."
+  },
+  "inputs": [
+    { "name": "message", "type": "string", "required": false, "default": "ping", "description": "Text to echo back." },
+    { "name": "repeat", "type": "int", "required": false, "default": 1, "description": "How many times to repeat the message (must be >= 1)." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ echoed, message, repeat, host, user, pwsh_version, pid }"
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4"],
+    "models": [],
+    "libraries": [],
+    "cpu": "any", "gpu": "none", "memory_mb": 64,
+    "network": false, "filesystem": "write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 60, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

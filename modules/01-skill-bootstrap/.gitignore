@@ -1,0 +1,4 @@
+# Skill runtime output (artifacts, per-invocation dirs) — never committed.
+runtime/
+**/runtime/
+*.tmp

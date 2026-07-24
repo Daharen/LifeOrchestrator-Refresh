@@ -21,8 +21,8 @@ Needs refactor · Deprecated · Replaced.
   original (running) at `proteus_repo/tools/trusted-bootstrap-executor/`, commit `c4e90c4`.
 - **Work order:** n/a (built ahead of this doc set). **Blockers:** none. **Deprecation:** none.
 
-## Module 1 — Skill Contract & Registry Bootstrap  ← next
-- **id:** `skill.bootstrap` · **Priority:** P0 · **Status:** **Ready**
+## Module 1 — Skill Contract & Registry Bootstrap
+- **id:** `skill.bootstrap` · **Priority:** P0 · **Status:** **MVP complete**
 - **Purpose:** Establish the smallest common interface for invokable skills: finalize `SKILL_CONTRACT.md`,
   the `skill.json` manifest format, the standard result envelope, standard artifact location, the
   registry entry format, and a **simple invocation wrapper** (validate manifest → run → validate envelope).
@@ -30,9 +30,14 @@ Needs refactor · Deprecated · Replaced.
 - **Dependencies:** Module 0; `SKILL_CONTRACT.md` (v0.1 already drafted in this pack).
 - **MVP acceptance:** one trivial reference skill validates against the contract and runs both directly
   and through the executor, emitting a schema-valid envelope; registry entry format proven by that skill.
-- **Work order:** _to be authored from `MODULE_WORK_ORDER_TEMPLATE.md`._ **Blockers:** none.
+- **Implementation:** `modules/01-skill-bootstrap/` — validators (`lib/SkillContract.psm1`), generic
+  wrapper (`Invoke-Skill.ps1`), reference skill (`skills/ref.echo/`).
+- **MVP acceptance:** **Met — `ref.echo` validates and runs directly + through the executor, emitting a
+  schema-valid `proteus.skill.result/0.1`; the wrapper validates manifest+envelope; module tests 11/11
+  (2026-07-24).** Contract-finalization of the adopted conventions deferred (DECISION_LOG D-0009).
+- **Work order:** `modules/01-skill-bootstrap/WORK_ORDER.md`. **Blockers:** none.
 
-## Module 2 — Filesystem Observer
+## Module 2 — Filesystem Observer  ← next
 - **id:** `fs.observer` · **Priority:** P1 · **Status:** Proposed
 - **Purpose:** Inspect, search, compare, and index the filesystem without screenshots — listings,
   discovery, change detection, metadata, markdown trees, project/artifact indexing.
