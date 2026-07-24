@@ -122,3 +122,31 @@ alternatives · consequences · affects · state (provisional | locked) · revis
   (with a contract-version bump) as a small housekeeping pass — deferred to keep this session scoped to Module 2.
 - **reason:** Validate conventions with a real second skill before promoting them to the normative contract (per D-0009/D-0005).
 - **affects:** `SKILL_CONTRACT.md`, future modules. · **revisit-if:** the fold happens (bump version), or a third skill needs a different convention.
+
+### D-0012 — First side-effecting skill (`uia.actor`): UIA patterns only, dry-run, not parallel-safe
+- **date:** 2026-07-24 · **state:** locked
+- **decision:** Module 5 `uia.actor` is the first skill that mutates external state. Its design is deliberately
+  constrained: (1) it acts **only** through UIA control patterns (Invoke/Toggle/SelectionItem/ExpandCollapse/
+  Value) plus `AutomationElement.SetFocus` — **never** synthetic global mouse/keyboard input (SendKeys,
+  `mouse_event`, `keybd_event`, `SetCursorPos`); a control exposing no usable pattern yields a structured
+  `pattern_unsupported` error, not a coordinate-click fallback. (2) It exposes a `-DryRun`/`-WhatIf` preview
+  that resolves the element and reports the intended action + pattern support + current state **without
+  performing it**. (3) It performs **one** action per invocation (no macros/sequences). (4) It declares
+  `parallel_safe:false` (unlike the read-only observers) because it mutates shared desktop UI. (5) It resolves
+  elements with the **same Children-scope DFS tree-walk as `uia.inspector`**, so the inspector's `path`
+  (child-index) locators compose exactly, and it also supports automation_id (exact) / name (glob) /
+  control_type (exact) locators with structured `element_not_found` / `ambiguous_locator` (candidate list) errors.
+- **reason:** Side effects demand a safety envelope. Patterns-only keeps actions on the accessibility layer
+  (deterministic, inspectable, honoring the executor's hard prohibitions — no synthetic-input evasion), dry-run
+  lets a caller verify a resolution before mutating anything, and `parallel_safe:false` prevents the router from
+  ever running two UI mutations concurrently against one desktop. One-action-per-call keeps side effects scoped
+  and auditable; sequencing belongs to a later orchestration module (#26).
+- **alternatives:** allow synthetic input as a fallback (rejected — unsafe, non-deterministic, and a
+  monitoring-evasion/automation-abuse hazard the executor prohibitions warn against); combine inspect+act into
+  one skill (rejected — keep the read/write halves separate per the roadmap); multi-action batch (deferred to #26).
+- **consequences:** Controls without a usable pattern cannot be actuated by this skill (accept for MVP; revisit
+  if a real need appears — likely via a separate, clearly-scoped input skill, not a silent fallback here). The
+  property-search walk is depth/element bounded like the inspector.
+- **affects:** Module 5, `MODULE_ROADMAP.md` (#5, #26), `SKILL_CONTRACT.md` (`parallel_safe` semantics for
+  side-effecting skills). · **revisit-if:** a module genuinely needs synthetic input, window management, or
+  multi-step UI sequences — each gets its own scoped work order.

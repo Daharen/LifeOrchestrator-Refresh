@@ -1,0 +1,84 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "uia.actor",
+  "skill_version": "0.1.0",
+  "contract_version": "0.1",
+  "invocation_id": "5c1e0a94-7d2b-4f8e-9a3c-1f2b6d84ac10",
+  "status": "ok",
+  "started_at_utc": "2026-07-24T06:25:00.4821003Z",
+  "finished_at_utc": "2026-07-24T06:25:01.3907741Z",
+  "duration_ms": 908,
+  "inputs_digest": "sha256:6b1f9c2a7e4d0a5b3c8f1e2d4a6b8c0e2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e",
+  "result": {
+    "target": {
+      "kind": "title:LO UIA Probe ab12cd34*",
+      "hwnd": 4523110,
+      "name": "LO UIA Probe ab12cd34",
+      "control_type": "Window",
+      "class_name": "WindowsForms10.Window.8.app.0.141b42a_r6_ad1",
+      "pid": 27640
+    },
+    "action": "toggle",
+    "dry_run": false,
+    "performed": true,
+    "actionable": true,
+    "requested_pattern": "Toggle",
+    "pattern_supported": true,
+    "locator": {
+      "automation_id": "",
+      "name": "",
+      "control_type": "CheckBox",
+      "path": null
+    },
+    "resolved_element": {
+      "ref": 2,
+      "path": "0.1",
+      "depth": 0,
+      "control_type": "CheckBox",
+      "name": "probeCheck",
+      "automation_id": "probeCheck",
+      "class_name": "WindowsForms10.BUTTON.app.0.141b42a_r6_ad1",
+      "x": 741,
+      "y": 429,
+      "width": 300,
+      "height": 24,
+      "enabled": true,
+      "offscreen": false,
+      "keyboard_focusable": true,
+      "patterns": [
+        "Toggle"
+      ]
+    },
+    "candidate_count": 1,
+    "candidates": [],
+    "before_state": {
+      "toggle_state": "Off"
+    },
+    "after_state": {
+      "toggle_state": "On"
+    },
+    "blockers": []
+  },
+  "confidence": null,
+  "artifacts": [
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\05-uia-actor\\runtime\\artifacts\\5c1e0a94-7d2b-4f8e-9a3c-1f2b6d84ac10\\action.md",
+      "kind": "markdown",
+      "bytes": 512,
+      "sha256": "a1c3e5079b2d4f6081a3c5e70921436587a9cbed0f214365879abdcef0123456"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\05-uia-actor\\runtime\\artifacts\\5c1e0a94-7d2b-4f8e-9a3c-1f2b6d84ac10\\action.json",
+      "kind": "json",
+      "bytes": 1104,
+      "sha256": "b2d4f60810a3c5e7092143658709abcd1f2436587a9cbed0f21436587a9cbed0"
+    }
+  ],
+  "model_provenance": [],
+  "diagnostics": {
+    "log": "stderr.txt",
+    "artifact_dir": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\05-uia-actor\\runtime\\artifacts\\5c1e0a94-7d2b-4f8e-9a3c-1f2b6d84ac10"
+  },
+  "warnings": [],
+  "error": null
+}

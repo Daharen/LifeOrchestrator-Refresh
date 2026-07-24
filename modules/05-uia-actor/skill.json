@@ -1,0 +1,46 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "uia.actor",
+  "name": "UI Automation Actor",
+  "version": "0.1.0",
+  "contract_version": "0.1",
+  "purpose": "Perform ONE UI Automation control-pattern action (invoke/toggle/select/expand/collapse/setvalue/focus) on a single element located by automation id, name, control type, and/or child-path from uia.inspector. Acting half of UIA, kept separate from inspection. UIA patterns only — no synthetic mouse/keyboard. Supports a dry-run/-WhatIf preview.",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-UiaActor.ps1",
+    "args_spec": "Named params -Hwnd <int> | -ProcessId <int> | -Title <glob> (else the desktop root); -Action <invoke|toggle|select|expand|collapse|setvalue|focus>; locators -AutomationId <exact> -Name <glob> -ControlType <exact> -Path <child-index path>; -Value <string> (setvalue); -DryRun/-WhatIf; -Depth <int> -MaxElements <int>. OR -InputsJson '<json {hwnd,pid,title,action,automation_id,name,control_type,path,value,dry_run,depth,max_elements}>'. Optional -ArtifactRoot, -InvocationId."
+  },
+  "inputs": [
+    { "name": "hwnd", "type": "int", "required": false, "description": "Target window handle (highest precedence)." },
+    { "name": "pid", "type": "int", "required": false, "description": "Target by process id (uses its main window)." },
+    { "name": "title", "type": "string", "required": false, "description": "Target by top-level window title (glob)." },
+    { "name": "action", "type": "string", "required": true, "description": "invoke | toggle | select | expand | collapse | setvalue | focus." },
+    { "name": "automation_id", "type": "string", "required": false, "description": "Locator: exact AutomationId match." },
+    { "name": "name", "type": "string", "required": false, "description": "Locator: glob match on element Name." },
+    { "name": "control_type", "type": "string", "required": false, "description": "Locator: exact control type (e.g. Button, CheckBox, Edit)." },
+    { "name": "path", "type": "string", "required": false, "description": "Locator: child-index path from uia.inspector (authoritative when supplied; empty string = the target itself)." },
+    { "name": "value", "type": "string", "required": false, "description": "Text to set for action=setvalue (required for a real setvalue)." },
+    { "name": "dry_run", "type": "bool", "required": false, "default": false, "description": "Resolve and report the intended action without performing it (also -WhatIf)." },
+    { "name": "depth", "type": "int", "required": false, "default": 12, "description": "Max search depth when resolving by property locators (ignored when path is supplied)." },
+    { "name": "max_elements", "type": "int", "required": false, "default": 3000, "description": "Cap on the property-search walk." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ target, action, dry_run, performed, actionable, requested_pattern, pattern_supported, locator, resolved_element, candidate_count, candidates[], before_state, after_state, blockers[] }"
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4"],
+    "models": [],
+    "libraries": ["UIAutomationClient", "UIAutomationTypes"],
+    "cpu": "any", "gpu": "none", "memory_mb": 256,
+    "network": false, "filesystem": "read", "audio": false, "screen": true, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 120, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": false,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

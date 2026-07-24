@@ -11,23 +11,27 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
 ---
 
 ### `exec.bootstrap` — Trusted High-Risk Bootstrap Executor
-- **status:** installed · **type:** skill/service (PowerShell) ·
-  **location:** `LifeOrchestrator-Refresh/modules/00-bootstrap-executor/` (canonical; running instance `0a1f8e69…`. The original at `proteus_repo/tools/trusted-bootstrap-executor/` was stopped and is pending removal from the game repo.)
+- **status:** installed (⚠️ **crashed 2026-07-24T06:26:36Z** on a transient file-sharing violation — must be
+  restarted via `ops/start-executor.bat`; see `CURRENT_STATE.md → Known failures`) · **type:** skill/service (PowerShell) ·
+  **location:** `LifeOrchestrator-Refresh/modules/00-bootstrap-executor/` (canonical; instance `0a1f8e69…`. The original at `proteus_repo/tools/trusted-bootstrap-executor/` was stopped and is pending removal from the game repo.)
 - **invocation:** `pwsh -NoProfile -File .\Start-BootstrapExecutor.ps1` (+ `Submit-`/`Stop-`); tasks are
   directories atomically published into `runtime/pending/`.
 - **supported tasks:** run arbitrary local PowerShell task packages with concurrency, timeout,
   output/exit/timing capture, restart recovery.
 - **I/O:** in = task dir (`task.json` + `task.ps1`); out = `result.json` + `stdout.txt`/`stderr.txt`.
-- **quality:** n/a (deterministic harness) · **speed:** poll-bounded (default 1s/200ms in tests) ·
+- **quality:** n/a (deterministic harness) · **speed:** poll-bounded (30s queue poll in the running instance) ·
   **CPU/GPU/mem:** low / none / low · **network:** none · **cost:** local only.
 - **limitations:** trust-based (not a sandbox); Windows-focused (`taskkill`); no orphan-child reaping
-  after crash; polling latency. · **last test:** 2026-07-24, 12/12 (pwsh 7.4.6). · **skills:** `exec.bootstrap`.
+  after crash; polling latency; **fatal on file-sharing violations** (does not retry queue moves/state writes).
+  · **last test:** 2026-07-24, 12/12 (pwsh 7.4.6). · **skills:** `exec.bootstrap`.
 
 ### `pwsh` — PowerShell 7.4.6 (runtime)
 - **status:** installed · **type:** executable ·
   **location:** `C:\Users\just_\.dotnet\tools\pwsh.exe` (.NET global tool; user PATH `~\.dotnet\tools`).
 - **invocation:** `pwsh -NoProfile -ExecutionPolicy Bypass -File <script>` (new shells) or the full path.
-- **supported tasks:** primary scripting/execution runtime for skills and the executor.
+- **supported tasks:** primary scripting/execution runtime for skills and the executor. Loads managed UI
+  Automation (`UIAutomationClient`/`UIAutomationTypes`), `System.Windows.Forms`/`System.Drawing`, and can host
+  a WinForms message loop on an STA runspace (verified 2026-07-24 for the Module 5 probe test).
 - **limitations:** shim reports process path as `dotnet.exe` (pass explicit `-PwshPath`); pinned version
   because the latest tool package is broken; not on system PATH (per-user only). · **last test:** 2026-07-24.
 
@@ -38,7 +42,7 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
 
 ### `git` — version control
 - **status:** installed · **type:** executable · **location:** on PATH ·
-  **supported tasks:** repo ops in `proteus_repo`. · **last test:** 2026-07-24 (committed `c4e90c4`).
+  **supported tasks:** repo ops in `LifeOrchestrator-Refresh` (and the game repo). · **last test:** 2026-07-24 (Module 4 commit).
 
 ### `winget` — Windows Package Manager
 - **status:** installed · **type:** executable ·
@@ -56,9 +60,7 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
 - **I/O:** in = `{message:string, repeat:int}`; out = `lifeorch.skill.result/0.1` envelope on stdout +
   `runtime/artifacts/<invocation_id>/{echo.txt,result.json,stderr.txt}`.
 - **quality:** deterministic (confidence null) · **speed:** ~0.1s · **CPU/GPU/mem:** low/none/~64MB ·
-  **network:** none · **cost:** local only.
-- **limitations:** reference/demo only; writes under its own module dir. · **last test:** 2026-07-24 via
-  executor (`m1-direct-001`/`m1-wrapped-001` completed exit 0; module tests 11/11). · **skills:** `ref.echo`.
+  **network:** none · **cost:** local only. · **last test:** 2026-07-24 via executor. · **skills:** `ref.echo`.
 
 ### `skill.bootstrap` — Skill contract tooling (Module 1)
 - **status:** installed · **type:** library/tooling (PowerShell) ·
@@ -69,7 +71,7 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   envelope; run any conforming skill and emit a `lifeorch.skill.invocation_report/0.1`.
 - **I/O:** in = skill dir + optional inputs JSON; out = invocation-report JSON.
 - **limitations:** field/type/enum checks (not full JSON-Schema); pwsh path defaults to the pinned
-  dotnet-tool build. · **last test:** 2026-07-24 (11/11 module tests via executor). · **skills:** n/a (harness).
+  dotnet-tool build. · **last test:** 2026-07-24 (reused by Modules 2–5). · **skills:** n/a (harness).
 
 ### `fs.observer` — Filesystem Observer (Module 2)
 - **status:** installed · **type:** skill (PowerShell) ·
@@ -80,9 +82,7 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
 - **I/O:** in = `{path, depth, pattern, include_hidden, max_entries}`; out = `lifeorch.skill.result/0.1` envelope +
   `runtime/artifacts/<id>/{tree.md,index.json,stderr.txt,result.json}`.
 - **quality:** deterministic (confidence null) · **speed:** sub-second for small trees · **CPU/GPU/mem:** low/none/~128MB ·
-  **network:** none · **cost:** local only.
-- **limitations:** point-in-time snapshot (no diffing); symlinks listed but not traversed; name-glob only (no content grep).
-  · **last test:** 2026-07-24 via executor (tests 16/16; capture over the repo = 27 entries / 10 md matches). · **skills:** `fs.observer`.
+  **network:** none · **cost:** local only. · **last test:** 2026-07-24 via executor (tests 16/16). · **skills:** `fs.observer`.
 
 ### `proc.observer` — Process & Window Observer (Module 3)
 - **status:** installed · **type:** skill (PowerShell + Win32 via Add-Type) ·
@@ -92,10 +92,8 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
 - **supported tasks:** snapshot running processes + top-level windows (titles, owning pid/name, bounds, min/max, foreground); no screenshots.
 - **I/O:** in = `{visible_only, name_filter, max_items}`; out = `lifeorch.skill.result/0.1` envelope +
   `runtime/artifacts/<id>/{report.md,processes.json,windows.json,stderr.txt,result.json}`.
-- **quality:** deterministic read of live state (confidence null; snapshot) · **speed:** ~1–3s (Win32 compile on first Add-Type) · **CPU/GPU/mem:** low/none/~128MB ·
-  **network:** none · **cost:** local only.
-- **limitations:** point-in-time (no diffing/stream); interactive session only (sees the desktop it runs in);
-  protected-process Path/StartTime may be null. · **last test:** 2026-07-24 via executor (tests 16/16; capture = 319 procs / 16 windows). · **skills:** `proc.observer`.
+- **quality:** deterministic read of live state (confidence null; snapshot) · **speed:** ~1–3s · **CPU/GPU/mem:** low/none/~128MB ·
+  **network:** none · **cost:** local only. · **last test:** 2026-07-24 via executor (tests 16/16). · **skills:** `proc.observer`.
 
 ### `uia.inspector` — UI Automation Inspector (Module 4)
 - **status:** installed · **type:** skill (PowerShell + managed UI Automation) ·
@@ -105,10 +103,33 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
 - **supported tasks:** read-only UIA control-tree walk of a target window (control type, name, automation id, class, bounds, patterns, state).
 - **I/O:** in = `{hwnd, pid, title, depth, max_elements, name_filter}`; out = `lifeorch.skill.result/0.1` envelope +
   `runtime/artifacts/<id>/{tree.md,elements.json,stderr.txt,result.json}`.
-- **quality:** deterministic read of live UI state (confidence null) · **speed:** ~1–5s (depth/element bound) · **CPU/GPU/mem:** low/none/~256MB ·
+- **quality:** deterministic read of live UI state (confidence null) · **speed:** ~1–5s · **CPU/GPU/mem:** low/none/~256MB ·
   **network:** none · **cost:** local only.
-- **limitations:** read-only (no actions — see Module 5); point-in-time; some apps (e.g. Unity games) expose no UIA tree; bounded by depth/max_elements.
-  · **last test:** 2026-07-24 via executor (tests 16/16; capture = 22 elements from desktop root). · **skills:** `uia.inspector`.
+- **limitations:** read-only (acting is Module 5 `uia.actor`); point-in-time; some apps (e.g. Unity games) expose no UIA tree; bounded by depth/max_elements.
+  · **last test:** 2026-07-24 via executor (tests 16/16). · **skills:** `uia.inspector`.
+
+### `uia.actor` — UI Automation Actor (Module 5)
+- **status:** installed · **type:** skill (PowerShell + managed UI Automation) ·
+  **location:** `LifeOrchestrator-Refresh/modules/05-uia-actor/`
+- **invocation:** direct `pwsh -NoProfile -File .\Invoke-UiaActor.ps1 [-Hwnd <n>|-ProcessId <n>|-Title <glob>]
+  -Action <invoke|toggle|select|expand|collapse|setvalue|focus> [-AutomationId <exact>] [-Name <glob>]
+  [-ControlType <exact>] [-Path <child-index path>] [-Value <s>] [-DryRun]` (or `-InputsJson '<json>'`);
+  wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
+- **supported tasks:** perform ONE UIA control-pattern action on a single element located by automation id /
+  name / control type / inspector child-path: invoke, toggle, select, expand, collapse, setvalue, focus.
+  UIA patterns only (no synthetic mouse/keyboard). `-DryRun`/`-WhatIf` resolves + reports the intended action
+  without performing it; before/after control state captured on real actions.
+- **I/O:** in = `{hwnd,pid,title,action,automation_id,name,control_type,path,value,dry_run,depth,max_elements}`;
+  out = `lifeorch.skill.result/0.1` envelope (result = `{target, action, dry_run, performed, actionable,
+  requested_pattern, pattern_supported, locator, resolved_element, candidate_count, candidates[],
+  before_state, after_state, blockers[]}`) + `runtime/artifacts/<id>/{action.md,action.json,stderr.txt,result.json}`.
+- **quality:** deterministic (confidence null) · **speed:** ~1–5s (bounded property search when no path) ·
+  **CPU/GPU/mem:** low/none/~256MB · **network:** none · **cost:** local only.
+- **limitations:** **side-effecting** (`parallel_safe:false`); one action per invocation; no window
+  management (move/resize/close), no scroll/range-value/multi-select, no keyboard text where no ValuePattern,
+  no wait-for-element retries; ambiguous locators error with a candidate list (refine or use path); targets
+  that expose no usable pattern return `pattern_unsupported`.
+  · **last test:** 2026-07-24 via executor (tests **26/26**; live invoke/toggle/setvalue on a WinForms probe). · **skills:** `uia.actor`.
 
 ---
 

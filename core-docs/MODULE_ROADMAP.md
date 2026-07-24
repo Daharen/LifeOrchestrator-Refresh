@@ -20,6 +20,8 @@ Needs refactor · Deprecated · Replaced.
 - **Current implementation:** working copy at `LifeOrchestrator-Refresh/modules/00-bootstrap-executor/`;
   original (running) at `proteus_repo/tools/trusted-bootstrap-executor/`, commit `c4e90c4`.
 - **Work order:** n/a (built ahead of this doc set). **Blockers:** none. **Deprecation:** none.
+- **Known issue (2026-07-24):** fatal-crashed once on a transient file-sharing violation during a task run
+  (`CURRENT_STATE.md → Known failures`). Hardening candidate: retry queue moves / state writes on IOException.
 
 ## Module 1 — Skill Contract & Registry Bootstrap
 - **id:** `skill.bootstrap` · **Priority:** P0 · **Status:** **MVP complete**
@@ -28,37 +30,36 @@ Needs refactor · Deprecated · Replaced.
   registry entry format, and a **simple invocation wrapper** (validate manifest → run → validate envelope).
   Must **not** become a plugin framework.
 - **Dependencies:** Module 0; `SKILL_CONTRACT.md` (v0.1 already drafted in this pack).
-- **MVP acceptance:** one trivial reference skill validates against the contract and runs both directly
-  and through the executor, emitting a schema-valid envelope; registry entry format proven by that skill.
-- **Implementation:** `modules/01-skill-bootstrap/` — validators (`lib/SkillContract.psm1`), generic
-  wrapper (`Invoke-Skill.ps1`), reference skill (`skills/ref.echo/`).
 - **MVP acceptance:** **Met — `ref.echo` validates and runs directly + through the executor, emitting a
   schema-valid `lifeorch.skill.result/0.1`; the wrapper validates manifest+envelope; module tests 11/11
   (2026-07-24).** Contract-finalization of the adopted conventions deferred (DECISION_LOG D-0009).
+- **Implementation:** `modules/01-skill-bootstrap/` — validators (`lib/SkillContract.psm1`), generic
+  wrapper (`Invoke-Skill.ps1`), reference skill (`skills/ref.echo/`).
 - **Work order:** `modules/01-skill-bootstrap/WORK_ORDER.md`. **Blockers:** none.
 
 ## Module 2 — Filesystem Observer
 - **id:** `fs.observer` · **Priority:** P1 · **Status:** **MVP complete**
 - **Purpose:** Inspect, search, compare, and index the filesystem without screenshots — listings,
   discovery, change detection, metadata, markdown trees, project/artifact indexing.
-- **Dependencies:** Module 1. **MVP acceptance:** deterministic tree + search over a target dir,
-  contract-valid envelope, markdown + JSON artifacts. **Met — manifest valid; `tree.md` + `index.json`
-  with hashes; glob search; error path; direct/wrapped/executor; tests 16/16 (2026-07-24).**
-- **Implementation:** `modules/02-fs-observer/` (`Invoke-FsObserver.ps1`, `skill.json`, tests). **Work
-  order:** `modules/02-fs-observer/WORK_ORDER.md`.
+- **Dependencies:** Module 1. **MVP acceptance:** **Met — `tree.md` + `index.json` with hashes; glob
+  search; error path; direct/wrapped/executor; tests 16/16 (2026-07-24).**
+- **Implementation:** `modules/02-fs-observer/`. **Work order:** `modules/02-fs-observer/WORK_ORDER.md`.
 
-## Modules 3–6 — Desktop observation & control (provisional)  ← Module 5 (`uia.actor`) next
-- **3 `proc.observer`** — Process & Window Observer: running apps, windows, active window, positions,
-  titles, state changes (no image processing). ***MVP complete*** — processes + top-level windows +
+## Modules 3–6 — Desktop observation & control (provisional)  ← Module 6 (`capture.screen`) next
+- **3 `proc.observer`** — Process & Window Observer. ***MVP complete*** — processes + top-level windows +
   foreground; `report.md`/`processes.json`/`windows.json`; tests 16/16 (2026-07-24). Work order:
   `modules/03-proc-observer/WORK_ORDER.md`.
-- **4 `uia.inspector`** — UI Automation Inspector: read accessible controls, return stable element info.
-  ***MVP complete*** — read-only UIA tree walk (control type/name/automation id/bounds/patterns/state);
-  `tree.md`/`elements.json`; tests 16/16 (2026-07-24). Work order: `modules/04-uia-inspector/WORK_ORDER.md`.
-- **5 `uia.actor`** — UI Automation Actor: invoke/select/expand/type on identified elements. Kept
-  **separate** from inspection. *Proposed, P2. Depends on 4.*
+- **4 `uia.inspector`** — UI Automation Inspector. ***MVP complete*** — read-only UIA tree walk (control
+  type/name/automation id/bounds/patterns/state); `tree.md`/`elements.json`; tests 16/16 (2026-07-24). Work
+  order: `modules/04-uia-inspector/WORK_ORDER.md`.
+- **5 `uia.actor`** — UI Automation Actor: invoke/toggle/select/expand/collapse/setvalue/focus on an
+  element located by automation id / name / control type / inspector child-path. Kept **separate** from
+  inspection; UIA control patterns only (no synthetic input); `-DryRun`/`-WhatIf`; `parallel_safe:false`
+  (first side-effecting skill). ***MVP complete*** — `action.md`/`action.json`; tests **26/26** incl. live
+  invoke/toggle/setvalue self-verified against a WinForms probe (2026-07-24). Work order:
+  `modules/05-uia-actor/WORK_ORDER.md`. See DECISION_LOG D-0011.
 - **6 `capture.screen`** — Screenshot & Region Capture: monitor/window/app/rectangle → artifact, for
-  when structured inspection is unavailable or visual verification is genuinely required. *Proposed, P2.*
+  when structured inspection is unavailable or visual verification is genuinely required. *Proposed, P2. **← next.***
 
 ## Modules 7–9 — Local model foundation (provisional)
 - **7 `model.gateway`** — Local Model Gateway: common interface to installed local LLM/vision/speech/
