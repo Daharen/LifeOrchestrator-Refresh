@@ -178,6 +178,66 @@ if (Test-Path -LiteralPath $stopRequestedPath) {
     Remove-Item -LiteralPath $stopRequestedPath -Force -ErrorAction SilentlyContinue
 }
 
+# --- Watchdog cooperation markers (additive; do not affect the queue protocol) ---
+# heartbeat.json refreshes each loop so a supervisor can detect a hang (alive but stuck).
+# last-exit.json is written on any graceful exit so a supervisor can tell an authorized
+# stop (reason stop_requested|signal) from a crash (reason fatal_error). Clearing both at
+# startup means: presence of last-exit.json => this run exited gracefully; its absence
+# after a start => the process was hard-killed / lost power.
+$heartbeatPath = Join-Path $directories["control"] "heartbeat.json"
+$lastExitPath  = Join-Path $directories["control"] "last-exit.json"
+$script:sawStopRequest = $false
+$script:lastHeartbeat  = [DateTime]::MinValue
+foreach ($staleMarker in @($lastExitPath, $heartbeatPath)) {
+    if (Test-Path -LiteralPath $staleMarker) { Remove-Item -LiteralPath $staleMarker -Force -ErrorAction SilentlyContinue }
+}
+
+# Best-effort: if the console window is CLOSED (X), or on logoff/shutdown, record an authorized
+# "signal" exit so a supervisor treats it as a manual stop rather than a crash. Implemented in C#
+# so the native control-handler callback writes the file directly (a PowerShell scriptblock invoked
+# from a native callback thread has no runspace and is unreliable). Ctrl+C is intentionally left to
+# PowerShell's own handling, which runs the finally block and records reason "signal" there.
+try {
+    if ($IsWindows) {
+        if (-not ("LoExecExitHandler" -as [type])) {
+            Add-Type -ErrorAction Stop -TypeDefinition @"
+using System;
+using System.IO;
+using System.Runtime.InteropServices;
+public static class LoExecExitHandler {
+    public delegate bool Handler(uint ctrlType);
+    [DllImport("kernel32.dll")] private static extern bool SetConsoleCtrlHandler(Handler handler, bool add);
+    private static Handler _keepAlive;
+    private static string _path;
+    private static string _instance;
+    public static void Arm(string path, string instance) {
+        _path = path; _instance = instance;
+        _keepAlive = new Handler(OnCtrl);
+        SetConsoleCtrlHandler(_keepAlive, true);
+    }
+    private static bool OnCtrl(uint ctrlType) {
+        // 2 = CTRL_CLOSE_EVENT, 5 = CTRL_LOGOFF_EVENT, 6 = CTRL_SHUTDOWN_EVENT
+        if (ctrlType == 2 || ctrlType == 5 || ctrlType == 6) {
+            try {
+                int pid = System.Diagnostics.Process.GetCurrentProcess().Id;
+                string json = "{\"instance_id\":\"" + _instance + "\",\"pid\":" + pid +
+                    ",\"at_utc\":\"" + DateTime.UtcNow.ToString("o") + "\",\"reason\":\"signal\"}";
+                File.WriteAllText(_path, json);
+            } catch { }
+        }
+        return false; // never suppress; let default handling proceed to terminate
+    }
+}
+"@
+        }
+        [LoExecExitHandler]::Arm($lastExitPath, $executorInstanceId)
+    }
+}
+catch {
+    Write-ExecutorLog ("Console-close handler unavailable; window-close will look like a crash to the watchdog " +
+        "(stop cleanly via Ctrl+C or stop.requested instead): $($_.Exception.Message)") "WARN"
+}
+
 # ----------------------------------------------------------------------------
 # Finalization
 # ----------------------------------------------------------------------------
@@ -414,8 +474,24 @@ try {
     while ($true) {
         if (Test-Path -LiteralPath $stopRequestedPath) {
             Write-ExecutorLog "Stop request detected (control/stop.requested)." "WARN"
+            $script:sawStopRequest = $true
             $shutdownReason = "Executor stop was requested."
             break
+        }
+
+        # Refresh the heartbeat (throttled) so a supervisor can detect a hang.
+        $heartbeatNow = Get-UtcNow
+        if (($heartbeatNow - $script:lastHeartbeat).TotalMilliseconds -ge 2000) {
+            try {
+                Write-JsonAtomic -Path $heartbeatPath -Value ([ordered]@{
+                    instance_id  = $executorInstanceId
+                    pid          = $PID
+                    at_utc       = (Format-Utc $heartbeatNow)
+                    active_tasks = $script:activeTasks.Count
+                })
+            }
+            catch { }
+            $script:lastHeartbeat = $heartbeatNow
         }
 
         # 1) Poll active tasks for exit / timeout.
@@ -469,6 +545,21 @@ finally {
     # Runs on normal stop, on Ctrl+C, and on fatal error. Cancels anything
     # still active, records results, releases the lock, and exits cleanly.
     try { Stop-AllActiveTasks -Reason $shutdownReason } catch { Write-ExecutorLog "Error during cancellation: $($_.Exception.Message)" "ERROR" }
+
+    # Record how we exited so a supervisor can distinguish an authorized stop from a crash.
+    # Written before the lock is released, so a watchdog that sees the lock free will find it.
+    try {
+        $exitReason = if ($null -ne $fatalError) { "fatal_error" }
+                      elseif ($script:sawStopRequest) { "stop_requested" }
+                      else { "signal" }
+        Write-JsonAtomic -Path $lastExitPath -Value ([ordered]@{
+            instance_id = $executorInstanceId
+            pid         = $PID
+            at_utc      = (Format-Utc (Get-UtcNow))
+            reason      = $exitReason
+        })
+    }
+    catch { Write-ExecutorLog "Failed writing last-exit.json: $($_.Exception.Message)" "ERROR" }
 
     if (Test-Path -LiteralPath $stopRequestedPath) {
         Remove-Item -LiteralPath $stopRequestedPath -Force -ErrorAction SilentlyContinue

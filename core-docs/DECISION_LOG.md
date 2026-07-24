@@ -150,3 +150,31 @@ alternatives · consequences · affects · state (provisional | locked) · revis
 - **affects:** Module 5, `MODULE_ROADMAP.md` (#5, #26), `SKILL_CONTRACT.md` (`parallel_safe` semantics for
   side-effecting skills). · **revisit-if:** a module genuinely needs synthetic input, window management, or
   multi-step UI sequences — each gets its own scoped work order.
+
+### D-0013 — Executor watchdog is COOPERATIVE, not perpetual (Module 00.1)
+- **date:** 2026-07-24 · **state:** locked
+- **decision:** Module 00.1 (`exec.watchdog`) may **autonomously restart the executor on a crash or a hang
+  with no approval**, but it must **stand down** — never restart — after a *deliberate* stop. "Deliberate" is
+  detected from a durable authorized-stop marker the executor writes on every graceful exit: Module 0 now
+  writes `control/last-exit.json {reason}` in its `finally` (`stop_requested` | `signal` | `fatal_error`) and
+  refreshes `control/heartbeat.json` each loop (hang = stale heartbeat while the lock is still held). The
+  watchdog restarts on `fatal_error` / hard-kill (no marker) / hung, and stands down on `stop_requested` /
+  `signal`. A **perpetual** design (always restart whenever down, ignoring how it stopped) is **rejected** — it
+  cannot distinguish a manual stop from a crash and would restart after a deliberate close, which is exactly the
+  "shutdown resistance / re-activation / preserving access after authorization is revoked" that D-0001 forbids.
+- **why this does not violate D-0001:** the watchdog heals *failures* only; an authorized stop is always
+  honored. It is a plain **visible, user-launched, session-scoped** process — **no** scheduled task / service /
+  Run key / startup entry, does **not** survive logout or reboot, does **not** relaunch itself, and stops on
+  `watchdog.stop.requested` or when its own window is closed. It never resists its own shutdown. Crash-loop
+  backoff (≤N restarts per window) prevents hammering. "Manual stop" must be *graceful* (Ctrl+C / stop-executor
+  / window-close, all of which leave the marker); only a `taskkill /F` or power-loss looks like a crash.
+- **alternatives:** perpetual watchdog (rejected, above); an OS Scheduled Task (rejected — that *is* boot
+  persistence and is harder to reason about); the cloud agent asking the user to restart every time (rejected —
+  that was the failure mode on 2026-07-24 when the executor sat dead for hours during an unattended gap).
+- **consequences:** the executor gains two additive markers (Module 0 12/12 unchanged); to fully stop the
+  system, stop the executor *gracefully* (the watchdog then stands down on its own) or stop the watchdog first.
+  A separate **Module 0 in-process self-heal** (retrying the internal IO op whose sharing-violation caused the
+  06:26 crash) is still worth doing and is deferred to a Module 0 hardening pass — the watchdog already recovers
+  that crash externally. · **affects:** Modules 0 and 00.1, `PROJECT_DIRECTION.md` (execution channel),
+  `D-0001`. · **revisit-if:** untrusted submitters become possible, or anyone proposes boot persistence / an
+  ignore-manual-stop mode (do not add without revisiting D-0001).

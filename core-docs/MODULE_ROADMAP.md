@@ -21,7 +21,24 @@ Needs refactor · Deprecated · Replaced.
   original (running) at `proteus_repo/tools/trusted-bootstrap-executor/`, commit `c4e90c4`.
 - **Work order:** n/a (built ahead of this doc set). **Blockers:** none. **Deprecation:** none.
 - **Known issue (2026-07-24):** fatal-crashed once on a transient file-sharing violation during a task run
-  (`CURRENT_STATE.md → Known failures`). Hardening candidate: retry queue moves / state writes on IOException.
+  (`CURRENT_STATE.md → Known failures`). Now **externally recovered** by Module 00.1 (watchdog). In-process
+  self-heal (retry queue moves / state writes on IOException) is still a worthwhile **hardening candidate** —
+  deferred to a dedicated Module 0 pass.
+- **Additive (2026-07-24):** now emits `control/heartbeat.json` (each loop) and `control/last-exit.json`
+  (`stop_requested`|`signal`|`fatal_error`, in `finally`) so a supervisor can tell a hang/crash from an
+  authorized stop. Module 0 tests remain 12/12 with these. See Module 00.1 and DECISION_LOG D-0013.
+
+## Module 00.1 — Executor Watchdog & Recovery
+- **id:** `exec.watchdog` · **Priority:** P0 (infrastructure) · **Status:** **MVP complete**
+- **Purpose:** a **cooperative, session-scoped, user-launched** supervisor that autonomously restarts the
+  executor on **crash or hang with no approval**, but **stands down** on a deliberate stop (honors the
+  `last-exit` marker). Plus an on-demand `Recover-Executor` / `recover-executor.bat` (force kill+restart).
+  Cooperative, **not** perpetual — no boot persistence, visible, self-killable (DECISION_LOG D-0013, honors D-0001).
+- **Dependencies:** Module 0 (+ its additive heartbeat/last-exit markers). **MVP acceptance:** **Met** — pure
+  `Get-WatchdogDecision` unit tests; real integration on temp runtimes (auto-restart a crash, stand down on an
+  authorized stop); Module 0 markers verified; **tests 22/22 (2026-07-24)**; Module 0 regression re-run 12/12.
+- **Implementation:** `modules/00.1-exec-watchdog/` (`Watch-Executor.ps1`, `Recover-Executor.ps1`, tests) +
+  `ops/{start-watchdog,stop-watchdog,recover-executor}.bat`. **Work order:** `modules/00.1-exec-watchdog/WORK_ORDER.md`.
 
 ## Module 1 — Skill Contract & Registry Bootstrap
 - **id:** `skill.bootstrap` · **Priority:** P0 · **Status:** **MVP complete**

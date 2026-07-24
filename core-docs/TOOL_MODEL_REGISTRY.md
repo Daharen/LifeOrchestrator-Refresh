@@ -11,9 +11,11 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
 ---
 
 ### `exec.bootstrap` — Trusted High-Risk Bootstrap Executor
-- **status:** installed (⚠️ **crashed 2026-07-24T06:26:36Z** on a transient file-sharing violation — must be
-  restarted via `ops/start-executor.bat`; see `CURRENT_STATE.md → Known failures`) · **type:** skill/service (PowerShell) ·
-  **location:** `LifeOrchestrator-Refresh/modules/00-bootstrap-executor/` (canonical; instance `0a1f8e69…`. The original at `proteus_repo/tools/trusted-bootstrap-executor/` was stopped and is pending removal from the game repo.)
+- **status:** installed, running (crashed once 2026-07-24T06:26:36Z on a transient file-sharing violation, since
+  restarted; now **auto-recovered by Module 00.1 `exec.watchdog`**). Emits `control/heartbeat.json` +
+  `control/last-exit.json` for supervision (additive; 12/12 unaffected). · **type:** skill/service (PowerShell) ·
+  **location:** `LifeOrchestrator-Refresh/modules/00-bootstrap-executor/` (canonical. The original at `proteus_repo/tools/trusted-bootstrap-executor/` was stopped and is pending removal from the game repo.)
+  · **NOTE:** restart the live executor once (`ops/restart-executor.bat`) so it begins emitting the new markers.
 - **invocation:** `pwsh -NoProfile -File .\Start-BootstrapExecutor.ps1` (+ `Submit-`/`Stop-`); tasks are
   directories atomically published into `runtime/pending/`.
 - **supported tasks:** run arbitrary local PowerShell task packages with concurrency, timeout,
@@ -22,8 +24,9 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
 - **quality:** n/a (deterministic harness) · **speed:** poll-bounded (30s queue poll in the running instance) ·
   **CPU/GPU/mem:** low / none / low · **network:** none · **cost:** local only.
 - **limitations:** trust-based (not a sandbox); Windows-focused (`taskkill`); no orphan-child reaping
-  after crash; polling latency; **fatal on file-sharing violations** (does not retry queue moves/state writes).
-  · **last test:** 2026-07-24, 12/12 (pwsh 7.4.6). · **skills:** `exec.bootstrap`.
+  after crash; polling latency; **fatal on file-sharing violations** (does not yet retry queue moves/state
+  writes — externally recovered by the watchdog; in-process self-heal deferred to a Module 0 hardening pass).
+  · **last test:** 2026-07-24, 12/12 (pwsh 7.4.6, with the additive markers). · **skills:** `exec.bootstrap`.
 
 ### `pwsh` — PowerShell 7.4.6 (runtime)
 - **status:** installed · **type:** executable ·
@@ -130,6 +133,25 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   no wait-for-element retries; ambiguous locators error with a candidate list (refine or use path); targets
   that expose no usable pattern return `pattern_unsupported`.
   · **last test:** 2026-07-24 via executor (tests **26/26**; live invoke/toggle/setvalue on a WinForms probe). · **skills:** `uia.actor`.
+
+### `exec.watchdog` — Executor Watchdog & Recovery (Module 00.1)
+- **status:** installed · **type:** service + tool (PowerShell) ·
+  **location:** `LifeOrchestrator-Refresh/modules/00.1-exec-watchdog/`
+- **invocation:** `ops/start-watchdog.bat` (supervise) · `ops/stop-watchdog.bat` · `ops/recover-executor.bat [-Force]`;
+  direct `pwsh -File .\Watch-Executor.ps1` / `.\Recover-Executor.ps1`.
+- **supported tasks:** **cooperative** auto-recovery of the executor — restart on crash / hard-kill, kill+restart
+  on hang; **stand down** on an authorized graceful stop (`last-exit` reason `stop_requested`/`signal`). On-demand
+  force kill+restart via `Recover-Executor.ps1 -Force`. Crash-loop backoff.
+- **I/O:** reads `control/{executor.lock,heartbeat.json,last-exit.json}`; writes `control/watchdog.json`,
+  `logs/watchdog.log`; honors `control/watchdog.stop.requested`. `Recover-Executor.ps1` prints a
+  `lifeorch.exec.recovery/0.1` JSON summary.
+- **quality:** deterministic decision logic (`Get-WatchdogDecision`, pure) · **speed:** poll ~10s · **CPU/GPU/mem:** low/none/low ·
+  **network:** none · **cost:** local only.
+- **limitations:** **cooperative, not perpetual** by design (honors manual stop — a `taskkill /F`/power-loss looks
+  like a crash and is recovered); **no** boot/OS persistence, does not survive logout/reboot, does not self-revive;
+  session-scoped and user-launched; single host. Window-close is honored best-effort via a C# console-ctrl handler
+  (verify on your machine; else stop via Ctrl+C / `stop-executor.bat`). · **last test:** 2026-07-24 via executor
+  (tests **22/22**; Module 0 regression re-run 12/12). · **skills:** `exec.watchdog`. See DECISION_LOG D-0013.
 
 ---
 
