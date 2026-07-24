@@ -1,0 +1,7 @@
+{
+  "queue_poll_seconds": 30,
+  "process_poll_milliseconds": 1000,
+  "max_concurrent_tasks": 4,
+  "default_timeout_seconds": 900,
+  "pwsh_path": "pwsh.exe"
+}

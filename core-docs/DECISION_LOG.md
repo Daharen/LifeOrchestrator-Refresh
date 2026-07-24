@@ -1,0 +1,80 @@
+# DECISION_LOG
+
+Owns **architectural rationale** so no instance must reread every discussion. Append-only; newest last.
+Read only when a prior decision may bear on your task. **Entry fields:** id · date · decision · reason ·
+alternatives · consequences · affects · state (provisional | locked) · revisit-if.
+
+---
+
+### D-0001 — Trusted bootstrap executor, not a sandbox
+- **date:** 2026-07-24 · **state:** locked
+- **decision:** The initial execution channel is a trust-based filesystem-queue executor. Queue-write
+  access equals the Windows user's authority; no allowlists/approvals in-band.
+- **reason:** Speed and unblocking real local work now; sandboxing is a large separate effort with its
+  own failure modes. Honestly labeled risk beats a false safety claim.
+- **alternatives:** OS sandbox, container, restricted runspace, HTTP service with auth.
+- **consequences:** Only trusted agents/processes may write the queue. Modules are **forbidden** to add
+  concealment, shutdown resistance, unauthorized propagation, monitoring evasion, or covert persistence.
+- **affects:** Module 0, `PROJECT_DIRECTION.md`. · **revisit-if:** untrusted submitters become possible,
+  or the executor is exposed beyond the local user.
+
+### D-0002 — Isolated skill processes before persistent sessions
+- **date:** 2026-07-24 · **state:** provisional
+- **decision:** Skills and tasks run as fresh isolated processes for now; no long-lived shared runspaces.
+- **reason:** Simplicity, crash isolation, restart-recoverability; avoids shared-state bugs early.
+- **alternatives:** persistent PowerShell sessions / warm model workers.
+- **consequences:** Per-invocation startup cost (notably higher with the dotnet-tool pwsh shim).
+- **affects:** Module 0, Module 1. · **revisit-if:** startup latency dominates a real workload
+  (e.g. model warm-up) — then introduce persistent workers for that skill only.
+
+### D-0003 — Filesystem queue before any local HTTP service
+- **date:** 2026-07-24 · **state:** provisional
+- **decision:** Coordinate via atomic directory moves on one volume; no local network listener yet.
+- **reason:** Zero infra, inspectable, restart-safe, no ports/auth to secure.
+- **alternatives:** local HTTP/gRPC service; named pipes.
+- **consequences:** Poll latency; single-volume requirement. · **affects:** Module 0.
+  · **revisit-if:** cross-machine or low-latency streaming coordination is needed.
+
+### D-0004 — Skill contract provides modularity; language does not
+- **date:** 2026-07-24 · **state:** locked
+- **decision:** Modularity is defined by `SKILL_CONTRACT.md` (manifest + result envelope), not by
+  implementation language. C++ preferred for durable/central components; Python/PowerShell/wrapped
+  binaries acceptable for faster/better MVPs.
+- **reason:** Lets us ship useful MVPs immediately while keeping the option to reimplement in C++ later
+  behind a stable interface.
+- **alternatives:** mandate C++ (too slow to MVP); mandate one scripting language (poor fit for models).
+- **affects:** all modules, `PROJECT_DIRECTION.md`, `SKILL_CONTRACT.md`. · **revisit-if:** the contract
+  proves insufficient to hide an implementation swap.
+
+### D-0005 — Contract starts minimal; grows only on real need
+- **date:** 2026-07-24 · **state:** locked
+- **decision:** `SKILL_CONTRACT.md` v0.1 is intentionally small. Extend only when a real module exposes
+  a missing requirement; bump the contract version and log it here.
+- **reason:** Avoids a speculative plugin framework nobody has stressed yet.
+- **affects:** `SKILL_CONTRACT.md`, Module 1. · **revisit-if:** each new contract change.
+
+### D-0006 — Long-horizon Proteus deferred to cold reference
+- **date:** 2026-07-24 · **state:** locked (for the near-term track)
+- **decision:** Deterministic canonical collapse, world simulation, projection, and structured memory
+  are **not** near-term admission requirements. Their architecture lives in `cold-reference/` and is not
+  loaded into ordinary module sessions.
+- **reason:** Keep every fresh instance's context light and focused on shippable MVPs.
+- **affects:** `PROJECT_DIRECTION.md`, `START_HERE.md`. · **revisit-if:** a module's value genuinely
+  depends on one of those systems.
+
+### D-0007 — Two-tier local model use with a review queue
+- **date:** 2026-07-24 · **state:** provisional
+- **decision:** Weak local models do bulk classification/sorting/extraction; a stronger local model
+  reviews only flagged/low-confidence/contradictory items via `REVIEW_QUEUE.md`; frontier models handle
+  the hardest judgment and adjudication.
+- **reason:** Proven cheaper in the prior Proteus database work than having strong models redo whole sets.
+- **affects:** Modules 7–9, 24; `REVIEW_QUEUE.md`. · **revisit-if:** local model quality shifts enough to
+  change the tier boundaries.
+
+### D-0008 — PowerShell 7 installed per-user via .NET global tool (pinned 7.4.6)
+- **date:** 2026-07-24 · **state:** provisional
+- **decision:** pwsh 7 provisioned as a .NET global tool (no admin), pinned to 7.4.6.
+- **reason:** No admin available; the latest tool package is malformed; this unblocked testing immediately.
+- **consequences:** pwsh only on the per-user PATH; the shim reports as `dotnet.exe` (pass explicit
+  `-PwshPath`). · **affects:** `CURRENT_STATE.md`, `TOOL_MODEL_REGISTRY.md`, Module 0. · **revisit-if:**
+  a system-wide winget/MSI install is preferred for broader use.
