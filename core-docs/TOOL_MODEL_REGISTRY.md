@@ -12,7 +12,7 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
 
 ### `exec.bootstrap` — Trusted High-Risk Bootstrap Executor
 - **status:** installed · **type:** skill/service (PowerShell) ·
-  **location:** `LifeOrchestrator-Refresh/modules/00-bootstrap-executor/` (working copy; original running instance still at `proteus_repo/tools/trusted-bootstrap-executor/`)
+  **location:** `LifeOrchestrator-Refresh/modules/00-bootstrap-executor/` (canonical; running instance `0a1f8e69…`. The original at `proteus_repo/tools/trusted-bootstrap-executor/` was stopped and is pending removal from the game repo.)
 - **invocation:** `pwsh -NoProfile -File .\Start-BootstrapExecutor.ps1` (+ `Submit-`/`Stop-`); tasks are
   directories atomically published into `runtime/pending/`.
 - **supported tasks:** run arbitrary local PowerShell task packages with concurrency, timeout,

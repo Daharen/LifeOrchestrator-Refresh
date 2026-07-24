@@ -13,11 +13,11 @@ is planned (serves scripts and weaker local models) but not yet created.
   and `modules/<NN>-<name>/` (one per module). **Reference sources (separate, not built here):** the earlier
   assistant codebase `LifeOrchestrator\repo` (fold in later) and the separate **Project Proteus** game
   (`Project-Proteus-src`).
-- **Executor status:** MVP complete. **Running instance:** the original at
-  `proteus_repo/tools/trusted-bootstrap-executor/` (commit `c4e90c4`), kept running for continuity — used
-  this session to run Module 1's tests (instance `98b7f774…`, pwsh 7.4.6, host `DESKTOP-PF5FFMF`).
-  **Working copy for this repo:** `LifeOrchestrator-Refresh/modules/00-bootstrap-executor/` — run future
-  instances from here. Launch/submit/stop via `pwsh` (see registry).
+- **Executor status:** MVP complete. **Running instance (canonical):** the Life Orchestrator executor at
+  `LifeOrchestrator-Refresh/modules/00-bootstrap-executor/` (instance `0a1f8e69…`, pwsh 7.4.6, host
+  `DESKTOP-PF5FFMF`) — started this session; the only executor we operate. The original at
+  `proteus_repo/tools/trusted-bootstrap-executor/` (was `98b7f774…`) has been **stopped**; removing it from
+  the game repo is pending user confirmation. Launch/submit/stop via `pwsh` or the `ops/` batch files.
 
 ## Completed modules
 - **Module 0** — Trusted High-Risk Bootstrap Executor. 12/12 integration tests pass on Windows.
@@ -52,6 +52,8 @@ is planned (serves scripts and weaker local models) but not yet created.
 - Skill (wrapped): `pwsh -NoProfile -File modules\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir <skill dir> [-InputsJson '<json>']`.
 - Skill (through executor): submit a task package whose `task.ps1` calls either entrypoint; read the
   envelope from `runtime/completed/<task_id>/stdout.txt`.
+- User ops (click-to-run): `ops/*.bat` — start/stop/restart/status the executor and run tests; each writes
+  output to `ops/out/` for the agent to read.
 
 ## Current tests
 - Executor: `modules/00-bootstrap-executor/tests/Invoke-BootstrapTests.ps1` — 12/12 pass
