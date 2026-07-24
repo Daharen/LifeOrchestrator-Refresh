@@ -37,14 +37,17 @@ Needs refactor · Deprecated · Replaced.
   (2026-07-24).** Contract-finalization of the adopted conventions deferred (DECISION_LOG D-0009).
 - **Work order:** `modules/01-skill-bootstrap/WORK_ORDER.md`. **Blockers:** none.
 
-## Module 2 — Filesystem Observer  ← next
-- **id:** `fs.observer` · **Priority:** P1 · **Status:** Proposed
+## Module 2 — Filesystem Observer
+- **id:** `fs.observer` · **Priority:** P1 · **Status:** **MVP complete**
 - **Purpose:** Inspect, search, compare, and index the filesystem without screenshots — listings,
   discovery, change detection, metadata, markdown trees, project/artifact indexing.
 - **Dependencies:** Module 1. **MVP acceptance:** deterministic tree + search over a target dir,
-  contract-valid envelope, markdown + JSON artifacts. **Work order:** TBD.
+  contract-valid envelope, markdown + JSON artifacts. **Met — manifest valid; `tree.md` + `index.json`
+  with hashes; glob search; error path; direct/wrapped/executor; tests 16/16 (2026-07-24).**
+- **Implementation:** `modules/02-fs-observer/` (`Invoke-FsObserver.ps1`, `skill.json`, tests). **Work
+  order:** `modules/02-fs-observer/WORK_ORDER.md`.
 
-## Modules 3–6 — Desktop observation & control (provisional)
+## Modules 3–6 — Desktop observation & control (provisional)  ← Module 3 (`proc.observer`) next
 - **3 `proc.observer`** — Process & Window Observer: running apps, windows, active window, positions,
   titles, state changes (no image processing). *Proposed, P1.*
 - **4 `uia.inspector`** — UI Automation Inspector: read accessible controls, return stable element info.

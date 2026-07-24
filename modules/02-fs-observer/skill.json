@@ -1,0 +1,39 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "fs.observer",
+  "name": "Filesystem Observer",
+  "version": "0.1.0",
+  "contract_version": "0.1",
+  "purpose": "List, search, and index a directory tree deterministically (depth-bounded, with metadata) without screenshots; emits a markdown tree and a JSON index.",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-FsObserver.ps1",
+    "args_spec": "Named params -Path <string> -Depth <int> -Pattern <glob> -IncludeHidden <bool> -MaxEntries <int>, OR -InputsJson '<json {path,depth,pattern,include_hidden,max_entries}>'. Optional -ArtifactRoot, -InvocationId."
+  },
+  "inputs": [
+    { "name": "path", "type": "string", "required": true, "description": "Root directory to inspect." },
+    { "name": "depth", "type": "int", "required": false, "default": 3, "description": "Max recursion depth (entries at depths 1..depth)." },
+    { "name": "pattern", "type": "string", "required": false, "description": "Optional name glob (e.g. *.md) for the matches list." },
+    { "name": "include_hidden", "type": "bool", "required": false, "default": false, "description": "Include hidden/system entries." },
+    { "name": "max_entries", "type": "int", "required": false, "default": 5000, "description": "Cap on entries; exceeding sets status=partial." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ root, depth, generated_at_utc, entry_count, dir_count, file_count, bytes_total, truncated, pattern, match_count, matches[] }"
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4"],
+    "models": [],
+    "libraries": [],
+    "cpu": "any", "gpu": "none", "memory_mb": 128,
+    "network": false, "filesystem": "read", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 120, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

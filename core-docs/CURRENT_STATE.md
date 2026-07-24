@@ -5,9 +5,9 @@ Owns **reality as it exists now** — not intended architecture. Keep it compact
 is planned (serves scripts and weaker local models) but not yet created.
 
 - **Project phase:** MVP module build-out.
-- **Active module:** _none in progress._ **Module 1 — Skill Contract & Registry Bootstrap (`skill.bootstrap`)
-  is MVP complete.** **Module 2 — Filesystem Observer (`fs.observer`) is next** (author its work order next
-  session). (Modules 0 and 1 complete.)
+- **Active module:** _none in progress._ **Modules 0–2 complete** (0 executor · 1 `skill.bootstrap` · 2
+  `fs.observer`). **Module 3 — Process & Window Observer (`proc.observer`) is next** (author its work order
+  next session).
 - **Repo / working dir:** **`C:\Users\just_\LifeOrchestrator-Refresh\`** — the clean standalone home for
   **Life Orchestrator** (near-term local-skills track; git-initialized). Layout: `core-docs/` (these docs)
   and `modules/<NN>-<name>/` (one per module). **Reference sources (separate, not built here):** the earlier
@@ -27,6 +27,8 @@ is planned (serves scripts and weaker local models) but not yet created.
 - **Module 1** — Skill Contract & Registry Bootstrap (`skill.bootstrap`). Reference skill `ref.echo`,
   contract validators (`lib/SkillContract.psm1`), and a generic wrapper (`Invoke-Skill.ps1`). Runs directly
   and through the executor; emits schema-valid `lifeorch.skill.result/0.1`. Module tests 11/11 (2026-07-24).
+- **Module 2** — Filesystem Observer (`fs.observer`). Deterministic depth-bounded tree + name/glob search;
+  `tree.md` + `index.json` artifacts; contract-valid envelope; runs direct/wrapped/executor. Tests 16/16 (2026-07-24).
 
 ## Installed dependencies (verified this machine)
 - **PowerShell 7.4.6** — installed as a .NET global tool at
@@ -63,6 +65,8 @@ is planned (serves scripts and weaker local models) but not yet created.
   (invoke with `-PwshPath 'C:\Users\just_\.dotnet\tools\pwsh.exe'`; see Known failures).
 - Module 1: `modules/01-skill-bootstrap/tests/Invoke-SkillBootstrapTests.ps1` — 11/11 pass
   (manifest, direct, wrapper, and error-path envelope validation; run 2026-07-24 via the executor).
+- Module 2: `modules/02-fs-observer/tests/Invoke-FsObserverTests.ps1` — 16/16 pass
+  (manifest, tree, artifacts, search, error path, wrapper; run 2026-07-24 via the executor).
 
 ## Known failures / gotchas
 - The dotnet-tool `pwsh` shim reports its process path as `dotnet.exe`, so `(Get-Process -Id $PID).Path`
@@ -82,8 +86,8 @@ is planned (serves scripts and weaker local models) but not yet created.
   (Module 2) confirms them, then bump the contract version. (See DECISION_LOG D-0009.)
 
 ## Next expected action
-Author the **Module 2 work order** (`modules/02-fs-observer/WORK_ORDER.md`) from the template and implement
-its MVP (deterministic tree + search over a target dir, contract-valid envelope, markdown + JSON artifacts),
-tested through the executor. Reuse `Test-SkillManifest` / `Test-SkillResultEnvelope` and `Invoke-Skill.ps1`.
+Author the **Module 3 work order** (`modules/03-proc-observer/WORK_ORDER.md`) from the template and implement
+its MVP (running processes + windows: pids, titles, active window, positions — no image processing), tested
+through the executor. Reuse `Test-SkillManifest` / `Test-SkillResultEnvelope` and `Invoke-Skill.ps1`.
 
-- **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 1 build session).
+- **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 2 build session).

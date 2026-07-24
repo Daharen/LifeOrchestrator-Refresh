@@ -71,6 +71,19 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
 - **limitations:** field/type/enum checks (not full JSON-Schema); pwsh path defaults to the pinned
   dotnet-tool build. · **last test:** 2026-07-24 (11/11 module tests via executor). · **skills:** n/a (harness).
 
+### `fs.observer` — Filesystem Observer (Module 2)
+- **status:** installed · **type:** skill (PowerShell) ·
+  **location:** `LifeOrchestrator-Refresh/modules/02-fs-observer/`
+- **invocation:** direct `pwsh -NoProfile -File .\Invoke-FsObserver.ps1 -Path <dir> -Depth <n> [-Pattern <glob>]`
+  (or `-InputsJson '<json>'`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
+- **supported tasks:** deterministic depth-bounded directory tree + metadata + name/glob search; no screenshots.
+- **I/O:** in = `{path, depth, pattern, include_hidden, max_entries}`; out = `lifeorch.skill.result/0.1` envelope +
+  `runtime/artifacts/<id>/{tree.md,index.json,stderr.txt,result.json}`.
+- **quality:** deterministic (confidence null) · **speed:** sub-second for small trees · **CPU/GPU/mem:** low/none/~128MB ·
+  **network:** none · **cost:** local only.
+- **limitations:** point-in-time snapshot (no diffing); symlinks listed but not traversed; name-glob only (no content grep).
+  · **last test:** 2026-07-24 via executor (tests 16/16; capture over the repo = 27 entries / 10 md matches). · **skills:** `fs.observer`.
+
 ---
 
 ### Planned / not yet present (do not assume these exist)

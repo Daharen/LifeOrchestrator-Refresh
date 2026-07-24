@@ -112,3 +112,13 @@ alternatives · consequences · affects · state (provisional | locked) · revis
 - **supersedes:** D-0006 (the long-horizon Proteus / cold-reference deferral was game vision, now out of scope).
 - **affects:** all docs, `SKILL_CONTRACT.md` schema IDs, Module 1 code, repo/folder name. · **revisit-if:**
   we ever intentionally re-import game concepts (not expected).
+
+
+### D-0011 — Module 2 confirms the D-0009 skill conventions
+- **date:** 2026-07-24 · **state:** provisional
+- **decision:** `fs.observer` (Module 2) independently used the D-0009 conventions (artifact-root under
+  `$PSScriptRoot`, `-InputsJson` generic arg passing, and the `lifeorch.skill.invocation_report/0.1` wrapper
+  report) without change. Two skills now confirm them, so they are ready to be folded into `SKILL_CONTRACT.md`
+  (with a contract-version bump) as a small housekeeping pass — deferred to keep this session scoped to Module 2.
+- **reason:** Validate conventions with a real second skill before promoting them to the normative contract (per D-0009/D-0005).
+- **affects:** `SKILL_CONTRACT.md`, future modules. · **revisit-if:** the fold happens (bump version), or a third skill needs a different convention.

@@ -1,0 +1,58 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "fs.observer",
+  "skill_version": "0.1.0",
+  "contract_version": "0.1",
+  "invocation_id": "ec3f2428-ab06-4587-9545-eec01aeb3fe1",
+  "status": "ok",
+  "started_at_utc": "2026-07-24T04:32:23.0715326Z",
+  "finished_at_utc": "2026-07-24T04:32:23.4592018Z",
+  "duration_ms": 384,
+  "inputs_digest": "sha256:d2abf2836f9091dbc2f41209dcc055ba1fd2cdfa25bb800bf696b75bd0e7e240",
+  "result": {
+    "root": "C:\\Users\\just_\\LifeOrchestrator-Refresh",
+    "depth": 2,
+    "generated_at_utc": "2026-07-24T04:32:23.0715326Z",
+    "entry_count": 27,
+    "dir_count": 7,
+    "file_count": 20,
+    "bytes_total": 53504,
+    "truncated": false,
+    "pattern": "*.md",
+    "match_count": 10,
+    "matches": [
+      "C:\\Users\\just_\\LifeOrchestrator-Refresh\\core-docs\\CURRENT_STATE.md",
+      "C:\\Users\\just_\\LifeOrchestrator-Refresh\\core-docs\\DECISION_LOG.md",
+      "C:\\Users\\just_\\LifeOrchestrator-Refresh\\core-docs\\MODULE_ROADMAP.md",
+      "C:\\Users\\just_\\LifeOrchestrator-Refresh\\core-docs\\MODULE_WORK_ORDER_TEMPLATE.md",
+      "C:\\Users\\just_\\LifeOrchestrator-Refresh\\core-docs\\PROJECT_DIRECTION.md",
+      "C:\\Users\\just_\\LifeOrchestrator-Refresh\\core-docs\\REVIEW_QUEUE.md",
+      "C:\\Users\\just_\\LifeOrchestrator-Refresh\\core-docs\\SKILL_CONTRACT.md",
+      "C:\\Users\\just_\\LifeOrchestrator-Refresh\\core-docs\\START_HERE.md",
+      "C:\\Users\\just_\\LifeOrchestrator-Refresh\\core-docs\\TOOL_MODEL_REGISTRY.md",
+      "C:\\Users\\just_\\LifeOrchestrator-Refresh\\README.md"
+    ]
+  },
+  "confidence": null,
+  "artifacts": [
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\02-fs-observer\\runtime\\artifacts\\ec3f2428-ab06-4587-9545-eec01aeb3fe1\\tree.md",
+      "kind": "markdown",
+      "bytes": 845,
+      "sha256": "61d2cde69eb5a46de56d20bbccddad8ef9b1af956a4fd356e9ba11e601473d0f"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\02-fs-observer\\runtime\\artifacts\\ec3f2428-ab06-4587-9545-eec01aeb3fe1\\index.json",
+      "kind": "json",
+      "bytes": 5622,
+      "sha256": "b2136dd4d1b1bcede44ee601615e2f0ef00665ed71310518de21fdc4250cc51c"
+    }
+  ],
+  "model_provenance": [],
+  "diagnostics": {
+    "log": "stderr.txt",
+    "artifact_dir": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\02-fs-observer\\runtime\\artifacts\\ec3f2428-ab06-4587-9545-eec01aeb3fe1"
+  },
+  "warnings": [],
+  "error": null
+}
