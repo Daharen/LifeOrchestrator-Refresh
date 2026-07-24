@@ -1,0 +1,45 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "capture.screen",
+  "name": "Screenshot & Region Capture",
+  "version": "0.1.0",
+  "contract_version": "0.1",
+  "purpose": "Capture a monitor, a top-level window (by hwnd/pid/title), an application's main window (by process name), or an explicit screen rectangle to a PNG (or JPG) image artifact plus a contract-valid result envelope. The visual-capture complement to the UIA skills, for when structured inspection is unavailable (e.g. Unity/game windows expose no UIA tree) or visual verification is genuinely needed. Read-only; no window management or synthetic input.",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-CaptureScreen.ps1",
+    "args_spec": "Named params -Target <monitor|window|app|region> (inferred from locators if omitted); -Monitor <index|all|primary>; window locators -Hwnd <int> | -ProcessId <int> | -Title <glob>; -App <process-name glob>; region -X <int> -Y <int> -Width <int> -Height <int>; -Format <png|jpg>. OR -InputsJson '<json {target,monitor,hwnd,pid,title,app,x,y,width,height,format}>'. Optional -ArtifactRoot, -InvocationId."
+  },
+  "inputs": [
+    { "name": "target", "type": "string", "required": false, "description": "monitor | window | app | region. Inferred from the supplied locator when omitted." },
+    { "name": "monitor", "type": "string", "required": false, "default": "primary", "description": "For target=monitor: a 0-based index, or 'all' (whole virtual desktop), or 'primary'." },
+    { "name": "hwnd", "type": "int", "required": false, "description": "Window locator: target window handle (highest precedence)." },
+    { "name": "pid", "type": "int", "required": false, "description": "Window locator: capture the process's main window." },
+    { "name": "title", "type": "string", "required": false, "description": "Window locator: glob match on a visible top-level window title (first match; warns if several)." },
+    { "name": "app", "type": "string", "required": false, "description": "For target=app: process-name glob (e.g. notepad, *chrome*); lowest matching pid that owns a main window." },
+    { "name": "x", "type": "int", "required": false, "default": 0, "description": "Region left, in virtual-desktop pixel coordinates." },
+    { "name": "y", "type": "int", "required": false, "default": 0, "description": "Region top, in virtual-desktop pixel coordinates." },
+    { "name": "width", "type": "int", "required": false, "description": "Region width (required, > 0, for target=region)." },
+    { "name": "height", "type": "int", "required": false, "description": "Region height (required, > 0, for target=region)." },
+    { "name": "format", "type": "string", "required": false, "default": "png", "description": "Image format: png (default) or jpg (quality 90)." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ mode, requested, capture{rectangle,format,image_width,image_height,path,bytes,sha256}, window, monitor, environment{virtual_screen,monitors[]} }"
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4"],
+    "models": [],
+    "libraries": ["System.Windows.Forms", "System.Drawing", "user32.dll", "dwmapi.dll"],
+    "cpu": "any", "gpu": "none", "memory_mb": 256,
+    "network": false, "filesystem": "write", "audio": false, "screen": true, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 120, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

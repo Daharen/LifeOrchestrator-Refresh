@@ -1,0 +1,111 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "capture.screen",
+  "skill_version": "0.1.0",
+  "contract_version": "0.1",
+  "invocation_id": "7513965c-9728-46a2-a7e9-e8417d25052a",
+  "status": "ok",
+  "started_at_utc": "2026-07-24T15:25:32.2118516Z",
+  "finished_at_utc": "2026-07-24T15:25:33.3217980Z",
+  "duration_ms": 1102,
+  "inputs_digest": "sha256:974111da2b9f4d7ace0cff4b027ea335960d8d420d6e6386df198f1a5d4e2504",
+  "result": {
+    "mode": "monitor",
+    "requested": {
+      "target": "monitor",
+      "monitor": "primary",
+      "hwnd": 0,
+      "pid": 0,
+      "title": "",
+      "app": "",
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0,
+      "format": "png"
+    },
+    "capture": {
+      "rectangle": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      },
+      "format": "png",
+      "image_width": 1920,
+      "image_height": 1080,
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\06-capture-screen\\runtime\\artifacts\\7513965c-9728-46a2-a7e9-e8417d25052a\\capture.png",
+      "bytes": 174908,
+      "sha256": "ebb107318d9798d864f2c5d2fe2d89f1b733497e2bc5fedcd2e6a635ad03be08"
+    },
+    "window": null,
+    "monitor": {
+      "index": 0,
+      "selector": "primary",
+      "primary": true,
+      "device_name": "\\\\.\\DISPLAY1",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      }
+    },
+    "environment": {
+      "virtual_screen": {
+        "x": 0,
+        "y": 0,
+        "width": 4480,
+        "height": 1440
+      },
+      "monitors": [
+        {
+          "index": 0,
+          "primary": true,
+          "device_name": "\\\\.\\DISPLAY1",
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        {
+          "index": 1,
+          "primary": false,
+          "device_name": "\\\\.\\DISPLAY2",
+          "x": 1920,
+          "y": 0,
+          "width": 2560,
+          "height": 1440
+        }
+      ]
+    }
+  },
+  "confidence": null,
+  "artifacts": [
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\06-capture-screen\\runtime\\artifacts\\7513965c-9728-46a2-a7e9-e8417d25052a\\capture.png",
+      "kind": "png",
+      "bytes": 174908,
+      "sha256": "ebb107318d9798d864f2c5d2fe2d89f1b733497e2bc5fedcd2e6a635ad03be08"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\06-capture-screen\\runtime\\artifacts\\7513965c-9728-46a2-a7e9-e8417d25052a\\capture.md",
+      "kind": "markdown",
+      "bytes": 573,
+      "sha256": "ceb9daa76420f949df05d6cfd8cf70504be10ee3ede0ee7c051a5c500a2c9fbe"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\06-capture-screen\\runtime\\artifacts\\7513965c-9728-46a2-a7e9-e8417d25052a\\capture.json",
+      "kind": "json",
+      "bytes": 1809,
+      "sha256": "1b464de51a1db8a2a9353dacd72e3e1476b317a6a40234bafb3681a50a6e6f08"
+    }
+  ],
+  "model_provenance": [],
+  "diagnostics": {
+    "log": "stderr.txt",
+    "artifact_dir": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\06-capture-screen\\runtime\\artifacts\\7513965c-9728-46a2-a7e9-e8417d25052a"
+  },
+  "warnings": [],
+  "error": null
+}

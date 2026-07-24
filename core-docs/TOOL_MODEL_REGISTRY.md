@@ -135,6 +135,29 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   that expose no usable pattern return `pattern_unsupported`.
   · **last test:** 2026-07-24 via executor (tests **26/26**; live invoke/toggle/setvalue on a WinForms probe). · **skills:** `uia.actor`.
 
+### `capture.screen` — Screenshot & Region Capture (Module 6)
+- **status:** installed · **type:** skill (PowerShell + WinForms/GDI + Win32 via Add-Type) ·
+  **location:** `LifeOrchestrator-Refresh/modules/06-capture-screen/`
+- **invocation:** direct `pwsh -NoProfile -File .\Invoke-CaptureScreen.ps1 [-Target <monitor|window|app|region>]
+  [-Monitor <index|all|primary>] [-Hwnd <n>|-ProcessId <n>|-Title <glob>] [-App <glob>] [-X -Y -Width -Height]
+  [-Format <png|jpg>]` (target inferred from the locator when omitted; or `-InputsJson '<json>'`); wrapped via
+  `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
+- **supported tasks:** capture a monitor / a top-level window (hwnd/pid/title) / an app's main window (process
+  name) / an explicit screen rectangle to a PNG (or JPG q90). The visual-capture complement to the UIA skills —
+  use when a target exposes no usable UIA tree (Unity/game/canvas) or visual verification is needed.
+- **I/O:** in = `{target,monitor,hwnd,pid,title,app,x,y,width,height,format}`; out = `lifeorch.skill.result/0.1`
+  envelope (result = `{mode, requested, capture{rectangle,format,image_width,image_height,path,bytes,sha256},
+  window, monitor, environment{virtual_screen,monitors[]}}`) + `runtime/artifacts/<id>/{capture.png|jpg,
+  capture.json,capture.md,stderr.txt,result.json}`.
+- **quality:** deterministic pixel copy of live screen state (confidence null) · **speed:** ~1–2s ·
+  **CPU/GPU/mem:** low/none/~256MB · **network:** none · **cost:** local only.
+- **limitations:** **read-only, screen-pixel copy** — captures whatever is on screen at the target's rect; an
+  occluded window captures what covers it, a minimized window is `window_minimized`; it does **not**
+  raise/activate/move windows and uses no synthetic input (`parallel_safe:true`). No image post-processing
+  (resize/crop/OCR/base64 → Module 15), no off-screen `PrintWindow` compositing, no video/batch. Per-Monitor-V2
+  DPI awareness set once per process. · **last test:** 2026-07-24 via executor (tests **39/39**; smoke
+  `m6-smoke-001` captured a real dual-monitor primary). · **skills:** `capture.screen`.
+
 ### `exec.watchdog` — Executor Watchdog & Recovery (Module 00.1)
 - **status:** installed · **type:** service + tool (PowerShell) ·
   **location:** `LifeOrchestrator-Refresh/modules/00.1-exec-watchdog/`

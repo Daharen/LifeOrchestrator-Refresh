@@ -179,3 +179,36 @@ alternatives · consequences · affects · state (provisional | locked) · revis
   watchdog's external recovery (defense in depth). · **affects:** Modules 0 and 00.1, `PROJECT_DIRECTION.md` (execution channel),
   `D-0001`. · **revisit-if:** untrusted submitters become possible, or anyone proposes boot persistence / an
   ignore-manual-stop mode (do not add without revisiting D-0001).
+
+### D-0014 — Screenshot capture (`capture.screen`): read-only screen-pixel copy, parallel-safe, PNG-first
+- **date:** 2026-07-24 · **state:** locked
+- **decision:** Module 6 `capture.screen` is the visual-capture complement to the UIA skills. Its MVP is
+  deliberately constrained: (1) **every target reduces to one rectangle in virtual-desktop coordinates** —
+  monitor (`index`/`all`/`primary`), window (hwnd/pid/title), app (process-name glob → main window), or an
+  explicit rectangle — captured by a single GDI `CopyFromScreen`. (2) It is **read-only and `parallel_safe:true`**
+  (unlike `uia.actor`): it **never** raises, activates, moves, resizes, or closes a window and uses **no**
+  synthetic input. An occluded window therefore captures whatever covers it; a **minimized** window is a
+  structured `window_minimized` error, not an auto-restore. (3) **Screen-pixel copy only** — no `PrintWindow`/
+  DWM-thumbnail compositing of off-screen/occluded windows in this MVP. (4) **Capture only, no post-processing**
+  — no resize/crop/annotate/OCR/base64 (those are `image.util` Module 15 and the perception modules). (5)
+  **PNG default** (JPG q90 optional). (6) Per-Monitor-V2 DPI awareness is requested so captures are true
+  physical pixels across mixed-DPI monitors; window bounds use the DWM extended frame (→ `GetWindowRect` fallback).
+- **reason:** The sensing counterpart to Modules 4–5 must be safe to run anywhere, any time (hence read-only +
+  parallel-safe — the router may capture freely without the single-writer constraint `uia.actor` needs), and
+  small: a reliable screen-pixel grab that other modules (a local vision model via Module 7+, `image.util`, the
+  perception stack) build on. Activating windows to get a clean shot is a side effect that belongs to a
+  dedicated window module, not a sensor; auto-raising also risks the interaction surprises the executor
+  prohibitions caution against. Screen-pixel copy is the smallest thing that works for the driving use case
+  (foreground Unity/game/canvas windows with no UIA tree).
+- **alternatives:** `PrintWindow`/DWM-thumbnail off-screen capture (deferred — per-app reliability problem, own
+  work order); auto-`SetForegroundWindow` before capture (rejected — side effect; belongs to a window module);
+  bundling capture with resize/crop/base64 (rejected — that is Module 15; keep capture atomic); JPG-only or
+  raw-BMP (rejected — PNG is lossless and universally consumable; JPG offered only for size).
+- **consequences:** Occluded/minimized/off-screen targets are not composited (documented limitation; retry when
+  visible, or use a future window module). Callers needing a downscaled/cropped image for cheap vision-model
+  feeding compose `capture.screen` with the future `image.util` (Module 15). `parallel_safe:true` lets the
+  router run captures concurrently with each other and with the read-only observers.
+- **affects:** Module 6, `MODULE_ROADMAP.md` (#6, #15), `TOOL_MODEL_REGISTRY.md`, `SKILL_CONTRACT.md`
+  (`screen:true` + `filesystem:write` requirements; `parallel_safe:true` for a sensor). · **revisit-if:** a real
+  need appears for off-screen/occluded compositing, window activation, cursor inclusion, or capture-time
+  downscaling — each gets its own scoped work order.

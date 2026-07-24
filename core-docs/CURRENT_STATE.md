@@ -5,10 +5,12 @@ Owns **reality as it exists now** — not intended architecture. Keep it compact
 is planned (serves scripts and weaker local models) but not yet created.
 
 - **Project phase:** MVP module build-out.
-- **Active module:** _none in progress._ **Modules 0–5 complete** (0 executor · 1 `skill.bootstrap` · 2
-  `fs.observer` · 3 `proc.observer` · 4 `uia.inspector` · 5 `uia.actor`), plus **Module 00.1 — Executor
-  Watchdog & Recovery (`exec.watchdog`)** (infrastructure, MVP complete this session). **Module 6 — Screenshot
-  & Region Capture (`capture.screen`) is next** (author its work order next session).
+- **Active module:** _none in progress._ **Modules 0–6 complete** (0 executor · 1 `skill.bootstrap` · 2
+  `fs.observer` · 3 `proc.observer` · 4 `uia.inspector` · 5 `uia.actor` · 6 `capture.screen`), plus
+  **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure). **Module 6 — Screenshot &
+  Region Capture (`capture.screen`) is MVP complete this session** (monitor/window/app/rectangle → PNG/JPG;
+  tests 39/39 via the executor). **Module 7 — Local Model Gateway (`model.gateway`) is next** (author its work
+  order next session).
 - **Repo / working dir:** **`C:\Users\just_\LifeOrchestrator-Refresh\`** — the clean standalone home for
   **Life Orchestrator** (near-term local-skills track; git-initialized). Layout: `core-docs/` (these docs)
   and `modules/<NN>-<name>/` (one per module). **Reference sources (separate, not built here):** the earlier
@@ -22,8 +24,9 @@ is planned (serves scripts and weaker local models) but not yet created.
   was stopped earlier; the physical `proteus_repo/tools/` leftover removal is still pending
   (`ops/finish-game-cleanup.bat`). **Now covered by the watchdog (Module 00.1):** launch `ops/start-watchdog.bat`
   for unattended resilience — it auto-restarts the executor on crash/hang and stands down on a graceful stop.
-  **The live executor (instance `857d7251…`) is running the pre-marker code; restart it once
-  (`ops/restart-executor.bat`) so it begins emitting `heartbeat.json`/`last-exit.json` that the watchdog reads.**
+  **The live executor was restarted onto the marker code and is now instance `51061264…` (pid 4844), emitting
+  `control/heartbeat.json`/`last-exit.json` (verified 2026-07-24T15:08Z; it ran the Module 6 tasks
+  `m6-smoke-001`/`m6-test-001`). The earlier "restart it once" action is resolved.**
 
 ## Completed modules
 - **Module 0** — Trusted High-Risk Bootstrap Executor. 12/12 integration tests pass on Windows.
@@ -41,6 +44,13 @@ is planned (serves scripts and weaker local models) but not yet created.
   UIA control patterns only (no synthetic input); `-DryRun`/`-WhatIf` preview; `parallel_safe:false` (first
   side-effecting skill). `action.md` + `action.json` artifacts. **Tests 26/26 via executor (2026-07-24)** —
   incl. real invoke/toggle/setvalue self-verified against a self-contained WinForms probe window. Committed `1691d16`.
+- **Module 6** — Screenshot & Region Capture (`capture.screen`). **Visual-capture** complement to the UIA
+  skills: resolve a target (monitor `index|all|primary` / window by hwnd|pid|title / app by process name /
+  explicit rectangle) to one virtual-desktop rectangle, then GDI `CopyFromScreen` → **PNG** (or JPG q90) image
+  artifact + `capture.json`/`capture.md`. Read-only (`parallel_safe:true`, `screen:true`), Per-Monitor-V2 DPI
+  aware, multi-monitor. **Tests 39/39 via executor (2026-07-24)** — monitor(primary/all), region(png+jpg),
+  window (self-verified against a WinForms probe), all error paths, wrapper; smoke `m6-smoke-001` captured a
+  real dual-monitor primary (1920×1080).
 - **Module 00.1** — Executor Watchdog & Recovery (`exec.watchdog`). **Cooperative** supervisor: autonomously
   restarts the executor on crash/hang (no approval), stands down on an authorized graceful stop; on-demand
   `Recover-Executor.ps1 -Force`. Not perpetual, no boot persistence, visible + self-killable (D-0013, honors
@@ -76,6 +86,7 @@ is planned (serves scripts and weaker local models) but not yet created.
 - Skill (through executor): submit a task package whose `task.ps1` calls either entrypoint; read the
   envelope from `runtime/completed/<task_id>/stdout.txt`.
 - uia.actor (direct): `pwsh -NoProfile -File modules\05-uia-actor\Invoke-UiaActor.ps1 -Title '<glob>' -Action <invoke|toggle|select|expand|collapse|setvalue|focus> [-AutomationId|-Name|-ControlType|-Path <loc>] [-Value <s>] [-DryRun]`.
+- capture.screen (direct): `pwsh -NoProfile -File modules\06-capture-screen\Invoke-CaptureScreen.ps1 [-Target <monitor|window|app|region>] [-Monitor <index|all|primary>] [-Hwnd|-ProcessId|-Title <loc>] [-App <glob>] [-X -Y -Width -Height] [-Format <png|jpg>]` (or `-InputsJson '<json>'`).
 - User ops (click-to-run): `ops/*.bat` — start/stop/restart/status the executor and run tests; each writes
   output to `ops/out/` for the agent to read.
 - Watchdog: `ops/start-watchdog.bat` (supervise), `ops/stop-watchdog.bat`, `ops/recover-executor.bat [-Force]`;
@@ -95,6 +106,10 @@ is planned (serves scripts and weaker local models) but not yet created.
   logic; `Test-ExecutorAlive`; `Get-ExecutorState`; Module 0 heartbeat/last-exit markers; and integration on
   temp runtimes: watchdog auto-restarts a crash and stands down on an authorized stop; `wd-test-002` 2026-07-24).
   Module 0 regression re-run **12/12** with the additive markers (`wd-precheck-001`).
+- Module 6: `modules/06-capture-screen/tests/Invoke-CaptureScreenTests.ps1` — **39/39 pass** (manifest;
+  monitor primary/all; region png+jpg with PNG/JPEG magic-byte + sha256 checks; six error paths; wrapper; and
+  a live window capture self-verified against a WinForms probe; run 2026-07-24 via the executor as
+  `m6-test-001`, exit 0, ~138s).
 
 ## Known failures / gotchas
 - **Executor fatal-crashed on a transient file lock (2026-07-24T06:26:36Z).** While task `m5-example-001`
@@ -119,6 +134,13 @@ is planned (serves scripts and weaker local models) but not yet created.
   drives a probe reliably; prefer side-effect-free dry-runs when capturing examples to avoid GUI-in-task risk.
 - Skill scripts must write **only** the JSON envelope to stdout (diagnostics to stderr); the executor
   captures stdout verbatim into `stdout.txt`, which is parsed as the envelope.
+- `capture.screen` uses screen-pixel copy (`CopyFromScreen`): an **occluded** window captures whatever covers
+  it and a **minimized** window returns a `window_minimized` error — it does **not** raise/activate windows
+  (read-only). Per-Monitor-V2 DPI awareness is set once per process (ignored if already set). Off-screen /
+  `PrintWindow` compositing is deferred (Module 6 follow-on). Note (Linux only, does not affect the Windows
+  executor): `System.Drawing.Common` is Windows-only, so `capture.screen` cannot even be dry-run on a
+  non-Windows host — the cloud agent validated it by pwsh syntax-parse + Roslyn compile of the embedded C#,
+  then ran it on the Windows executor.
 
 ## Unresolved questions
 - Exact GPU/CPU/RAM; which local models (LLM/vision/speech/embedding) are installed or wanted.
@@ -126,15 +148,19 @@ is planned (serves scripts and weaker local models) but not yet created.
 - Install pwsh system-wide (winget, needs UAC) vs. keep the per-user dotnet-tool build.
 - Contract finalization: fold the provisional Module 1 conventions (artifact-root resolution, `-InputsJson`
   generic arg passing, `lifeorch.skill.invocation_report/0.1`) into `SKILL_CONTRACT.md` and bump the version —
-  now exercised by Modules 2–5. (See DECISION_LOG D-0009.)
+  now exercised by Modules 2–6. (See DECISION_LOG D-0009.)
 
 ## Next expected action
-1. **Restart the live executor once** (`ops/restart-executor.bat`) so it emits the new heartbeat/last-exit
-   markers, then optionally launch `ops/start-watchdog.bat` for unattended resilience. (Optional now; required
-   before the watchdog can supervise the live instance.)
-2. Author the **Module 6 work order** (`modules/06-capture-screen/WORK_ORDER.md`) from the template and implement
-   its MVP (screenshot / region capture: monitor / window / app / rectangle → image artifact + contract-valid
-   envelope), tested through the executor. Reuse `Test-SkillManifest` / `Test-SkillResultEnvelope` and `Invoke-Skill.ps1`.
-3. ~~Module 0 in-process self-heal~~ — **done this session** (retry-on-IOException + per-loop guard; 12/12).
+1. Author the **Module 7 work order** (`modules/07-model-gateway/WORK_ORDER.md`) from the template and implement
+   its MVP: a **Local Model Gateway** (`model.gateway`) — a common interface to whatever local LLM/vision/speech/
+   embedding models exist here (may wrap an existing server/CLI), recording model id/version/params/io/runtime/
+   resources/failure. This unblocks Modules 8–9 (batch classification + review processor). Reuse
+   `Test-SkillManifest` / `Test-SkillResultEnvelope` and `Invoke-Skill.ps1`.
+2. A **local-model / hardware detection pass** is likely needed before/within Module 7 — **no models are
+   registered yet** and exact GPU/CPU/RAM are unmeasured (see Unresolved questions). Discover what is installed
+   (Ollama / LM Studio / llama.cpp / ONNX / etc.) and register it in `TOOL_MODEL_REGISTRY.md`.
+3. Housekeeping (deferred): fold the D-0009 conventions into `SKILL_CONTRACT.md` and bump the contract version
+   (now exercised by Modules 2–6; DECISION_LOG D-0009/D-0011); the pending `proteus_repo/tools/` leftover
+   removal (`ops/finish-game-cleanup.bat`).
 
-- **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 00.1 watchdog build session).
+- **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 6 capture.screen build session).

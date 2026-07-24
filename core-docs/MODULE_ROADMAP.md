@@ -62,7 +62,7 @@ Needs refactor · Deprecated · Replaced.
   search; error path; direct/wrapped/executor; tests 16/16 (2026-07-24).**
 - **Implementation:** `modules/02-fs-observer/`. **Work order:** `modules/02-fs-observer/WORK_ORDER.md`.
 
-## Modules 3–6 — Desktop observation & control (provisional)  ← Module 6 (`capture.screen`) next
+## Modules 3–6 — Desktop observation & control (provisional)  ← all MVP complete
 - **3 `proc.observer`** — Process & Window Observer. ***MVP complete*** — processes + top-level windows +
   foreground; `report.md`/`processes.json`/`windows.json`; tests 16/16 (2026-07-24). Work order:
   `modules/03-proc-observer/WORK_ORDER.md`.
@@ -75,13 +75,17 @@ Needs refactor · Deprecated · Replaced.
   (first side-effecting skill). ***MVP complete*** — `action.md`/`action.json`; tests **26/26** incl. live
   invoke/toggle/setvalue self-verified against a WinForms probe (2026-07-24). Work order:
   `modules/05-uia-actor/WORK_ORDER.md`. See DECISION_LOG D-0011.
-- **6 `capture.screen`** — Screenshot & Region Capture: monitor/window/app/rectangle → artifact, for
-  when structured inspection is unavailable or visual verification is genuinely required. *Proposed, P2. **← next.***
+- **6 `capture.screen`** — Screenshot & Region Capture: resolve monitor (`index|all|primary`) / window
+  (hwnd|pid|title) / app (process name) / explicit rectangle → one virtual-desktop rect, then GDI capture →
+  **PNG** (or JPG q90) + `capture.json`/`capture.md`. Read-only (`parallel_safe:true`, `screen:true`),
+  Per-Monitor-V2 DPI aware, multi-monitor. ***MVP complete*** — tests **39/39** via the executor incl. a live
+  window capture self-verified against a WinForms probe (2026-07-24). Work order:
+  `modules/06-capture-screen/WORK_ORDER.md`. See DECISION_LOG D-0014.
 
-## Modules 7–9 — Local model foundation (provisional)
+## Modules 7–9 — Local model foundation (provisional)  ← Module 7 (`model.gateway`) next
 - **7 `model.gateway`** — Local Model Gateway: common interface to installed local LLM/vision/speech/
   embedding models; may wrap existing servers/CLIs; records model id/version/params/io/runtime/resources/
-  failure. *Proposed, P1.*
+  failure. *Proposed, P1. **← next.***
 - **8 `classify.batch`** — Batch Classification & Sorting: weak-local-model categorization/labeling/
   extraction/routing; early proof that local models do useful unattended work. *Proposed, P2. Depends on 7.*
 - **9 `review.processor`** — Review Queue Processor: stronger local model adjudicates only flagged/
