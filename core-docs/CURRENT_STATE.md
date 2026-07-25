@@ -224,8 +224,8 @@ is planned (serves scripts and weaker local models) but not yet created.
   once mid-session (2026-07-24T06:26:36Z, instance `0a1f8e69…`, transient file-lock — see Known failures), was
   **restarted** and is now instance `857d7251…` (up 13:52Z); restart recovery correctly marked the orphaned
   `m5-example-001` as `abandoned_after_restart`. The original at `proteus_repo/tools/trusted-bootstrap-executor/`
-  was stopped earlier; the physical `proteus_repo/tools/` leftover removal is still pending
-  (`ops/finish-game-cleanup.bat`). **Now covered by the watchdog (Module 00.1):** launch `ops/start-watchdog.bat`
+  was stopped earlier; the physical `proteus_repo/tools/` leftover was **removed 2026-07-25** (housekeeping D-0028;
+  `proteus_repo` itself untouched). **Now covered by the watchdog (Module 00.1):** launch `ops/start-watchdog.bat`
   for unattended resilience — it auto-restarts the executor on crash/hang and stands down on a graceful stop.
   **The live executor was restarted onto the marker code and is now instance `51061264…` (pid 4844), emitting
   `control/heartbeat.json`/`last-exit.json` (heartbeat fresh 2026-07-24T17:26Z; it has since run the Module 7 and
@@ -328,21 +328,23 @@ is planned (serves scripts and weaker local models) but not yet created.
 - Not admin. No system-wide `pwsh` (only the user `~\.dotnet\tools` entry — resolves in new shells).
 
 ## Installed local models
-- **Discovered + registered (2026-07-24).** 4 LLM GGUF (Qwen2.5 0.5B/1.5B/3B + Qwen3.5-27B; all `wired` via
-  `model.gateway`), 1 STT (Whisper base.en), 2 TTS voices + 1 tokenizer (Qwen3-TTS 0.6B/1.7B), 1 embedding
-  (Qwen3-Embedding-0.6B). **All copied to portable F: storage** (`…\LifeOrchestrator-Refresh_Large_Data\
-  _pending-model-storage\`, ~27.4 GB). Full inventory + sizes + engines in `TOOL_MODEL_REGISTRY.md`; relocation plan
-  in that folder's `MIGRATION.md`. **STT (Whisper base.en) is wired via `speech.stt` (M11); the TTS voices
-  (Qwen3-TTS 0.6B/1.7B) are wired via `speech.tts` (M12)** (they run under the speech venv, not the gateway). Only the
-  **embedding** model remains declared-but-unwired (its own Module 23).
+- **Discovered + registered (2026-07-24); relocated + tokenizer-deduped 2026-07-25 (D-0028).** 4 LLM GGUF
+  (Qwen2.5 0.5B/1.5B/3B + Qwen3.5-27B; all `wired` via `model.gateway`), 1 STT (Whisper base.en), 2 TTS voices
+  (Qwen3-TTS 0.6B/1.7B; the redundant standalone 12 Hz tokenizer was **de-duplicated/removed** — each voice keeps its
+  own bundled `speech_tokenizer\`), 1 embedding (Qwen3-Embedding-0.6B). **Relocated out of the `_pending-model-storage\`
+  staging area into per-owning-module F: homes** (`…\LifeOrchestrator-Refresh_Large_Data\<NN>-<module>\`; the shared
+  llama.cpp engine under `_engines\`); the staging area and its `MIGRATION.md` are **deleted**. Full inventory + new
+  paths in `TOOL_MODEL_REGISTRY.md` / `models.json`. **STT (Whisper base.en) is wired via `speech.stt` (M11); the TTS
+  voices (Qwen3-TTS 0.6B/1.7B) are wired via `speech.tts` (M12)** (they run under the speech venv, not the gateway).
+  Only the **embedding** model remains declared-but-unwired (its own Module 23; pre-provisioned at `23-artifact-search\`).
 - **Object detectors added 2026-07-25 (Module 16).** `detect.yolox.nano` (3.66 MB, default) + `detect.yolox.tiny` (20.2 MB)
-  — COCO-80 YOLOX ONNX (Apache-2.0), downloaded + staged to `_pending-model-storage\detector\{yolox-nano,yolox-tiny}\`
+  — COCO-80 YOLOX ONNX (Apache-2.0), downloaded then (2026-07-25) relocated to `16-detect-objects\detector\{yolox-nano,yolox-tiny}\`
   (sha256 byte-exact). Type `detector`, engine `onnxruntime`, `wired:false` for the gateway; run under the **system python**
   (CPU) via `detect.objects`. Both staged + verified (`m16-probe-001` nano live; `m16-test-001` tiny staged).
 - **VLM added 2026-07-25 (Module 17).** `vlm.qwen2p5-vl-3b` — Qwen2.5-VL-3B-Instruct GGUF (`Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf`
   ~1.80 GB + `mmproj-Qwen2.5-VL-3B-Instruct-f16.gguf` ~1.25 GB), Apache-2.0, downloaded from `ggml-org/Qwen2.5-VL-3B-Instruct-GGUF`
-  and staged to `_pending-model-storage\vlm\Qwen2.5-VL-3B-Instruct-GGUF\` (sha256 recorded in `models.json`). Type `vlm`, engine
-  `llama-server` (multimodal, carries a `mmproj` path), `wired:false` for the gateway; run via the staged `llama-server` by
+  and (2026-07-25) relocated to `17-image-interpret\vlm\Qwen2.5-VL-3B-Instruct-GGUF\` (sha256 recorded in `models.json`). Type `vlm`, engine
+  `llama-server` (multimodal, carries a `mmproj` path), `wired:false` for the gateway; run via the shared `llama-server` by
   `image.interpret`. Staged + **load-and-caption verified live** (`m17-probe-002`: accurate `dog.jpg` caption, ~111 tok/s, full
   GPU offload on the RTX 2080 Ti).
 
@@ -593,20 +595,18 @@ is planned (serves scripts and weaker local models) but not yet created.
 ## Unresolved questions
 - Root cause of the executor file-lock crash (see Known failures) — reproduce and harden Module 0.
 - Install pwsh system-wide (winget, needs UAC) vs. keep the per-user dotnet-tool build.
-- Contract finalization: fold the provisional Module 1 conventions (artifact-root resolution, `-InputsJson`
-  generic arg passing, `lifeorch.skill.invocation_report/0.1`) into `SKILL_CONTRACT.md` and bump the version —
-  now exercised by Modules 2–7. (See DECISION_LOG D-0009.)
-- **Model relocation:** the staged models in `_pending-model-storage\` must eventually move into their owning
-  modules' F: folders (Modules 7/11/12/23) and the pending folder be deleted when empty (see its `MIGRATION.md`).
+- ~~Contract finalization~~ and ~~model relocation~~ — **both resolved 2026-07-25 (D-0028):** the D-0009/D-0011
+  conventions are folded into `SKILL_CONTRACT.md` v0.2, and every staged model is relocated into its owning-module
+  F: home (the 12 Hz TTS tokenizer de-duplicated) with `_pending-model-storage\` deleted.
 - **model.gateway follow-ons:** semantic (not just completeness) confidence; a warm/persistent server if load
   latency dominates. The 27B `gpu_layers` is now **tuned to 32** (Module 9 sweep — see REVIEW_QUEUE.md); a cold
   27B load (~90s) approaches the gateway's 120s default, so callers pass a longer `-LoadTimeoutSec` for the strong tier.
 
 ## Next expected action
 1. **The image/document perception block (14–18) is COMPLETE** — #14 `ocr.layout`, #15 `image.util`, #16 `detect.objects`,
-   #17 `image.interpret`, and now #18 `image.index` (the fusion capstone) are all MVP complete. The next module is the **video
-   block (#19 `media.decompose` → #20 `track.objects` → #21 `video.timeline` → #22 `video.interpret`)** or a housekeeping pass
-   (below); expand the chosen one and give it a work order. **`image.index` follow-ons (NOT this session):** **concurrent** child
+   #17 `image.interpret`, and now #18 `image.index` (the fusion capstone) are all MVP complete. **The housekeeping pass is now
+   done (D-0028), so the next module is the video block: #19 `media.decompose` → #20 `track.objects` → #21 `video.timeline`
+   → #22 `video.interpret`** — expand #19 and give it a work order. **`image.index` follow-ons (NOT this session):** **concurrent** child
    execution (a warm-worker pool shared with #7/#8/#12/#14/#16/#17; run the parallel-safe children together); **batch/directory/
    glob** indexing; **cross-stage grounding** (associate detections ↔ OCR words ↔ caption phrases; open-vocab boxes); an
    **overlay/annotated card image** (needs the `image.util` draw op); persisting indices into `artifact.search` (#23); a
@@ -628,10 +628,9 @@ is planned (serves scripts and weaker local models) but not yet created.
    compaction/archival of `resolved` items to keep the live queue small; a warm/persistent gateway worker (shared
    with #8); calibrated/semantic reviewer confidence; **strong-tier prompt/max_tokens tuning** so the 27B emits a
    parseable JSON verdict instead of being escalated on truncated reasoning (observed in `m9-test-003`).
-4. Housekeeping (deferred): fold the D-0009 conventions into `SKILL_CONTRACT.md` and bump the contract version
-   (now exercised by Modules 2–10; DECISION_LOG D-0009/D-0011); relocate staged models per `MIGRATION.md`; the pending
-   `proteus_repo/tools/` leftover removal (`ops/finish-game-cleanup.bat`); classify.batch follow-ons (warm-worker /
-   intra-batch prompt for throughput; calibrated confidence; a side-effecting `sort.files` mover) — see D-0017; audio.ingest follow-ons (batch/directory ingest; trimming/
-   segmentation → Module 13; denoise/high-pass — see D-0019).
+4. Housekeeping — **contract finalization (v0.2), model relocation + tokenizer de-dup, and the `proteus_repo/tools/`
+   removal are DONE 2026-07-25 (D-0028).** Remaining lower-priority follow-ons: classify.batch (warm-worker /
+   intra-batch prompt for throughput; calibrated confidence; a side-effecting `sort.files` mover — D-0017);
+   audio.ingest (batch/directory ingest; trimming/segmentation → Module 13; denoise/high-pass — D-0019).
 
-- **Last updated:** 2026-07-25 (UTC) · **Last updating agent:** Claude (Cowork — Module 18 image.index build session; the fusion capstone of the image/document perception block (14–18); an orchestrator/composer modeled on voice.live #13 that fuses image.util meta+hashes (always) + optional ocr.layout/detect.objects/image.interpret into one index.json + index.md per image, spawns children as child pwsh, aggregates stage-tagged model_provenance, redirects child review writes to child_review.jsonl (NOT a review producer — set stays at seven), runs children sequentially; determinism mixed, parallel_safe:false, confidence = min-of-stochastic-stages; composes capture.screen (#6) + passes -MaxDimension to detect/interpret; NO models.json change / no Module 7 re-verify; 41/41 live via the executor (m18-test-002), cloud mock-children gate 40/40; canonical review_queue.jsonl verified untouched, 0 orphans, 9 shipped files sha256 byte-exact; D-0027).
+- **Last updated:** 2026-07-25 (UTC) · **Last updating agent:** Claude (Cowork — housekeeping pass, D-0028: (A) folded the three D-0009/D-0011 conventions into SKILL_CONTRACT.md v0.2 (skill-relative artifact roots + absolute paths §3, generic -InputsJson §3.1, lifeorch.skill.invocation_report/0.1 §3.2), keeping the wire schema ids at /0.1 — additive + backward-compatible, so the validators and all existing manifests were untouched; (B) relocated every staged model out of _pending-model-storage into per-owning-module F: homes (LLMs→07-model-gateway, whisper→11-speech-stt, TTS voices→12-speech-tts, detectors→16-detect-objects, VLM→17-image-interpret, embedding→23-artifact-search) + the shared llama.cpp engine→_engines, rewrote models.json (13 models, byte-exact sha256 5aed38db…), de-duplicated the 12 Hz TTS tokenizer (deleted the standalone copy + its declared-only registry entry — each voice keeps its bundled speech_tokenizer), and deleted the emptied _pending-model-storage + its MIGRATION.md; (C) removed the proteus_repo/tools leftover. Re-verified live via the executor (hk-verify-001): all 4 LLM tiers + whisper STT + Qwen3-TTS (bundled tokenizer) + ONNX detector + VLM caption each load from their new homes, 0 orphaned servers. Refreshed the Module 1 README; no skill code changed).

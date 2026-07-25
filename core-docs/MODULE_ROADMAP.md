@@ -46,10 +46,10 @@ Needs refactor · Deprecated · Replaced.
   the `skill.json` manifest format, the standard result envelope, standard artifact location, the
   registry entry format, and a **simple invocation wrapper** (validate manifest → run → validate envelope).
   Must **not** become a plugin framework.
-- **Dependencies:** Module 0; `SKILL_CONTRACT.md` (v0.1 already drafted in this pack).
+- **Dependencies:** Module 0; `SKILL_CONTRACT.md` (drafted v0.1; finalized to **v0.2** by the 2026-07-25 housekeeping pass, D-0028).
 - **MVP acceptance:** **Met — `ref.echo` validates and runs directly + through the executor, emitting a
   schema-valid `lifeorch.skill.result/0.1`; the wrapper validates manifest+envelope; module tests 11/11
-  (2026-07-24).** Contract-finalization of the adopted conventions deferred (DECISION_LOG D-0009).
+  (2026-07-24).** Contract-finalization of the adopted conventions **done 2026-07-25 — folded into `SKILL_CONTRACT.md` v0.2 (DECISION_LOG D-0009/D-0011 → D-0028).**
 - **Implementation:** `modules/01-skill-bootstrap/` — validators (`lib/SkillContract.psm1`), generic
   wrapper (`Invoke-Skill.ps1`), reference skill (`skills/ref.echo/`).
 - **Work order:** `modules/01-skill-bootstrap/WORK_ORDER.md`. **Blockers:** none.

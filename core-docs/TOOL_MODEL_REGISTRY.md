@@ -550,9 +550,10 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
 
 ## Local model runtimes (verified on this machine)
 - **llama.cpp `llama-server` / `llama-cli`** — CUDA build **b8661 (b7ad48ebd)**, at
-  `F:\Qwen3.5-27B\llama.cpp\build\bin\`; **portable copy staged** at
-  `F:\…\LifeOrchestrator-Refresh_Large_Data\_pending-model-storage\_engines\llama.cpp\bin\` (runs standalone;
-  needs a system CUDA runtime). `model.gateway` uses `llama-server` (chat completions). Note: this build's
+  `F:\Qwen3.5-27B\llama.cpp\build\bin\`; **portable copy** at
+  `F:\…\LifeOrchestrator-Refresh_Large_Data\_engines\llama.cpp\bin\` (shared by `model.gateway` #7 +
+  `image.interpret` #17; relocated 2026-07-25 out of the `_pending-model-storage` staging area — D-0028; runs
+  standalone; needs a system CUDA runtime). `model.gateway` uses `llama-server` (chat completions). Note: this build's
   `llama-cli` is interactive-only (rejects `-no-cnv`); use `llama-server` for scripting.
   **Multimodal-capable (verified 2026-07-25, `m17-probe-001/002`):** `llama-server --help` exposes `-mm/--mmproj`,
   `--mmproj-offload`, `--image-min/max-tokens` (full mtmd support); launched with `--mmproj <projector.gguf>` it accepts
@@ -580,41 +581,46 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   torch 2.2.1 + torchvision 0.17.1 are also present (unused by this MVP).
 - Ollama / LM Studio: **not installed.** git / winget / .NET SDK 9 / node: present (see above).
 
-## Installed local models (inventory — DO NOT re-download; portable copies staged on F:)
-All staged under `F:\My_Programs\LifeOrchestrator-Refresh_Large_Data\_pending-model-storage\` (see that folder's
-`MIGRATION.md`). `wired` = runnable by `model.gateway` today.
+## Installed local models (inventory — DO NOT re-download; portable copies on F:)
+Relocated 2026-07-25 out of the temporary staging area into per-owning-module homes under
+`F:\My_Programs\LifeOrchestrator-Refresh_Large_Data\<NN>-<module>\` (D-0028; the `_pending-model-storage\`
+staging area and its `MIGRATION.md` are deleted). The `file/dir` column below is relative to
+`…_Large_Data\`; **the exact absolute paths live in `models.json`.** `wired` = runnable by `model.gateway` today.
 
-| model_id | type | file/dir (staged) | size | engine | wired |
+| model_id | type | file/dir (under …_Large_Data\) | size | engine | wired |
 |---|---|---|---|---|---|
-| `llm.weak.qwen2p5-0p5b` | llm | `llm\Qwen2.5-0.5B-Instruct-Q4_K_M\…gguf` | 0.38 GB | llama-server | **yes** |
-| `llm.weak.qwen2p5-1p5b` | llm | `llm\Qwen2.5-1.5B-Instruct-Q4_K_M\…gguf` | 0.94 GB | llama-server | **yes** (default) |
-| `llm.weak.qwen2p5-3b` | llm | `llm\Qwen2.5-3B-Instruct-IQ4_XS\…gguf` | 1.66 GB | llama-server | **yes** |
-| `llm.strong.qwen3p5-27b` | llm | `llm\Qwen3.5-27B-Q4_K_M\…gguf` | 16.3 GB | llama-server | **yes** (partial GPU, ngl=32 tuned M9) |
-| `stt.whisper.base-en` | stt | `stt\whisper-ggml-base.en\ggml-base.en.bin` | 0.14 GB | whisper.cpp | **via `speech.stt`** (M11) |
-| `tts.tokenizer.qwen3-12hz` | tts-comp | `tts\Qwen3-TTS-Tokenizer-12Hz\` | 0.65 GB | transformers | via bundle (M12) |
-| `tts.weak.qwen3-0p6b` | tts | `tts\Qwen3-TTS-12Hz-0.6B-CustomVoice\` | 2.38 GB | transformers | **via `speech.tts`** (M12, default) |
-| `tts.strong.qwen3-1p7b` | tts | `tts\Qwen3-TTS-12Hz-1.7B-CustomVoice\` | 4.31 GB | transformers | **via `speech.tts`** (M12) |
-| `embedding.qwen3-0p6b` | embedding | `embedding\Qwen3-Embedding-0.6B\` | 1.12 GB | transformers | no → M23 |
-| `detect.yolox.nano` | detector | `detector\yolox-nano\yolox_nano.onnx` | 3.66 MB | onnxruntime | **via `detect.objects`** (M16, default) |
-| `detect.yolox.tiny` | detector | `detector\yolox-tiny\yolox_tiny.onnx` | 20.2 MB | onnxruntime | **via `detect.objects`** (M16, `-Tier tiny`) |
-| `vlm.qwen2p5-vl-3b` | vlm | `vlm\Qwen2.5-VL-3B-Instruct-GGUF\{...Q4_K_M.gguf,mmproj-...f16.gguf}` | 1.80 + 1.25 GB | llama-server (mmproj) | **via `image.interpret`** (M17, default) |
+| `llm.weak.qwen2p5-0p5b` | llm | `07-model-gateway\llm\Qwen2.5-0.5B-Instruct-Q4_K_M\…gguf` | 0.38 GB | llama-server | **yes** |
+| `llm.weak.qwen2p5-1p5b` | llm | `07-model-gateway\llm\Qwen2.5-1.5B-Instruct-Q4_K_M\…gguf` | 0.94 GB | llama-server | **yes** (default) |
+| `llm.weak.qwen2p5-3b` | llm | `07-model-gateway\llm\Qwen2.5-3B-Instruct-IQ4_XS\…gguf` | 1.66 GB | llama-server | **yes** |
+| `llm.strong.qwen3p5-27b` | llm | `07-model-gateway\llm\Qwen3.5-27B-Q4_K_M\…gguf` | 16.3 GB | llama-server | **yes** (partial GPU, ngl=32 tuned M9) |
+| `stt.whisper.base-en` | stt | `11-speech-stt\stt\whisper-ggml-base.en\ggml-base.en.bin` | 0.14 GB | whisper.cpp | **via `speech.stt`** (M11) |
+| `tts.weak.qwen3-0p6b` | tts | `12-speech-tts\Qwen3-TTS-12Hz-0.6B-CustomVoice\` (+ bundled `speech_tokenizer\`) | 2.38 GB | transformers | **via `speech.tts`** (M12, default) |
+| `tts.strong.qwen3-1p7b` | tts | `12-speech-tts\Qwen3-TTS-12Hz-1.7B-CustomVoice\` (+ bundled `speech_tokenizer\`) | 4.31 GB | transformers | **via `speech.tts`** (M12) |
+| `embedding.qwen3-0p6b` | embedding | `23-artifact-search\embedding\Qwen3-Embedding-0.6B\` | 1.12 GB | transformers | no → M23 |
+| `detect.yolox.nano` | detector | `16-detect-objects\detector\yolox-nano\yolox_nano.onnx` | 3.66 MB | onnxruntime | **via `detect.objects`** (M16, default) |
+| `detect.yolox.tiny` | detector | `16-detect-objects\detector\yolox-tiny\yolox_tiny.onnx` | 20.2 MB | onnxruntime | **via `detect.objects`** (M16, `-Tier tiny`) |
+| `vlm.qwen2p5-vl-3b` | vlm | `17-image-interpret\vlm\Qwen2.5-VL-3B-Instruct-GGUF\{...Q4_K_M.gguf,mmproj-...f16.gguf}` | 1.80 + 1.25 GB | llama-server (mmproj) | **via `image.interpret`** (M17, default) |
 
 Tiers (`models.json`): LLM `tiny`=0.5B, `weak`=1.5B (default), `mid`=3B, `strong`=27B; detector `nano` (default) / `tiny`; vlm `3b` (default).
 Detectors are COCO-80 YOLOX ONNX (Apache-2.0), run under the system python's onnxruntime (CPU by default), decoupled from the
-gateway `wired` gate. Source originals (may be removed by the user) are listed in `_pending-model-storage\MIGRATION.md`.
+gateway `wired` gate. The redundant standalone `tts.tokenizer.qwen3-12hz` entry was **removed 2026-07-25** (de-duplicated —
+byte-identical to each voice's bundled `speech_tokenizer\`, which the voices actually load; D-0028). The source originals the
+portable copies came from (the deleted `MIGRATION.md`'s content) are recorded in DECISION_LOG **D-0028**.
 
 ## Large-data storage (F:)
 - **Root:** `F:\My_Programs\LifeOrchestrator-Refresh_Large_Data\` — home for all module data >~50 MB (D-0015).
-  Contains `_engines\` (staged llama.cpp), `_pending-model-storage\` (~27.4 GB, all models pending relocation),
-  `README.md`, and a `.lnk` back to the repo `modules\`. A `.lnk` in the repo `modules\` folder points here.
-- **Rule:** the C: repo never stores model weights; skills reference models by absolute F: paths in their registry.
-  As owning modules are built, models move into `…_Large_Data\<NN>-<module>\` and `_pending-model-storage\` shrinks
-  (delete it when empty). See `_pending-model-storage\MIGRATION.md`.
+  Contains the shared `_engines\` (llama.cpp) and per-owning-module homes `07-model-gateway\`, `11-speech-stt\`,
+  `12-speech-tts\`, `16-detect-objects\`, `17-image-interpret\`, `23-artifact-search\` (embedding, pre-provisioned
+  for the unbuilt Module 23), `README.md`, and two `.lnk` shortcuts. The temporary `_pending-model-storage\` staging
+  area was **emptied and deleted 2026-07-25** (D-0028).
+- **Rule:** the C: repo never stores model weights; skills reference models by absolute F: paths in their registry
+  (`models.json`). Each model lives under its owning module's `…_Large_Data\<NN>-<module>\` home; the shared llama.cpp
+  engine under `…_Large_Data\_engines\`.
 
 ### Planned / not yet present (do not assume these exist)
-- **Object detectors** — present (Module 16): `detect.yolox.nano`/`detect.yolox.tiny` (COCO-80 ONNX) staged on F:.
+- **Object detectors** — present (Module 16): `detect.yolox.nano`/`detect.yolox.tiny` (COCO-80 ONNX) on F: under `16-detect-objects\`.
 - **Vision / multimodal (VLM)** models — present (Module 17): `vlm.qwen2p5-vl-3b` (Qwen2.5-VL-3B-Instruct GGUF Q4_K_M + mmproj-f16,
-  Apache-2.0) staged on F:, run via the staged `llama-server` (multimodal) by `image.interpret`. C++ toolchain for native modules — verify
+  Apache-2.0) on F: under `17-image-interpret\`, run via the shared `llama-server` (multimodal) by `image.interpret`. C++ toolchain for native modules — verify
   (CMake/MSVC) before the first C++ module; register when confirmed.
 
 **Discipline:** never list a tool as `installed` you have not actually invoked on this machine. Prefer

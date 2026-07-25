@@ -212,8 +212,11 @@ fixture, and an empty fixture each produced the right `image.interpret` item; `m
 - **model.gateway confidence is a heuristic, not semantic.** It measures generation *completeness*
   (finish_reason/empty), NOT whether the answer is *correct*. Replace with a logprob- or self-consistency-based
   **semantic** confidence when Module 9 (`review.processor`) needs a real signal. (D-0016.)
-- **TTS tokenizer triplication (~650 MB × 3).** `Qwen3-TTS-Tokenizer-12Hz` is duplicated inside both
-  CustomVoice models' `speech_tokenizer\`. De-duplicate when Module 12 (`speech.tts`) is built.
+- ~~**TTS tokenizer triplication (~650 MB × 3).**~~ **Resolved 2026-07-25 (D-0028):** the redundant standalone
+  `Qwen3-TTS-Tokenizer-12Hz` copy + its declared-only `tts.tokenizer.qwen3-12hz` registry entry were removed
+  (byte-identical to each voice's bundled `speech_tokenizer\`, sha256 836B7B35…, which the voices actually load).
+  Each voice keeps its own bundled copy (self-contained + portable); collapsing the two remaining per-voice copies
+  to one shared copy is a deferred qwen_tts-external-tokenizer-config follow-on.
 - **Staged llama.cpp engine depends on a system CUDA runtime.** The portable `_engines\llama.cpp\bin\` copy
   (72 MB) runs today but links to a CUDA runtime installed outside `F:\Qwen3.5-27B`. Confirm the runtime's
   home before that folder is torn down; if it lived only there, restage the CUDA DLLs too.

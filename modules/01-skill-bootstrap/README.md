@@ -33,13 +33,15 @@ read the envelope from `runtime/completed/<task_id>/stdout.txt`.
 3. Validate with `Test-SkillManifest` / `Test-SkillResultEnvelope` (or run via `Invoke-Skill.ps1`).
 4. Add a `TOOL_MODEL_REGISTRY.md` entry for the skill.
 
-## Adopted conventions (candidates for the contract to absorb later)
-- **Artifact root** resolves relative to the skill folder (`$PSScriptRoot`); the envelope
-  always reports absolute artifact paths.
+## Adopted conventions (now normative in the contract, v0.2)
+- **Artifact root** resolves relative to the skill folder (`$PSScriptRoot/runtime/artifacts/<invocation_id>/`,
+  or a caller-supplied `-ArtifactRoot`); the envelope always reports absolute artifact paths.
 - **Generic argument passing**: a skill accepts `-InputsJson '<json object>'` so a generic
   wrapper need not know each skill's parameters. Named params may also be offered.
-- **Wrapper report**: `lifeorch.skill.invocation_report/0.1` = `{ manifest_valid, manifest_errors,
-  invoked, exit_code, envelope_valid, envelope_errors, envelope, stderr_tail }`.
+- **Wrapper report**: `lifeorch.skill.invocation_report/0.1` = `{ schema, skill_dir, skill_id,
+  manifest_valid, manifest_errors, invoked, exit_code, envelope_valid, envelope_errors, envelope,
+  stderr_tail }`.
 
-These are recorded in `DECISION_LOG.md` (D-0009) as provisional, to be folded into the
-contract once a second skill confirms them.
+Adopted provisionally in `DECISION_LOG.md` (D-0009), confirmed by Module 2 (D-0011), and **folded into
+`SKILL_CONTRACT.md` v0.2** (§3, §3.1, §3.2) as a housekeeping pass once every skill through Module 18 had
+exercised them (D-0028). The wire schema ids stayed `/0.1` — the change is additive and backward-compatible.
