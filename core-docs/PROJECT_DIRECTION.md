@@ -10,12 +10,26 @@ Create **useful local capabilities that frontier and local agents can invoke** o
 Each capability is a *skill*: independently usable, testable on its own, and runnable through the
 bootstrap executor. Success is measured in working MVPs, not architectural completeness.
 
+## Modules and Widgets (vocabulary — D-0029)
+
+We build two kinds of thing. A **Module** (under `modules/`) is a backend capability that AI agents — and
+Widgets — invoke through `SKILL_CONTRACT.md`; it is modular because it satisfies the contract, not because
+of its language. A **Widget** (under `widgets/`) is a human-interface tool — a real window/application —
+that connects a *person* into the Module architecture, usually by driving the local orchestrator + Local
+Logic Escalator so it reaches every Module without embedding each one. Modules give the system capability;
+Widgets make it usable by a human. (Widget is the adopted name for the HID / human-interface layer.)
+
 ## Current-phase priorities
 
 - **Speed and practical usefulness first.** A working, testable MVP beats an elegant unfinished design.
 - **Modularity.** Skills must be independently usable *before* any integrated orchestration is built.
 - **Offload cost locally.** The system should increasingly move remote token consumption onto the
   local computer — cheap local work done locally, expensive judgment reserved for capable models.
+- **Usable local core before deep research (D-0029).** The near-term build order is prioritized, not
+  strictly sequential: build the cost-offload keystones (the Local Logic Escalator + a local orchestrator),
+  a few utility Modules (doc I/O, generators), and the Widget layer that makes them human-usable **before**
+  resuming the slower architecture spine. Every task a local model finishes end-to-end is a task the weekly
+  frontier allotment never pays for. The current build order lives in `MODULE_ROADMAP.md → Build priority`.
 
 ## Perception and reasoning policy
 
@@ -64,7 +78,9 @@ agents submit PowerShell task packages to a filesystem queue and receive machine
 
 Life Orchestrator's own long-horizon aims may include a persistent structured memory, coordinated
 local + remote model orchestration, and the progressive replacement of stochastic workflows with cheaper
-deterministic tools where they earn it. **None of that is near-term work.**
+deterministic tools where they earn it. **None of that is near-term work.** The full destination — the
+canonical 0-49 Module spine, the real-time autonomic control layer (45-49), and the 6-level operating
+hierarchy — is mapped in `ARCHITECTURE_MAP.md` (a reference for orientation, **not** a build order).
 
 Two things this project is explicitly **not**: the earlier assistant codebase in `LifeOrchestrator\repo`
 (kept as reference material to fold in later, not a dependency now) and the separate **Project Proteus**

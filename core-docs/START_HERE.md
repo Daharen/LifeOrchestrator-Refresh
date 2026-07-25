@@ -7,7 +7,10 @@ Read this first. It routes you; it does not contain the project's substance.
 
 We are building a suite of small, independently-invokable **local skills** that frontier and
 local agents can call to do real work on this Windows machine — offloading token cost from the
-cloud onto the local computer. Skills are built and run **one module at a time**.
+cloud onto the local computer. Backend capabilities live in `modules/` (**Modules**); human-interface
+apps that plug into them live in `widgets/` (**Widgets** — the HID layer; see `widgets/README.md`).
+Work proceeds **one scoped Module or Widget per session** (vocabulary + priority in `PROJECT_DIRECTION.md`,
+D-0029; the full destination is `ARCHITECTURE_MAP.md`, the current order is `MODULE_ROADMAP.md → Build priority`).
 
 ## What phase we are in
 
@@ -18,7 +21,7 @@ locally.
 
 ## Source of truth (docs & state)
 
-**The on-disk repo is canonical** — `C:\Users\just_\LifeOrchestrator-Refresh\` (`core-docs/` + `modules/`).
+**The on-disk repo is canonical** — `C:\Users\just_\LifeOrchestrator-Refresh\` (`core-docs/` + `modules/` + `widgets/`).
 That is what the executor and local models read, and what we commit to git.
 
 **The attached Claude Project mirrors `core-docs/`.** The frontier agent keeps it current (via the Project
@@ -45,6 +48,9 @@ have full context. Rules:
 - `DECISION_LOG.md` — only when a prior architectural decision may bear on your task.
 - `MODULE_WORK_ORDER_TEMPLATE.md` — only when authoring a new work order.
 - `REVIEW_QUEUE.md` — only when producing or consuming flagged/low-confidence items.
+- `ARCHITECTURE_MAP.md` — only for long-range orientation (the canonical 0-49 spine + the real-time
+  autonomic layer + the operating hierarchy). It is the **destination, not the build order** — the current
+  order is `MODULE_ROADMAP.md → Build priority` (D-0029).
 
 ## How you identify the current module
 
@@ -77,5 +83,5 @@ Do **not** rearchitect other modules or expand scope beyond the work order.
 
 - **Useful MVP completion beats speculative architecture.** Ship the smallest thing that works and is
   testable through the executor.
-- **One module at a time.** If you find yourself expanding scope, stop and write the extra work into
-  `MODULE_ROADMAP.md` / a new work order instead.
+- **One scoped unit at a time (a Module or a Widget).** If you find yourself expanding scope, stop and write
+  the extra work into `MODULE_ROADMAP.md` / a new work order instead.

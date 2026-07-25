@@ -9,6 +9,43 @@ Needs refactor · Deprecated · Replaced.
 
 ---
 
+## Build priority (2026-07-25 pivot — D-0029)
+
+**The per-module numbers in this doc are architectural positions, not a build sequence.** The full 0-49
+spine (+ the real-time autonomic layer 45-49 and the 6-level operating hierarchy) lives in
+`ARCHITECTURE_MAP.md`. **Modules 0-18 + 00.1 are built.** The near-term order is re-prioritized to deliver a
+**locally usable core** (cost-offload + a human interface) before the deep-research spine:
+
+**Phase A — Utility & cost-offload Modules (build next, in this order):**
+1. **`logic.escalator` — Local Logic Escalator** (generalizes `review.processor` #9 + `route.tasks` #24):
+   the weakest model answers; each higher tier judges the tier below and either accepts it or produces its
+   own answer for the next tier to judge; stop when the step up would add no substantial gain (that fixes
+   the accepted layer). **Must** anchor rungs with deterministic ground-truth gates (schema / unit-test /
+   retrieval / self-consistency), not LLM-judges-LLM alone, and be **empirically calibrated** (sandbox:
+   measure the resolve-level distribution + the false-approval rate; a ladder of N tiers can cost more than
+   one correct call unless most tasks resolve low; target ~95% confidence) before it is trusted. The single
+   highest-leverage budget item — every task a local model finishes end-to-end is one the frontier allotment never pays for.
+2. **`doc.io` — Local Model Doc Read/Write/Edit/Append** (cheap, mostly deterministic; high utility).
+3. **`agent.local` — Local Orchestrator / Agent core** (a scoped #26): a local model that plans and invokes
+   any Module through the escalator — the frontier agent's job, done locally.
+4. **Generators, cheapest-first:** `gen.audio` → `gen.image` (the #44 family: Qwen-Image / FLUX.1-schnell /
+   Stable Diffusion XL) → `gen.music` → `gen.video`.
+5. **`agent.coding` — Coding Agent** (last here — the frontier already codes well; lowest near-term ROI).
+
+**Phase B — Widget layer (human interface; `widgets/`):** led by the **Local Agent Console** (the usability
+keystone), then Launcher/Registry Browser, Review/Escalation Dashboard, Voice Console, Generator Studio,
+Document Workspace, System/Executor Monitor. Full list + rationale in `widgets/README.md`.
+
+**Phase C — resume the canonical spine (deferred):** video (19-22) → search/routing/orchestration (23-26) →
+the general-screen-perception + self-improving stack (27-44) → the real-time autonomic layer (45-49).
+
+The per-module entries below remain the canonical position/status records. **Read this Build priority for
+what to do next**: pick up a Phase-A item (or, if video capability is specifically wanted now, #19
+`media.decompose`) as the next scoped unit. New Phase-A/B ids (`logic.escalator`, `doc.io`, `agent.local`,
+`gen.*`, `agent.coding`, the Widgets) get expanded entries + work orders when they become active.
+
+---
+
 ## Module 0 — Trusted High-Risk Bootstrap Executor
 - **id:** `exec.bootstrap` · **Priority:** P0 · **Status:** **MVP complete**
 - **Purpose:** Authorized agents submit PowerShell task packages to a filesystem queue; concurrent
