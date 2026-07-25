@@ -1,0 +1,49 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "detect.objects",
+  "name": "Object Detection (YOLOX / ONNX)",
+  "version": "0.1.0",
+  "contract_version": "0.1",
+  "purpose": "Detect objects in one image and return each as {class, class_id, score, box{x,y,width,height}} with a REAL per-detection confidence (YOLOX objectness * class probability). Runs a staged ONNX detector (default detect.yolox.nano, COCO-80) via onnxruntime in a Python worker (detect_worker.py) under the system python and reads its meta file (worker+meta hand-off). Resolves the detector from models.json (type=detector), decoupled from the gateway's wired gate. Default CPU execution provider -> no port/VRAM/CUDA binding, so parallel_safe. Populates confidence + model_provenance and routes low-confidence / no-object results to the review queue (sixth producer). Can compose capture.screen (Module 6) as its input (-Capture) and image.util (Module 15) to downscale a very large input then rescale boxes back (-MaxDimension).",
+  "determinism": "mixed",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-DetectObjects.ps1",
+    "args_spec": "Named params -InputFile <path> (image; required unless -Capture); -Model <model_id> | -Tier <nano|tiny>; -ScoreThreshold <0..1> (detection floor, default 0.25); -ConfidenceThreshold <0..1> (review + low_confidence mark, default 0.5); -NmsThreshold <0..1> (default 0.45); -MaxDetections <n> (default 100); -Classes <name,...> (COCO class filter); -Provider <cpu|cuda|dml> (default cpu); -MaxDimension <n> (downscale via image.util then rescale boxes); -MaxReviewDetections <n>; -MinImagePixels <n>; -Capture; -CaptureInputsJson '<json>'; overrides -Registry/-ModelPath/-DetectWorkerPath/-PythonPath/-ImageUtilPath/-CapturePath/-PwshPath/-ReviewQueuePath. OR -InputsJson '<json {input,model,tier,score_threshold,confidence_threshold,nms_threshold,max_detections,classes,provider,max_dimension,max_review_detections,min_image_pixels,capture,capture_inputs,registry,model_path,detect_worker_path,python_path,image_util_path,capture_path,pwsh_path,review_queue_path}>'. Optional -ArtifactRoot, -InvocationId.",
+    "python_worker": "detect_worker.py"
+  },
+  "inputs": [
+    { "name": "input", "type": "string", "required": false, "description": "Path to the source image (anything Pillow can open: jpg/png/bmp/webp/tif/...). Required unless capture=true." },
+    { "name": "model", "type": "string", "required": false, "description": "Detector model_id in models.json (type=detector). Default = defaults.detector (detect.yolox.nano)." },
+    { "name": "tier", "type": "string", "required": false, "description": "Detector tier alias resolved via tiers.detector (nano | tiny). A named -Model wins." },
+    { "name": "score_threshold", "type": "double", "required": false, "default": 0.25, "description": "Minimum detection score to report a box at all (the detector confidence floor)." },
+    { "name": "confidence_threshold", "type": "double", "required": false, "default": 0.5, "description": "Overall (best) confidence below this routes the result to the review queue (verify_detections); per-detection scores below it are marked low_confidence." },
+    { "name": "nms_threshold", "type": "double", "required": false, "default": 0.45, "description": "IoU threshold for class-aware non-max suppression." },
+    { "name": "max_detections", "type": "int", "required": false, "default": 100, "description": "Cap on returned detections (highest score first)." },
+    { "name": "classes", "type": "array", "required": false, "description": "Optional COCO class-name filter (e.g. [person, car]); unknown names are warned and ignored." },
+    { "name": "provider", "type": "string", "required": false, "default": "cpu", "description": "onnxruntime execution provider: cpu (default, parallel_safe) | cuda | dml. cuda/dml bind the GPU and are NOT parallel_safe." },
+    { "name": "max_dimension", "type": "int", "required": false, "description": "When set and the image's longest side exceeds it, downscale via image.util (Module 15) before detection, then rescale boxes back to original pixels." },
+    { "name": "max_review_detections", "type": "int", "required": false, "default": 25, "description": "Cap on the worst detections carried in a low-confidence review item (worst-score first)." },
+    { "name": "min_image_pixels", "type": "int", "required": false, "default": 1, "description": "A zero-detection result only emits a verify_no_objects review item when width*height >= this." },
+    { "name": "capture", "type": "bool", "required": false, "default": false, "description": "When true and no input is given, compose capture.screen (Module 6) to produce the image, then detect on it." },
+    { "name": "capture_inputs", "type": "object", "required": false, "description": "Inputs object passed to capture.screen when capture=true (default: primary monitor)." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ input{path,exists,source,capture?}, image{width,height}, model{id,name,family,engine,provider,input_size,num_classes,path}, params{score_threshold,confidence_threshold,nms_threshold,max_detections,classes}, preprocess{max_dimension,downscaled,scale_x,scale_y,original,artifact_dir}, detection_count, class_summary{class:count}, detections[{index,class_id,class,score,low_confidence,box{x,y,width,height}}], confidence{overall,mean,min,low_confidence_count,reason}, review{threshold,flagged_count,truncated,queue_path}, detect{engine_env,provider,infer_ms,runtime_ms} }"
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4", "python>=3.10 (system, with onnxruntime + Pillow + numpy)", "capture.screen (Module 6, only when -Capture)", "image.util (Module 15, only when -MaxDimension)"],
+    "models": ["detect.yolox.nano (staged ONNX YOLOX-Nano, COCO-80; Apache-2.0)"],
+    "libraries": ["onnxruntime>=1.17", "Pillow>=10", "numpy"],
+    "cpu": "any", "gpu": "none", "memory_mb": 512,
+    "network": false, "filesystem": "read-write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 180, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

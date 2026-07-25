@@ -1,0 +1,185 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "detect.objects",
+  "skill_version": "0.1.0",
+  "contract_version": "0.1",
+  "invocation_id": "EXAMPLE-0000-0000-0000-000000000000",
+  "status": "ok",
+  "started_at_utc": "2026-07-25T00:00:00.0000000Z",
+  "finished_at_utc": "2026-07-25T00:00:00.6800000Z",
+  "duration_ms": 680,
+  "inputs_digest": "sha256:a80599fc60984e2c1e0ad0833c02073ddb3b9fb8a307202b4d9ba1482e0dc9f7",
+  "result": {
+    "input": {
+      "path": "C:\\path\\to\\dog.jpg",
+      "exists": true,
+      "source": "file",
+      "capture": null
+    },
+    "image": {
+      "width": 768,
+      "height": 576
+    },
+    "model": {
+      "id": "detect.yolox.nano",
+      "name": "YOLOX-Nano (COCO-80)",
+      "family": "yolox",
+      "engine": "onnxruntime",
+      "provider": "CPUExecutionProvider",
+      "input_size": [
+        416,
+        416
+      ],
+      "num_classes": 80,
+      "path": "F:\\...\\_pending-model-storage\\detector\\yolox-nano\\yolox_nano.onnx"
+    },
+    "params": {
+      "score_threshold": 0.25,
+      "confidence_threshold": 0.5,
+      "nms_threshold": 0.45,
+      "max_detections": 100,
+      "classes": []
+    },
+    "preprocess": {
+      "max_dimension": null,
+      "downscaled": false,
+      "scale_x": 1.0,
+      "scale_y": 1.0,
+      "original": null,
+      "artifact_dir": null
+    },
+    "detection_count": 5,
+    "class_summary": {
+      "dog": 1,
+      "car": 1,
+      "bicycle": 1,
+      "cat": 1,
+      "truck": 1
+    },
+    "detections": [
+      {
+        "index": 0,
+        "class_id": 16,
+        "class": "dog",
+        "score": 0.828525,
+        "low_confidence": false,
+        "box": {
+          "x": 133,
+          "y": 207,
+          "width": 192,
+          "height": 335
+        }
+      },
+      {
+        "index": 1,
+        "class_id": 2,
+        "class": "car",
+        "score": 0.809433,
+        "low_confidence": false,
+        "box": {
+          "x": 467,
+          "y": 78,
+          "width": 225,
+          "height": 94
+        }
+      },
+      {
+        "index": 2,
+        "class_id": 1,
+        "class": "bicycle",
+        "score": 0.807967,
+        "low_confidence": false,
+        "box": {
+          "x": 46,
+          "y": 132,
+          "width": 526,
+          "height": 299
+        }
+      },
+      {
+        "index": 3,
+        "class_id": 15,
+        "class": "cat",
+        "score": 0.379844,
+        "low_confidence": true,
+        "box": {
+          "x": 131,
+          "y": 213,
+          "width": 191,
+          "height": 328
+        }
+      },
+      {
+        "index": 4,
+        "class_id": 7,
+        "class": "truck",
+        "score": 0.271377,
+        "low_confidence": true,
+        "box": {
+          "x": 464,
+          "y": 77,
+          "width": 218,
+          "height": 96
+        }
+      }
+    ],
+    "confidence": {
+      "overall": 0.828525,
+      "mean": 0.619429,
+      "min": 0.271377,
+      "low_confidence_count": 2,
+      "reason": "confident"
+    },
+    "review": {
+      "threshold": 0.5,
+      "flagged_count": 0,
+      "truncated": false,
+      "queue_path": null
+    },
+    "detect": {
+      "engine_env": "C:\\Users\\just_\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+      "provider": "CPUExecutionProvider",
+      "infer_ms": 17,
+      "runtime_ms": 201
+    }
+  },
+  "confidence": 0.828525,
+  "artifacts": [
+    {
+      "path": "runtime/artifacts/EXAMPLE/detect.json",
+      "kind": "json",
+      "bytes": 2290,
+      "sha256": "fc8a588ba52af1aae32dd949c5048b56d904db25d01e5975d3d607475da2fe89"
+    },
+    {
+      "path": "runtime/artifacts/EXAMPLE/detect.md",
+      "kind": "markdown",
+      "bytes": 715,
+      "sha256": "0efd93b71949c3ded584b190b4b25726c12ce520c1f143b08b8ebff8f43b6e0c"
+    }
+  ],
+  "model_provenance": [
+    {
+      "model_id": "detect.yolox.nano",
+      "name": "YOLOX-Nano (COCO-80)",
+      "family": "yolox",
+      "engine": "onnxruntime",
+      "provider": "CPUExecutionProvider",
+      "engine_env": "python3",
+      "input_size": [
+        416,
+        416
+      ],
+      "num_classes": 80,
+      "detection_count": 5,
+      "infer_ms": 17,
+      "runtime_ms": 201
+    }
+  ],
+  "diagnostics": {
+    "log": "stderr.txt",
+    "artifact_dir": "runtime/artifacts/EXAMPLE"
+  },
+  "warnings": [],
+  "error": null
+}

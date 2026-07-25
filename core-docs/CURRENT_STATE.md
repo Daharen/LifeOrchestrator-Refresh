@@ -5,12 +5,12 @@ Owns **reality as it exists now** — not intended architecture. Keep it compact
 is planned (serves scripts and weaker local models) but not yet created.
 
 - **Project phase:** MVP module build-out.
-- **Active module:** _none in progress._ **Modules 0–15 complete** (0 executor · 1 `skill.bootstrap` · 2
+- **Active module:** _none in progress._ **Modules 0–16 complete** (0 executor · 1 `skill.bootstrap` · 2
   `fs.observer` · 3 `proc.observer` · 4 `uia.inspector` · 5 `uia.actor` · 6 `capture.screen` · 7 `model.gateway` ·
   8 `classify.batch` · 9 `review.processor` · 10 `audio.ingest` · 11 `speech.stt` · 12 `speech.tts` · 13 `voice.live` ·
-  14 `ocr.layout` · 15 `image.util`), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure). **The full
-  audio track (10–13) is complete; the image/document perception block (14–18) is under way — Modules 14 `ocr.layout` and
-  15 `image.util` are done.**
+  14 `ocr.layout` · 15 `image.util` · 16 `detect.objects`), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure). **The full
+  audio track (10–13) is complete; the image/document perception block (14–18) is under way — Modules 14 `ocr.layout`,
+  15 `image.util`, and 16 `detect.objects` are done.**
   **Module 8 — Batch Classification & Sorting (`classify.batch`) is MVP complete** — the **first real
   consumer of `model.gateway`**: for each item in a batch it calls the gateway (default `-Tier weak` = 1.5B) with a
   mode-specific prompt (`classify` one-label / `multilabel` / `extract` fields), parses the completion, computes a
@@ -143,6 +143,31 @@ is planned (serves scripts and weaker local models) but not yet created.
   Pillow 12.2, 48/48) as the pre-ship gate — the same real-engine-on-cloud gate as `audio.ingest`. Directly unblocks two
   `ocr.layout` follow-ons (documented, not built here): `MaxImageDimension` downscale-then-rescale-boxes, and a box-overlay
   PNG. See D-0024.
+- **Module 16 — Object Detection (`detect.objects`) is MVP complete this session** — the **third module of the image/document
+  perception block (14–18)** and the **first onnxruntime-backed** stochastic/mixed perception skill; **parallel-safe** (default
+  CPU provider, no port/VRAM/CUDA binding). One image in -> `detections[{index,class_id,class,score,low_confidence,
+  box{x,y,width,height}}]` with a **REAL per-detection confidence** (YOLOX objectness x class prob — not a heuristic), plus
+  overall/mean/min and a `class_summary`. Runs a staged **ONNX** detector (default `detect.yolox.nano`, COCO-80, Apache-2.0,
+  ~3.66 MB, staged to F:) via **onnxruntime** in a **Python worker** (`detect_worker.py`, letterbox-416 -> decode strides
+  {8,16,32} -> obj*cls -> class-aware NMS -> boxes in original pixels) under the **system python** + a **pwsh-7 wrapper**
+  (`Invoke-DetectObjects.ps1`) with a **meta-file hand-off** (the D-0021 pattern in its ONNX variant). **Registry-driven,
+  decoupled from the gateway `wired` gate** (D-0020/D-0023): resolves `detect.yolox.nano` (type `detector`) from `models.json`,
+  which stays `wired:false` for the gateway. **Confidence** = the best detection's real score (0.1 sentinel when empty);
+  **sixth review-queue producer** (`flagged_by:"detect.objects"`; below-threshold best score -> `verify_detections`; zero
+  objects on a non-empty image -> `verify_no_objects`). **Composes `capture.screen` (M6)** via `-Capture` and **`image.util`
+  (M15)** via `-MaxDimension` (downscale-then-rescale-boxes). `determinism:"mixed"`, `parallel_safe:true` (CPU default;
+  `-Provider cuda|dml` is not), `batch:false`. Artifacts `detect.json`/`detect.md`. **Probe-first** (`m16-probe-001`): no
+  detector was staged; picked a staged ONNX YOLOX via onnxruntime (system python has onnxruntime-gpu 1.17.1) over a torch/venv
+  model — staged the model to F: (sha256 byte-exact) and confirmed **live CPU inference** reproducing the cloud detections
+  exactly (dog/car/bicycle). **Tests 38/38 via the executor** (`m16-test-001`, exit 0) — live detection (boxes+scores+classes),
+  class filter, both review paths, the **image.util downscale** + live **capture.screen** compositions, five error paths, and
+  the Module 1 wrapper; real-registry smoke (default nano from F:); no orphaned processes; shipped-file sha256 verified
+  byte-exact (13 files). **Pre-shipped off-machine**: because onnxruntime CPU inference is deterministic + portable, the
+  harness ran the **real** worker on the cloud Linux box (onnxruntime 1.25, 34/34) as the pre-ship gate — the same
+  real-engine-on-cloud gate as `image.util`. `models.json` gained `defaults.detector`/`tiers.detector` +
+  `detect.yolox.nano`/`detect.yolox.tiny` (additive; **Module 7 re-verified 28/28**). **Side fix:** composing `image.util` on
+  a real JPEG surfaced + fixed a latent Module 15 bug (JPEG `dpi` `IFDRational` was not JSON-serializable and truncated the
+  worker meta; `image_worker.py` now coerces `dpi` to float) — **Module 15 re-verified 48/48**, no regression. See D-0025.
 - **Repo / working dir:** **`C:\Users\just_\LifeOrchestrator-Refresh\`** — the clean standalone home for
   **Life Orchestrator** (near-term local-skills track; git-initialized). Layout: `core-docs/` (these docs)
   and `modules/<NN>-<name>/` (one per module). **Reference sources (separate, not built here):** the earlier
@@ -250,6 +275,10 @@ is planned (serves scripts and weaker local models) but not yet created.
   **speech venv** (F:): PIL 12.2.0 + numpy 2.4.4. Verified live 2026-07-25 (`m15-probe-001`): round-trips png/jpg/webp/
   bmp/tiff, LANCZOS + all format features, EXIF api, and a numpy-DCT pHash **identical across both** PIL/numpy versions.
   `image.util` uses the **system python** (CPU-only, not tied to the CUDA/speech venv). No install needed.
+- **onnxruntime** — the detection runtime for `detect.objects` (Module 16). **System python**: **onnxruntime-gpu 1.17.1** +
+  onnxruntime-directml 1.17.1 (providers: Tensorrt/CUDA/CPU) + torch 2.2.1 + torchvision 0.17.1. `detect.objects` requests
+  **`CPUExecutionProvider`** by default (deterministic + parallel-safe). Verified live 2026-07-25 (`m16-probe-001`: CPU-provider
+  session load + YOLOX-Nano inference reproducing the cloud detections byte-for-byte). No install needed.
 - Not admin. No system-wide `pwsh` (only the user `~\.dotnet\tools` entry — resolves in new shells).
 
 ## Installed local models
@@ -260,6 +289,10 @@ is planned (serves scripts and weaker local models) but not yet created.
   in that folder's `MIGRATION.md`. **STT (Whisper base.en) is wired via `speech.stt` (M11); the TTS voices
   (Qwen3-TTS 0.6B/1.7B) are wired via `speech.tts` (M12)** (they run under the speech venv, not the gateway). Only the
   **embedding** model remains declared-but-unwired (its own Module 23).
+- **Object detectors added 2026-07-25 (Module 16).** `detect.yolox.nano` (3.66 MB, default) + `detect.yolox.tiny` (20.2 MB)
+  — COCO-80 YOLOX ONNX (Apache-2.0), downloaded + staged to `_pending-model-storage\detector\{yolox-nano,yolox-tiny}\`
+  (sha256 byte-exact). Type `detector`, engine `onnxruntime`, `wired:false` for the gateway; run under the **system python**
+  (CPU) via `detect.objects`. Both staged + verified (`m16-probe-001` nano live; `m16-test-001` tiny staged).
 
 ## Available hardware (measured 2026-07-24)
 - **CPU** Intel i9-9900KF (8c/16t @3.6GHz) · **RAM** 64 GB · **GPU** NVIDIA RTX 2080 Ti **11 GB VRAM** (CUDA,
@@ -385,9 +418,30 @@ is planned (serves scripts and weaker local models) but not yet created.
   `missing_params`/`unsupported_format`/`compare_not_found` + schema-valid error envelope; the Module 1 wrapper; `m15-test-001`, exit 0,
   no orphaned python). The harness is **real-worker & OS-portable** (no mock — Pillow is portable + version-stable): it generates its
   fixtures with Pillow at runtime and ran the *real* worker on the cloud Linux box (pwsh 7.4.6 + cloud python + Pillow 12.2, 48/48) as
-  the pre-ship gate before the identical harness ran live on the Windows executor (system python, PIL 10.2).
+  the pre-ship gate before the identical harness ran live on the Windows executor (system python, PIL 10.2). **Re-verified
+  48/48 in `m16-test-001`** after the JPEG-`dpi` JSON-safety fix (below) — no regression.
+- Module 16: `modules/16-detect-objects/tests/Invoke-DetectObjectsTests.ps1` — **38/38 pass** (manifest + mixed/parallel_safe=true/
+  batch flags; a **live** detection of `tests/fixtures/dog.jpg` — ≥3 detections incl. `dog`, every box integer + within image
+  bounds, every score in (0,1], envelope `confidence` = the max detection score, `model_provenance[0]` engine `onnxruntime`,
+  `detect.json`/`detect.md` artifacts with sha256; a COCO **class filter** (`dog` only); score-floor monotonicity; **both
+  review paths** — a forced 0.999 `confidence_threshold` → a valid `detect.objects` `verify_detections` item, a 0.999
+  `score_threshold` → 0 detections → `verify_no_objects`; the **image.util `-MaxDimension` downscale** composition (boxes back
+  in original 768×576 space, still finds a dog); five error paths `input_not_found`/`model_file_not_found`/`registry_not_found`/
+  `model_not_found`; the Module 1 wrapper; **and the live `capture.screen` composition** (`-Capture` → source=capture);
+  `m16-test-001`, exit 0; no orphaned processes; 13 shipped files sha256-verified byte-exact). The harness is **real-worker &
+  OS-portable** (no mock — onnxruntime CPU inference is deterministic): the same harness ran the *real* worker on the cloud
+  Linux box (onnxruntime 1.25, model via `-ModelPath`, 34/34 — capture skipped off-Windows) as the pre-ship gate before it
+  ran live on the Windows executor (system python onnxruntime 1.17.1, model from the registry on F:, 38/38). Real-registry
+  smoke: default `detect.yolox.nano` on `dog.jpg` → dog 0.83 / car 0.81 / bicycle 0.81.
 
 ## Known failures / gotchas
+- **image.util truncated its worker meta on a real JPEG `dpi` (2026-07-25, Module 15, fixed).** Pillow returns a JPEG's
+  `dpi` as `(IFDRational, IFDRational)`, which `json.dump` cannot serialize — it raised **mid-write**, leaving a truncated
+  `image_meta.json`, so `image.util` failed with `ConvertFrom-Json ... Unexpected end ... Path 'metadata.dpi'`. Surfaced the
+  first time a consumer (`detect.objects` `-MaxDimension`) composed `image.util` on a real photo (the module's own fixtures
+  were dpi-less generated PNGs). **Fix:** `image_worker.py` coerces `dpi` to plain floats (`safe_dpi`). **Rule:** any value
+  written into a worker meta must be JSON-serializable; exotic Pillow/numpy types (IFDRational, numpy scalars) need explicit
+  coercion or a `json.dump(default=...)`. Module 15 re-verified 48/48.
 - **Windows PowerShell 5.1 reads a BOM-less `.ps1` as ANSI, not UTF-8 (2026-07-25, Module 14).** Any non-ASCII byte in a
   script run under `powershell.exe` (5.1) corrupts parsing: a UTF-8 em dash in `ocr_worker.ps1` made 5.1 fail with
   "Unexpected token" / "The hash literal was incomplete" and exit 1 with **no output** (`m14-diag-002`). Because the
@@ -467,16 +521,20 @@ is planned (serves scripts and weaker local models) but not yet created.
   27B load (~90s) approaches the gateway's 120s default, so callers pass a longer `-LoadTimeoutSec` for the strong tier.
 
 ## Next expected action
-1. **Modules 14 `ocr.layout` + 15 `image.util` are complete; the perception block (14–18) continues.** The next step is
-   **#16 `detect.objects`** (class boxes + confidence — **probe for a detection model first**, none is staged yet; onnxruntime
-   is present in both pythons), then **#17 `image.interpret`** (a local **VLM** — probe for a vision model first, none is staged
-   yet), **#18 `image.index`** (integrate 14–17). Expand and give a work order to whichever is picked. **`image.util` follow-ons
-   (NOT this session):** the two `ocr.layout` compositions it unblocks — `MaxImageDimension` **downscale-then-rescale-boxes**
-   (`op=resize,max_dimension=10000` then rescale word boxes by `1/scale`) and a **box-overlay PNG** (needs a draw op); a
-   **draw/annotate/overlay** op; **batch/directory/glob**; rotate/flip/EXIF auto-orient; denoise/sharpen; multi-frame (GIF)
-   handling. See D-0024. **`ocr.layout` follow-ons (NOT this session):** wire **Tesseract** (`ocr.tesseract`, installed) or a
-   VLM as a second `-Engine` for calibrated per-word confidence + multi-language; the box-overlay + downscale compositions now
-   unblocked by `image.util`; multi-column reading-order reflow; **batch/directory/PDF-page** OCR. See D-0023.
+1. **Modules 14 `ocr.layout`, 15 `image.util`, 16 `detect.objects` are complete; the perception block (14–18) continues.**
+   The next step is **#17 `image.interpret`** (a local **VLM** — captions / VQA / screen interpretation; **probe for a vision
+   model first**, none is staged yet; the system python has onnxruntime + torch/torchvision, but a VLM likely needs a llama.cpp
+   multimodal build / a transformers model in the speech venv — probe before deciding), then **#18 `image.index`** (integrate
+   14–17 → markdown + machine index). Expand and give a work order to whichever is picked. **`detect.objects` follow-ons (NOT
+   this session):** an **overlay/annotated image** (draw boxes+labels — needs an `image.util` draw op, which is also its own
+   follow-on); **batch/directory**; a larger tier (`-Tier tiny` is staged) / RT-DETR / a VLM open-vocab detector (#17);
+   **GPU-by-default** or a warm detector worker; **calibrated** confidence; object **tracking** across frames (#20). See D-0025.
+   **`image.util` follow-ons (NOT this session):** the **box-overlay/draw** op (pairs with detect.objects overlay + the
+   ocr.layout box overlay); **batch/directory/glob**; rotate/flip/EXIF auto-orient; denoise/sharpen; multi-frame (GIF); an
+   operation pipeline. See D-0024. **`ocr.layout` follow-ons (NOT this session):** wire **Tesseract** (`ocr.tesseract`,
+   installed) or a VLM as a second `-Engine` for calibrated per-word confidence + multi-language; the box-overlay + `MaxImage-
+   Dimension` downscale compositions now unblocked by `image.util` (the downscale-then-rescale-boxes pattern is proven by
+   `detect.objects`); multi-column reading-order reflow; **batch/directory/PDF-page** OCR. See D-0023.
 2. **Audio-track follow-ons (NOT this session):** a mic `audio.capture` skill + a streaming/interactive loop; standalone
    VAD (stage a VAD ggml model); multi-turn dialogue + memory; a **warm-worker pool** so a voice turn avoids three cold
    model loads (the shared pressure point with #7/#8/#12/#14 per-call worker spawns). See D-0022.
@@ -490,4 +548,4 @@ is planned (serves scripts and weaker local models) but not yet created.
    intra-batch prompt for throughput; calibrated confidence; a side-effecting `sort.files` mover) — see D-0017; audio.ingest follow-ons (batch/directory ingest; trimming/
    segmentation → Module 13; denoise/high-pass — see D-0019).
 
-- **Last updated:** 2026-07-25 (UTC) · **Last updating agent:** Claude (Cowork — Module 15 image.util build session; second perception-block module; first deterministic perception skill; Pillow+numpy worker under the system python; 48/48 live; not a review producer; no models.json change).
+- **Last updated:** 2026-07-25 (UTC) · **Last updating agent:** Claude (Cowork — Module 16 detect.objects build session; third perception-block module; first onnxruntime-backed perception skill; staged YOLOX-Nano/Tiny ONNX to F:; parallel-safe CPU; sixth review producer; composes capture.screen + image.util; 38/38 live, cloud gate 34/34; also fixed a latent image.util JPEG-dpi JSON bug — Module 15 re-verified 48/48, Module 7 re-verified 28/28; models.json additive detector entries).

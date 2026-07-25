@@ -161,6 +161,25 @@ verbs by construction. Verified end-to-end by the Module 14 tests (a forced 0.99
 item; a blank image produced a `verify_no_text` item; `m14-test-003`). **Producers are now 7/8/11/12/14 → local drainer 9
 → frontier for the residue.** See D-0023.
 
+## Sixth producer wired (Module 16)
+`detect.objects` is the **sixth skill that appends** to `review_queue.jsonl` (after `model.gateway`, `classify.batch`,
+`speech.stt`, `speech.tts`, `ocr.layout`), and the second from the perception track. It detects objects in one image via a
+staged ONNX YOLOX detector (onnxruntime) and flags **weak or empty** results. Unlike `ocr.layout`, its confidence is a
+**real** signal — each detection carries the model's own `score` (objectness × class probability), and the page-level
+`confidence.overall` is the **best** detection's score. When `overall` falls below `-ConfidenceThreshold` (default 0.5), it
+appends **one page-level** `lifeorch.review.item/0.1` with `flagged_by:"detect.objects"`, `reason:"low_confidence"`,
+`source_ref:"artifact://<invDir>/detect.json"`, `weak_result = {model, image, detection_count, reason, low_confidence_count,
+detections:[…worst by score, bounded by -MaxReviewDetections]}`, `requested:"verify_detections"`. A **non-empty image with
+zero detections** above `-ScoreThreshold` instead appends one `reason:"uncategorized"`, `requested:"verify_no_objects"` item
+(a silent-detection-failure guard). It is **page-level, not per-box** — one item per image so a busy scene cannot flood the
+queue. A text reviewer (Module 9) can sanity-check the class list / counts against the requested verb even without the pixels;
+genuinely vision-bound cases escalate to the frontier. Its optional children (`image.util` for `-MaxDimension` downscale,
+`capture.screen` for `-Capture`) are deterministic / non-producers, so there is no gateway-style suppression to do. Module 9
+selects by `flagged_by` and handles the new `verify_detections`/`verify_no_objects` verbs by construction. Verified
+end-to-end by the Module 16 tests (a forced 0.999 threshold produced a valid `detect.objects` item; a 0.999 score floor
+produced a `verify_no_objects` item; `m16-test-001`, 38/38). **Producers are now 7/8/11/12/14/16 → local drainer 9 →
+frontier for the residue.** See D-0025.
+
 ## Design flags to revisit (not yet actioned — for a future session/frontier pass)
 - **speech.stt confidence is mean token probability — honest but not calibrated.** A real acoustic signal (richer than
   the gateway's completeness heuristic) but not a probability the transcript is *correct*; replace with a calibrated /

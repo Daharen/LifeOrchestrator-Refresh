@@ -179,7 +179,7 @@ Needs refactor · Deprecated · Replaced.
   (23/23). Work order: `modules/13-voice-live/WORK_ORDER.md`. See D-0022. Follow-on: mic `audio.capture` + streaming
   loop; standalone VAD (stage a model); multi-turn + memory; a warm-worker pool so a turn avoids three cold model loads.
 
-## Modules 14–18 — Image & document perception (14–15 MVP complete; 16–18 provisional)
+## Modules 14–18 — Image & document perception (14–16 MVP complete; 17–18 provisional)
 - **14 `ocr.layout`** — OCR + bounding boxes + reading order. ***MVP complete (2026-07-25)*** — the **first perception
   module** and the first **parallel-safe** stochastic/mixed perception skill. Recognizes the text in one image and returns
   it with **per-word pixel bounding boxes** and **lines in reading order** (+ text angle, image dims). Drives the system
@@ -213,9 +213,27 @@ Needs refactor · Deprecated · Replaced.
   **pre-shipped off-machine** on the cloud box (real worker, Pillow 12.2, 48/48 — the real-engine-on-cloud gate, like
   `audio.ingest`). Work order: `modules/15-image-util/WORK_ORDER.md`. See D-0024. Follow-on: the `ocr.layout` downscale-
   then-rescale-boxes + box-overlay compositions (now unblocked); a draw/annotate op; batch/directory; rotate/flip/auto-orient.
-- **16 `detect.objects`** class boxes + confidence · **17 `image.interpret`** local multimodal captions/VQA/screen
-  interpretation · **18 `image.index`** integrate 14–17 → markdown + machine index. *(16 is the natural next step —
-  probe for a local detection model first; none is staged yet.)*
+- **16 `detect.objects`** — object detection → class boxes + confidence. ***MVP complete (2026-07-25)*** — the **third
+  perception module** and the **first onnxruntime-backed** stochastic/mixed perception skill; **parallel-safe** (default CPU
+  provider). Detects objects in one image → `detections[{class,class_id,score,low_confidence,box{x,y,width,height}}]` with a
+  **real per-detection confidence** (YOLOX objectness × class prob). Runs a staged **ONNX** detector (default
+  `detect.yolox.nano`, COCO-80, Apache-2.0, staged on F:) via **onnxruntime** in a Python worker (`detect_worker.py`) under
+  the system python + a pwsh-7 wrapper (`Invoke-DetectObjects.ps1`) with a meta-file hand-off. Registry-driven
+  (`type=detector`, `wired:false` for the gateway — decoupled per D-0020/D-0023). **Confidence** = the best detection's real
+  score; **sixth review-queue producer** (`verify_detections` low-confidence / `verify_no_objects` guard,
+  `flagged_by:"detect.objects"`). **Composes `capture.screen` (#6)** via `-Capture` and **`image.util` (#15)** via
+  `-MaxDimension` (downscale-then-rescale-boxes). `determinism:"mixed"`, `parallel_safe:true` (CPU; `-Provider cuda|dml` is
+  not), `batch:false`. Artifacts `detect.json`/`detect.md`. **Probe-first** (`m16-probe-001`: staged the model to F: +
+  confirmed live CPU inference, detections identical to the cloud box). **Tests 38/38 via the executor** (`m16-test-001`,
+  exit 0) — live detection (boxes/scores/classes), class filter, both review paths, the image.util downscale + capture
+  compositions, five error paths, the Module 1 wrapper; **pre-shipped off-machine** on the cloud box (real worker,
+  onnxruntime 1.25, 34/34 — the real-engine-on-cloud gate, like `image.util`). `models.json` gained `defaults.detector`/
+  `tiers.detector` + `detect.yolox.nano`/`detect.yolox.tiny` (additive; Module 7 re-verified 28/28). **Side fix:** surfaced +
+  fixed a latent `image.util` JPEG-`dpi` JSON bug (Module 15 re-verified 48/48). Work order:
+  `modules/16-detect-objects/WORK_ORDER.md`. See D-0025. Follow-on: overlay/annotated image (needs an image.util draw op);
+  batch/directory; larger tiers / RT-DETR; GPU/warm worker; calibrated confidence; tracking (#20).
+- **17 `image.interpret`** local multimodal captions/VQA/screen interpretation · **18 `image.index`** integrate 14–17 →
+  markdown + machine index. *(17 is the natural next step — a local **VLM**; probe for a vision model first, none is staged yet.)*
 
 ## Modules 19–22 — Video (provisional)
 - **19 `media.decompose`** audio/subs/scenes/keyframes/clips/meta/proxies · **20 `track.objects`** identity

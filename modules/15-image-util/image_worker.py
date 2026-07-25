@@ -62,6 +62,21 @@ def _safe_exif(v):
         return None
 
 
+def safe_dpi(dpi):
+    # Pillow returns JPEG dpi as (IFDRational, IFDRational), which json cannot serialize -- coerce to
+    # plain floats. (Surfaced by detect.objects/Module 16 composing image.util on a real JPEG: an
+    # IFDRational raised mid-json.dump and truncated the meta file. Fix keeps dpi numeric + JSON-safe.)
+    if not dpi:
+        return None
+    try:
+        return [float(x) for x in dpi]
+    except Exception:
+        try:
+            return [float(dpi)]
+        except Exception:
+            return None
+
+
 def exif_lite(im):
     out = {}
     try:
@@ -380,7 +395,7 @@ def main():
         input_block = {"path": os.path.abspath(input_path), "exists": True, "bytes": len(raw),
                        "sha256": sha, "format": fmt, "mode": mode, "width": ow, "height": oh, "has_alpha": alpha}
         metadata = {"format": fmt, "mode": mode, "width": ow, "height": oh, "has_alpha": alpha,
-                    "dpi": (list(dpi) if dpi else None), "n_frames": nframes, "exif": exif}
+                    "dpi": safe_dpi(dpi), "n_frames": nframes, "exif": exif}
 
         hs = int(args.get("hash_size", 8) or 8)
         hashes = {"sha256": sha, "phash": None, "dhash": None, "hash_bits": hs * hs}

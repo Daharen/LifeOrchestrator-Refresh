@@ -8,8 +8,12 @@
     "llama-server": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\_pending-model-storage\\_engines\\llama.cpp\\bin\\llama-server.exe",
     "_comment": "Staged, verified to run standalone (health + chat) 2026-07-24. Depends on a system CUDA runtime (not on the source folder). If torn down, restage from F:\\Qwen3.5-27B\\llama.cpp\\build\\bin."
   },
-  "defaults": { "llm": "llm.weak.qwen2p5-1p5b", "stt": "stt.whisper.base-en", "tts": "tts.weak.qwen3-0p6b", "ocr": "ocr.windows.media" },
+  "defaults": { "llm": "llm.weak.qwen2p5-1p5b", "stt": "stt.whisper.base-en", "tts": "tts.weak.qwen3-0p6b", "ocr": "ocr.windows.media", "detector": "detect.yolox.nano" },
   "tiers": {
+    "detector": {
+      "nano": "detect.yolox.nano",
+      "tiny": "detect.yolox.tiny"
+    },
     "llm": {
       "tiny": "llm.weak.qwen2p5-0p5b",
       "weak": "llm.weak.qwen2p5-1p5b",
@@ -144,6 +148,32 @@
       "engine": "tesseract",
       "params": {},
       "notes": "DECLARED only. Installed (found by m14-probe-001). A future ocr.layout engine: calibrated per-word confidence + hOCR/TSV boxes + multi-language. Not wired in the Module 14 MVP (only windows.media.ocr)."
+    },
+    {
+      "model_id": "detect.yolox.nano",
+      "type": "detector", "wired": false,
+      "name": "YOLOX-Nano (COCO-80)", "family": "yolox", "format": "onnx",
+      "version": "yolox-nano-0.1.1rc0",
+      "path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\_pending-model-storage\\detector\\yolox-nano\\yolox_nano.onnx",
+      "engine": "onnxruntime",
+      "engine_env": "C:\\Users\\just_\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+      "license": "Apache-2.0",
+      "classes": "coco80",
+      "params": { "input_size": [416, 416], "num_classes": 80, "params_b": 0.0009, "size_bytes": 3659407, "score_threshold_default": 0.25, "nms_threshold_default": 0.45 },
+      "notes": "Consumed by detect.objects (Module 16), which runs the ONNX model via onnxruntime in a Python worker (detect_worker.py) under this engine_env (the system python; onnxruntime-gpu 1.17.1) and reads its meta file. Default CPU execution provider -> no GPU/port binding, so detect.objects is parallel_safe. wired:false for model.gateway on purpose (the gateway runs type=llm only). Staged to F: + verified live 2026-07-25 (m16-probe-001: CPU provider load + dog/car/bicycle on the committed fixture, identical to the cloud box). YOLOX letterbox-416 preproc, strides {8,16,32}, obj*cls score, class-aware NMS; real per-detection confidence. Apache-2.0 (Megvii YOLOX)."
+    },
+    {
+      "model_id": "detect.yolox.tiny",
+      "type": "detector", "wired": false,
+      "name": "YOLOX-Tiny (COCO-80)", "family": "yolox", "format": "onnx",
+      "version": "yolox-tiny-0.1.1rc0",
+      "path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\_pending-model-storage\\detector\\yolox-tiny\\yolox_tiny.onnx",
+      "engine": "onnxruntime",
+      "engine_env": "C:\\Users\\just_\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+      "license": "Apache-2.0",
+      "classes": "coco80",
+      "params": { "input_size": [416, 416], "num_classes": 80, "size_bytes": 20219662 },
+      "notes": "Second detector tier (-Tier tiny). Same YOLOX topology/decode as nano but more accurate (~5M params). Apache-2.0 (Megvii YOLOX). A drop-in for detect.objects with no code change; if the F: file is absent, detect.objects returns a clean model_file_not_found."
     }
   ]
 }

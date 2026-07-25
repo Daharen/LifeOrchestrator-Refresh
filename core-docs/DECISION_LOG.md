@@ -626,3 +626,54 @@ alternatives · consequences · affects · state (provisional | locked) · revis
   `REVIEW_QUEUE.md`, or Module 7). · **revisit-if:** a draw/overlay op, batch/directory processing, an operation pipeline,
   rotate/flip/auto-orient, or a warm worker is built (each its own scoped follow-on); or `detect.objects` (#16) / a VLM (#17)
   needs a shared image-preprocessing path.
+
+### D-0025 — detect.objects wraps a staged ONNX YOLOX via onnxruntime (system python, CPU); mixed; real per-detection confidence; sixth review producer; composes capture.screen + image.util
+- **date:** 2026-07-25 · **state:** locked (backend + model family + Python worker + CPU/parallel-safe + registry-driven + review producer), provisional (model family / tiers may grow)
+- **decision:** Module 16 `detect.objects` — the **third** module of the image/document perception block (14–18) — detects
+  objects in **one** image and returns each as `{class, class_id, score, box{x,y,width,height}}` with a **real per-detection
+  confidence** (not a heuristic) plus overall/mean/min and a per-detection `low_confidence` flag. Settled after a
+  **probe-first** pass (`detect-001` package survey + `m16-probe-001` live): (1) **Backend = a staged ONNX detector run via
+  `onnxruntime` in a Python worker (`detect_worker.py`) under the system python** (onnxruntime-gpu **1.17.1** + PIL + numpy;
+  all already present — no install). Chosen over a torch/torchvision model in the speech venv (heavier, CUDA-bound, ties a
+  CPU detector to the GPU stack) and over wrapping a binary (none suitable). (2) **Model = YOLOX-Nano ONNX** (`detect.yolox.nano`,
+  416×416, COCO-80, **Apache-2.0**, ~3.66 MB), downloaded on the cloud box and **staged to F:**
+  (`_pending-model-storage\detector\yolox-nano\`), sha256-verified byte-exact; `detect.yolox.tiny` staged as a more-accurate
+  drop-in tier. Preproc = letterbox-416 (pad 114, BGR, raw 0–255, CHW); decode = grids/strides {8,16,32}
+  (`xy=(raw+grid)·stride`, `wh=exp(raw)·stride`); `score = objectness × class`; class-aware NMS; boxes mapped to original
+  pixels. (3) **Two-part skill** like `image.util` (D-0024) — worker does inference+decode, writes a JSON **meta file**; the
+  pwsh-7 wrapper (`Invoke-DetectObjects.ps1`) resolves the detector from **`models.json` (`type=detector`), decoupled from the
+  gateway `wired` gate** (mirrors `ocr.layout` D-0023 / D-0020), resolves the interpreter, spawns the worker, reads the meta,
+  and builds the contract envelope. (4) **CPU execution provider by default** → binds no port/VRAM/CUDA → **`parallel_safe:true`**
+  (a `-Provider cuda|dml` opt-in is available and is *not* parallel-safe). (5) **`determinism:"mixed"`**: the envelope
+  `confidence` is the **best detection's real score** (0.1 sentinel when nothing is found); `model_provenance` carries
+  model/engine/provider/timings/detection_count. (6) **Sixth review-queue producer**: a below-`-ConfidenceThreshold` (0.5)
+  best score → one page-level `verify_detections` (`low_confidence`) item; **zero** detections on a non-empty image →
+  `verify_no_objects` (`uncategorized`). (7) **Composes** `capture.screen` (#6) via `-Capture` ("detect on screen") and
+  `image.util` (#15) via `-MaxDimension` (downscale a huge input, then rescale boxes back to original pixels).
+  `batch:false`, `streaming:false`.
+- **reason:** Object boxes+labels are the perception primitive the block was missing (#14 text, #15 pixels, #16 objects);
+  ONNX+onnxruntime is the lightest real-model path already installed, gives **genuine** per-detection confidence (unlike the
+  OCR legibility heuristic), and CPU inference is deterministic + portable — so the **real** worker runs on the cloud pre-ship
+  gate (identical detections on cloud onnxruntime 1.25 and Windows onnxruntime 1.17.1, `m16-probe-001`), the strongest gate,
+  like `image.util`/`audio.ingest`. YOLOX is a clean **Apache-2.0** citizen with directly-downloadable ONNX and a
+  well-documented decode. Registry-driven resolution keeps the detector swappable (tiny/-S/RT-DETR) with no code change;
+  decoupling from the gateway `wired` gate keeps the gateway type=llm-only (Module 7 unaffected).
+- **alternatives:** torchvision detection model in the speech venv (rejected as default — CUDA-bound, weight-cache download,
+  ties a CPU tool to the GPU stack); a torch/ONNX model on the GPU by default (rejected — not parallel-safe; onnxruntime-gpu
+  1.17.1 cuDNN deps uncertain — CPU is the safe, portable default); YOLOv8/v5 (works but **AGPL** — YOLOX Apache-2.0 preferred);
+  reimplementing resize in the worker instead of composing `image.util` (rejected — composing #15 reuses the tested
+  downscale+scale-factor path, which surfaced and fixed a real image.util bug); a mock worker for the cloud gate (rejected —
+  onnxruntime runs for real on Linux, so the real worker is the better gate); per-detection review items (rejected — a coarse
+  page-level flag like `ocr.layout`, so a busy image cannot flood the queue); overlay/annotated output (deferred — needs the
+  `image.util` draw op, D-0024); batch/segmentation/tracking/VLM open-vocab (deferred — later modules).
+- **consequences:** the perception block can now name+locate objects; the review queue has a **sixth** producer (7/8/11/12/14/16).
+  `models.json` gained `defaults.detector`/`tiers.detector` + `detect.yolox.nano`/`detect.yolox.tiny` (type `detector`, engine
+  `onnxruntime`, `wired:false` for the gateway) — **additive; Module 7 re-verified 28/28**. The **system python is now also an
+  onnxruntime detection runtime**. **Side fix:** composing `image.util` on a real JPEG surfaced a latent Module 15 bug — a
+  JPEG `dpi` of `IFDRational` is not JSON-serializable, so `json.dump` raised mid-write and truncated the worker meta;
+  `image_worker.py` now coerces `dpi` to float (`safe_dpi`). **Module 15 re-verified 48/48** (no regression); the fix also
+  hardens #15 for #17/#18. Live: `m16-test-001` — detect.objects **38/38** (incl. the capture composition), image.util 48/48,
+  model.gateway 28/28, real-registry smoke, 0 orphans. · **affects:** Module 16 (new), Module 15 (`image_worker.py` dpi fix),
+  `models.json`, `TOOL_MODEL_REGISTRY.md`, `REVIEW_QUEUE.md`, `CURRENT_STATE.md`, `MODULE_ROADMAP.md`. · **revisit-if:** an
+  overlay/annotated image (image.util draw op), batch/directory, a larger tier / RT-DETR / a VLM open-vocab detector (#17),
+  GPU-by-default or a warm detector worker, calibrated confidence, or object tracking (#20) is built.

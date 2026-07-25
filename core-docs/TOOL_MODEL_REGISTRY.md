@@ -453,7 +453,40 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   auto-orient, denoise/filters (follow-ons); multi-frame handled on frame 0 only; **not a `model.gateway` model — no
   `models.json` entry** (a tool, like ffmpeg). `parallel_safe:true` (CPU-bound; no port/VRAM/CUDA binding). · **last test:**
   2026-07-25 via executor (**tests 48/48**; `m15-test-001`, exit 0; pre-shipped on the cloud box, real worker, Pillow 12.2,
-  48/48). · **skills:** `image.util`. See D-0024.
+  48/48). · **skills:** `image.util`. See D-0024. **Fix 2026-07-25 (Module 16):** `image_worker.py` now coerces JPEG `dpi`
+  (`IFDRational`) to float before JSON — a real JPEG previously truncated the worker meta; re-verified 48/48.
+
+### `detect.objects` — Object Detection (Module 16)
+- **status:** installed · **type:** skill (pwsh-7 wrapper + onnxruntime Python worker `detect_worker.py` under the system python) ·
+  **location:** `LifeOrchestrator-Refresh/modules/16-detect-objects/`
+- **invocation:** direct `pwsh -NoProfile -File .\Invoke-DetectObjects.ps1 -InputFile <image> [-Model <id>|-Tier <nano|tiny>]
+  [-ScoreThreshold <0..1>] [-ConfidenceThreshold <0..1>] [-NmsThreshold <0..1>] [-MaxDetections <n>] [-Classes <name,...>]
+  [-Provider <cpu|cuda|dml>] [-MaxDimension <n>] [-MaxReviewDetections <n>] [-MinImagePixels <n>] [-Capture]
+  [-CaptureInputsJson '<json>'] [-Registry|-ModelPath|-DetectWorkerPath|-PythonPath|-ImageUtilPath|-CapturePath|-PwshPath|
+  -ReviewQueuePath <override>]` (or `-InputsJson '<json {input,model,tier,score_threshold,confidence_threshold,nms_threshold,
+  max_detections,classes,provider,max_dimension,max_review_detections,min_image_pixels,capture,capture_inputs,registry,
+  model_path,detect_worker_path,python_path,image_util_path,capture_path,pwsh_path,review_queue_path}>'`); wrapped via
+  `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
+- **supported tasks:** detect objects in one image → labeled boxes with **real per-detection confidence**. Resolves an ONNX
+  detector from `models.json` (`type=detector`, decoupled from the gateway `wired` gate). Compose `capture.screen` (`-Capture`)
+  to detect on the live screen, or `image.util` (`-MaxDimension`) to downscale a huge input and rescale boxes back.
+- **I/O:** in = an image path (or `-Capture`) + options; out = `lifeorch.skill.result/0.1` envelope (result = `{input{path,
+  exists,source,capture?}, image{width,height}, model{id,name,family,engine,provider,input_size,num_classes,path},
+  params{score_threshold,confidence_threshold,nms_threshold,max_detections,classes}, preprocess{max_dimension,downscaled,
+  scale_x,scale_y,original,artifact_dir}, detection_count, class_summary{class:count}, detections[{index,class_id,class,score,
+  low_confidence,box{x,y,width,height}}], confidence{overall,mean,min,low_confidence_count,reason}, review{...},
+  detect{engine_env,provider,infer_ms,runtime_ms}}`) + `runtime/artifacts/<id>/{detect.json,detect.md,detect_args.json,
+  detect_meta.json,worker.log,result.json,stderr.txt, capture/…, image_util/…}`.
+- **determinism:** **mixed** (deterministic orchestration/decode; model output) · **confidence:** the **best detection's real
+  score** (objectness × class prob; 0.1 sentinel when empty); `< -ConfidenceThreshold` 0.5 → `review_queue.jsonl`
+  (`flagged_by:"detect.objects"`, `verify_detections`); zero objects on a non-empty image → `verify_no_objects` · **speed:**
+  ~0.06–0.2 s inference on CPU for YOLOX-Nano (per-call python spawn adds ~0.5 s) · **CPU/GPU/mem:** CPU / none (default) / ~512 MB.
+- **limitations:** **`parallel_safe:true`** with the default CPU provider (binds no port/VRAM/CUDA; only shared write is the
+  append-only review queue) — **`-Provider cuda|dml` is NOT parallel-safe**; one image per invocation (`batch:false`);
+  COCO-80 classes (YOLOX); no overlay/annotated output (needs an `image.util` draw op — follow-on); no segmentation/oriented
+  boxes/tracking (later modules). · **last test:** 2026-07-25 via executor (**tests 38/38**; `m16-test-001`, exit 0; probe
+  `m16-probe-001` staged the model + confirmed live CPU inference; pre-shipped on the cloud box, real worker, onnxruntime 1.25,
+  34/34). · **skills:** `detect.objects`. See D-0025.
 
 ### `Windows.Media.Ocr` — system OCR engine (used by ocr.layout)
 - **status:** installed (system) · **type:** WinRT API (`Windows.Media.Ocr.OcrEngine`) · **location:** OS component;
@@ -502,6 +535,11 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
 - **System Python** 3.12.10 (`…\AppData\Local\Programs\Python\Python312`) with torch 2.2.1 + onnxruntime 1.17.1 +
   **Pillow 10.2.0 + numpy 1.26.4 + cv2 4.9.0**. **Wired by `image.util` (Module 15)** — its Pillow+numpy worker runs
   under this interpreter (CPU-only, so `parallel_safe`; not the CUDA/speech venv). Verified 2026-07-25 (`m15-probe-001`).
+- **onnxruntime (system python)** — **onnxruntime-gpu 1.17.1** + onnxruntime-directml 1.17.1 (providers available:
+  Tensorrt/CUDA/CPU). **Wired by `detect.objects` (Module 16)** as the detector runtime; the worker requests
+  **`CPUExecutionProvider`** by default (deterministic + parallel-safe — no GPU binding). Verified live 2026-07-25
+  (`m16-probe-001`: CPU-provider session load + YOLOX-Nano inference reproducing the cloud detections byte-for-byte).
+  torch 2.2.1 + torchvision 0.17.1 are also present (unused by this MVP).
 - Ollama / LM Studio: **not installed.** git / winget / .NET SDK 9 / node: present (see above).
 
 ## Installed local models (inventory — DO NOT re-download; portable copies staged on F:)
@@ -519,9 +557,12 @@ All staged under `F:\My_Programs\LifeOrchestrator-Refresh_Large_Data\_pending-mo
 | `tts.weak.qwen3-0p6b` | tts | `tts\Qwen3-TTS-12Hz-0.6B-CustomVoice\` | 2.38 GB | transformers | **via `speech.tts`** (M12, default) |
 | `tts.strong.qwen3-1p7b` | tts | `tts\Qwen3-TTS-12Hz-1.7B-CustomVoice\` | 4.31 GB | transformers | **via `speech.tts`** (M12) |
 | `embedding.qwen3-0p6b` | embedding | `embedding\Qwen3-Embedding-0.6B\` | 1.12 GB | transformers | no → M23 |
+| `detect.yolox.nano` | detector | `detector\yolox-nano\yolox_nano.onnx` | 3.66 MB | onnxruntime | **via `detect.objects`** (M16, default) |
+| `detect.yolox.tiny` | detector | `detector\yolox-tiny\yolox_tiny.onnx` | 20.2 MB | onnxruntime | **via `detect.objects`** (M16, `-Tier tiny`) |
 
-Tiers (`models.json`): `tiny`=0.5B, `weak`=1.5B (default), `mid`=3B, `strong`=27B. Source originals (may be
-removed by the user) are listed in `_pending-model-storage\MIGRATION.md`.
+Tiers (`models.json`): LLM `tiny`=0.5B, `weak`=1.5B (default), `mid`=3B, `strong`=27B; detector `nano` (default) / `tiny`.
+Detectors are COCO-80 YOLOX ONNX (Apache-2.0), run under the system python's onnxruntime (CPU by default), decoupled from the
+gateway `wired` gate. Source originals (may be removed by the user) are listed in `_pending-model-storage\MIGRATION.md`.
 
 ## Large-data storage (F:)
 - **Root:** `F:\My_Programs\LifeOrchestrator-Refresh_Large_Data\` — home for all module data >~50 MB (D-0015).
@@ -532,7 +573,8 @@ removed by the user) are listed in `_pending-model-storage\MIGRATION.md`.
   (delete it when empty). See `_pending-model-storage\MIGRATION.md`.
 
 ### Planned / not yet present (do not assume these exist)
-- **Vision / multimodal** models — none yet (Modules 16–17). C++ toolchain for native modules — verify
+- **Object detectors** — present (Module 16): `detect.yolox.nano`/`detect.yolox.tiny` (COCO-80 ONNX) staged on F:.
+- **Vision / multimodal (VLM)** models — none yet (Module 17 `image.interpret`). C++ toolchain for native modules — verify
   (CMake/MSVC) before the first C++ module; register when confirmed.
 
 **Discipline:** never list a tool as `installed` you have not actually invoked on this machine. Prefer
