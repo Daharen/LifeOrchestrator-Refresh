@@ -1,0 +1,60 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "image.index",
+  "skill_version": "0.1.0",
+  "contract_version": "0.1",
+  "invocation_id": "8f3c1d2e-0000-4a11-b222-abc123def456",
+  "status": "ok",
+  "started_at_utc": "2026-07-25T07:22:07.6233690Z",
+  "finished_at_utc": "2026-07-25T07:22:41.5197836Z",
+  "duration_ms": 33896,
+  "inputs_digest": "sha256:da570550a043d5ba30209aca5f6afe1161d36704c9955fd191a1d45786fdaf62",
+  "result": {
+    "input": { "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\18-image-index\\tests\\fixtures\\dog.jpg", "source": "file", "capture": null },
+    "image": {
+      "width": 768, "height": 576, "format": "JPEG", "mode": "RGB", "has_alpha": false, "dpi": [72.0, 72.0],
+      "metadata": { "format": "JPEG", "mode": "RGB", "width": 768, "height": 576, "has_alpha": false, "dpi": [72.0, 72.0], "n_frames": 1 }
+    },
+    "hashes": { "sha256": "5a9522051c3cec2bbd2f6323fccba32e8fbf3ddcc2b3e2fd46b04c720bc6f866", "phash": "9c3c6c6c3c3c1c0c", "dhash": "0f1f3f3f1f0f0703" },
+    "stages": {
+      "image_util": { "ran": true, "status": "ok", "confidence": null, "reason": null, "ms": 611, "artifact_dir": "...\\runtime\\artifacts\\<id>\\image_util", "error": null },
+      "ocr": { "ran": true, "status": "ok", "confidence": 0.9, "reason": "legible", "ms": 742, "artifact_dir": "...\\runtime\\artifacts\\<id>\\ocr", "error": null,
+        "word_count": 0, "line_count": 0, "text": "", "lines": [] },
+      "detect": { "ran": true, "status": "ok", "confidence": 0.83, "reason": "ok", "ms": 2140, "artifact_dir": "...\\runtime\\artifacts\\<id>\\detect", "error": null,
+        "detection_count": 3, "class_summary": { "dog": 1, "car": 1, "bicycle": 1 },
+        "detections": [
+          { "index": 0, "class_id": 16, "class": "dog", "score": 0.83, "low_confidence": false, "box": { "x": 132, "y": 218, "width": 190, "height": 320 } },
+          { "index": 1, "class_id": 2, "class": "car", "score": 0.81, "low_confidence": false, "box": { "x": 470, "y": 76, "width": 210, "height": 100 } },
+          { "index": 2, "class_id": 1, "class": "bicycle", "score": 0.81, "low_confidence": false, "box": { "x": 150, "y": 300, "width": 400, "height": 250 } }
+        ] },
+      "interpret": { "ran": true, "status": "ok", "confidence": 0.7, "reason": "ok", "ms": 30120, "artifact_dir": "...\\runtime\\artifacts\\<id>\\interpret", "error": null,
+        "mode": "describe", "text": "A dog stands on a paved area in front of a parked car and a bicycle leaning nearby.", "finish_reason": "stop", "completion_tokens": 21 }
+    },
+    "summary": {
+      "caption": "A dog stands on a paved area in front of a parked car and a bicycle leaning nearby.",
+      "ocr_text": "",
+      "ocr_word_count": 0,
+      "top_objects": [ { "class": "dog", "count": 1 }, { "class": "car", "count": 1 }, { "class": "bicycle", "count": 1 } ],
+      "detection_count": 3,
+      "stochastic_confidence_min": 0.7,
+      "stages_ran": ["image_util", "ocr", "detect", "interpret"],
+      "stages_ok": ["image_util", "ocr", "detect", "interpret"],
+      "stages_error": []
+    },
+    "review": { "mode": "redirected_in_artifact", "child_review_path": "...\\runtime\\artifacts\\<id>\\child_review.jsonl", "child_review_count": 1, "is_producer": false },
+    "config": { "ocr": true, "detect": true, "interpret": true, "capture": false, "max_dimension": null, "interpret_mode": "describe", "language": null, "classes": null, "confidence_threshold": 0.5 }
+  },
+  "confidence": 0.7,
+  "artifacts": [
+    { "path": "...\\runtime\\artifacts\\<id>\\index.json", "kind": "json", "bytes": 4096, "sha256": "..." },
+    { "path": "...\\runtime\\artifacts\\<id>\\index.md", "kind": "markdown", "bytes": 720, "sha256": "..." }
+  ],
+  "model_provenance": [
+    { "stage": "ocr", "model_id": "ocr.windows.media", "name": "Windows.Media.Ocr", "engine": "windows.media.ocr", "recognizer_language": "en-US", "word_count": 0, "line_count": 0 },
+    { "stage": "detect", "model_id": "detect.yolox.nano", "name": "YOLOX-Nano", "engine": "onnxruntime", "provider": "CPUExecutionProvider", "detection_count": 3 },
+    { "stage": "interpret", "model_id": "vlm.qwen2p5-vl-3b", "name": "Qwen2.5-VL-3B-Instruct", "engine": "llama-server", "device": "cuda:0", "mode": "describe", "completion_tokens": 21, "finish_reason": "stop" }
+  ],
+  "diagnostics": { "log": "stderr.txt", "artifact_dir": "...\\runtime\\artifacts\\<id>" },
+  "warnings": [],
+  "error": null
+}

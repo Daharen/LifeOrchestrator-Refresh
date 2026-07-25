@@ -5,12 +5,12 @@ Owns **reality as it exists now** — not intended architecture. Keep it compact
 is planned (serves scripts and weaker local models) but not yet created.
 
 - **Project phase:** MVP module build-out.
-- **Active module:** _none in progress._ **Modules 0–17 complete** (0 executor · 1 `skill.bootstrap` · 2
+- **Active module:** _none in progress._ **Modules 0–18 complete** (0 executor · 1 `skill.bootstrap` · 2
   `fs.observer` · 3 `proc.observer` · 4 `uia.inspector` · 5 `uia.actor` · 6 `capture.screen` · 7 `model.gateway` ·
   8 `classify.batch` · 9 `review.processor` · 10 `audio.ingest` · 11 `speech.stt` · 12 `speech.tts` · 13 `voice.live` ·
-  14 `ocr.layout` · 15 `image.util` · 16 `detect.objects` · 17 `image.interpret`), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure). **The full
-  audio track (10–13) is complete; the image/document perception block (14–18) is nearly done — Modules 14 `ocr.layout`,
-  15 `image.util`, 16 `detect.objects`, and 17 `image.interpret` are done; only #18 `image.index` remains.**
+  14 `ocr.layout` · 15 `image.util` · 16 `detect.objects` · 17 `image.interpret` · 18 `image.index`), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure). **The full
+  audio track (10–13) is complete; the image/document perception block (14–18) is COMPLETE — Modules 14 `ocr.layout`,
+  15 `image.util`, 16 `detect.objects`, 17 `image.interpret`, and 18 `image.index` (the fusion capstone) are all done.**
   **Module 8 — Batch Classification & Sorting (`classify.batch`) is MVP complete** — the **first real
   consumer of `model.gateway`**: for each item in a batch it calls the gateway (default `-Tier weak` = 1.5B) with a
   mode-specific prompt (`classify` one-label / `multilabel` / `extract` fields), parses the completion, computes a
@@ -192,6 +192,28 @@ is planned (serves scripts and weaker local models) but not yet created.
   cloud box, the harness ran the **real** wrapper against a captured-real response seam (+ the real `image.util` downscale)
   on the cloud box (40/40) as the pre-ship gate. `models.json` gained `defaults.vlm`/`tiers.vlm` + `vlm.qwen2p5-vl-3b`
   (additive; **Module 7 re-verified 28/28**). See D-0026.
+- **Module 18 — Image Index (`image.index`) is MVP complete this session** — the **capstone of the image/document
+  perception block (14–18)** and the **second skill to compose several stochastic perception skills end-to-end** (after
+  `voice.live` #13 for audio). Given one image it fuses the perception children into a single per-image record: **`image.util`
+  (#15) ALWAYS** (metadata + `sha256`/`pHash`/`dHash` — the deterministic backbone), plus optional **`ocr.layout` (#14, `-Ocr`)**
+  text + boxes, **`detect.objects` (#16, `-Detect`)** class boxes + scores, and **`image.interpret` (#17, `-Interpret`)** a VLM
+  free-text interpretation; **`-All`** runs the three, **`-Capture`** sources the image **once** via `capture.screen` (#6), and
+  **`-MaxDimension`** is passed through to detect + interpret. It is an **orchestrator** and **reimplements nothing**: it spawns
+  each child as a child pwsh, parses its `lifeorch.skill.result/0.1` envelope, **aggregates every child's `model_provenance`
+  (stage-tagged)**, and runs the children **sequentially** (capture → image.util → ocr → detect → interpret) to avoid the VLM's
+  VRAM/loopback-port contention. **Orchestrator, NOT a review producer** (like #13): it **redirects** children's review-queue
+  writes to an in-artifact **`child_review.jsonl`** and does **not** re-flag — so the **review-queue producer set stays at seven**
+  and the canonical `review_queue.jsonl` is untouched. Envelope `confidence` = the **minimum** confidence across the stochastic
+  stages that ran (the weakest-link signal; `null` when only image.util ran); `determinism:"mixed"`, **`parallel_safe:false`**
+  (can bind CUDA/VRAM + a port via `-Interpret`), `batch:false`. Artifacts `index.json` (machine) + `index.md` (human per-image
+  card). **No new model / no `models.json` change / no Module 7 re-verify** (it composes existing skills; a pure orchestrator).
+  **Tests 41/41 via the executor** (`m18-test-002`, exit 0, ~44 s) — live full index on `dog.jpg` (image.util meta+hashes +
+  OCR + 5 detections + a real VLM description, `model_provenance` = 3 stage-tagged, min-confidence fusion), the default
+  image.util-only path, selective/`-All`/error paths, the child-review **redirect** with the **canonical queue verified
+  untouched (0→0)**, the Module 1 wrapper, and **no orphaned `llama-server`/python**; shipped-file sha256 byte-exact (9 files).
+  **Pre-shipped off-machine**: cloud pwsh 7.4.6 AST-parse + a **mock-children** harness (`tests/mock-child.ps1` branching on the
+  `-ArtifactRoot` leaf) driving the **real** orchestrator (40/40) — the M13 mock-children gate, since #17's VLM can't run on the
+  cloud box. See D-0027.
 - **Repo / working dir:** **`C:\Users\just_\LifeOrchestrator-Refresh\`** — the clean standalone home for
   **Life Orchestrator** (near-term local-skills track; git-initialized). Layout: `core-docs/` (these docs)
   and `modules/<NN>-<name>/` (one per module). **Reference sources (separate, not built here):** the earlier
@@ -477,6 +499,22 @@ is planned (serves scripts and weaker local models) but not yet created.
   `llama-server`; `m17-test-001/002`, exit 0). The harness is **dual-mode / OS-portable**: seam mode (the captured-real-response
   `-VlmResponsePath` + the real `image.util`) ran on the cloud Linux box (40/40) as the pre-ship gate before the identical
   harness ran live (`-Live`) on the Windows executor (48/48).
+- Module 18: `modules/18-image-index/tests/Invoke-ImageIndexTests.ps1` — **41/41 pass (live) / 40/40 (cloud mock)** (manifest +
+  mixed/parallel_safe=false/batch/streaming flags; the **default** run fuses image.util meta+hashes only — `confidence` null,
+  empty `model_provenance`, `index.json`/`index.md` sha256; the **`-All`** run fuses all four stages — every stage `ran`, the
+  stochastic stages ok/partial, envelope `confidence` = the **min of the per-stage confidences**, `model_provenance` ≥ 3 tagged
+  ocr+detect+interpret, `summary.caption`/`top_objects` populated, `summary.ocr_text` mirrors the ocr stage; the child-review
+  **redirect** — `review.is_producer=false`, `child_review_path` under the invocation dir; selective `-Ocr`-only; two error
+  paths `input_not_found` + `ocr_not_found` (requested child entrypoint missing); the Module 1 wrapper; **live extras** — a real
+  full index on `dog.jpg` (image.util hashes, detect found objects, interpret text, `model_provenance` ≥ 2, **no orphaned
+  `llama-server`**). The harness is **dual-mode / OS-portable**: `-UseMock` points every child (capture/image.util/ocr/detect/
+  interpret) at `tests/mock-child.ps1` (branches on the `-ArtifactRoot` leaf; canned envelopes; capture writes a real 1×1 PNG;
+  image.util emits a real sha256; the stochastic children append a review item to the passed `review_queue_path`) so the **real**
+  orchestrator's fuse/aggregate/redirect/envelope logic runs off-GPU on the cloud box (40/40) as the pre-ship gate before the
+  identical harness ran live (`-Live`) on the Windows executor (41/41, `m18-test-002`). The two live-only assertion adjustments
+  (envelope confidence = min-of-stages; `ocr_text` mirrors the stage) were made mode-robust after the first live run showed OCR
+  correctly finds **no text** on a photo (conf 0.1 = the fused record's weakest link). Live smoke: `dog.jpg -All` → 5 detections
+  + a full VLM description + min-confidence 0.1, canonical queue **untouched (0→0)**.
 
 ## Known failures / gotchas
 - **image.util truncated its worker meta on a real JPEG `dpi` (2026-07-25, Module 15, fixed).** Pillow returns a JPEG's
@@ -565,23 +603,24 @@ is planned (serves scripts and weaker local models) but not yet created.
   27B load (~90s) approaches the gateway's 120s default, so callers pass a longer `-LoadTimeoutSec` for the strong tier.
 
 ## Next expected action
-1. **Modules 14 `ocr.layout`, 15 `image.util`, 16 `detect.objects`, 17 `image.interpret` are complete; only #18 remains in the
-   perception block (14–18).** The next step is **#18 `image.index`** — integrate 14–17 into a per-image **markdown + machine
-   index**: fuse OCR text (#14) + pixel meta/hashes (#15) + object boxes (#16) + a VLM interpretation (#17) into one record.
-   Expand and give it a work order. **`image.interpret` follow-ons (NOT this session):** a **warm/persistent VLM server**
-   (shared worker-pool pressure with #7/#8/#12/#14/#16); **logprob/calibrated semantic** confidence (llama-server can return
-   token logprobs); **batch/directory**; **multi-image / multi-turn**; **open-vocab grounding boxes** (a #16 follow-on); a
-   **7B VLM tier** or the **transformers-venv backend** (both documented alternatives in D-0026); wiring the VLM as a **second
-   `ocr.layout` engine**. See D-0026. **`detect.objects` follow-ons (NOT
-   this session):** an **overlay/annotated image** (draw boxes+labels — needs an `image.util` draw op, which is also its own
-   follow-on); **batch/directory**; a larger tier (`-Tier tiny` is staged) / RT-DETR / a VLM open-vocab detector (#17);
-   **GPU-by-default** or a warm detector worker; **calibrated** confidence; object **tracking** across frames (#20). See D-0025.
-   **`image.util` follow-ons (NOT this session):** the **box-overlay/draw** op (pairs with detect.objects overlay + the
-   ocr.layout box overlay); **batch/directory/glob**; rotate/flip/EXIF auto-orient; denoise/sharpen; multi-frame (GIF); an
-   operation pipeline. See D-0024. **`ocr.layout` follow-ons (NOT this session):** wire **Tesseract** (`ocr.tesseract`,
-   installed) or a VLM as a second `-Engine` for calibrated per-word confidence + multi-language; the box-overlay + `MaxImage-
-   Dimension` downscale compositions now unblocked by `image.util` (the downscale-then-rescale-boxes pattern is proven by
-   `detect.objects`); multi-column reading-order reflow; **batch/directory/PDF-page** OCR. See D-0023.
+1. **The image/document perception block (14–18) is COMPLETE** — #14 `ocr.layout`, #15 `image.util`, #16 `detect.objects`,
+   #17 `image.interpret`, and now #18 `image.index` (the fusion capstone) are all MVP complete. The next module is the **video
+   block (#19 `media.decompose` → #20 `track.objects` → #21 `video.timeline` → #22 `video.interpret`)** or a housekeeping pass
+   (below); expand the chosen one and give it a work order. **`image.index` follow-ons (NOT this session):** **concurrent** child
+   execution (a warm-worker pool shared with #7/#8/#12/#14/#16/#17; run the parallel-safe children together); **batch/directory/
+   glob** indexing; **cross-stage grounding** (associate detections ↔ OCR words ↔ caption phrases; open-vocab boxes); an
+   **overlay/annotated card image** (needs the `image.util` draw op); persisting indices into `artifact.search` (#23); a
+   frontier/`route.tasks` (#24) drain of the redirected `child_review.jsonl`. See D-0027. **`image.interpret` follow-ons (NOT
+   this session):** a **warm/persistent VLM server** (shared worker-pool pressure with #7/#8/#12/#14/#16/#18); **logprob/calibrated
+   semantic** confidence; **batch/directory**; **multi-image / multi-turn**; **open-vocab grounding boxes**; a **7B VLM tier** or
+   the **transformers-venv backend**; wiring the VLM as a **second `ocr.layout` engine**. See D-0026. **`detect.objects` follow-ons
+   (NOT this session):** an **overlay/annotated image** (needs an `image.util` draw op); **batch/directory**; a larger tier /
+   RT-DETR / a VLM open-vocab detector (#17); **GPU-by-default** or a warm detector worker; **calibrated** confidence; object
+   **tracking** across frames (#20). See D-0025. **`image.util` follow-ons (NOT this session):** the **box-overlay/draw** op;
+   **batch/directory/glob**; rotate/flip/EXIF auto-orient; denoise/sharpen; multi-frame (GIF); an operation pipeline. See D-0024.
+   **`ocr.layout` follow-ons (NOT this session):** wire **Tesseract** (`ocr.tesseract`, installed) or a VLM as a second `-Engine`;
+   the box-overlay + `MaxImageDimension` downscale compositions; multi-column reading-order reflow; **batch/directory/PDF-page**
+   OCR. See D-0023.
 2. **Audio-track follow-ons (NOT this session):** a mic `audio.capture` skill + a streaming/interactive loop; standalone
    VAD (stage a VAD ggml model); multi-turn dialogue + memory; a **warm-worker pool** so a voice turn avoids three cold
    model loads (the shared pressure point with #7/#8/#12/#14 per-call worker spawns). See D-0022.
@@ -595,4 +634,4 @@ is planned (serves scripts and weaker local models) but not yet created.
    intra-batch prompt for throughput; calibrated confidence; a side-effecting `sort.files` mover) — see D-0017; audio.ingest follow-ons (batch/directory ingest; trimming/
    segmentation → Module 13; denoise/high-pass — see D-0019).
 
-- **Last updated:** 2026-07-25 (UTC) · **Last updating agent:** Claude (Cowork — Module 17 image.interpret build session; fourth perception-block module; first local-VLM skill; probed + staged Qwen2.5-VL-3B GGUF + mmproj to F:; drives the already-staged llama.cpp llama-server in multimodal mode via a pure-PowerShell wrapper; parallel_safe:false; seventh review producer; composes capture.screen + image.util; 48/48 live, cloud gate 40/40 via a captured-real-response seam; models.json additive vlm entry, Module 7 re-verified 28/28).
+- **Last updated:** 2026-07-25 (UTC) · **Last updating agent:** Claude (Cowork — Module 18 image.index build session; the fusion capstone of the image/document perception block (14–18); an orchestrator/composer modeled on voice.live #13 that fuses image.util meta+hashes (always) + optional ocr.layout/detect.objects/image.interpret into one index.json + index.md per image, spawns children as child pwsh, aggregates stage-tagged model_provenance, redirects child review writes to child_review.jsonl (NOT a review producer — set stays at seven), runs children sequentially; determinism mixed, parallel_safe:false, confidence = min-of-stochastic-stages; composes capture.screen (#6) + passes -MaxDimension to detect/interpret; NO models.json change / no Module 7 re-verify; 41/41 live via the executor (m18-test-002), cloud mock-children gate 40/40; canonical review_queue.jsonl verified untouched, 0 orphans, 9 shipped files sha256 byte-exact; D-0027).

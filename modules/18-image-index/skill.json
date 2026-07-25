@@ -1,0 +1,47 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "image.index",
+  "name": "Image Index",
+  "version": "0.1.0",
+  "contract_version": "0.1",
+  "purpose": "Fuse the image/document perception block (14-17) into one per-image record for a single image: image.util (#15) ALWAYS provides metadata + sha256/pHash/dHash (the deterministic backbone); ocr.layout (#14, -Ocr) adds text + word/line boxes + reading order; detect.objects (#16, -Detect) adds class boxes + real per-detection scores; image.interpret (#17, -Interpret) adds a local-VLM free-text interpretation. -All enables the three optional stages; -Capture sources the image once via capture.screen (#6). The capstone of the perception block (14-18): an orchestrator that spawns each child as pwsh, parses its result envelope, aggregates every child's model_provenance (stage-tagged), and redirects children's review-queue writes to an in-artifact child_review.jsonl -- it reimplements nothing and is NOT itself a review producer. Envelope confidence = the minimum confidence across the stochastic stages that ran (null when only image.util ran). Outputs a machine index.json and a human index.md card.",
+  "determinism": "mixed",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-ImageIndex.ps1",
+    "args_spec": "Named params -InputFile <image> (required unless -Capture); -Ocr/-Detect/-Interpret/-All (switches, enable the optional stages); -Capture (switch) + -CaptureInputsJson '<json>'; -MaxDimension <n> (passed to detect+interpret); -Language <code> (ocr); -Classes <c1,c2> (detect filter); -InterpretMode <caption|describe|vqa|screen> (def describe); -Prompt <q> (interpret vqa); -Tier <alias>/-InterpretModel <id> (interpret model); -ConfidenceThreshold <0..1> (def 0.5, passed to the stochastic children); path overrides -ImageUtilPath/-OcrPath/-DetectPath/-InterpretPath/-CapturePath; -PwshPath/-PythonPath/-Powershell51Path; -ReviewQueuePath <override>. OR -InputsJson '<json {input,ocr,detect,interpret,all,capture,capture_inputs,max_dimension,language,classes,interpret_mode,prompt,tier,interpret_model,confidence_threshold,...paths...,review_queue_path}>'. Optional -ArtifactRoot, -InvocationId.",
+    "composes": ["image.util (Module 15)", "ocr.layout (Module 14)", "detect.objects (Module 16)", "image.interpret (Module 17)", "capture.screen (Module 6)"]
+  },
+  "inputs": [
+    { "name": "input", "type": "string", "required": false, "description": "Path to the input image. Required unless capture is set." },
+    { "name": "capture", "type": "bool", "required": false, "default": false, "description": "Source the image once from capture.screen (#6) instead of -InputFile; the captured PNG is fed to every stage." },
+    { "name": "ocr", "type": "bool", "required": false, "default": false, "description": "Run ocr.layout (#14): text + per-word/line boxes + reading order." },
+    { "name": "detect", "type": "bool", "required": false, "default": false, "description": "Run detect.objects (#16): class boxes + real per-detection scores + class summary." },
+    { "name": "interpret", "type": "bool", "required": false, "default": false, "description": "Run image.interpret (#17): a local-VLM free-text interpretation." },
+    { "name": "all", "type": "bool", "required": false, "default": false, "description": "Enable ocr + detect + interpret together." },
+    { "name": "max_dimension", "type": "int", "required": false, "description": "Downscale bound passed to detect + interpret (they rescale boxes back to original); image.util meta/hash still run on the original." },
+    { "name": "language", "type": "string", "required": false, "description": "OCR recognizer language (ocr.layout)." },
+    { "name": "classes", "type": "string[]", "required": false, "description": "COCO class filter (detect.objects)." },
+    { "name": "interpret_mode", "type": "string", "required": false, "default": "describe", "description": "VLM mode: caption|describe|vqa|screen (image.interpret)." },
+    { "name": "prompt", "type": "string", "required": false, "description": "Question for interpret VQA mode." },
+    { "name": "confidence_threshold", "type": "number", "required": false, "default": 0.5, "description": "Passed to the stochastic children for their own review flagging (image.index does not itself flag)." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ input{path,source,capture}, image{width,height,format,mode,has_alpha,dpi,metadata}, hashes{sha256,phash,dhash}, stages{ image_util, ocr, detect, interpret }(each {ran,status,confidence,reason,ms,artifact_dir,error,+payload}), summary{caption,ocr_text,ocr_word_count,top_objects[],detection_count,stochastic_confidence_min,stages_ran,stages_ok,stages_error}, review{mode,child_review_path,child_review_count,is_producer:false}, config{...} }. Envelope confidence = min stochastic child confidence (null if only image.util ran); model_provenance = stage-tagged aggregate of all children."
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4"],
+    "models": ["(none of its own; children transitively use ocr.windows.media, detect.yolox.nano, vlm.qwen2p5-vl-3b)"],
+    "libraries": [],
+    "cpu": "any", "gpu": "cuda (only when -Interpret; -Detect uses CPU)", "memory_mb": 4096,
+    "network": false, "filesystem": "read-write", "audio": false, "screen": true, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 1200, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": false,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

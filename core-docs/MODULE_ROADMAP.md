@@ -179,7 +179,7 @@ Needs refactor · Deprecated · Replaced.
   (23/23). Work order: `modules/13-voice-live/WORK_ORDER.md`. See D-0022. Follow-on: mic `audio.capture` + streaming
   loop; standalone VAD (stage a model); multi-turn + memory; a warm-worker pool so a turn avoids three cold model loads.
 
-## Modules 14–18 — Image & document perception (14–17 MVP complete; 18 provisional)
+## Modules 14–18 — Image & document perception (**all MVP complete** — OCR + pixels/hashes + objects + VLM interpretation, fused by #18)
 - **14 `ocr.layout`** — OCR + bounding boxes + reading order. ***MVP complete (2026-07-25)*** — the **first perception
   module** and the first **parallel-safe** stochastic/mixed perception skill. Recognizes the text in one image and returns
   it with **per-word pixel bounding boxes** and **lines in reading order** (+ text angle, image dims). Drives the system
@@ -253,8 +253,26 @@ Needs refactor · Deprecated · Replaced.
   Work order: `modules/17-image-interpret/WORK_ORDER.md`. See D-0026. Follow-on: warm VLM server; logprob/calibrated
   confidence; batch/directory; multi-image/multi-turn; open-vocab grounding boxes (#16 follow-on); a 7B tier / the
   transformers-venv backend; wiring the VLM as a second `ocr.layout` engine.
-- **18 `image.index`** integrate 14–17 → markdown + machine index. *(the natural next step — fuse OCR text (#14) + pixel
-  meta/hashes (#15) + object boxes (#16) + a VLM interpretation (#17) into one per-image markdown + machine-readable index.)*
+- **18 `image.index`** — fuse 14–17 → per-image machine index + human card. ***MVP complete (2026-07-25)*** — the **capstone of
+  the perception block (14–18)** and the **second skill to compose several stochastic perception skills end-to-end** (after
+  `voice.live` #13). Given one image it fuses the children into one record: **`image.util` (#15) ALWAYS** (metadata + `sha256`/
+  `pHash`/`dHash`, the deterministic backbone), + optional **`ocr.layout` (#14, `-Ocr`)** text+boxes, **`detect.objects` (#16,
+  `-Detect`)** class boxes+scores, **`image.interpret` (#17, `-Interpret`)** a VLM interpretation; **`-All`** runs the three,
+  **`-Capture`** sources the image once via `capture.screen` (#6), **`-MaxDimension`** passes through to detect+interpret. An
+  **orchestrator** that **reimplements nothing**: spawns each child as pwsh, parses its envelope, **aggregates stage-tagged
+  `model_provenance`**, runs children **sequentially** (avoids the VLM's VRAM/port contention). **Orchestrator, NOT a review
+  producer** (like #13): **redirects** children's review writes to an in-artifact `child_review.jsonl` and does not re-flag — the
+  **producer set stays at seven** and the canonical queue is untouched. Envelope `confidence` = the **min** stochastic-stage
+  confidence (weakest link; `null` when only image.util ran); `determinism:"mixed"`, **`parallel_safe:false`** (binds CUDA/VRAM +
+  a port via `-Interpret`), `batch:false`, `streaming:false`. Artifacts `index.json`/`index.md`. **No new model / no `models.json`
+  change / no Module 7 re-verify** (it composes existing skills). **Tests 41/41 via the executor** (`m18-test-002`, exit 0) —
+  live full index on `dog.jpg` (meta+hashes + OCR + 5 detections + a real VLM description, 3 stage-tagged provenance,
+  min-confidence fusion), default image.util-only, selective/`-All`/error paths, the child-review **redirect** with the canonical
+  queue **verified untouched (0→0)**, the Module 1 wrapper, no orphaned `llama-server`/python; **pre-shipped off-machine** on the
+  cloud box (a **mock-children** harness — `tests/mock-child.ps1` branching on the `-ArtifactRoot` leaf — driving the *real*
+  orchestrator, 40/40). Work order: `modules/18-image-index/WORK_ORDER.md`. See D-0027. Follow-on: concurrent children / a shared
+  warm-worker pool; batch/directory; cross-stage grounding (detections↔OCR↔caption); an overlay card image (needs an image.util
+  draw op); persisting indices into `artifact.search` (#23).
 
 ## Modules 19–22 — Video (provisional)
 - **19 `media.decompose`** audio/subs/scenes/keyframes/clips/meta/proxies · **20 `track.objects`** identity
