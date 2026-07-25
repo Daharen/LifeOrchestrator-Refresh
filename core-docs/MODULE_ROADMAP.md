@@ -179,7 +179,7 @@ Needs refactor · Deprecated · Replaced.
   (23/23). Work order: `modules/13-voice-live/WORK_ORDER.md`. See D-0022. Follow-on: mic `audio.capture` + streaming
   loop; standalone VAD (stage a model); multi-turn + memory; a warm-worker pool so a turn avoids three cold model loads.
 
-## Modules 14–18 — Image & document perception (14 MVP complete; 15–18 provisional)
+## Modules 14–18 — Image & document perception (14–15 MVP complete; 16–18 provisional)
 - **14 `ocr.layout`** — OCR + bounding boxes + reading order. ***MVP complete (2026-07-25)*** — the **first perception
   module** and the first **parallel-safe** stochastic/mixed perception skill. Recognizes the text in one image and returns
   it with **per-word pixel bounding boxes** and **lines in reading order** (+ text angle, image dims). Drives the system
@@ -198,10 +198,24 @@ Needs refactor · Deprecated · Replaced.
   re-verified 28/28). Work order: `modules/14-ocr-layout/WORK_ORDER.md`. See D-0023. **Tesseract** (installed) is declared
   as `ocr.tesseract` for a second-engine + calibrated-confidence follow-on. Follow-on: wire Tesseract/a VLM (#17) engine;
   overlay PNG; `MaxImageDimension` downscale; multi-column reflow; batch/PDF OCR.
-- **15 `image.util`** resize/crop/meta/hash/similarity/convert/tile/region · **16 `detect.objects`** class boxes +
-  confidence · **17 `image.interpret`** local multimodal captions/VQA/screen interpretation · **18 `image.index`**
-  integrate 14–17 → markdown + machine index. *(15 is the natural next step — it also unblocks ocr.layout's
-  MaxImageDimension downscale + box overlay follow-ons.)*
+- **15 `image.util`** — resize/crop/convert/meta/hash/similarity/tile. ***MVP complete (2026-07-25)*** — the **second
+  perception module** and the **first deterministic perception skill** (like `audio.ingest`/`fs.observer`:
+  `determinism:"deterministic"`, `confidence:null`, empty `model_provenance`, **not** a review-queue producer). One image
+  in -> metadata + hashes always, plus one optional op: **resize** (fit/fill/exact or a single `max_dimension`, reporting
+  `scale_x`/`scale_y`), **crop** (pixel rect / normalized / named region), **convert** (png/jpg/webp/bmp/tiff + quality),
+  **tile** (grid or fixed size + overlap), **similarity** (pHash/dHash Hamming + score). Metadata = format/mode/dims/
+  has_alpha/dpi/EXIF-lite; hashes = **sha256** + **pHash** + **dHash** (64-bit, version-stable). A **Pillow+numpy Python
+  worker** (`image_worker.py`) under the **system python** + a pwsh-7 wrapper (`Invoke-ImageUtil.ps1`) with a meta-file
+  hand-off (D-0021 pattern, deterministic variant). **Probe-first** (`m15-probe-001`). **NOT a `model.gateway` model — no
+  `models.json` change** (a tool, like ffmpeg for `audio.ingest`). `parallel_safe:true`, `batch:false`. Artifacts
+  `image.json`/`image.md` + produced image(s). **Tests 48/48 via the executor** (`m15-test-001`, exit 0) — resize scale
+  factors, crop rect/normalized/region, all five convert formats, tile grid+size, similarity, six error paths, wrapper;
+  **pre-shipped off-machine** on the cloud box (real worker, Pillow 12.2, 48/48 — the real-engine-on-cloud gate, like
+  `audio.ingest`). Work order: `modules/15-image-util/WORK_ORDER.md`. See D-0024. Follow-on: the `ocr.layout` downscale-
+  then-rescale-boxes + box-overlay compositions (now unblocked); a draw/annotate op; batch/directory; rotate/flip/auto-orient.
+- **16 `detect.objects`** class boxes + confidence · **17 `image.interpret`** local multimodal captions/VQA/screen
+  interpretation · **18 `image.index`** integrate 14–17 → markdown + machine index. *(16 is the natural next step —
+  probe for a local detection model first; none is staged yet.)*
 
 ## Modules 19–22 — Video (provisional)
 - **19 `media.decompose`** audio/subs/scenes/keyframes/clips/meta/proxies · **20 `track.objects`** identity

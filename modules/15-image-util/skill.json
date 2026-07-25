@@ -1,0 +1,60 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "image.util",
+  "name": "Image Utilities (Pillow)",
+  "version": "0.1.0",
+  "contract_version": "0.1",
+  "purpose": "Deterministic image plumbing for one image: probe metadata (dims/format/mode/has_alpha/dpi/EXIF-lite), content + perceptual hashes (sha256 + pHash + dHash), resize (fit/fill/exact or a single max_dimension, reporting scale factors), crop (pixel rect / normalized / named region), convert (png/jpg/webp/bmp/tiff + quality), tile/split (grid or fixed size + overlap), and image similarity (Hamming distance of perceptual hashes). Runs a Pillow+numpy Python worker under the system python and reads its meta file (worker+meta hand-off). CPU-only, parallel-safe, no model. Unblocks ocr.layout's MaxImageDimension downscale-then-rescale-boxes and box-overlay follow-ons.",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-ImageUtil.ps1",
+    "args_spec": "Named params -InputFile <path> (required); -Op <meta|resize|crop|convert|tile|similarity> (default meta); resize: -Width -Height -Mode <fit|fill|exact> -MaxDimension -Resample <lanczos|bicubic|bilinear|box|hamming|nearest> -AllowUpscale; crop: -X -Y -CropWidth -CropHeight -Normalized -Region <center|top|bottom|left|right|top-left|top-right|bottom-left|bottom-right> -RegionFraction; convert/output: -Format <png|jpg|jpeg|webp|bmp|tiff> -Quality <1..100> -OutputName; tile: -TileCols -TileRows | -TileWidth -TileHeight -TileOverlap; similarity: -CompareTo <path>; hashing: -HashSize <n> -NoPerceptualHash; overrides -PythonPath -ImageWorkerPath. OR -InputsJson '<json {input,op,width,height,mode,max_dimension,resample,allow_upscale,x,y,crop_width,crop_height,normalized,region,region_fraction,format,quality,output_name,tile_cols,tile_rows,tile_width,tile_height,tile_overlap,compare_to,hash_size,no_perceptual_hash,python_path,image_worker_path}>'. Optional -ArtifactRoot, -InvocationId."
+  },
+  "inputs": [
+    { "name": "input", "type": "string", "required": true, "description": "Path to the source image (anything Pillow can open: png/jpg/webp/bmp/tif/gif/...)." },
+    { "name": "op", "type": "string", "required": false, "default": "meta", "description": "Operation: meta | resize | crop | convert | tile | similarity. Metadata + hashes are always computed regardless of op." },
+    { "name": "width", "type": "int", "required": false, "description": "Target width (resize). With height depends on mode." },
+    { "name": "height", "type": "int", "required": false, "description": "Target height (resize)." },
+    { "name": "mode", "type": "string", "required": false, "default": "fit", "description": "Resize mode: fit (scale within WxH box, keep aspect, no upscale by default), fill (cover box + center-crop to exact WxH), exact (resize to WxH ignoring aspect)." },
+    { "name": "max_dimension", "type": "int", "required": false, "description": "Resize so the longest side is <= this, keeping aspect (the ocr.layout downscale case). Overrides width/height when set." },
+    { "name": "resample", "type": "string", "required": false, "default": "lanczos", "description": "Resampling filter: lanczos|bicubic|bilinear|box|hamming|nearest." },
+    { "name": "allow_upscale", "type": "bool", "required": false, "default": false, "description": "Permit fit/max_dimension to enlarge an image smaller than the target." },
+    { "name": "x", "type": "int", "required": false, "description": "Crop left (px, or 0..1 fraction if normalized)." },
+    { "name": "y", "type": "int", "required": false, "description": "Crop top (px, or fraction if normalized)." },
+    { "name": "crop_width", "type": "int", "required": false, "description": "Crop width (px, or fraction if normalized)." },
+    { "name": "crop_height", "type": "int", "required": false, "description": "Crop height (px, or fraction if normalized)." },
+    { "name": "normalized", "type": "bool", "required": false, "default": false, "description": "Treat x/y/crop_width/crop_height as 0..1 fractions of the image." },
+    { "name": "region", "type": "string", "required": false, "description": "Named crop region: center|top|bottom|left|right|top-left|top-right|bottom-left|bottom-right (used when no explicit rect is given)." },
+    { "name": "region_fraction", "type": "double", "required": false, "default": 0.5, "description": "Size of a named region as a fraction of the image (0..1)." },
+    { "name": "format", "type": "string", "required": false, "description": "Output format for resize/crop/convert/tile: png|jpg|jpeg|webp|bmp|tiff. Default = keep the input format." },
+    { "name": "quality", "type": "int", "required": false, "default": 90, "description": "Encoder quality 1..100 for jpg/webp." },
+    { "name": "output_name", "type": "string", "required": false, "description": "Base name for output image files (default = input file stem)." },
+    { "name": "tile_cols", "type": "int", "required": false, "description": "Tile: number of columns (grid mode)." },
+    { "name": "tile_rows", "type": "int", "required": false, "description": "Tile: number of rows (grid mode)." },
+    { "name": "tile_width", "type": "int", "required": false, "description": "Tile: fixed tile width in px (size mode; takes precedence over cols/rows)." },
+    { "name": "tile_height", "type": "int", "required": false, "description": "Tile: fixed tile height in px (size mode)." },
+    { "name": "tile_overlap", "type": "int", "required": false, "default": 0, "description": "Tile: overlap between adjacent tiles in px." },
+    { "name": "compare_to", "type": "string", "required": false, "description": "similarity: path to a second image to compare against by perceptual hash." },
+    { "name": "hash_size", "type": "int", "required": false, "default": 8, "description": "Perceptual hash size (8 -> 64-bit)." },
+    { "name": "no_perceptual_hash", "type": "bool", "required": false, "default": false, "description": "Skip pHash/dHash (sha256 is always computed)." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ input{path,exists,bytes,sha256,format,mode,width,height,has_alpha}, op, params{...}, metadata{format,mode,width,height,has_alpha,dpi,n_frames,exif{...}}, hashes{sha256,phash,dhash,hash_bits}, outputs[{path,format,mode,width,height,bytes,sha256}], resize{mode,requested,original,result,scale_x,scale_y}|null, crop{requested,applied}|null, tile{mode,cols,rows,tile_width,tile_height,overlap,count,tiles[{index,row,col,x,y,width,height,path}]}|null, similarity{compare_to,hash_bits,phash_a,phash_b,hamming_phash,dhash_a,dhash_b,hamming_dhash,similarity}|null, runtime_ms, worker{python,pillow_version,numpy_version} }"
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4", "python>=3.10 (system, with Pillow>=10 + numpy)"],
+    "models": [],
+    "libraries": ["Pillow>=10", "numpy"],
+    "cpu": "any", "gpu": "none", "memory_mb": 256,
+    "network": false, "filesystem": "read-write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 120, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

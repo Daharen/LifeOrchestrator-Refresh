@@ -69,6 +69,20 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   WinGet `Links\*.exe` reparse points (Windows `Test-Path`/`where.exe` resolve them fine). · **last test:**
   2026-07-24 (`m10-ffprobe-001`; used by Module 10). · **skills:** `audio.ingest`.
 
+### `Pillow` (PIL) + `numpy` — imaging backend (used by image.util)
+- **status:** installed · **type:** Python library · **location:** the **system python**
+  `C:\Users\just_\AppData\Local\Programs\Python\Python312\python.exe` (**PIL 10.2.0 + numpy 1.26.4**, also cv2 4.9.0);
+  fallback the **speech venv** (F:, PIL 12.2.0 + numpy 2.4.4).
+- **invocation:** via the `image.util` Python worker `image_worker.py` (the wrapper resolves the interpreter and passes an
+  args JSON); or ad-hoc `python -c "from PIL import Image; ..."`.
+- **supported tasks:** open/save png/jpg/webp/bmp/tiff, resize (LANCZOS/bicubic/…), crop, format convert + quality,
+  metadata/EXIF read, and (with numpy) a DCT perceptual hash. `PIL.features` confirms webp/libtiff/jpg/zlib all present.
+- **quality:** deterministic; perceptual hashes are **stable across PIL/numpy versions** (`m15-probe-001`: identical pHash
+  on PIL 10.2/numpy 1.26 and PIL 12.2/numpy 2.4) · **speed:** fast (CPU) · **network:** none · **cost:** local only.
+- **limitation / gotcha:** `image.util` uses the **system python** (CPU-only, not the CUDA/speech venv) for
+  parallel-safety; Pillow 12 dropped the `transp_webp` feature name (harmless "Unknown feature" warning if checked). ·
+  **last test:** 2026-07-25 (`m15-probe-001` + `m15-test-001`; used by Module 15). · **skills:** `image.util`.
+
 ### `ref.echo` — Reference Echo Skill (Module 1)
 - **status:** installed · **type:** skill (PowerShell) ·
   **location:** `LifeOrchestrator-Refresh/modules/01-skill-bootstrap/skills/ref.echo/`
@@ -413,6 +427,34 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   **last test:** 2026-07-25 via executor (**tests 30/30**; `m14-test-003`, exit 0; real-registry smoke `m14-smoke-001`).
   · **skills:** `ocr.layout`. See D-0023.
 
+### `image.util` — Image Utilities (Module 15)
+- **status:** installed · **type:** skill (pwsh-7 wrapper + Pillow+numpy Python worker `image_worker.py`) ·
+  **location:** `LifeOrchestrator-Refresh/modules/15-image-util/`
+- **invocation:** direct `pwsh -NoProfile -File .\Invoke-ImageUtil.ps1 -InputFile <image> [-Op <meta|resize|crop|convert|
+  tile|similarity>] [-Width -Height -Mode <fit|fill|exact> -MaxDimension -Resample -AllowUpscale] [-X -Y -CropWidth
+  -CropHeight -Normalized -Region -RegionFraction] [-Format <png|jpg|webp|bmp|tiff> -Quality -OutputName] [-TileCols
+  -TileRows | -TileWidth -TileHeight -TileOverlap] [-CompareTo <image>] [-HashSize -NoPerceptualHash] [-PythonPath
+  -ImageWorkerPath]` (or `-InputsJson '<json {input,op,width,height,mode,max_dimension,resample,allow_upscale,x,y,
+  crop_width,crop_height,normalized,region,region_fraction,format,quality,output_name,tile_cols,tile_rows,tile_width,
+  tile_height,tile_overlap,compare_to,hash_size,no_perceptual_hash,python_path,image_worker_path}>'`); wrapped via
+  `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
+- **supported tasks:** one image -> metadata + hashes always, plus one op: **resize** (fit/fill/exact or `max_dimension`,
+  reporting `scale_x`/`scale_y` for box rescaling), **crop** (pixel rect / normalized / named region), **convert**
+  (png/jpg/webp/bmp/tiff + quality), **tile** (grid or fixed size + overlap), **similarity** (pHash/dHash Hamming + score).
+  Deterministic image plumbing for the perception block; unblocks `ocr.layout`'s MaxImageDimension downscale + box overlay.
+- **I/O:** in = an image path + op params; out = `lifeorch.skill.result/0.1` envelope (result = `{input{path,exists,bytes,
+  sha256,format,mode,width,height,has_alpha}, op, params, metadata{format,mode,width,height,has_alpha,dpi,n_frames,exif},
+  hashes{sha256,phash,dhash,hash_bits}, outputs[{path,format,mode,width,height,bytes,sha256}], resize|crop|tile|similarity,
+  runtime_ms, worker}`) + `runtime/artifacts/<id>/{image.json,image.md,image_args.json,image_meta.json,worker.log,
+  result.json,stderr.txt, <produced image(s)>}`.
+- **determinism:** **deterministic** (confidence **null**; empty `model_provenance`; **not** a review producer) ·
+  **speed:** ~0.2–0.8 s per op (per-call python spawn) · **CPU/GPU/mem:** CPU / none / ~256 MB · **network:** none · **cost:** local only.
+- **limitations:** one image per invocation (`batch:false`; no directory/glob); no draw/annotate/overlay, rotate/flip/
+  auto-orient, denoise/filters (follow-ons); multi-frame handled on frame 0 only; **not a `model.gateway` model — no
+  `models.json` entry** (a tool, like ffmpeg). `parallel_safe:true` (CPU-bound; no port/VRAM/CUDA binding). · **last test:**
+  2026-07-25 via executor (**tests 48/48**; `m15-test-001`, exit 0; pre-shipped on the cloud box, real worker, Pillow 12.2,
+  48/48). · **skills:** `image.util`. See D-0024.
+
 ### `Windows.Media.Ocr` — system OCR engine (used by ocr.layout)
 - **status:** installed (system) · **type:** WinRT API (`Windows.Media.Ocr.OcrEngine`) · **location:** OS component;
   reached via **Windows PowerShell 5.1** at `C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe` (5.1.19041.6456).
@@ -457,7 +499,9 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   onnxruntime, **`qwen_tts`**). **Verified + wired by `speech.tts` (Module 12), 2026-07-24** (`m12-probe-001/002`): CUDA
   available on the RTX 2080 Ti; `qwen_tts.Qwen3TTSModel.generate_custom_voice(...)` loads bf16 + `sdpa` (flash-attn absent)
   and returns `(List[np.ndarray], sr=24000)`. This is the venv the TTS models run under (registry `engine_env`).
-- **System Python** 3.12.10 (`…\AppData\Local\Programs\Python\Python312`) with torch 2.2.1 + onnxruntime-gpu/directml.
+- **System Python** 3.12.10 (`…\AppData\Local\Programs\Python\Python312`) with torch 2.2.1 + onnxruntime 1.17.1 +
+  **Pillow 10.2.0 + numpy 1.26.4 + cv2 4.9.0**. **Wired by `image.util` (Module 15)** — its Pillow+numpy worker runs
+  under this interpreter (CPU-only, so `parallel_safe`; not the CUDA/speech venv). Verified 2026-07-25 (`m15-probe-001`).
 - Ollama / LM Studio: **not installed.** git / winget / .NET SDK 9 / node: present (see above).
 
 ## Installed local models (inventory — DO NOT re-download; portable copies staged on F:)

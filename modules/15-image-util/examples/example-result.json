@@ -1,0 +1,116 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "image.util",
+  "skill_version": "0.1.0",
+  "contract_version": "0.1",
+  "invocation_id": "4eba3778-0000-4a1b-9c2d-imageutil01",
+  "status": "ok",
+  "started_at_utc": "2026-07-25T05:11:09.0713792Z",
+  "finished_at_utc": "2026-07-25T05:11:09.8640632Z",
+  "duration_ms": 788,
+  "inputs_digest": "sha256:9e9325168bc282c0bd5203f2c264ca0f24d9ba0d0f76f006f12b570ea4c6e453",
+  "result": {
+    "input": {
+      "path": "C:\\Users\\just_\\Pictures\\example-src.png",
+      "exists": true,
+      "bytes": 10932,
+      "sha256": "54697e8b55940fa0fbf68d6e286326f76c8b6b32f6939f7b3fd6e65f66bcc9e7",
+      "format": "PNG",
+      "mode": "RGB",
+      "width": 1600,
+      "height": 1200,
+      "has_alpha": false
+    },
+    "op": "resize",
+    "params": {
+      "op": "resize",
+      "format": "jpg",
+      "quality": 88,
+      "output_name": "",
+      "hash_size": 8,
+      "no_perceptual_hash": false
+    },
+    "metadata": {
+      "format": "PNG",
+      "mode": "RGB",
+      "width": 1600,
+      "height": 1200,
+      "has_alpha": false,
+      "dpi": null,
+      "n_frames": 1,
+      "exif": {}
+    },
+    "hashes": {
+      "sha256": "54697e8b55940fa0fbf68d6e286326f76c8b6b32f6939f7b3fd6e65f66bcc9e7",
+      "phash": "ec1d95e2e26994d1",
+      "dhash": "333433338523130a",
+      "hash_bits": 64
+    },
+    "outputs": [
+      {
+        "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\15-image-util\\runtime\\artifacts\\4eba3778-0000-4a1b-9c2d-imageutil01\\example-src_resized.jpg",
+        "format": "JPEG",
+        "mode": "RGB",
+        "width": 800,
+        "height": 600,
+        "bytes": 17627,
+        "sha256": "026481e68c60d4c7959bc53337d3485d60f67d8b941189bb771ce3104255e8a2"
+      }
+    ],
+    "resize": {
+      "mode": "max_dimension",
+      "requested": {
+        "width": null,
+        "height": null,
+        "max_dimension": 800
+      },
+      "original": {
+        "width": 1600,
+        "height": 1200
+      },
+      "result": {
+        "width": 800,
+        "height": 600
+      },
+      "scale_x": 0.5,
+      "scale_y": 0.5
+    },
+    "crop": null,
+    "tile": null,
+    "similarity": null,
+    "runtime_ms": 150,
+    "worker": {
+      "python": "3.12.10",
+      "pillow_version": "10.2.0",
+      "numpy_version": "1.26.4"
+    }
+  },
+  "confidence": null,
+  "artifacts": [
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\15-image-util\\runtime\\artifacts\\4eba3778-0000-4a1b-9c2d-imageutil01\\image.json",
+      "kind": "json",
+      "bytes": 1597,
+      "sha256": "2403352b5a0503557cdd9b1f4ad61e54429f4532c91e0afd01c96bf027c997ae"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\15-image-util\\runtime\\artifacts\\4eba3778-0000-4a1b-9c2d-imageutil01\\image.md",
+      "kind": "markdown",
+      "bytes": 444,
+      "sha256": "cf87741fa44d39d42b73383c2f3fd69070b441d947a484ea9e885e178cf49d54"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\15-image-util\\runtime\\artifacts\\4eba3778-0000-4a1b-9c2d-imageutil01\\example-src_resized.jpg",
+      "kind": "image",
+      "bytes": 17627,
+      "sha256": "026481e68c60d4c7959bc53337d3485d60f67d8b941189bb771ce3104255e8a2"
+    }
+  ],
+  "model_provenance": [],
+  "diagnostics": {
+    "log": "stderr.txt",
+    "artifact_dir": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\15-image-util\\runtime\\artifacts\\4eba3778-0000-4a1b-9c2d-imageutil01"
+  },
+  "warnings": [],
+  "error": null
+}

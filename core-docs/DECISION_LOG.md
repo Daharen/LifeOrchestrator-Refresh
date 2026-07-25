@@ -573,3 +573,56 @@ alternatives · consequences · affects · state (provisional | locked) · revis
   `MODULE_ROADMAP.md`, `SKILL_CONTRACT.md` (first parallel-safe stochastic perception skill). · **revisit-if:** Tesseract
   (or a VLM, #17) is wired as a second engine; a calibrated/semantic confidence, an overlay PNG, `MaxImageDimension`
   downscaling, multi-column reflow, or batch/PDF OCR is built (each its own scoped follow-on).
+
+### D-0024 — image.util is a deterministic Pillow+numpy Python worker under the system python; not a review producer; no models.json change
+- **date:** 2026-07-25 · **state:** locked (backend choice + Python worker + meta hand-off + deterministic + tool-not-model), provisional (op surface may grow)
+- **decision:** Module 15 `image.util` — the second module of the image/document perception block (14–18) and the **first
+  deterministic perception skill** — does the small, boring, deterministic image operations the perception block and
+  everything downstream keep needing: **one image in -> metadata + content/perceptual hashes always, plus one optional op**:
+  **resize** (`fit`/`fill`/`exact` with width/height, or a single `max_dimension` = longest-side cap; reports
+  `original`/`result`/`scale_x`/`scale_y`), **crop** (explicit pixel rect / `normalized` 0..1 rect / named `region` +
+  `region_fraction`; clamped with a warning), **convert** (png/jpg/webp/bmp/tiff + quality; alpha flattened onto white
+  where the format has none), **tile** (a `cols`x`rows` grid or fixed `tile_width`x`tile_height` with optional `overlap`,
+  bounded to 400 tiles), and **similarity** (pHash/dHash Hamming distance + a `1 - hamming/bits` score vs a second image).
+  Metadata = `format/mode/width/height/has_alpha/dpi/n_frames/EXIF-lite`; hashes = **sha256** (exact file content) + a DCT
+  **pHash** + a gradient **dHash** (64-bit). MVP design, settled after a **probe-first** pass (`m15-probe-001`): (1)
+  **Backend = Pillow + numpy under the system python** (`…\Python312`, PIL 10.2.0 + numpy 1.26.4). The probe confirmed live
+  round-trips of all five formats, LANCZOS + `PIL.features` webp/libtiff/jpg, EXIF read, and a numpy-DCT pHash — and,
+  critically, that the **perceptual hashes are identical across PIL 10.2/numpy 1.26 and PIL 12.2/numpy 2.4**, so they are
+  safe to store and compare across machines. Chosen over the speech venv (PIL 12.2) because the system python is **CPU-only**
+  (so the skill is genuinely `parallel_safe`, binding no CUDA/venv) and not tied to the speech stack; over `ffmpeg`
+  (weaker at metadata/EXIF/format nuance) and `System.Drawing` (Windows-only, no perceptual hashing). (2) **Two-part skill**
+  like `speech.tts` (D-0021) but **deterministic**: a Python worker (`image_worker.py`) does all pixel work and writes a
+  JSON **meta file**; the pwsh-7 wrapper (`Invoke-ImageUtil.ps1`) resolves the interpreter (`-PythonPath` -> system Python312
+  -> speech venv -> PATH, first that imports PIL+numpy), spawns the worker, reads the **meta file** (never stdout — robust
+  to any library chatter), and builds the contract envelope, hashing every artifact. (3) **Deterministic posture**:
+  `determinism:"deterministic"`, `confidence:null`, empty `model_provenance`, **NOT a review-queue producer** (it makes no
+  uncertain judgment — like `audio.ingest`/`fs.observer`). (4) **A tool, not a model**: Pillow is registered in
+  `TOOL_MODEL_REGISTRY.md`, but there is **no `models.json` entry and no Module 7 re-verify** (contrast the OCR/STT/TTS
+  registry-driven modules) — exactly as `audio.ingest` treats `ffmpeg`. `parallel_safe:true`, `batch:false`, `streaming:false`.
+- **reason:** Smallest useful set that closes the "deterministic pixel plumbing" gap for the whole perception block and is
+  immediately useful (downscale-before-OCR, thumbnails, crop, dedup by perceptual hash). Pillow is the richest, most
+  portable image library and is already installed — wrapping it (not reimplementing) fits the language policy (Python for
+  the imaging ecosystem; PowerShell owns the envelope). Reporting resize `scale_x`/`scale_y` is deliberate: it makes the
+  `ocr.layout` **MaxImageDimension downscale-then-rescale-boxes** composition a one-liner for the caller (rescale boxes by
+  `1/scale`). Because Pillow is portable AND version-stable, the test harness runs the **real** worker on the cloud box
+  (no mock needed, unlike the WinRT/CUDA engines that forced mocks in M11/12/14) — the same real-engine-on-cloud pre-ship
+  gate as `audio.ingest`, but stronger.
+- **alternatives:** wrap `ffmpeg` for single-image resize/convert (rejected — no perceptual hashing, weaker metadata/EXIF,
+  awkward for crop/tile); `System.Drawing` / .NET (rejected — Windows-only, no pHash, and `capture.screen` already shows its
+  limits); the **speech venv** python as the worker interpreter (rejected as default — heavier, CUDA-bound, ties a CPU tool
+  to the GPU stack; kept as a **fallback** in the resolver, and it produces identical hashes); a mock worker for the
+  off-machine gate (rejected — Pillow runs for real on Linux, so the real worker is a better gate); a review-queue producer
+  or a `confidence` (rejected — the operations are deterministic, there is nothing to review); an **operation pipeline**
+  (multiple ops per call) (deferred — one primary op per call is simpler and sufficient; a pipeline is a follow-on);
+  **draw/annotate/overlay**, **batch/directory**, rotate/flip/auto-orient, denoise/filters, multi-frame editing (deferred —
+  scoped follow-ons; the box-overlay PNG in particular pairs with a future draw op).
+- **consequences:** the perception block (14–18) now has its deterministic image primitive; the review queue is unchanged
+  (still five producers — `image.util` produces nothing). `models.json` is untouched, so Module 7 stays 28/28 without a
+  re-run. The system python is now a wired runtime (Pillow+numpy). Two `ocr.layout` follow-ons are unblocked and documented
+  (MaxImageDimension downscale + box overlay) but intentionally **not** wired here. Throughput is a per-call python spawn
+  (~0.2–0.8 s) — fine for the perception use; a warm worker is a possible follow-on if it ever dominates. · **affects:**
+  Module 15, `TOOL_MODEL_REGISTRY.md`, `CURRENT_STATE.md`, `MODULE_ROADMAP.md` (does **not** touch `models.json`,
+  `REVIEW_QUEUE.md`, or Module 7). · **revisit-if:** a draw/overlay op, batch/directory processing, an operation pipeline,
+  rotate/flip/auto-orient, or a warm worker is built (each its own scoped follow-on); or `detect.objects` (#16) / a VLM (#17)
+  needs a shared image-preprocessing path.

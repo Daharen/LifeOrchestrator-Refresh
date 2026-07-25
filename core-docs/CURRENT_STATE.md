@@ -5,11 +5,12 @@ Owns **reality as it exists now** — not intended architecture. Keep it compact
 is planned (serves scripts and weaker local models) but not yet created.
 
 - **Project phase:** MVP module build-out.
-- **Active module:** _none in progress._ **Modules 0–14 complete** (0 executor · 1 `skill.bootstrap` · 2
+- **Active module:** _none in progress._ **Modules 0–15 complete** (0 executor · 1 `skill.bootstrap` · 2
   `fs.observer` · 3 `proc.observer` · 4 `uia.inspector` · 5 `uia.actor` · 6 `capture.screen` · 7 `model.gateway` ·
   8 `classify.batch` · 9 `review.processor` · 10 `audio.ingest` · 11 `speech.stt` · 12 `speech.tts` · 13 `voice.live` ·
-  14 `ocr.layout`), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure). **The full
-  audio track (10–13) is complete; the image/document perception block (14–18) has begun — Module 14 `ocr.layout` is done.**
+  14 `ocr.layout` · 15 `image.util`), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure). **The full
+  audio track (10–13) is complete; the image/document perception block (14–18) is under way — Modules 14 `ocr.layout` and
+  15 `image.util` are done.**
   **Module 8 — Batch Classification & Sorting (`classify.batch`) is MVP complete** — the **first real
   consumer of `model.gateway`**: for each item in a batch it calls the gateway (default `-Tier weak` = 1.5B) with a
   mode-specific prompt (`classify` one-label / `multilabel` / `extract` fields), parses the completion, computes a
@@ -119,6 +120,29 @@ is planned (serves scripts and weaker local models) but not yet created.
   bytes hit Windows. `models.json` gained `defaults.ocr`/`tiers.ocr` + `ocr.windows.media` (default) / `ocr.tesseract`
   (declared) — **additive; Module 7 re-verified 28/28** (`m14-final-001`). **Tesseract is installed** (`C:\Program
   Files\Tesseract-OCR\`) and declared as a future second engine. See D-0023.
+- **Module 15 — Image Utilities (`image.util`) is MVP complete this session** — the **second module of the image/document
+  perception block (14–18)** and the **first deterministic perception skill** (like `audio.ingest`/`fs.observer`:
+  `determinism:"deterministic"`, `confidence:null`, empty `model_provenance`, **not** a review-queue producer). One image
+  in -> metadata + hashes always, plus one optional op: **resize** (fit/fill/exact or a single `max_dimension`, reporting
+  `scale_x`/`scale_y`), **crop** (pixel rect / normalized 0..1 / named region), **convert** (png/jpg/webp/bmp/tiff +
+  quality; alpha flattened to white where unsupported), **tile** (grid or fixed size + overlap, bounded to 400), and
+  **similarity** (pHash/dHash Hamming distance + score vs a second image). Metadata = format/mode/dims/has_alpha/dpi/
+  n_frames/EXIF-lite; hashes = **sha256** (exact) + a DCT **pHash** + **dHash** (64-bit, deterministic and **stable across
+  Pillow/numpy versions** — `m15-probe-001`). **Probe-first** (`m15-probe-001`): the **system python**
+  (`…\Python312\python.exe`, PIL 10.2.0 + numpy 1.26.4) round-trips all five formats + LANCZOS + EXIF + a numpy-DCT pHash;
+  chosen over the speech venv (PIL 12.2) because it is CPU-only (so genuinely `parallel_safe`, no CUDA/venv binding) and
+  not tied to the speech stack. Implemented as a **Pillow+numpy Python worker** (`image_worker.py`) + a **pwsh-7 wrapper**
+  (`Invoke-ImageUtil.ps1`) with a **meta-file hand-off** (the D-0021 worker+meta pattern in its deterministic variant).
+  **NOT a `model.gateway` model — no `models.json` change, no Module 7 re-verify** (a tool, like ffmpeg for `audio.ingest`).
+  `parallel_safe:true`, `batch:false`. Artifacts `image.json`/`image.md` + produced image file(s). **Tests 48/48 via the
+  executor** (`m15-test-001`, exit 0) — manifest, meta+hashes, resize fit/fill/exact + `max_dimension` scale factors, crop
+  rect/normalized/region, convert to all five formats, tile grid + fixed-size, similarity self/near-dup/different, six
+  error paths, and the Module 1 wrapper; no orphaned processes; shipped-file sha256 verified byte-exact on disk.
+  **Pre-shipped off-machine**: because Pillow is portable AND version-stable (unlike the WinRT/CUDA engines that forced
+  mock workers in M11/12/14), the harness ran the **real** worker on the cloud Linux box (pwsh 7.4.6 + cloud python +
+  Pillow 12.2, 48/48) as the pre-ship gate — the same real-engine-on-cloud gate as `audio.ingest`. Directly unblocks two
+  `ocr.layout` follow-ons (documented, not built here): `MaxImageDimension` downscale-then-rescale-boxes, and a box-overlay
+  PNG. See D-0024.
 - **Repo / working dir:** **`C:\Users\just_\LifeOrchestrator-Refresh\`** — the clean standalone home for
   **Life Orchestrator** (near-term local-skills track; git-initialized). Layout: `core-docs/` (these docs)
   and `modules/<NN>-<name>/` (one per module). **Reference sources (separate, not built here):** the earlier
@@ -221,6 +245,11 @@ is planned (serves scripts and weaker local models) but not yet created.
 - **Tesseract OCR** at `C:\Program Files\Tesseract-OCR\tesseract.exe` — **installed** (found by `m14-probe-001`),
   **declared not wired** (`ocr.tesseract`) as a future `ocr.layout` engine (calibrated per-word confidence + multi-lang).
   No Python OCR libs (easyocr/paddleocr/rapidocr/pytesseract) in either venv (`onnxruntime`/`PIL`/`cv2` present).
+- **Pillow (PIL) + numpy** — the imaging backend for `image.util` (Module 15). **System python**
+  (`C:\Users\just_\AppData\Local\Programs\Python\Python312\python.exe`): **PIL 10.2.0 + numpy 1.26.4 + cv2 4.9.0**;
+  **speech venv** (F:): PIL 12.2.0 + numpy 2.4.4. Verified live 2026-07-25 (`m15-probe-001`): round-trips png/jpg/webp/
+  bmp/tiff, LANCZOS + all format features, EXIF api, and a numpy-DCT pHash **identical across both** PIL/numpy versions.
+  `image.util` uses the **system python** (CPU-only, not tied to the CUDA/speech venv). No install needed.
 - Not admin. No system-wide `pwsh` (only the user `~\.dotnet\tools` entry — resolves in new shells).
 
 ## Installed local models
@@ -347,6 +376,16 @@ is planned (serves scripts and weaker local models) but not yet created.
   portable**: `-UseMock` runs the *real* wrapper against a mock worker (`tests/mock-ocr-worker.ps1` + captured real
   `tests/fixtures/ocr-sample.meta.json`) + a temp registry — it ran on the cloud Linux box (28/28) as the pre-ship gate
   before the identical harness ran live on the Windows executor. Real-registry smoke `m14-smoke-001` (7 words, conf 0.9).
+- Module 15: `modules/15-image-util/tests/Invoke-ImageUtilTests.ps1` — **48/48 pass** (manifest + deterministic/parallel_safe=true/
+  batch flags; `meta` -> correct 800x600/PNG/RGB + sha256==file + 16-hex pHash/dHash + `confidence` null + empty
+  `model_provenance` + image.json/image.md artifacts with sha256; `resize max_dimension`=400 -> 400x300 with `scale_x==scale_y==0.5`
+  and the output file reopened at 400x300; resize exact/fit/fill; crop rect/normalized(0.5)/region(center) -> 400x300; convert to
+  png/jpg/webp/bmp/tiff each reopened with the right format/mode/dims; tile grid 2x2 -> count 4 (+sha256) and fixed-size 300 -> count 6;
+  similarity self (Hamming 0, score 1.0) / near-dup jpg (small) / different (larger); six error paths `input_not_found`/`invalid_op`/
+  `missing_params`/`unsupported_format`/`compare_not_found` + schema-valid error envelope; the Module 1 wrapper; `m15-test-001`, exit 0,
+  no orphaned python). The harness is **real-worker & OS-portable** (no mock — Pillow is portable + version-stable): it generates its
+  fixtures with Pillow at runtime and ran the *real* worker on the cloud Linux box (pwsh 7.4.6 + cloud python + Pillow 12.2, 48/48) as
+  the pre-ship gate before the identical harness ran live on the Windows executor (system python, PIL 10.2).
 
 ## Known failures / gotchas
 - **Windows PowerShell 5.1 reads a BOM-less `.ps1` as ANSI, not UTF-8 (2026-07-25, Module 14).** Any non-ASCII byte in a
@@ -428,14 +467,16 @@ is planned (serves scripts and weaker local models) but not yet created.
   27B load (~90s) approaches the gateway's 120s default, so callers pass a longer `-LoadTimeoutSec` for the strong tier.
 
 ## Next expected action
-1. **Module 14 `ocr.layout` is complete; the perception block (14–18) is under way.** The next step is **Module 15
-   `image.util`** (resize/crop/meta/hash/similarity/convert/tile/region) — the natural follow-on, and it directly unblocks
-   `ocr.layout`'s `MaxImageDimension` downscale + box-overlay follow-ons. Then **#16 `detect.objects`**, **#17
-   `image.interpret`** (a local **VLM** — probe for a vision model first, none is staged yet), **#18 `image.index`**
-   (integrate 14–17). Expand and give a work order to whichever is picked. `ocr.layout` follow-ons (NOT this session):
-   wire **Tesseract** (`ocr.tesseract`, installed) or a VLM as a second `-Engine` for calibrated per-word confidence +
-   multi-language; a drawn **overlay PNG** of the boxes; `MaxImageDimension` **downscale-then-rescale-boxes** (pairs with
-   #15); multi-column reading-order reflow; **batch/directory/PDF-page** OCR. See D-0023.
+1. **Modules 14 `ocr.layout` + 15 `image.util` are complete; the perception block (14–18) continues.** The next step is
+   **#16 `detect.objects`** (class boxes + confidence — **probe for a detection model first**, none is staged yet; onnxruntime
+   is present in both pythons), then **#17 `image.interpret`** (a local **VLM** — probe for a vision model first, none is staged
+   yet), **#18 `image.index`** (integrate 14–17). Expand and give a work order to whichever is picked. **`image.util` follow-ons
+   (NOT this session):** the two `ocr.layout` compositions it unblocks — `MaxImageDimension` **downscale-then-rescale-boxes**
+   (`op=resize,max_dimension=10000` then rescale word boxes by `1/scale`) and a **box-overlay PNG** (needs a draw op); a
+   **draw/annotate/overlay** op; **batch/directory/glob**; rotate/flip/EXIF auto-orient; denoise/sharpen; multi-frame (GIF)
+   handling. See D-0024. **`ocr.layout` follow-ons (NOT this session):** wire **Tesseract** (`ocr.tesseract`, installed) or a
+   VLM as a second `-Engine` for calibrated per-word confidence + multi-language; the box-overlay + downscale compositions now
+   unblocked by `image.util`; multi-column reading-order reflow; **batch/directory/PDF-page** OCR. See D-0023.
 2. **Audio-track follow-ons (NOT this session):** a mic `audio.capture` skill + a streaming/interactive loop; standalone
    VAD (stage a VAD ggml model); multi-turn dialogue + memory; a **warm-worker pool** so a voice turn avoids three cold
    model loads (the shared pressure point with #7/#8/#12/#14 per-call worker spawns). See D-0022.
@@ -449,4 +490,4 @@ is planned (serves scripts and weaker local models) but not yet created.
    intra-batch prompt for throughput; calibrated confidence; a side-effecting `sort.files` mover) — see D-0017; audio.ingest follow-ons (batch/directory ingest; trimming/
    segmentation → Module 13; denoise/high-pass — see D-0019).
 
-- **Last updated:** 2026-07-25 (UTC) · **Last updating agent:** Claude (Cowork — Module 14 ocr.layout build session; perception block 14–18 begun; first parallel-safe perception skill; fifth review producer).
+- **Last updated:** 2026-07-25 (UTC) · **Last updating agent:** Claude (Cowork — Module 15 image.util build session; second perception-block module; first deterministic perception skill; Pillow+numpy worker under the system python; 48/48 live; not a review producer; no models.json change).
