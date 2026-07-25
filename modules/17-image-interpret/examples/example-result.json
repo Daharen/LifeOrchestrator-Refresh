@@ -1,0 +1,147 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "image.interpret",
+  "skill_version": "0.1.0",
+  "contract_version": "0.1",
+  "invocation_id": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\17-image-interpret\\runtime\\artifacts\\example-0001",
+  "status": "ok",
+  "started_at_utc": "2026-07-25T06:39:04.8658923Z",
+  "finished_at_utc": "2026-07-25T06:39:05.1504602Z",
+  "duration_ms": 280,
+  "inputs_digest": "sha256:959bd3b7c9dd7c30c7e94fad8b1eef4cbd49de355a2835159f6e36e9cfbcde9e",
+  "result": {
+    "input": {
+      "path": "C:\\Users\\just_\\Pictures\\photo.jpg",
+      "exists": true,
+      "source": "file",
+      "capture": null
+    },
+    "image": {
+      "width": null,
+      "height": null,
+      "mime": "image/jpeg"
+    },
+    "model": {
+      "id": "vlm.qwen2p5-vl-3b",
+      "name": "Qwen2.5-VL-3B-Instruct (GGUF)",
+      "family": "qwen2.5-vl",
+      "engine": "llama-server",
+      "format": "gguf",
+      "quant": "Q4_K_M",
+      "context": 8192,
+      "gpu_layers": 99,
+      "path": "F:\\...\\vlm\\Qwen2.5-VL-3B-Instruct-GGUF\\Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf",
+      "mmproj": "F:\\...\\vlm\\Qwen2.5-VL-3B-Instruct-GGUF\\mmproj-Qwen2.5-VL-3B-Instruct-f16.gguf"
+    },
+    "request": {
+      "mode": "describe",
+      "system": "You are a precise visual assistant. Answer based only on what is visible in the image. Be concise and factual.",
+      "prompt": "Describe this image in detail. Include the main objects, the setting, and any visible text.",
+      "max_tokens": 512,
+      "temperature": 0.2,
+      "top_p": 0.9,
+      "seed": -1
+    },
+    "preprocess": {
+      "max_dimension": null,
+      "downscaled": false,
+      "scale_x": 1.0,
+      "scale_y": 1.0,
+      "original": null,
+      "artifact_dir": null
+    },
+    "interpretation": {
+      "text": "The image shows a dog sitting on a porch next to a red bicycle. The porch has a yellow wall and white floor. In the background, there is a tree, a white van parked on the street, and a red motorcycle. The setting appears to be a residential area with a tree providing shade.",
+      "finish_reason": "stop",
+      "prompt_tokens": 624,
+      "completion_tokens": 62,
+      "total_tokens": 686,
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 624,
+        "prompt_ms": 456.156,
+        "prompt_per_token_ms": 0.7310192307692308,
+        "prompt_per_second": 1367.953068687028,
+        "predicted_n": 62,
+        "predicted_ms": 557.278,
+        "predicted_per_token_ms": 8.988354838709677,
+        "predicted_per_second": 111.25506479710306
+      }
+    },
+    "confidence": {
+      "value": 0.7,
+      "reason": "ok",
+      "refusal": false
+    },
+    "review": {
+      "threshold": 0.5,
+      "flagged_count": 0,
+      "queue_path": null
+    },
+    "server": {
+      "mode": "captured_response",
+      "port": null,
+      "health_ms": null,
+      "gpu_layers": 99,
+      "context": 8192
+    }
+  },
+  "confidence": 0.7,
+  "artifacts": [
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\17-image-interpret\\runtime\\artifacts\\example-0001\\interpret.json",
+      "kind": "json",
+      "bytes": 2067,
+      "sha256": "2f756d74ff769b045fb115b8322ce9dba49e6c4d14f78351bbfb9aec3ade6a3c"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\17-image-interpret\\runtime\\artifacts\\example-0001\\interpret.md",
+      "kind": "markdown",
+      "bytes": 614,
+      "sha256": "27220bf3ae3374430387ab12fdb9743c94c6a86246980171e9d5677f398d0add"
+    }
+  ],
+  "model_provenance": [
+    {
+      "model_id": "vlm.qwen2p5-vl-3b",
+      "name": "Qwen2.5-VL-3B-Instruct (GGUF)",
+      "family": "qwen2.5-vl",
+      "version": "Q4_K_M",
+      "format": "gguf",
+      "engine": "llama-server",
+      "engine_build": "llama.cpp b8661 (b7ad48ebd), CUDA",
+      "device": "captured",
+      "params": {
+        "gpu_layers": 99,
+        "context": 8192,
+        "max_tokens": 512,
+        "temperature": 0.2,
+        "top_p": 0.9,
+        "seed": -1
+      },
+      "mode": "describe",
+      "prompt_tokens": 624,
+      "completion_tokens": 62,
+      "total_tokens": 686,
+      "finish_reason": "stop",
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 624,
+        "prompt_ms": 456.156,
+        "prompt_per_token_ms": 0.7310192307692308,
+        "prompt_per_second": 1367.953068687028,
+        "predicted_n": 62,
+        "predicted_ms": 557.278,
+        "predicted_per_token_ms": 8.988354838709677,
+        "predicted_per_second": 111.25506479710306
+      },
+      "runtime_ms": null
+    }
+  ],
+  "diagnostics": {
+    "log": "stderr.txt",
+    "artifact_dir": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\17-image-interpret\\runtime\\artifacts\\example-0001"
+  },
+  "warnings": [],
+  "error": null
+}

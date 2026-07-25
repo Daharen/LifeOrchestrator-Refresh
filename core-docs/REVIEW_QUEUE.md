@@ -180,6 +180,25 @@ end-to-end by the Module 16 tests (a forced 0.999 threshold produced a valid `de
 produced a `verify_no_objects` item; `m16-test-001`, 38/38). **Producers are now 7/8/11/12/14/16 → local drainer 9 →
 frontier for the residue.** See D-0025.
 
+## Seventh producer wired (Module 17)
+`image.interpret` is the **seventh skill that appends** to `review_queue.jsonl` (after `model.gateway`, `classify.batch`,
+`speech.stt`, `speech.tts`, `ocr.layout`, `detect.objects`), and the third from the perception track. It interprets one
+image with a local VLM (llama.cpp `llama-server` + mmproj) and flags a **weak, refusing, or empty** interpretation. Its
+confidence is a documented **completeness + refusal + non-empty heuristic** (like `model.gateway`/`ocr.layout`, not
+calibrated): generation stop → 0.7, truncated (`finish_reason=length`) → 0.4, a detected **refusal** → 0.3, empty output →
+0.1. When the envelope `confidence` falls below `-ConfidenceThreshold` (default 0.5), it appends **one page-level**
+`lifeorch.review.item/0.1` with `flagged_by:"image.interpret"`, `source_ref:"artifact://<invDir>/interpret.json"`,
+`weak_result = {model, mode, image, prompt, finish_reason, confidence_reason, answer_preview}`,
+`requested:"verify_interpretation"`, and a **reason mapped from the failure**: `failed_transform` (empty output),
+`needs_strong_review` (a refusal — a stronger model / the frontier can judge whether the refusal is warranted), or
+`low_confidence` (truncated / otherwise low). It is **page-level, not per-sentence** — one item per interpretation. A text
+reviewer (Module 9) can sanity-check the interpretation against the prompt/mode; genuinely vision-bound cases escalate to
+the frontier. Its optional children (`image.util` for `-MaxDimension`, `capture.screen` for `-Capture`) are deterministic /
+non-producers, so there is no gateway-style suppression to do. Module 9 selects by `flagged_by` and handles the new
+`verify_interpretation` verb by construction. Verified end-to-end by the Module 17 tests (forced low-confidence, a refusal
+fixture, and an empty fixture each produced the right `image.interpret` item; `m17-test-001/002`, 48/48). **Producers are now
+7/8/11/12/14/16/17 → local drainer 9 → frontier for the residue.** See D-0026.
+
 ## Design flags to revisit (not yet actioned — for a future session/frontier pass)
 - **speech.stt confidence is mean token probability — honest but not calibrated.** A real acoustic signal (richer than
   the gateway's completeness heuristic) but not a probability the transcript is *correct*; replace with a calibrated /

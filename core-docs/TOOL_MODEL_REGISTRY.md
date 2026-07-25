@@ -488,6 +488,40 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   `m16-probe-001` staged the model + confirmed live CPU inference; pre-shipped on the cloud box, real worker, onnxruntime 1.25,
   34/34). · **skills:** `detect.objects`. See D-0025.
 
+### `image.interpret` — Image Interpretation / VLM (Module 17)
+- **status:** installed · **type:** skill (pwsh-7 wrapper, **no python worker**; drives the staged llama.cpp `llama-server`
+  in multimodal mode over HTTP) · **location:** `LifeOrchestrator-Refresh/modules/17-image-interpret/`
+- **invocation:** direct `pwsh -NoProfile -File .\Invoke-ImageInterpret.ps1 -InputFile <image> [-Prompt <q>]
+  [-Mode <caption|describe|vqa|screen>] [-System <s>] [-Model <id>|-Tier <3b>] [-MaxTokens <n>] [-Temperature <n>]
+  [-TopP <n>] [-Seed <n>] [-ConfidenceThreshold <0..1>] [-MaxDimension <n>] [-Capture] [-CaptureInputsJson '<json>']
+  [-Context|-GpuLayers|-Port|-LoadTimeoutSec <n>] [-Registry|-ModelPath|-MmprojPath|-EnginePath|-ImageUtilPath|
+  -CapturePath|-PythonPath|-PwshPath|-ReviewQueuePath|-VlmResponsePath <override>]` (or `-InputsJson '<json {input,prompt,
+  mode,system,model,tier,max_tokens,temperature,top_p,seed,confidence_threshold,max_dimension,capture,capture_inputs,
+  context,gpu_layers,port,load_timeout_sec,registry,model_path,mmproj_path,engine_path,image_util_path,capture_path,
+  python_path,pwsh_path,review_queue_path,vlm_response_path}>'`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1
+  -SkillDir .`; or an `exec.bootstrap` task.
+- **supported tasks:** caption / detailed description / VQA / screen interpretation of one image with a local VLM. Resolves
+  a VLM from `models.json` (`type=vlm`, decoupled from the gateway `wired` gate). Compose `capture.screen` (`-Capture`) to
+  interpret the live screen, or `image.util` (`-MaxDimension`) to downscale a huge input before sending (bounds vision tokens).
+- **I/O:** in = an image path (or `-Capture`) + a prompt/mode; out = `lifeorch.skill.result/0.1` envelope (result = `{input{path,
+  exists,source,capture?}, image{width,height,mime}, model{id,name,family,engine,format,quant,context,gpu_layers,path,mmproj},
+  request{mode,system,prompt,max_tokens,temperature,top_p,seed}, preprocess{...}, interpretation{text,finish_reason,
+  prompt_tokens,completion_tokens,total_tokens,timings}, confidence{value,reason,refusal}, review{...},
+  server{mode,port,health_ms,gpu_layers,context}}`) + `runtime/artifacts/<id>/{interpret.json,interpret.md,interpret_args.json,
+  server.out.log,server.err.log,result.json,stderr.txt, capture/…, image_util/…}`.
+- **determinism:** **mixed** · **confidence:** a documented **completeness + refusal + non-empty heuristic** (stop 0.7 / length
+  0.4 / refusal 0.3 / empty 0.1; NOT calibrated); `< -ConfidenceThreshold` 0.5 → `review_queue.jsonl`
+  (`flagged_by:"image.interpret"`, `verify_interpretation`; reason `low_confidence`/`needs_strong_review`(refusal)/
+  `failed_transform`(empty)) · **speed:** cold `llama-server` load a few s + image decode ~0.1 s + ~111 tok/s generate on the
+  RTX 2080 Ti · **CPU/GPU/mem:** GPU (CUDA, ~3.1 GB VLM weights fully offloaded) / ~6 GB.
+- **limitations:** **`parallel_safe:false`** (starts a `llama-server` bound to a loopback port + the GPU — run one at a time);
+  one image per invocation (`batch:false`); free-text only — **no grounding/bounding boxes** (that is `detect.objects` #16 /
+  `#22`) and not an OCR path (that is `ocr.layout` #14); confidence is a completeness/refusal heuristic, not calibrated; no
+  warm server / streaming. · **last test:** 2026-07-25 via executor (**tests 48/48**; `m17-test-001/002`, exit 0; probes
+  `m17-probe-001` mmproj support / `m17-probe-002` staged + live-verified / `m17-probe-003` captured the seam fixture;
+  pre-shipped on the cloud box via a captured-real-response seam, 40/40). · **skills:** `image.interpret`. Registry id
+  `vlm.qwen2p5-vl-3b` (models.json, `wired:false`). See D-0026.
+
 ### `Windows.Media.Ocr` — system OCR engine (used by ocr.layout)
 - **status:** installed (system) · **type:** WinRT API (`Windows.Media.Ocr.OcrEngine`) · **location:** OS component;
   reached via **Windows PowerShell 5.1** at `C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe` (5.1.19041.6456).
@@ -520,6 +554,10 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   `F:\…\LifeOrchestrator-Refresh_Large_Data\_pending-model-storage\_engines\llama.cpp\bin\` (runs standalone;
   needs a system CUDA runtime). `model.gateway` uses `llama-server` (chat completions). Note: this build's
   `llama-cli` is interactive-only (rejects `-no-cnv`); use `llama-server` for scripting.
+  **Multimodal-capable (verified 2026-07-25, `m17-probe-001/002`):** `llama-server --help` exposes `-mm/--mmproj`,
+  `--mmproj-offload`, `--image-min/max-tokens` (full mtmd support); launched with `--mmproj <projector.gguf>` it accepts
+  OpenAI-style `image_url` (base64 data URI) content on `/v1/chat/completions`. **Wired by `image.interpret` (Module 17)**
+  with the Qwen2.5-VL-3B GGUF — a live dog.jpg caption ran at ~111 tok/s, weights fully GPU-offloaded.
 - **whisper.cpp** — CUDA + CPU builds with `whisper-cli.exe`/`whisper-server.exe` under
   `F:\Local_TTS_Large_Data\external\whisper.cpp_{cuda,cpu_backup_2026_04_17}\build\bin\Release\`. **Verified + wired by
   `speech.stt` (Module 11), 2026-07-24.** Both builds load headless (`m11-probe-001`; the CUDA build initializes the RTX
@@ -559,8 +597,9 @@ All staged under `F:\My_Programs\LifeOrchestrator-Refresh_Large_Data\_pending-mo
 | `embedding.qwen3-0p6b` | embedding | `embedding\Qwen3-Embedding-0.6B\` | 1.12 GB | transformers | no → M23 |
 | `detect.yolox.nano` | detector | `detector\yolox-nano\yolox_nano.onnx` | 3.66 MB | onnxruntime | **via `detect.objects`** (M16, default) |
 | `detect.yolox.tiny` | detector | `detector\yolox-tiny\yolox_tiny.onnx` | 20.2 MB | onnxruntime | **via `detect.objects`** (M16, `-Tier tiny`) |
+| `vlm.qwen2p5-vl-3b` | vlm | `vlm\Qwen2.5-VL-3B-Instruct-GGUF\{...Q4_K_M.gguf,mmproj-...f16.gguf}` | 1.80 + 1.25 GB | llama-server (mmproj) | **via `image.interpret`** (M17, default) |
 
-Tiers (`models.json`): LLM `tiny`=0.5B, `weak`=1.5B (default), `mid`=3B, `strong`=27B; detector `nano` (default) / `tiny`.
+Tiers (`models.json`): LLM `tiny`=0.5B, `weak`=1.5B (default), `mid`=3B, `strong`=27B; detector `nano` (default) / `tiny`; vlm `3b` (default).
 Detectors are COCO-80 YOLOX ONNX (Apache-2.0), run under the system python's onnxruntime (CPU by default), decoupled from the
 gateway `wired` gate. Source originals (may be removed by the user) are listed in `_pending-model-storage\MIGRATION.md`.
 
@@ -574,7 +613,8 @@ gateway `wired` gate. Source originals (may be removed by the user) are listed i
 
 ### Planned / not yet present (do not assume these exist)
 - **Object detectors** — present (Module 16): `detect.yolox.nano`/`detect.yolox.tiny` (COCO-80 ONNX) staged on F:.
-- **Vision / multimodal (VLM)** models — none yet (Module 17 `image.interpret`). C++ toolchain for native modules — verify
+- **Vision / multimodal (VLM)** models — present (Module 17): `vlm.qwen2p5-vl-3b` (Qwen2.5-VL-3B-Instruct GGUF Q4_K_M + mmproj-f16,
+  Apache-2.0) staged on F:, run via the staged `llama-server` (multimodal) by `image.interpret`. C++ toolchain for native modules — verify
   (CMake/MSVC) before the first C++ module; register when confirmed.
 
 **Discipline:** never list a tool as `installed` you have not actually invoked on this machine. Prefer

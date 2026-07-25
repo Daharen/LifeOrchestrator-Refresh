@@ -1,0 +1,49 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "image.interpret",
+  "name": "Image Interpretation (VLM captions / VQA / screen)",
+  "version": "0.1.0",
+  "contract_version": "0.1",
+  "purpose": "Interpret one image with a local vision-language model and return a free-text interpretation (caption / detailed description / answer to a question / screen summary). Runs the already-staged llama.cpp llama-server (b8661) in multimodal mode (-m <vlm.gguf> --mmproj <projector.gguf> -> /v1/chat/completions with an OpenAI-style image_url base64 data URI), the same engine model.gateway (#7) drives, extended with the projector. Resolves the VLM from models.json (type=vlm), decoupled from the gateway wired gate. Binds a loopback port + CUDA/VRAM, so parallel_safe:false. Populates confidence (completeness+refusal+non-empty heuristic) + model_provenance and routes low-confidence / refusal / empty interpretations to the review queue (seventh producer). Composes capture.screen (#6) via -Capture and image.util (#15) via -MaxDimension (downscale before sending). Default model vlm.qwen2p5-vl-3b (Qwen2.5-VL-3B-Instruct GGUF Q4_K_M + mmproj, Apache-2.0).",
+  "determinism": "mixed",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-ImageInterpret.ps1",
+    "args_spec": "Named params -InputFile <path> (image; required unless -Capture); -Prompt <question/instruction>; -Mode <caption|describe|vqa|screen> (default resolved from prompt/capture); -System <system prompt>; -Model <model_id> | -Tier <alias>; -MaxTokens <n> (512); -Temperature <0..2> (0.2); -TopP <0..1> (0.9); -Seed <n>; -ConfidenceThreshold <0..1> (0.5, review floor); -MaxDimension <n> (downscale via image.util before sending); -Capture; -CaptureInputsJson '<json>'; server knobs -Context/-GpuLayers/-Port/-LoadTimeoutSec; overrides -Registry/-ModelPath/-MmprojPath/-EnginePath/-ImageUtilPath/-CapturePath/-PythonPath/-PwshPath/-ReviewQueuePath; test seam -VlmResponsePath <captured.json>. OR -InputsJson '<json {input,prompt,mode,system,model,tier,max_tokens,temperature,top_p,seed,confidence_threshold,max_dimension,capture,capture_inputs,context,gpu_layers,port,load_timeout_sec,registry,model_path,mmproj_path,engine_path,image_util_path,capture_path,python_path,pwsh_path,review_queue_path,vlm_response_path}>'. Optional -ArtifactRoot, -InvocationId.",
+    "engine": "llama.cpp llama-server (multimodal, --mmproj)"
+  },
+  "inputs": [
+    { "name": "input", "type": "string", "required": false, "description": "Path to the source image (anything the VLM/data-URI accepts: jpg/png/webp/bmp/gif). Required unless capture=true." },
+    { "name": "prompt", "type": "string", "required": false, "description": "Question or instruction. Used verbatim when given (selects mode=vqa unless a mode is named); otherwise a per-mode default is used." },
+    { "name": "mode", "type": "string", "required": false, "description": "caption (one sentence) | describe (detailed; default for a file) | vqa (answer -Prompt) | screen (screen-oriented default; default with -Capture)." },
+    { "name": "system", "type": "string", "required": false, "description": "System prompt (default: a concise, factual visual-assistant instruction)." },
+    { "name": "model", "type": "string", "required": false, "description": "VLM model_id in models.json (type=vlm). Default = defaults.vlm (vlm.qwen2p5-vl-3b)." },
+    { "name": "tier", "type": "string", "required": false, "description": "VLM tier alias resolved via tiers.vlm. A named -Model wins." },
+    { "name": "max_tokens", "type": "int", "required": false, "default": 512, "description": "Max generated tokens." },
+    { "name": "temperature", "type": "double", "required": false, "default": 0.2, "description": "Sampling temperature (low = factual)." },
+    { "name": "top_p", "type": "double", "required": false, "default": 0.9, "description": "Nucleus sampling top-p." },
+    { "name": "seed", "type": "int", "required": false, "default": -1, "description": "Sampling seed (-1 = server default)." },
+    { "name": "confidence_threshold", "type": "double", "required": false, "default": 0.5, "description": "Envelope confidence below this routes the interpretation to the review queue (verify_interpretation)." },
+    { "name": "max_dimension", "type": "int", "required": false, "description": "When set and the image's longest side exceeds it, downscale via image.util (Module 15) before sending, to bound vision tokens." },
+    { "name": "capture", "type": "bool", "required": false, "default": false, "description": "When true and no input is given, compose capture.screen (Module 6) to produce the image, then interpret it." },
+    { "name": "capture_inputs", "type": "object", "required": false, "description": "Inputs object passed to capture.screen when capture=true (default: primary monitor)." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ input{path,exists,source,capture?}, image{width,height,mime}, model{id,name,family,engine,format,quant,context,gpu_layers,path,mmproj}, request{mode,system,prompt,max_tokens,temperature,top_p,seed}, preprocess{max_dimension,downscaled,scale_x,scale_y,original,artifact_dir}, interpretation{text,finish_reason,prompt_tokens,completion_tokens,total_tokens,timings}, confidence{value,reason,refusal}, review{threshold,flagged_count,queue_path}, server{mode,port,health_ms,gpu_layers,context} }"
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4", "llama.cpp llama-server (b8661, multimodal build; staged)", "capture.screen (Module 6, only when -Capture)", "image.util (Module 15, only when -MaxDimension)"],
+    "models": ["vlm.qwen2p5-vl-3b (Qwen2.5-VL-3B-Instruct GGUF Q4_K_M + mmproj-f16; Apache-2.0)"],
+    "libraries": [],
+    "cpu": "any", "gpu": "cuda (RTX 2080 Ti; VLM runs on GPU)", "memory_mb": 6144,
+    "network": false, "filesystem": "read-write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 300, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": false,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

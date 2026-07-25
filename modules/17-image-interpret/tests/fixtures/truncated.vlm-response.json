@@ -1,0 +1,1 @@
+{"choices":[{"finish_reason":"length","index":0,"message":{"role":"assistant","content":"The image shows a dog sitting on a porch next to a red bicycle and there is also a"}}],"created":1784961192,"model":"Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf","system_fingerprint":"b8661-b7ad48ebd","object":"chat.completion","usage":{"completion_tokens":20,"prompt_tokens":620,"total_tokens":640}}

@@ -5,12 +5,12 @@ Owns **reality as it exists now** — not intended architecture. Keep it compact
 is planned (serves scripts and weaker local models) but not yet created.
 
 - **Project phase:** MVP module build-out.
-- **Active module:** _none in progress._ **Modules 0–16 complete** (0 executor · 1 `skill.bootstrap` · 2
+- **Active module:** _none in progress._ **Modules 0–17 complete** (0 executor · 1 `skill.bootstrap` · 2
   `fs.observer` · 3 `proc.observer` · 4 `uia.inspector` · 5 `uia.actor` · 6 `capture.screen` · 7 `model.gateway` ·
   8 `classify.batch` · 9 `review.processor` · 10 `audio.ingest` · 11 `speech.stt` · 12 `speech.tts` · 13 `voice.live` ·
-  14 `ocr.layout` · 15 `image.util` · 16 `detect.objects`), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure). **The full
-  audio track (10–13) is complete; the image/document perception block (14–18) is under way — Modules 14 `ocr.layout`,
-  15 `image.util`, and 16 `detect.objects` are done.**
+  14 `ocr.layout` · 15 `image.util` · 16 `detect.objects` · 17 `image.interpret`), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure). **The full
+  audio track (10–13) is complete; the image/document perception block (14–18) is nearly done — Modules 14 `ocr.layout`,
+  15 `image.util`, 16 `detect.objects`, and 17 `image.interpret` are done; only #18 `image.index` remains.**
   **Module 8 — Batch Classification & Sorting (`classify.batch`) is MVP complete** — the **first real
   consumer of `model.gateway`**: for each item in a batch it calls the gateway (default `-Tier weak` = 1.5B) with a
   mode-specific prompt (`classify` one-label / `multilabel` / `extract` fields), parses the completion, computes a
@@ -168,6 +168,30 @@ is planned (serves scripts and weaker local models) but not yet created.
   `detect.yolox.nano`/`detect.yolox.tiny` (additive; **Module 7 re-verified 28/28**). **Side fix:** composing `image.util` on
   a real JPEG surfaced + fixed a latent Module 15 bug (JPEG `dpi` `IFDRational` was not JSON-serializable and truncated the
   worker meta; `image_worker.py` now coerces `dpi` to float) — **Module 15 re-verified 48/48**, no regression. See D-0025.
+- **Module 17 — Image Interpretation (`image.interpret`) is MVP complete this session** — the **fourth module of the
+  image/document perception block (14–18)** and the block's first **semantic/free-text** perception skill; the **first skill to
+  drive a local VLM**. One image (+ an optional prompt) in -> a free-text `interpretation.text` (modes `caption`/`describe`/
+  `vqa`/`screen`). **Probe-first** (`m17-probe-001/002/003`; no VLM was staged): confirmed the already-staged llama.cpp
+  **`llama-server` (b8661) has full multimodal support** (`--mmproj`/mtmd/`--image-max-tokens`), chose it over a transformers
+  VLM in the speech venv (also viable, heavier) / an ONNX VLM, then **downloaded + staged** `vlm.qwen2p5-vl-3b`
+  (Qwen2.5-VL-3B-Instruct GGUF Q4_K_M ~1.8 GB + `mmproj-f16` ~1.3 GB, Apache-2.0, from `ggml-org/...-GGUF`) to F: and
+  **live-verified** an accurate `dog.jpg` caption at ~111 tok/s (full GPU offload). Implemented as a **pure-PowerShell wrapper**
+  (`Invoke-ImageInterpret.ps1`, **no python worker**): base64-encodes the image, reuses `model.gateway`'s `llama-server`
+  lifecycle (free-port -> `Start-Process` w/ redirected logs -> `/health` -> `/v1/chat/completions` with an OpenAI-style
+  `image_url` data URI -> synchronous `taskkill`+`WaitForExit` teardown). **Registry-driven, decoupled from the gateway `wired`
+  gate** (D-0020/D-0023/D-0025): resolves `vlm.qwen2p5-vl-3b` (type `vlm`) from `models.json`, which stays `wired:false` for
+  the gateway. **Confidence** = a documented completeness+refusal+non-empty heuristic (stop 0.7 / length 0.4 / refusal 0.3 /
+  empty 0.1); **seventh review-queue producer** (`flagged_by:"image.interpret"`, `verify_interpretation`; reason
+  `low_confidence`/`needs_strong_review`(refusal)/`failed_transform`(empty)). **Composes `capture.screen` (#6)** via `-Capture`
+  ("interpret my screen") and **`image.util` (#15)** via `-MaxDimension` (downscale before sending). `determinism:"mixed"`,
+  **`parallel_safe:false`** (binds a loopback port + CUDA/VRAM — unlike the parallel-safe #14–16), `batch:false`. Artifacts
+  `interpret.json`/`interpret.md`. **Tests 48/48 via the executor** (`m17-test-001/002`, exit 0) — seam tests (a **captured-real
+  llama-server response**) + real VLM describe/VQA (device `cuda:0`, conf 0.7) + the **image.util downscale** + the live
+  **capture.screen** compositions + all three review paths + error paths + the Module 1 wrapper; no orphaned `llama-server`;
+  13 shipped files sha256-verified byte-exact. **Pre-shipped off-machine**: because a VLM's real weights can't run on the Linux
+  cloud box, the harness ran the **real** wrapper against a captured-real response seam (+ the real `image.util` downscale)
+  on the cloud box (40/40) as the pre-ship gate. `models.json` gained `defaults.vlm`/`tiers.vlm` + `vlm.qwen2p5-vl-3b`
+  (additive; **Module 7 re-verified 28/28**). See D-0026.
 - **Repo / working dir:** **`C:\Users\just_\LifeOrchestrator-Refresh\`** — the clean standalone home for
   **Life Orchestrator** (near-term local-skills track; git-initialized). Layout: `core-docs/` (these docs)
   and `modules/<NN>-<name>/` (one per module). **Reference sources (separate, not built here):** the earlier
@@ -293,6 +317,12 @@ is planned (serves scripts and weaker local models) but not yet created.
   — COCO-80 YOLOX ONNX (Apache-2.0), downloaded + staged to `_pending-model-storage\detector\{yolox-nano,yolox-tiny}\`
   (sha256 byte-exact). Type `detector`, engine `onnxruntime`, `wired:false` for the gateway; run under the **system python**
   (CPU) via `detect.objects`. Both staged + verified (`m16-probe-001` nano live; `m16-test-001` tiny staged).
+- **VLM added 2026-07-25 (Module 17).** `vlm.qwen2p5-vl-3b` — Qwen2.5-VL-3B-Instruct GGUF (`Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf`
+  ~1.80 GB + `mmproj-Qwen2.5-VL-3B-Instruct-f16.gguf` ~1.25 GB), Apache-2.0, downloaded from `ggml-org/Qwen2.5-VL-3B-Instruct-GGUF`
+  and staged to `_pending-model-storage\vlm\Qwen2.5-VL-3B-Instruct-GGUF\` (sha256 recorded in `models.json`). Type `vlm`, engine
+  `llama-server` (multimodal, carries a `mmproj` path), `wired:false` for the gateway; run via the staged `llama-server` by
+  `image.interpret`. Staged + **load-and-caption verified live** (`m17-probe-002`: accurate `dog.jpg` caption, ~111 tok/s, full
+  GPU offload on the RTX 2080 Ti).
 
 ## Available hardware (measured 2026-07-24)
 - **CPU** Intel i9-9900KF (8c/16t @3.6GHz) · **RAM** 64 GB · **GPU** NVIDIA RTX 2080 Ti **11 GB VRAM** (CUDA,
@@ -303,7 +333,8 @@ is planned (serves scripts and weaker local models) but not yet created.
 
 ## Active model servers
 - None persistent. `model.gateway` starts a **transient `llama-server`** on a free loopback port per call and kills
-  it when done (no warm/persistent worker yet — D-0002).
+  it when done (no warm/persistent worker yet — D-0002). **`image.interpret` (Module 17) does the same with a transient
+  multimodal `llama-server`** (`--mmproj`), also `parallel_safe:false`.
 
 ## Known working invocation paths
 - Executor: `pwsh -NoProfile -File .\Start-BootstrapExecutor.ps1` /
@@ -319,6 +350,7 @@ is planned (serves scripts and weaker local models) but not yet created.
 - speech.stt (direct): `pwsh -NoProfile -File modules\11-speech-stt\Invoke-SpeechStt.ps1 -InputFile <audio> [-Normalize <auto|always|never>] [-Language <code>] [-Translate] [-NoGpu] [-SegmentConfidenceThreshold <0..1>] [-Model <id>]` (or `-InputsJson '<json {input,normalize,language,...}>'`). Resolves whisper.cpp + `stt.whisper.base-en` from `modules\07-model-gateway\models.json`; normalizes non-ready input via `audio.ingest`.
 - speech.tts (direct): `pwsh -NoProfile -File modules\12-speech-tts\Invoke-SpeechTts.ps1 -Text '<text>' [-Speaker <Ryan|Aiden|...>] [-Language <name>] [-Instruct '<style>'] [-Seed <n>] [-Format <wav|mp3|...>] [-SampleRate <hz>] [-Model <id>]` (or `-InputsJson '<json {text,speaker,language,instruct,...}>'`). Runs the Qwen3-TTS worker `tts_infer.py` under the speech venv (registry `engine_env`); 24 kHz mono WAV, optional format/rate via `audio.ingest`.
 - voice.live (direct): `pwsh -NoProfile -File modules\13-voice-live\Invoke-VoiceLive.ps1 -InputFile <audio> [-Respond <bool>] [-Speak <bool>] [-ReadbackTranscript <bool>] [-Tier <weak|mid|...>] [-Speaker <name>] [-Format <wav|mp3|...>]` (or `-InputsJson '<json {input,respond,speak,...}>'`). Composes speech.stt → model.gateway → speech.tts; writes `voice.json`/`voice.md`/`reply.wav`.
+- image.interpret (direct): `pwsh -NoProfile -File modules\17-image-interpret\Invoke-ImageInterpret.ps1 -InputFile <image> [-Prompt '<q>'] [-Mode <caption|describe|vqa|screen>] [-MaxTokens <n>] [-Temperature <n>] [-MaxDimension <n>] [-Capture] [-Model <id>|-Tier <3b>]` (or `-InputsJson '<json {input,prompt,mode,system,max_tokens,temperature,max_dimension,capture,...}>'`). Resolves `vlm.qwen2p5-vl-3b` (type `vlm`) + the staged multimodal `llama-server` from `modules\07-model-gateway\models.json`; composes capture.screen (`-Capture`) + image.util (`-MaxDimension`); writes `interpret.json`/`interpret.md`.
 - User ops (click-to-run): `ops/*.bat` — start/stop/restart/status the executor and run tests; each writes
   output to `ops/out/` for the agent to read.
 - Watchdog: `ops/start-watchdog.bat` (supervise), `ops/stop-watchdog.bat`, `ops/recover-executor.bat [-Force]`;
@@ -433,6 +465,18 @@ is planned (serves scripts and weaker local models) but not yet created.
   Linux box (onnxruntime 1.25, model via `-ModelPath`, 34/34 — capture skipped off-Windows) as the pre-ship gate before it
   ran live on the Windows executor (system python onnxruntime 1.17.1, model from the registry on F:, 38/38). Real-registry
   smoke: default `detect.yolox.nano` on `dog.jpg` → dog 0.83 / car 0.81 / bicycle 0.81.
+- Module 17: `modules/17-image-interpret/tests/Invoke-ImageInterpretTests.ps1` — **48/48 pass** (manifest + mixed/
+  parallel_safe=false/batch/streaming flags; a **seam** describe on `dog.jpg` via a captured-real `llama-server` response —
+  confidence 0.7, text mentions the dog, `server.mode=captured_response`, completion_tokens carried through, provenance engine
+  `llama-server`, `interpret.json`/`interpret.md` sha256; VQA mode auto-resolves from `-Prompt`; mode defaulting; all three
+  **review paths** — truncated→`low_confidence`, refusal→`needs_strong_review`, empty→`failed_transform`, each a valid
+  `image.interpret` `verify_interpretation` item; a forced-0.99 threshold flags the describe; the **image.util `-MaxDimension`
+  downscale** composition (real on Linux, original dims 768×576); five error paths `input_not_found`/`registry_not_found`/
+  `model_not_found`/`invalid_mode`/`no_prompt`; the Module 1 wrapper; and — with `-Live` on the executor — **real
+  `llama-server` VLM** describe (device `cuda:0`) + VQA + the **capture.screen** composition (`source=capture`) + no orphaned
+  `llama-server`; `m17-test-001/002`, exit 0). The harness is **dual-mode / OS-portable**: seam mode (the captured-real-response
+  `-VlmResponsePath` + the real `image.util`) ran on the cloud Linux box (40/40) as the pre-ship gate before the identical
+  harness ran live (`-Live`) on the Windows executor (48/48).
 
 ## Known failures / gotchas
 - **image.util truncated its worker meta on a real JPEG `dpi` (2026-07-25, Module 15, fixed).** Pillow returns a JPEG's
@@ -521,11 +565,14 @@ is planned (serves scripts and weaker local models) but not yet created.
   27B load (~90s) approaches the gateway's 120s default, so callers pass a longer `-LoadTimeoutSec` for the strong tier.
 
 ## Next expected action
-1. **Modules 14 `ocr.layout`, 15 `image.util`, 16 `detect.objects` are complete; the perception block (14–18) continues.**
-   The next step is **#17 `image.interpret`** (a local **VLM** — captions / VQA / screen interpretation; **probe for a vision
-   model first**, none is staged yet; the system python has onnxruntime + torch/torchvision, but a VLM likely needs a llama.cpp
-   multimodal build / a transformers model in the speech venv — probe before deciding), then **#18 `image.index`** (integrate
-   14–17 → markdown + machine index). Expand and give a work order to whichever is picked. **`detect.objects` follow-ons (NOT
+1. **Modules 14 `ocr.layout`, 15 `image.util`, 16 `detect.objects`, 17 `image.interpret` are complete; only #18 remains in the
+   perception block (14–18).** The next step is **#18 `image.index`** — integrate 14–17 into a per-image **markdown + machine
+   index**: fuse OCR text (#14) + pixel meta/hashes (#15) + object boxes (#16) + a VLM interpretation (#17) into one record.
+   Expand and give it a work order. **`image.interpret` follow-ons (NOT this session):** a **warm/persistent VLM server**
+   (shared worker-pool pressure with #7/#8/#12/#14/#16); **logprob/calibrated semantic** confidence (llama-server can return
+   token logprobs); **batch/directory**; **multi-image / multi-turn**; **open-vocab grounding boxes** (a #16 follow-on); a
+   **7B VLM tier** or the **transformers-venv backend** (both documented alternatives in D-0026); wiring the VLM as a **second
+   `ocr.layout` engine**. See D-0026. **`detect.objects` follow-ons (NOT
    this session):** an **overlay/annotated image** (draw boxes+labels — needs an `image.util` draw op, which is also its own
    follow-on); **batch/directory**; a larger tier (`-Tier tiny` is staged) / RT-DETR / a VLM open-vocab detector (#17);
    **GPU-by-default** or a warm detector worker; **calibrated** confidence; object **tracking** across frames (#20). See D-0025.
@@ -548,4 +595,4 @@ is planned (serves scripts and weaker local models) but not yet created.
    intra-batch prompt for throughput; calibrated confidence; a side-effecting `sort.files` mover) — see D-0017; audio.ingest follow-ons (batch/directory ingest; trimming/
    segmentation → Module 13; denoise/high-pass — see D-0019).
 
-- **Last updated:** 2026-07-25 (UTC) · **Last updating agent:** Claude (Cowork — Module 16 detect.objects build session; third perception-block module; first onnxruntime-backed perception skill; staged YOLOX-Nano/Tiny ONNX to F:; parallel-safe CPU; sixth review producer; composes capture.screen + image.util; 38/38 live, cloud gate 34/34; also fixed a latent image.util JPEG-dpi JSON bug — Module 15 re-verified 48/48, Module 7 re-verified 28/28; models.json additive detector entries).
+- **Last updated:** 2026-07-25 (UTC) · **Last updating agent:** Claude (Cowork — Module 17 image.interpret build session; fourth perception-block module; first local-VLM skill; probed + staged Qwen2.5-VL-3B GGUF + mmproj to F:; drives the already-staged llama.cpp llama-server in multimodal mode via a pure-PowerShell wrapper; parallel_safe:false; seventh review producer; composes capture.screen + image.util; 48/48 live, cloud gate 40/40 via a captured-real-response seam; models.json additive vlm entry, Module 7 re-verified 28/28).

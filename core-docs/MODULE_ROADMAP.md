@@ -179,7 +179,7 @@ Needs refactor · Deprecated · Replaced.
   (23/23). Work order: `modules/13-voice-live/WORK_ORDER.md`. See D-0022. Follow-on: mic `audio.capture` + streaming
   loop; standalone VAD (stage a model); multi-turn + memory; a warm-worker pool so a turn avoids three cold model loads.
 
-## Modules 14–18 — Image & document perception (14–16 MVP complete; 17–18 provisional)
+## Modules 14–18 — Image & document perception (14–17 MVP complete; 18 provisional)
 - **14 `ocr.layout`** — OCR + bounding boxes + reading order. ***MVP complete (2026-07-25)*** — the **first perception
   module** and the first **parallel-safe** stochastic/mixed perception skill. Recognizes the text in one image and returns
   it with **per-word pixel bounding boxes** and **lines in reading order** (+ text angle, image dims). Drives the system
@@ -232,8 +232,29 @@ Needs refactor · Deprecated · Replaced.
   fixed a latent `image.util` JPEG-`dpi` JSON bug (Module 15 re-verified 48/48). Work order:
   `modules/16-detect-objects/WORK_ORDER.md`. See D-0025. Follow-on: overlay/annotated image (needs an image.util draw op);
   batch/directory; larger tiers / RT-DETR; GPU/warm worker; calibrated confidence; tracking (#20).
-- **17 `image.interpret`** local multimodal captions/VQA/screen interpretation · **18 `image.index`** integrate 14–17 →
-  markdown + machine index. *(17 is the natural next step — a local **VLM**; probe for a vision model first, none is staged yet.)*
+- **17 `image.interpret`** — local VLM captions / VQA / screen interpretation. ***MVP complete (2026-07-25)*** — the **fourth
+  perception module** and the block's first **semantic/free-text** skill. Interprets one image with a local **VLM** →
+  `interpretation.text` (modes `caption`|`describe`|`vqa`|`screen`). Backend = the already-staged llama.cpp **`llama-server`
+  (b8661) in multimodal mode** (`-m <vlm.gguf> --mmproj <projector.gguf>` → `/v1/chat/completions` with an OpenAI-style
+  `image_url` base64 data URI) — the same engine `model.gateway` (#7) drives, extended with the projector, so the wrapper is
+  **pure PowerShell** (no python worker). Registry-driven (`type=vlm`, **decoupled from the gateway `wired` gate** per
+  D-0020/D-0023/D-0025); default `vlm.qwen2p5-vl-3b` (Qwen2.5-VL-3B-Instruct GGUF Q4_K_M + mmproj-f16, **Apache-2.0**, staged
+  to F:). **`parallel_safe:false`** (binds a loopback port + CUDA/VRAM — unlike the parallel-safe #14–16). **Confidence** = a
+  documented completeness + refusal + non-empty heuristic (stop 0.7 / length 0.4 / refusal 0.3 / empty 0.1); **seventh
+  review-queue producer** (`verify_interpretation`: `low_confidence`/`needs_strong_review`(refusal)/`failed_transform`(empty),
+  `flagged_by:"image.interpret"`). **Composes `capture.screen` (#6)** via `-Capture` and **`image.util` (#15)** via
+  `-MaxDimension` (downscale before sending). `determinism:"mixed"`, `batch:false`, `streaming:false`. Artifacts
+  `interpret.json`/`interpret.md`. **Probe-first** (`m17-probe-001` mmproj support; `m17-probe-002` staged the VLM to F: +
+  live-verified an accurate dog.jpg caption at ~111 tok/s; `m17-probe-003` captured a real response for the test seam).
+  **Tests 48/48 via the executor** (`m17-test-001/002`) — seam tests (captured-real response) + real `llama-server` VLM
+  describe/VQA + the image.util downscale + the capture.screen compositions + the review paths + error paths + the Module 1
+  wrapper; **pre-shipped off-machine** on the cloud box (real wrapper + captured-real-response seam + real image.util,
+  40/40). `models.json` gained `defaults.vlm`/`tiers.vlm` + `vlm.qwen2p5-vl-3b` (additive; **Module 7 re-verified 28/28**).
+  Work order: `modules/17-image-interpret/WORK_ORDER.md`. See D-0026. Follow-on: warm VLM server; logprob/calibrated
+  confidence; batch/directory; multi-image/multi-turn; open-vocab grounding boxes (#16 follow-on); a 7B tier / the
+  transformers-venv backend; wiring the VLM as a second `ocr.layout` engine.
+- **18 `image.index`** integrate 14–17 → markdown + machine index. *(the natural next step — fuse OCR text (#14) + pixel
+  meta/hashes (#15) + object boxes (#16) + a VLM interpretation (#17) into one per-image markdown + machine-readable index.)*
 
 ## Modules 19–22 — Video (provisional)
 - **19 `media.decompose`** audio/subs/scenes/keyframes/clips/meta/proxies · **20 `track.objects`** identity
