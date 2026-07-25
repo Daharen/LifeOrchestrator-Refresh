@@ -1,0 +1,60 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "gen.image",
+  "skill_version": "0.1.0",
+  "contract_version": "0.2",
+  "invocation_id": "8f3c1e2a-0b44-4c9d-9a11-7e2f4d6b0c31",
+  "status": "ok",
+  "started_at_utc": "2026-07-25T22:05:00.0000000Z",
+  "finished_at_utc": "2026-07-25T22:05:11.2500000Z",
+  "duration_ms": 11250,
+  "inputs_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "result": {
+    "input": { "prompt": "a red apple on a wooden table, studio photo", "negative_prompt": "blurry, lowres", "chars": 43 },
+    "model": {
+      "id": "image.sd15",
+      "name": "Stable Diffusion 1.5 (diffusers fp16)",
+      "family": "stable-diffusion",
+      "engine": "diffusers",
+      "engine_env": "F:\\My_Programs\\Local_Computer_Speech_Large_Data\\python_env\\Scripts\\python.exe",
+      "device": "cuda:0",
+      "dtype": "float16",
+      "path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\23-gen-image\\stable-diffusion-v1-5"
+    },
+    "request": { "width": 512, "height": 512, "steps": 20, "guidance": 7.5, "seed": 42, "scheduler": "dpm++", "format": "png" },
+    "image": {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\23-gen-image\\runtime\\artifacts\\8f3c1e2a-0b44-4c9d-9a11-7e2f4d6b0c31\\image.png",
+      "format": "png", "width": 512, "height": 512, "mode": "RGB",
+      "bytes": 345818, "sha256": "b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1",
+      "pixel_std": 60.61, "pixel_mean": 97.03
+    },
+    "confidence": { "overall": 0.9, "reason": "has_content" },
+    "review": { "threshold": 0.5, "flagged": false, "queue_path": null },
+    "generation": { "load_ms": 1900, "gen_ms": 8200, "runtime_ms": 10450, "vram_peak_gb": 2.61, "diffusers": "0.35.2", "torch": "2.11.0+cu128" }
+  },
+  "confidence": 0.9,
+  "artifacts": [
+    { "path": "C:\\Users\\just_\\...\\artifacts\\8f3c1e2a\\image.png", "kind": "png", "bytes": 345818, "sha256": "b2c1d0e9...4a3b2c1" },
+    { "path": "C:\\Users\\just_\\...\\artifacts\\8f3c1e2a\\gen.json", "kind": "json", "bytes": 1024, "sha256": "..." },
+    { "path": "C:\\Users\\just_\\...\\artifacts\\8f3c1e2a\\gen.md", "kind": "markdown", "bytes": 380, "sha256": "..." }
+  ],
+  "model_provenance": [
+    {
+      "model_id": "image.sd15",
+      "name": "Stable Diffusion 1.5 (diffusers fp16)",
+      "family": "stable-diffusion",
+      "format": "diffusers",
+      "version": "stable-diffusion-v1-5-fp16",
+      "engine": "diffusers",
+      "engine_env": "F:\\My_Programs\\Local_Computer_Speech_Large_Data\\python_env\\Scripts\\python.exe",
+      "device": "cuda:0",
+      "dtype": "float16",
+      "params": { "width": 512, "height": 512, "steps": 20, "guidance": 7.5, "seed": 42, "scheduler": "dpm++" },
+      "image_pixels": 262144,
+      "runtime_ms": 10450
+    }
+  ],
+  "diagnostics": { "log": "stderr.txt", "artifact_dir": "C:\\Users\\just_\\...\\artifacts\\8f3c1e2a-0b44-4c9d-9a11-7e2f4d6b0c31" },
+  "warnings": [],
+  "error": null
+}

@@ -1,0 +1,47 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "gen.image",
+  "name": "Local Image Generation (Stable Diffusion)",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "Generate one image from a text prompt with a local Stable Diffusion pipeline. Drives the diffusers StableDiffusionPipeline (fp16, CUDA) via a Python worker (gen_image_infer.py) under the speech venv with a meta-file hand-off to a PowerShell wrapper (the D-0021 speech.tts pattern). Resolves the image-gen model from models.json (type=image-gen), decoupled from the gateway wired gate. Binds the CUDA context / VRAM, so parallel_safe:false. Populates confidence (a generation-completeness / non-blank heuristic) + model_provenance and routes failed / blank / low-confidence generations to the review queue (the eighth producer). Default model image.sd15 (Stable Diffusion 1.5 diffusers fp16, CreativeML OpenRAIL-M). The neural generation counterpart of image.interpret (#17, which reads an image) and gen.audio (#22, which synthesizes sound).",
+  "determinism": "mixed",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-GenImage.ps1",
+    "args_spec": "Named params -Prompt <text> (required); -NegativePrompt <text>; -Width <n> (512) -Height <n> (512) (multiples of 8, 128..1024, w*h<=1048576); -Steps <n> (20; 1..150); -Guidance <n> (7.5; 0..30); -Seed <n> (-1 = random; actual seed recorded); -Scheduler <dpm++|euler|euler_a|ddim> (dpm++); -Format <png|jpg|webp> (png); -ConfidenceThreshold <0..1> (0.5, review floor); -Model <model_id> | -Tier <alias>; overrides -Registry/-PythonPath/-GenInferPath/-ReviewQueuePath. OR -InputsJson '<json {prompt,negative_prompt,width,height,steps,guidance,seed,scheduler,format,confidence_threshold,model,tier,registry,python_path,gen_infer_path,review_queue_path}>'. Optional -ArtifactRoot, -InvocationId.",
+    "engine": "diffusers StableDiffusionPipeline (fp16, CUDA; Python worker under the speech venv)"
+  },
+  "inputs": [
+    { "name": "prompt", "type": "string", "required": true, "description": "Text prompt describing the image to generate." },
+    { "name": "negative_prompt", "type": "string", "required": false, "description": "Text describing what to avoid (e.g. 'blurry, lowres, watermark')." },
+    { "name": "width", "type": "int", "required": false, "default": 512, "description": "Image width in px (multiple of 8, 128..1024; width*height <= 1048576)." },
+    { "name": "height", "type": "int", "required": false, "default": 512, "description": "Image height in px (multiple of 8, 128..1024; width*height <= 1048576)." },
+    { "name": "steps", "type": "int", "required": false, "default": 20, "description": "Number of denoising steps (1..150). More = slower, usually higher quality." },
+    { "name": "guidance", "type": "double", "required": false, "default": 7.5, "description": "Classifier-free guidance (CFG) scale (0..30). Higher = follow the prompt more strictly." },
+    { "name": "seed", "type": "int", "required": false, "default": -1, "description": "RNG seed. -1 = random (the actual chosen seed is recorded). A fixed seed >= 0 is reproducible on this GPU." },
+    { "name": "scheduler", "type": "string", "required": false, "default": "dpm++", "description": "Sampler: dpm++ (DPMSolverMultistep) | euler | euler_a (Euler ancestral) | ddim." },
+    { "name": "format", "type": "string", "required": false, "default": "png", "description": "Output image format: png | jpg | webp." },
+    { "name": "confidence_threshold", "type": "double", "required": false, "default": 0.5, "description": "Envelope confidence below this routes the generation to the review queue (verify_generation)." },
+    { "name": "model", "type": "string", "required": false, "description": "image-gen model_id in models.json (type=image-gen). Default = defaults.image (image.sd15)." },
+    { "name": "tier", "type": "string", "required": false, "description": "image tier alias resolved via tiers.image. A named -Model wins." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ input{prompt,negative_prompt,chars}, model{id,name,family,engine,engine_env,device,dtype,path}, request{width,height,steps,guidance,seed,scheduler,format}, image{path,format,width,height,mode,bytes,sha256,pixel_std,pixel_mean}, confidence{overall,reason}, review{threshold,flagged,queue_path}, generation{load_ms,gen_ms,runtime_ms,vram_peak_gb,diffusers,torch} }"
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4", "python (speech venv) + diffusers 0.35.2"],
+    "models": ["image.sd15 (Stable Diffusion 1.5 diffusers fp16; CreativeML OpenRAIL-M)"],
+    "libraries": ["diffusers", "torch (cu128)", "transformers", "safetensors", "numpy", "Pillow"],
+    "cpu": "any", "gpu": "cuda (RTX 2080 Ti; SD runs on GPU, ~2.6 GB VRAM at 512x512)", "memory_mb": 6144,
+    "network": false, "filesystem": "read-write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 300, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": false,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

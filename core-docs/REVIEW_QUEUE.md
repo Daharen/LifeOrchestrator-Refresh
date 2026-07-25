@@ -208,6 +208,22 @@ non-producers, so there is no gateway-style suppression to do. Module 9 selects 
 fixture, and an empty fixture each produced the right `image.interpret` item; `m17-test-001/002`, 48/48). **Producers are now
 7/8/11/12/14/16/17 → local drainer 9 → frontier for the residue.** See D-0026.
 
+## Eighth producer wired (Module 23)
+`gen.image` is the **eighth skill that appends** to `review_queue.jsonl` (after `model.gateway`, `classify.batch`,
+`speech.stt`, `speech.tts`, `ocr.layout`, `detect.objects`, `image.interpret`), and the first from the **generator** track
+(`gen.audio` #22 is deterministic and NOT a producer). It generates one image from a text prompt with a local Stable
+Diffusion pipeline (SD 1.5 via `diffusers`) and flags a **failed, blank, or low-detail** generation. Its confidence is a
+documented **generation-completeness / non-blank heuristic** (not calibrated) from the image pixel standard deviation:
+blank/uniform (std <=2) → 0.1, very-low-detail (<8) → 0.3, low-detail (<15) → 0.5, has-content (>=15) → 0.9. When the
+envelope `confidence` falls below `-ConfidenceThreshold` (default 0.5), it appends **one** `lifeorch.review.item/0.1` with
+`flagged_by:"gen.image"`, `source_ref:"artifact://<invDir>/gen.json"`,
+`weak_result = {model, prompt_preview, width, height, pixel_std, confidence_reason}`, `requested:"verify_generation"`, and a
+**reason**: `failed_transform` (a blank/near-uniform image, confidence <=0.15) or `low_confidence` (low-detail). A stronger
+model / the frontier can judge whether the image actually satisfies the prompt (a completeness signal cannot). Module 9
+selects by `flagged_by` and handles the new `verify_generation` verb by construction. Verified by the Module 23 mock gate
+(blank → `failed_transform`, low-detail → `low_confidence`, a good image → no item) with the canonical queue verified
+untouched live (1→1). **Producers are now 7/8/11/12/14/16/17/23 → local drainer 9 → frontier for the residue.** See D-0034.
+
 ## Design flags to revisit (not yet actioned — for a future session/frontier pass)
 - **speech.stt confidence is mean token probability — honest but not calibrated.** A real acoustic signal (richer than
   the gateway's completeness heuristic) but not a probability the transcript is *correct*; replace with a calibrated /

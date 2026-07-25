@@ -8,8 +8,11 @@
     "llama-server": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\_engines\\llama.cpp\\bin\\llama-server.exe",
     "_comment": "Staged, verified to run standalone (health + chat) 2026-07-24. Depends on a system CUDA runtime (not on the source folder). If torn down, restage from F:\\Qwen3.5-27B\\llama.cpp\\build\\bin."
   },
-  "defaults": { "llm": "llm.weak.qwen2p5-1p5b", "stt": "stt.whisper.base-en", "tts": "tts.weak.qwen3-0p6b", "ocr": "ocr.windows.media", "detector": "detect.yolox.nano", "vlm": "vlm.qwen2p5-vl-3b" },
+  "defaults": { "llm": "llm.weak.qwen2p5-1p5b", "stt": "stt.whisper.base-en", "tts": "tts.weak.qwen3-0p6b", "ocr": "ocr.windows.media", "detector": "detect.yolox.nano", "vlm": "vlm.qwen2p5-vl-3b", "image": "image.sd15" },
   "tiers": {
+    "image": {
+      "sd15": "image.sd15"
+    },
     "detector": {
       "nano": "detect.yolox.nano",
       "tiny": "detect.yolox.tiny"
@@ -182,6 +185,18 @@
       "classes": null,
       "params": { "params_b": 3, "size_bytes": 1929901056, "mmproj_bytes": 1338428128, "sha256": "d02fe9b69ad8cadbbd228e387667af66612c44bed29ffc8eb1e7caf9ac486c12", "mmproj_sha256": "b9160fe9d814d1fadf68395677468534778b39ac33c2e7561b7b218626e60d5e", "image_input": "openai_image_url_base64" },
       "notes": "Consumed by image.interpret (Module 17), which runs this GGUF + its mmproj projector via the staged llama.cpp llama-server (b8661, multimodal build) - launch -m <path> --mmproj <mmproj> -c 8192 -ngl 99, then POST /v1/chat/completions with an OpenAI-style image_url base64 data URI. Fully GPU-offloaded on the RTX 2080 Ti (~3.1 GB weights + image tokens, ~111 tok/s). wired:false for model.gateway on purpose (the gateway runs type=llm only; image.interpret reads this entry itself, decoupled from the wired gate like ocr.layout/detect.objects). Downloaded from ggml-org/Qwen2.5-VL-3B-Instruct-GGUF and staged to F: + load-and-caption verified live 2026-07-25 (m17-probe-002/003). Apache-2.0 (Alibaba Qwen). A 7B tier and a transformers-venv backend are documented follow-ons."
+    },
+    {
+      "model_id": "image.sd15",
+      "type": "image-gen", "wired": false,
+      "name": "Stable Diffusion 1.5 (diffusers fp16)", "family": "stable-diffusion", "format": "diffusers", "quant": "fp16",
+      "version": "stable-diffusion-v1-5-fp16",
+      "path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\23-gen-image\\stable-diffusion-v1-5",
+      "engine": "diffusers",
+      "engine_env": "F:\\My_Programs\\Local_Computer_Speech_Large_Data\\python_env\\Scripts\\python.exe",
+      "license": "CreativeML-OpenRAIL-M",
+      "params": { "variant": "fp16", "native_resolution": 512, "default_steps": 20, "default_guidance": 7.5, "default_scheduler": "dpm++", "size_bytes": 2134194467, "unet_sha256": "c83908253f9a64d08c25fc90874c9c8aef9a329ce1ca5fb909d73b0c83d1ea21", "vae_sha256": "4fbcf0ebe55a0984f5a5e00d8c4521d52359af7229bb4d81890039d2aa16dd7c", "text_encoder_sha256": "77795e2023adcf39bc29a884661950380bd093cf0750a966d473d1718dc9ef4e" },
+      "notes": "Consumed by gen.image (Module 23), which runs this diffusers folder via the StableDiffusionPipeline (fp16, CUDA) in a Python worker (gen_image_infer.py) under this engine_env (the speech venv; diffusers 0.35.2 + torch 2.11+cu128) and reads its meta file. wired:false for model.gateway on purpose (the gateway runs type=llm only; gen.image reads this entry itself, decoupled from the wired gate like speech.tts/image.interpret). Downloaded from stable-diffusion-v1-5/stable-diffusion-v1-5 (fp16 variant) and staged to F: + load-and-generate verified live 2026-07-25 (m23-probe-002: 512x512 in 2.8 s, VRAM peak 2.61 GB, non-blank). CreativeML OpenRAIL-M. FLUX.1-schnell (Apache-2.0, needs offload on 11 GB) and SDXL/SDXL-Turbo are documented follow-on tiers."
     }
   ]
 }
