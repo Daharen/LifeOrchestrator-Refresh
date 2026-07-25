@@ -1,0 +1,80 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "agent.local",
+  "skill_version": "0.1.0",
+  "contract_version": "0.2",
+  "invocation_id": "b1d2c3e4-0000-4a11-9c00-agentlocalexmpl",
+  "status": "ok",
+  "started_at_utc": "2026-07-25T20:30:00.0000000Z",
+  "finished_at_utc": "2026-07-25T20:31:12.5000000Z",
+  "duration_ms": 72500,
+  "inputs_digest": "sha256:0f1e2d3c4b5a69788796a5b4c3d2e1f00112233445566778899aabbccddeeff0",
+  "result": {
+    "goal": "Read notes.md and write its line count to stats.txt",
+    "working_dir": "C:\\Users\\just_\\scratch",
+    "status": "completed",
+    "final_answer": "I read notes.md (12 lines) and wrote 12 to stats.txt. The goal is complete.",
+    "needs_frontier": false,
+    "stop_reason": "finish",
+    "step_count": 3,
+    "max_steps": 5,
+    "dry_run": false,
+    "tools_available": [
+      { "tool": "doc.io", "skill_id": "doc.io", "side_effecting": true },
+      { "tool": "fs.observer", "skill_id": "fs.observer", "side_effecting": false }
+    ],
+    "steps": [
+      {
+        "index": 1,
+        "decision": { "chosen_tool": "doc.io", "confidence": 0.86, "accepted_tier": "weak", "accepted_via": "judge", "needs_frontier": false, "ok": true },
+        "args": { "op": "read", "path": "C:\\Users\\just_\\scratch\\notes.md", "review_queue_path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\21-agent-local\\runtime\\artifacts\\b1d2c3e4\\child_review.jsonl" },
+        "args_raw": "{\"op\":\"read\",\"path\":\"notes.md\"}",
+        "tool": { "skill_id": "doc.io", "invoked": true, "status": "ok", "error": null, "artifact_dir": "...\\runtime\\artifacts\\b1d2c3e4\\tool-1" },
+        "observation": "status=ok; op=read; path=C:\\Users\\just_\\scratch\\notes.md; lines=12 sha256=9f2c...; content=<<# Notes\nfirst line\n...>>",
+        "error": null
+      },
+      {
+        "index": 2,
+        "decision": { "chosen_tool": "doc.io", "confidence": 0.83, "accepted_tier": "mid", "accepted_via": "judge", "needs_frontier": false, "ok": true },
+        "args": { "op": "write", "path": "C:\\Users\\just_\\scratch\\stats.txt", "content": "12", "review_queue_path": "...\\child_review.jsonl" },
+        "args_raw": "{\"op\":\"write\",\"path\":\"stats.txt\",\"content\":\"12\"}",
+        "tool": { "skill_id": "doc.io", "invoked": true, "status": "ok", "error": null, "artifact_dir": "...\\runtime\\artifacts\\b1d2c3e4\\tool-2" },
+        "observation": "status=ok; op=write; path=C:\\Users\\just_\\scratch\\stats.txt; lines=1 sha256=6b51...; bytes_written=2",
+        "error": null
+      },
+      {
+        "index": 3,
+        "decision": { "chosen_tool": "finish", "confidence": 0.9, "accepted_tier": "weak", "accepted_via": "consistency", "needs_frontier": false, "ok": true },
+        "args": null,
+        "args_raw": null,
+        "tool": { "skill_id": null, "invoked": false, "status": null, "error": null, "artifact_dir": null },
+        "observation": null,
+        "error": null
+      }
+    ],
+    "cost": { "decision_calls": 3, "gen_calls": 3, "tool_calls": 2, "total_gateway_calls": 11, "total_tokens": 1840, "total_runtime_ms": 71200 },
+    "decision_tiers": ["tiny", "weak", "mid"],
+    "gen_tier": "mid",
+    "review": { "mode": "redirected_in_artifact", "child_review_path": "...\\runtime\\artifacts\\b1d2c3e4\\child_review.jsonl", "child_review_count": 0, "is_producer": false },
+    "is_review_producer": false,
+    "child_reviews_redirected_to": "...\\runtime\\artifacts\\b1d2c3e4\\child_review.jsonl"
+  },
+  "confidence": 0.83,
+  "artifacts": [
+    { "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\21-agent-local\\runtime\\artifacts\\b1d2c3e4\\agent.json", "kind": "json", "bytes": 4096, "sha256": "..." },
+    { "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\21-agent-local\\runtime\\artifacts\\b1d2c3e4\\agent.md", "kind": "markdown", "bytes": 1280, "sha256": "..." }
+  ],
+  "model_provenance": [
+    { "stage": "decision-1", "tier": "tiny", "model_id": "llm.weak.qwen2p5-0p5b", "engine": "llama-server", "calls": 1, "prompt_tokens_total": 210, "completion_tokens_total": 3, "total_tokens_total": 213, "runtime_ms_total": 9200 },
+    { "stage": "decision-1", "tier": "weak", "model_id": "llm.weak.qwen2p5-1p5b", "engine": "llama-server", "calls": 1, "prompt_tokens_total": 260, "completion_tokens_total": 5, "total_tokens_total": 265, "runtime_ms_total": 10400 },
+    { "stage": "arggen-1", "model_id": "llm.weak.qwen2p5-3b", "engine": "llama-server", "calls": 1, "prompt_tokens_total": 240, "completion_tokens_total": 18, "total_tokens_total": 258, "runtime_ms_total": 11800 },
+    { "stage": "final", "model_id": "llm.weak.qwen2p5-3b", "engine": "llama-server", "calls": 1, "prompt_tokens_total": 300, "completion_tokens_total": 26, "total_tokens_total": 326, "runtime_ms_total": 12500 }
+  ],
+  "diagnostics": {
+    "log": "stderr.txt",
+    "artifact_dir": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\21-agent-local\\runtime\\artifacts\\b1d2c3e4",
+    "child_reviews_redirected_to": "...\\runtime\\artifacts\\b1d2c3e4\\child_review.jsonl"
+  },
+  "warnings": [],
+  "error": null
+}

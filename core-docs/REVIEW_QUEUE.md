@@ -148,6 +148,11 @@ orchestrator/non-producer pattern** — #18 redirects its perception children's 
 #19 (the Local Logic Escalator) suppresses the child gateway's review writes to an in-artifact
 `_gateway_review_suppressed.jsonl` and surfaces `needs_frontier` per task in its own result (a status signal, NOT a queue
 write) — so the canonical `review_queue.jsonl` producer set stays at **seven** (7/8/11/12/14/16/17). See D-0027, D-0030.
+**`agent.local` (Module 21) follows the same orchestrator/non-producer pattern** — the local agent redirects every child's
+review writes (the escalator's suppressed gateway flags, and any gateway/tool flags) to an in-artifact `child_review.jsonl`
+and surfaces `needs_frontier` in its own result (set on a low-confidence decision or an exhausted `max_steps` budget; a
+status signal, NOT a queue write / frontier call). The producer set stays at **seven** (verified live, before==after —
+`m21-live-001` queue 1→1). See D-0032.
 
 ## Fifth producer wired (Module 14)
 `ocr.layout` is the **fifth skill that appends** to `review_queue.jsonl` (after `model.gateway`, `classify.batch`,

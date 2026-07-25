@@ -26,8 +26,8 @@ spine (+ the real-time autonomic layer 45-49 and the 6-level operating hierarchy
    one correct call unless most tasks resolve low; target ~95% confidence) before it is trusted. The single
    highest-leverage budget item — every task a local model finishes end-to-end is one the frontier allotment never pays for.
 2. **`doc.io` — Local Model Doc Read/Write/Edit/Append** — **MVP COMPLETE 2026-07-25 (folder `modules/20-doc-io/`; D-0031; deterministic; tests 88/88 cloud + 88/88 live).** (cheap, mostly deterministic; high utility): read (whole / line-range) + write + exact-string edit + append, with atomic writes, EOL preservation (CRLF-safe), an `expect_sha256` precondition, and a recoverable pre-image. Pure PowerShell + .NET; not a review producer; no `models.json` change.
-3. **`agent.local` — Local Orchestrator / Agent core** (a scoped #26): a local model that plans and invokes
-   any Module through the escalator — the frontier agent's job, done locally.
+3. **`agent.local` — Local Orchestrator / Agent core** — **MVP COMPLETE 2026-07-25 (folder `modules/21-agent-local/`; D-0032; orchestrator/non-producer; tests 39/39 cloud + 39/39 live + a real end-to-end run).** (a scoped #26): a local model that plans and invokes
+   any Module through the escalator — the frontier agent's job, done locally. A bounded ReAct loop: the tool-selection decision routes through `logic.escalator` (#19) as a closed-set classify (in-set gate); args + final answer via `model.gateway` (#7); tools are conforming Modules from a declarative closed registry (`tools.json`: `doc.io` #20 + `fs.observer` #2). Guardrails: hard `max_steps` budget, `-DryRun` plan-preview, `needs_frontier` as status. See the Module 21 entry below.
 4. **Generators, cheapest-first:** `gen.audio` → `gen.image` (the #44 family: Qwen-Image / FLUX.1-schnell /
    Stable Diffusion XL) → `gen.music` → `gen.video`.
 5. **`agent.coding` — Coding Agent** (last here — the frontier already codes well; lowest near-term ROI).
@@ -365,6 +365,46 @@ what to do next**: pick up a Phase-A item (or, if video capability is specifical
 - **Follow-ons (NOT this session):** batch/directory/glob; a regex or unified-diff apply mode; structured-format
   (JSON/YAML/CSV) field edits; a sibling `fs.manage` (move/copy/rename/delete/mkdir); more encodings; a read-only or
   per-file-lock `parallel_safe:true` mode + a tail/follow read; insert-at-line / replace-line-range ops.
+
+## Module 21 (build order) — Local Orchestrator / Agent (`agent.local`)
+- **id:** `agent.local` · **Priority:** Phase A #3 (D-0029) · **Status:** **MVP complete (2026-07-25)**
+- **Folder-number note:** on-disk `modules/21-agent-local/`. The `NN-` prefix is a **monotonic build-order counter**
+  (0, 00.1, 1..20, then 21); D-0029 decoupled it from the ARCHITECTURE_MAP 0-49 positions. `agent.local` is a **scoped
+  slice of `skill.orchestrator` (#26)** pulled forward as the local-orchestrator cost-offload keystone — not the video-block "21".
+- **Purpose:** a **bounded, ReAct-style local agent loop** — the frontier agent's tool loop, done locally. Given a
+  natural-language **goal** it decides which Module (tool) to call, generates that tool's arguments, invokes it, observes
+  the result, and repeats until it decides `finish` or the `max_steps` budget is hit. Every goal a local agent finishes
+  end-to-end is orchestration the frontier allotment never pays for.
+- **Composition (reimplements nothing):** DECISIONS route **through `logic.escalator` (#19)** as a closed-set `classify`
+  task (labels = the registered tool names + `finish`) — the escalator's deterministic **in-set gate** guarantees a valid
+  action (or surfaces `needs_frontier`) and its tiny→weak→mid ladder is the cost-offload; ARG-GENERATION + the FINAL ANSWER
+  use **`model.gateway` (#7)**; TOOLS are conforming Modules spawned as child skills (the `image.index` #18 pattern) from a
+  **declarative closed registry** (`tools.json`, ships **`doc.io` #20 + `fs.observer` #2**). The registry **is** the sandbox
+  — no arbitrary-shell / code-exec tool.
+- **Guardrails (first skill where a local model chooses side-effecting actions):** a **hard `max_steps` budget** (default 4;
+  exhausting → `status:"stopped"` + `needs_frontier:true`); a **`-DryRun` plan-preview** (records the intended tool+args per
+  step, invokes nothing); `needs_frontier` surfaced as a status field (never a frontier call / queue write).
+- **Flags:** `determinism:"mixed"`, `parallel_safe:false` (drives the gateway → GPU/port, can invoke `doc.io` mutations),
+  `batch:false`, `streaming:false`. **Orchestrator, NOT a review-queue producer** (redirects child review writes to an
+  in-artifact `child_review.jsonl`; canonical queue + the seven-producer set untouched). No new model / no `models.json`
+  change / no Module 7 re-verify.
+- **Tests:** **39/39 mock off-machine (cloud pwsh 7.4.6, real orchestrator + mock-children harness + real Module 1 wrapper)
+  + 39/39 the same harness `-Live`** (`m21-test-001`, exit 0) **+ a REAL end-to-end run** (`m21-live-001`): "create hello.txt
+  containing 'hi from agent.local'" → chose `doc.io` via the escalator, the 3B produced the args, **the file was written on
+  disk with the exact content**; a second goal invoked `fs.observer`; 0 orphaned `llama-server`; canonical queue 1→1. 10
+  files sha256 byte-exact + AST-parse OK on the target (`m21-verify-001`).
+- **Honest finding (D-0032):** the tiny/weak/mid models **under-use the `finish` action** — both live goals ran to
+  `max_steps` (re-doing the completed action) instead of self-terminating; the hard budget caught it every time (`stopped` +
+  `needs_frontier`, final answer still correct). Better termination (a deterministic goal-satisfied / repeat-action check, or
+  a dedicated "are-we-done?" gate) is the **#1 measured follow-on**, not built here.
+- **Implementation:** `modules/21-agent-local/` (`Invoke-AgentLocal.ps1`, `skill.json`, `tools.json`, `README.md`,
+  `WORK_ORDER.md`, `.gitignore`, `tests/{mock-child,Invoke-AgentLocalTests}.ps1`, `examples/`). **Work order:**
+  `modules/21-agent-local/WORK_ORDER.md`. See **D-0032**.
+- **Follow-ons (NOT this session):** better termination (above); a warm/persistent gateway worker (shared with
+  #7/#8/#12/#14/#16/#17/#19) to kill the per-step cold-load cost; richer planning (sub-goals, reflection-retry, a planning
+  DAG); more tools in the registry (perception / audio / generator Modules) with per-tool arg schemas; a `route.tasks` (#24)
+  drain of `needs_frontier` goals; registry auto-discovery from module manifests; a `batch` multi-goal mode; calibrated
+  decision confidence; persistent working-memory across invocations.
 
 ## Modules 19–22 — Video (architectural positions; deferred to Phase C)
 **Note:** the `19–22` here are **architectural positions** (`ARCHITECTURE_MAP.md`), NOT build-order folder numbers — the

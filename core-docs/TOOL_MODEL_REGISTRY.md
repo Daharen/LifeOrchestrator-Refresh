@@ -566,6 +566,42 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   test:** 2026-07-25 via executor (**88/88 live — `m20-test-001`**, exit 0; pre-shipped on the cloud box, real skill +
   real Module 1 wrapper, 88/88; 8 files sha256 byte-exact). · **skills:** `doc.io`. See D-0031.
 
+### `agent.local` — Local Orchestrator / Agent (Module 21)
+- **status:** installed · **type:** skill (PowerShell orchestrator; composes `logic.escalator` #19 + `model.gateway` #7
+  and invokes conforming Modules as child skills; **no new model / no `models.json` change**) ·
+  **location:** `LifeOrchestrator-Refresh/modules/21-agent-local/`
+- **invocation:** direct `pwsh -NoProfile -File .\Invoke-AgentLocal.ps1 -Goal <string> [-WorkingDir <dir>]
+  [-MaxSteps <int=4>] [-DryRun] [-DecisionTiers tiny,weak,mid] [-GenTier mid] [-FrontierThreshold 0.5]
+  [-MaxObservationChars 600] [-MaxTranscriptChars 4000] [-Temperature 0.0] [-Seed 42] [-MaxTokens 512]
+  [-ToolsPath <tools.json>] [-Tools <json>] [-EscalatorPath] [-GatewayPath] [-Registry <models.json>] [-PwshPath]
+  [-LoadTimeoutSec] [-ReviewQueuePath]` (or `-InputsJson '<json {goal,working_dir,max_steps,dry_run,decision_tiers,
+  gen_tier,frontier_threshold,max_observation_chars,max_transcript_chars,temperature,seed,max_tokens,tools_path,tools,
+  escalator_path,gateway_path,registry,pwsh_path,load_timeout_s,review_queue_path}>'`); wrapped via
+  `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
+- **supported tasks:** a bounded ReAct loop that, given a natural-language **goal**, decides which tool to call
+  **through the escalator** (closed-set `classify` over the registered tool names + `finish`; in-set gate), generates
+  the tool's arguments **via the gateway**, invokes the tool (a conforming Module child skill), observes, and repeats
+  until `finish` or the `max_steps` budget. Default tool registry (`tools.json`): **`doc.io` #20 + `fs.observer` #2**
+  (the registry IS the capability surface — no arbitrary-shell tool).
+- **I/O:** in = a goal (+ optional working_dir + tuning); out = `lifeorch.skill.result/0.1` envelope (result = `{goal,
+  working_dir, status (completed|stopped|error), final_answer, needs_frontier, stop_reason, step_count, max_steps,
+  dry_run, tools_available[], steps[{index,decision{chosen_tool,confidence,accepted_tier,needs_frontier},args,
+  tool{skill_id,invoked,status,error},observation}], cost{}}`) + `runtime/artifacts/<id>/{agent.json,agent.md,
+  result.json,stderr.txt,child_review.jsonl, decision-*/arggen-*/tool-*/final child sub-roots}`. `confidence` = the min
+  per-step decision confidence; `model_provenance` = the stage-tagged aggregate of every child call.
+- **determinism:** **mixed** · **parallel_safe:** false (drives the gateway → GPU/port; can invoke `doc.io` mutations) ·
+  **speed:** several cold model loads per step (no warm worker — D-0002); keep `max_steps` small · **cost:** local only.
+- **safety / guardrails:** a hard `max_steps` budget (exhausting → `stopped` + `needs_frontier`); a `-DryRun` plan-preview
+  (invokes nothing); the closed tool registry (no shell tool); **orchestrator, NOT a review producer** (redirects child
+  review writes to an in-artifact `child_review.jsonl`; canonical `review_queue.jsonl` + the seven-producer set untouched).
+- **limitations:** the tiny/weak/mid models **under-use the `finish` action** (both live goals ran to `max_steps`; the
+  budget is the backstop — D-0032; better termination is the #1 follow-on); one goal per invocation (`batch:false`); a
+  linear loop (no sub-agents / planning DAG / reflection); MVP registry is `doc.io` + `fs.observer` only. **Not a
+  `model.gateway` model — no `models.json` entry** (an orchestrator that composes the wired tiers). · **last test:**
+  2026-07-25 via executor (**39/39 mock `-Live` — `m21-test-001` + a REAL end-to-end run `m21-live-001`** wrote a file on
+  disk through real children, 0 orphaned `llama-server`, queue 1→1; pre-shipped on the cloud box real orchestrator +
+  mock-children + real Module 1 wrapper, 39/39; 10 files sha256 byte-exact `m21-verify-001`). · **skills:** `agent.local`. See D-0032.
+
 ### `Windows.Media.Ocr` — system OCR engine (used by ocr.layout)
 - **status:** installed (system) · **type:** WinRT API (`Windows.Media.Ocr.OcrEngine`) · **location:** OS component;
   reached via **Windows PowerShell 5.1** at `C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe` (5.1.19041.6456).

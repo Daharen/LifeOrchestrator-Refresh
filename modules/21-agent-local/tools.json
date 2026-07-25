@@ -1,0 +1,26 @@
+{
+  "schema": "lifeorch.agent.tools/0.1",
+  "description": "Default closed tool registry for agent.local (Module 21). Each tool is a conforming Life Orchestrator Module invoked as a child skill via -InputsJson/-ArtifactRoot. Entrypoints are repo-relative. This registry IS the agent's entire capability surface; there is deliberately no arbitrary-shell/code-exec tool. Extend by adding conforming skills.",
+  "tools": [
+    {
+      "tool": "doc.io",
+      "skill_id": "doc.io",
+      "entrypoint": "modules/20-doc-io/Invoke-DocIo.ps1",
+      "description": "Read, write, edit, or append a UTF-8 text file (exactly one op per call). Use it to create a file, read a file's contents, replace an exact string in a file, or append a line.",
+      "args_hint": "Always: op (one of read|write|edit|append) and path. write/append also need content. edit needs old_string and new_string. read may take start_line/end_line (1-indexed). Paths may be bare filenames (resolved under working_dir).",
+      "args_example": { "op": "write", "path": "hello.txt", "content": "hi from agent.local" },
+      "required": ["op", "path"],
+      "side_effecting": true
+    },
+    {
+      "tool": "fs.observer",
+      "skill_id": "fs.observer",
+      "entrypoint": "modules/02-fs-observer/Invoke-FsObserver.ps1",
+      "description": "List and search a directory tree, read-only. Returns file/dir/entry counts and, with a glob pattern, the matching file names. Use it to discover what files exist before acting.",
+      "args_hint": "Required: path (a directory). Optional: depth (int, default 3), pattern (a name glob such as *.md), include_hidden (bool).",
+      "args_example": { "path": ".", "depth": 2, "pattern": "*.md" },
+      "required": ["path"],
+      "side_effecting": false
+    }
+  ]
+}
