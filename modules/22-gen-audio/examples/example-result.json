@@ -1,0 +1,67 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "gen.audio",
+  "skill_version": "0.1.0",
+  "contract_version": "0.2",
+  "invocation_id": "8f3c2a10-example-0001",
+  "status": "ok",
+  "started_at_utc": "2026-07-25T20:51:53.5420750Z",
+  "finished_at_utc": "2026-07-25T20:51:54.2913479Z",
+  "duration_ms": 742,
+  "inputs_digest": "sha256:285313f975142a39bd5e1a59a0dbbeb802fa64e0adfa9bee4746d785f72f8567",
+  "result": {
+    "generation": {
+      "kind": "tone",
+      "waveform": "sine",
+      "frequencies": [ 440.0 ],
+      "note": "A4",
+      "duration_s": 1.0,
+      "sample_rate": 44100,
+      "channels": 1,
+      "amplitude": 0.5,
+      "fade_in_ms": 0,
+      "fade_out_ms": 0
+    },
+    "output": {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\22-gen-audio\\runtime\\artifacts\\8f3c2a10-example-0001\\audio.wav",
+      "format": "wav",
+      "container": "wav",
+      "codec": "pcm_s16le",
+      "sample_rate": 44100,
+      "channels": 1,
+      "sample_fmt": "s16",
+      "bitrate": null,
+      "duration_s": 1.0,
+      "bytes": 88244,
+      "sha256": "6e5107c654012e75fc0407ebc524cedad31b84249f9543db1064e4f42b06c742",
+      "probe": {
+        "format_name": "wav",
+        "duration_s": 1.0,
+        "audio": { "codec": "pcm_s16le", "sample_rate": 44100, "channels": 1, "channel_layout": "" }
+      }
+    },
+    "source": { "lavfi": "aevalsrc=exprs=0.5*(sin(2*PI*440*t)):s=44100:d=1" },
+    "ffmpeg": {
+      "path": "C:\\Users\\just_\\AppData\\Local\\Microsoft\\WinGet\\Links\\ffmpeg.exe",
+      "version": "ffmpeg version 8.1-full_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers",
+      "argv": [
+        "-hide_banner", "-nostdin", "-y", "-f", "lavfi", "-i",
+        "aevalsrc=exprs=0.5*(sin(2*PI*440*t)):s=44100:d=1",
+        "-t", "1", "-ar", "44100", "-ac", "1", "-c:a", "pcm_s16le",
+        "-map_metadata", "-1", "-bitexact",
+        "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\22-gen-audio\\runtime\\artifacts\\8f3c2a10-example-0001\\audio.wav"
+      ]
+    },
+    "ffprobe": { "path": "C:\\Users\\just_\\AppData\\Local\\Microsoft\\WinGet\\Links\\ffprobe.exe" }
+  },
+  "confidence": null,
+  "artifacts": [
+    { "path": "C:\\Users\\just_\\...\\22-gen-audio\\runtime\\artifacts\\8f3c2a10-example-0001\\audio.wav", "kind": "wav", "bytes": 88244, "sha256": "6e5107c654012e75fc0407ebc524cedad31b84249f9543db1064e4f42b06c742" },
+    { "path": "C:\\Users\\just_\\...\\22-gen-audio\\runtime\\artifacts\\8f3c2a10-example-0001\\gen.md", "kind": "markdown", "bytes": 495, "sha256": "81fb3ba5d5e87e147f4ec5dcad73ffc55292de80187b2d3b6953872094605ded" },
+    { "path": "C:\\Users\\just_\\...\\22-gen-audio\\runtime\\artifacts\\8f3c2a10-example-0001\\gen.json", "kind": "json", "bytes": 1784, "sha256": "e301917881cc6f966e3dad52979e72ef0b0fa42ad65c05b7b96d3172ed15b0ad" }
+  ],
+  "model_provenance": [],
+  "diagnostics": { "log": "stderr.txt", "artifact_dir": "C:\\Users\\just_\\...\\22-gen-audio\\runtime\\artifacts\\8f3c2a10-example-0001" },
+  "warnings": [],
+  "error": null
+}

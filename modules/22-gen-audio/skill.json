@@ -1,0 +1,55 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "gen.audio",
+  "name": "Local Audio Generation (Procedural)",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "Generate a single synthetic audio signal from a compact specification by wrapping ffmpeg lavfi sources. One -Kind per invocation: tone (single sine/square/triangle/sawtooth partial, by frequency or note name), chord (several partials summed), noise (white/pink/brown/blue/violet/velvet, seeded and reproducible), sweep (linear sine chirp), silence. Shaping: duration, sample rate, channels, amplitude, fade in/out. Encodes directly to wav/mp3/flac/opus/ogg/m4a. Deterministic; no model. The cheapest generator: notification beeps, alert tones/chords, reference pitches, masking/focus noise, test signals, and audio fixtures.",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-GenAudio.ps1",
+    "args_spec": "Named params -Kind <tone|chord|noise|sweep|silence> (required); tone: -Frequency <hz> | -Note <A4|C#3|Bb5>, -Waveform <sine|square|triangle|sawtooth>; chord: -Frequencies '440,554.37,659.25' | -Notes 'C4,E4,G4', -Waveform; noise: -Color <white|pink|brown|blue|violet|velvet>, -Seed <int>; sweep: -FreqStart <hz> -FreqEnd <hz>; shaping (all): -Duration <s> -SampleRate <hz> -Channels <1|2> -Amplitude <0..1> -FadeInMs <n> -FadeOutMs <n>; output: -Format <wav|mp3|flac|opus|ogg|m4a> -SampleFormat <s16|s24|s32|flt> -Bitrate <e.g. 192k>; -FfmpegPath/-FfprobePath <override>. OR -InputsJson '<json {kind,frequency,note,frequencies,notes,waveform,color,freq_start,freq_end,seed,duration,sample_rate,channels,amplitude,fade_in_ms,fade_out_ms,format,sample_fmt,bitrate,ffmpeg_path,ffprobe_path}>'. Optional -ArtifactRoot, -InvocationId."
+  },
+  "inputs": [
+    { "name": "kind", "type": "string", "required": true, "description": "Generator: tone | chord | noise | sweep | silence." },
+    { "name": "frequency", "type": "double", "required": false, "default": 440.0, "description": "Tone frequency in Hz (used when -Note is not given)." },
+    { "name": "note", "type": "string", "required": false, "description": "Tone pitch by equal-temperament name (A4=440), e.g. A4, C#3, Bb5. Overrides frequency." },
+    { "name": "frequencies", "type": "string", "required": false, "description": "Chord partials as a comma-separated Hz list, e.g. '261.63,329.63,392'." },
+    { "name": "notes", "type": "string", "required": false, "description": "Chord partials as comma-separated note names, e.g. 'C4,E4,G4'. Overrides frequencies." },
+    { "name": "waveform", "type": "string", "required": false, "default": "sine", "description": "Waveform for tone/chord: sine | square | triangle | sawtooth. (sweep is sine.)" },
+    { "name": "color", "type": "string", "required": false, "default": "white", "description": "Noise color: white | pink | brown | blue | violet | velvet." },
+    { "name": "freq_start", "type": "double", "required": false, "default": 200.0, "description": "Sweep start frequency in Hz." },
+    { "name": "freq_end", "type": "double", "required": false, "default": 2000.0, "description": "Sweep end frequency in Hz." },
+    { "name": "seed", "type": "int", "required": false, "default": 0, "description": "Noise RNG seed (fixed -> reproducible output)." },
+    { "name": "duration", "type": "double", "required": false, "default": 1.0, "description": "Duration in seconds (0 < d <= 3600)." },
+    { "name": "sample_rate", "type": "int", "required": false, "default": 44100, "description": "Output sample rate in Hz (8000..192000)." },
+    { "name": "channels", "type": "int", "required": false, "default": 1, "description": "Output channels: 1 (mono) or 2 (duplicated stereo)." },
+    { "name": "amplitude", "type": "double", "required": false, "default": 0.5, "description": "Peak amplitude 0..1 (chords divide it across partials to avoid clipping)." },
+    { "name": "fade_in_ms", "type": "int", "required": false, "default": 0, "description": "Fade-in length in ms (afade; kills onset clicks)." },
+    { "name": "fade_out_ms", "type": "int", "required": false, "default": 0, "description": "Fade-out length in ms (afade)." },
+    { "name": "format", "type": "string", "required": false, "default": "wav", "description": "Output format/container: wav | mp3 | flac | opus | ogg | m4a." },
+    { "name": "sample_fmt", "type": "string", "required": false, "default": "s16", "description": "PCM sample format for wav only: s16 | s24 | s32 | flt." },
+    { "name": "bitrate", "type": "string", "required": false, "description": "Audio bitrate for lossy formats (mp3/opus/ogg/m4a), e.g. 192k. Per-format default when omitted." },
+    { "name": "ffmpeg_path", "type": "string", "required": false, "description": "Explicit ffmpeg.exe path override (else resolved from PATH / known locations)." },
+    { "name": "ffprobe_path", "type": "string", "required": false, "description": "Explicit ffprobe.exe path override (else the sibling of the resolved ffmpeg)." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ generation{kind,waveform?,frequencies?,note?,notes?,color?,seed?,freq_start?,freq_end?,duration_s,sample_rate,channels,amplitude,fade_in_ms,fade_out_ms}, output{path,format,container,codec,sample_rate,channels,sample_fmt,bitrate,duration_s,bytes,sha256,probe}, source{lavfi}, ffmpeg{path,version,argv[]}, ffprobe{path} }"
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4", "ffmpeg>=6"],
+    "models": [],
+    "libraries": [],
+    "cpu": "any", "gpu": "none", "memory_mb": 256,
+    "network": false, "filesystem": "read-write", "audio": true, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 120, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}
