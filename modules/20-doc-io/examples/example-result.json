@@ -1,0 +1,69 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "doc.io",
+  "skill_version": "0.1.0",
+  "contract_version": "0.2",
+  "invocation_id": "74374f4e-2a75-45d7-8597-106bc48675f4",
+  "status": "ok",
+  "started_at_utc": "2026-07-25T19:08:03.2552352Z",
+  "finished_at_utc": "2026-07-25T19:08:03.5677233Z",
+  "duration_ms": 312,
+  "inputs_digest": "sha256:62e03aeee2d0b50b7328b5833bb916130ead8216b85f9fadf96ea06a94ae2258",
+  "result": {
+    "op": "edit",
+    "path": "C:\\tmp\\report.md",
+    "existed": true,
+    "occurrences": 1,
+    "replacements": 1,
+    "replace_all": false,
+    "byte_count_before": 20,
+    "sha256_before": "7af4b59fc4df09287df7f7597469e5cbb767760f5a864cdbcaf03661c3e7e95a",
+    "file": {
+      "encoding": "utf-8",
+      "bom": false,
+      "eol": "lf",
+      "line_count": 3,
+      "byte_count": 23,
+      "char_count": 23,
+      "sha256": "8650cb6920f9b69f34aa6a6c88c18ef31e43696a1dec53f3cd1a17a2f3a6c20d"
+    },
+    "preimage": {
+      "written": true,
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\20-doc-io\\runtime\\artifacts\\<invocation_id>\\before.md",
+      "reason": null
+    }
+  },
+  "confidence": null,
+  "artifacts": [
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\20-doc-io\\runtime\\artifacts\\<invocation_id>\\after.md",
+      "kind": "markdown",
+      "bytes": 23,
+      "sha256": "8650cb6920f9b69f34aa6a6c88c18ef31e43696a1dec53f3cd1a17a2f3a6c20d"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\20-doc-io\\runtime\\artifacts\\<invocation_id>\\before.md",
+      "kind": "markdown",
+      "bytes": 20,
+      "sha256": "7af4b59fc4df09287df7f7597469e5cbb767760f5a864cdbcaf03661c3e7e95a"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\20-doc-io\\runtime\\artifacts\\<invocation_id>\\doc.json",
+      "kind": "json",
+      "bytes": 614,
+      "sha256": "a59a8b7e7a4092a0f7994ba3b5b9104e7dc01da524e416d7399852fa017cdedc"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\20-doc-io\\runtime\\artifacts\\<invocation_id>\\doc.md",
+      "kind": "markdown",
+      "bytes": 329,
+      "sha256": "e0927bbcd1a624b08bf2629671b1c56276e4fe527249e57d2064a4c2c98d37e8"
+    }
+  ],
+  "model_provenance": [],
+  "diagnostics": {
+    "log": "stderr.txt"
+  },
+  "warnings": [],
+  "error": null
+}

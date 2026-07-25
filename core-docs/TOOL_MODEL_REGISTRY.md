@@ -537,6 +537,35 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
 - **last test:** 2026-07-25 via executor (**24/24 mock + 28/28 `-Live` — `m19-test-001`**, 0 orphaned `llama-server`;
   calibration `m19-calib-002/003`; 10 files sha256 byte-exact `m19-verify-001`). · **skills:** `logic.escalator`. See D-0030.
 
+### `doc.io` — Local Document I/O (Module 20)
+- **status:** installed · **type:** skill (pure PowerShell + .NET; no external binary/Python/model) ·
+  **location:** `LifeOrchestrator-Refresh/modules/20-doc-io/`
+- **invocation:** direct `pwsh -NoProfile -File .\Invoke-DocIo.ps1 -Op <read|write|edit|append> -Path <file>
+  [read: -StartLine -EndLine -MaxBytes] [write: -Content -Overwrite -CreateDirs -Eol <lf|crlf>] [edit: -OldString
+  -NewString -ReplaceAll -ExpectCount] [append: -Content -EnsureNewline -Create] [-Encoding <utf-8|utf-8-bom>]
+  [-ExpectSha256 <hex>] [-NoPreimage]` (or `-InputsJson '<json {op,path,content,old_string,new_string,replace_all,
+  expect_count,start_line,end_line,max_bytes,eol,overwrite,create_dirs,create,ensure_newline,encoding,expect_sha256,
+  no_preimage}>'`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
+- **supported tasks:** read (whole file or a 1-indexed inclusive line range), write (create/overwrite), edit (exact
+  `old_string`→`new_string`; unique by default, `replace_all`/`expect_count`), and append UTF-8 **text documents**.
+  The read/write/edit/append primitive local models (the escalator #19, a future `agent.local`, Widgets) call.
+- **I/O:** in = an op + a path (+ op params); out = `lifeorch.skill.result/0.1` envelope (result = `{op, path, existed,
+  file{encoding,bom,eol,line_count,byte_count,char_count,sha256}, + op-specific: read→content/returned; write→created/
+  bytes_written/sha256_before/preimage; edit→occurrences/replacements/sha256_before/preimage; append→created/
+  bytes_appended/ensured_newline/sha256_before/preimage}`) + `runtime/artifacts/<id>/{doc.json,doc.md,result.json,
+  stderr.txt, read.txt | before.<ext>+after.<ext>}`.
+- **determinism:** **deterministic** (confidence **null**; empty `model_provenance`; **not** a review producer) ·
+  **speed:** ~0.2–0.5 s per op (per-call pwsh spawn) · **CPU/GPU/mem:** low / none / ~128 MB · **network:** none · **cost:** local only.
+- **safety:** **atomic** temp+rename writes (no torn files / no leftover `.docio-*.tmp`); optional `-ExpectSha256`
+  optimistic-concurrency precondition (`precondition_failed`); recoverable `before.<ext>` pre-image; **EOL preservation**
+  (a CRLF file stays CRLF); UTF-8 default + UTF-16 BOM detect/preserve; binary (NUL) files refused for read/edit/append.
+- **limitations:** **`parallel_safe:false`** (first general external-file mutator — writes arbitrary caller-chosen
+  paths; conservative, see D-0031); one file + one op per invocation (`batch:false`); exact-string edit only (no
+  regex/diff); **text** only (no structured-format field edits); no move/copy/rename/delete/mkdir (a future `fs.manage`);
+  UTF-8 / UTF-16-BOM only. **Not a `model.gateway` model — no `models.json` entry** (a tool, like ffmpeg). · **last
+  test:** 2026-07-25 via executor (**88/88 live — `m20-test-001`**, exit 0; pre-shipped on the cloud box, real skill +
+  real Module 1 wrapper, 88/88; 8 files sha256 byte-exact). · **skills:** `doc.io`. See D-0031.
+
 ### `Windows.Media.Ocr` — system OCR engine (used by ocr.layout)
 - **status:** installed (system) · **type:** WinRT API (`Windows.Media.Ocr.OcrEngine`) · **location:** OS component;
   reached via **Windows PowerShell 5.1** at `C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe` (5.1.19041.6456).

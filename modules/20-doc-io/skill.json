@@ -1,0 +1,52 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "doc.io",
+  "name": "Local Document I/O",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "Read, write, edit, and append UTF-8 text documents on the local machine (one operation per invocation), with atomic writes, EOL preservation, sha256 reporting, an optional expect_sha256 precondition, and a recoverable pre-image.",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-DocIo.ps1",
+    "args_spec": "-Op read|write|edit|append -Path <file> [op-specific] | -InputsJson '<json>'"
+  },
+  "inputs": [
+    {"name": "op", "type": "string", "required": true, "description": "Operation: read | write | edit | append."},
+    {"name": "path", "type": "string", "required": true, "description": "Target document path (absolute, or relative to CWD)."},
+    {"name": "content", "type": "string", "required": false, "description": "New content (required for write and append)."},
+    {"name": "old_string", "type": "string", "required": false, "description": "Exact string to find (required for edit)."},
+    {"name": "new_string", "type": "string", "required": false, "description": "Replacement string (required for edit)."},
+    {"name": "replace_all", "type": "bool", "required": false, "default": false, "description": "edit: replace every occurrence (else exactly one required)."},
+    {"name": "expect_count", "type": "int", "required": false, "description": "edit: require exactly this many occurrences."},
+    {"name": "start_line", "type": "int", "required": false, "description": "read: 1-indexed inclusive range start."},
+    {"name": "end_line", "type": "int", "required": false, "description": "read: 1-indexed inclusive range end."},
+    {"name": "max_bytes", "type": "int", "required": false, "default": 5000000, "description": "read: cap the returned content in bytes."},
+    {"name": "eol", "type": "string", "required": false, "default": "lf", "description": "write/append: newline convention for the written content (lf|crlf)."},
+    {"name": "overwrite", "type": "bool", "required": false, "default": true, "description": "write: overwrite an existing file."},
+    {"name": "create_dirs", "type": "bool", "required": false, "default": true, "description": "write: create missing parent directories."},
+    {"name": "create", "type": "bool", "required": false, "default": true, "description": "append: create the file if missing."},
+    {"name": "ensure_newline", "type": "bool", "required": false, "default": true, "description": "append: insert a separating newline when the file does not end with one."},
+    {"name": "encoding", "type": "string", "required": false, "default": "utf-8", "description": "utf-8 (default) or utf-8-bom; read also auto-detects UTF-16 LE/BE BOM; edit/append preserve the detected encoding."},
+    {"name": "expect_sha256", "type": "string", "required": false, "description": "write/edit/append: precondition — the current file's sha256 must match."},
+    {"name": "no_preimage", "type": "bool", "required": false, "default": false, "description": "Disable the before.<ext> pre-image artifact for mutating ops."}
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{op, path, existed, file{encoding,bom,eol,line_count,byte_count,char_count,sha256}, and op-specific fields (read: content/returned; write/edit/append: sha256_before/counts/preimage)}."
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4"],
+    "models": [],
+    "libraries": [],
+    "cpu": "any", "gpu": "none", "memory_mb": 128,
+    "network": false, "filesystem": "write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": {"root": "runtime/artifacts/<invocation_id>/"},
+  "timeout": {"default_seconds": 120, "on_timeout": "kill_tree_and_report"},
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": false,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

@@ -25,7 +25,7 @@ spine (+ the real-time autonomic layer 45-49 and the 6-level operating hierarchy
    measure the resolve-level distribution + the false-approval rate; a ladder of N tiers can cost more than
    one correct call unless most tasks resolve low; target ~95% confidence) before it is trusted. The single
    highest-leverage budget item — every task a local model finishes end-to-end is one the frontier allotment never pays for.
-2. **`doc.io` — Local Model Doc Read/Write/Edit/Append** (cheap, mostly deterministic; high utility).
+2. **`doc.io` — Local Model Doc Read/Write/Edit/Append** — **MVP COMPLETE 2026-07-25 (folder `modules/20-doc-io/`; D-0031; deterministic; tests 88/88 cloud + 88/88 live).** (cheap, mostly deterministic; high utility): read (whole / line-range) + write + exact-string edit + append, with atomic writes, EOL preservation (CRLF-safe), an `expect_sha256` precondition, and a recoverable pre-image. Pure PowerShell + .NET; not a review producer; no `models.json` change.
 3. **`agent.local` — Local Orchestrator / Agent core** (a scoped #26): a local model that plans and invokes
    any Module through the escalator — the frontier agent's job, done locally.
 4. **Generators, cheapest-first:** `gen.audio` → `gen.image` (the #44 family: Qwen-Image / FLUX.1-schnell /
@@ -337,6 +337,34 @@ what to do next**: pick up a Phase-A item (or, if video capability is specifical
 - **Follow-ons (measured, NOT this session):** raise strong-tier `max_tokens` / no-reasoning directive (D-0018);
   self-consistency **veto** + skeptical judges (cut the 0.20 false-approval); higher floor / cost-aware early-stop;
   live-calibrate K>1; `unit_test`/retrieval gates; a `route.tasks` (#24) drain of `needs_frontier`.
+
+## Module 20 (build order) — Local Document I/O (`doc.io`)
+- **id:** `doc.io` · **Priority:** Phase A #2 (D-0029) · **Status:** **MVP complete (2026-07-25)**
+- **Folder-number note:** on-disk `modules/20-doc-io/`. The `NN-` prefix is a **monotonic build-order counter**
+  (0, 00.1, 1..19, then 20); D-0029 decoupled it from the ARCHITECTURE_MAP 0-49 architectural positions.
+  `doc.io` has no dedicated spine slot — a Phase-A utility Module (the cheap, high-utility document primitive).
+- **Purpose:** the read/write/edit/append **text-document primitive** a local model (the escalator #19, a future
+  `agent.local`, Widgets, unattended executor tasks) calls to do real file work — the local counterpart to the
+  frontier agent's Read/Write/Edit tools. One skill, **one op per invocation** (`-Op read|write|edit|append`).
+- **Ops:** **read** (whole file or a 1-indexed inclusive `start_line..end_line` range + `max_bytes` cap → content +
+  `{encoding,bom,eol,line_count,byte_count,char_count,sha256}`); **write** (create/overwrite; `overwrite`/`create_dirs`/
+  `eol lf|crlf`); **edit** (exact-string `old_string`→`new_string`; default exactly-one, `replace_all`/`expect_count`
+  variants); **append** (`ensure_newline`/`create`).
+- **Deterministic + tool-not-model:** `determinism:"deterministic"`, `confidence:null`, empty `model_provenance`,
+  **NOT a review-queue producer** (the seven-producer set is untouched); pure PowerShell + .NET only — **no external
+  binary / Python / model / `models.json` change / Module 7 re-verify** (the leanest skill yet).
+- **Safety:** atomic temp+rename writes (no torn files / no leftover `.docio-*.tmp`); optional `expect_sha256`
+  optimistic-concurrency precondition; recoverable `before.<ext>` pre-image; **EOL preservation** (a CRLF file stays
+  CRLF — the D-0018/core-docs gotcha, generalized); UTF-8 default + UTF-16 BOM detect/preserve; binary refused.
+- **Flags:** `determinism:"deterministic"`, `parallel_safe:false` (first general external-file mutator; conservative —
+  see D-0031), `batch:false`, `streaming:false`.
+- **Tests:** **88/88 off-machine (cloud pwsh 7.4.6, real skill + real Module 1 wrapper — no mock) + 88/88 `-Live` via
+  the executor** (`m20-test-001`, exit 0); 8 files sha256 byte-exact + AST-parse OK on the target.
+- **Implementation:** `modules/20-doc-io/` (`Invoke-DocIo.ps1`, `skill.json`, `README.md`, `WORK_ORDER.md`,
+  `.gitignore`, `tests/Invoke-DocIoTests.ps1`, `examples/`). **Work order:** `modules/20-doc-io/WORK_ORDER.md`. See **D-0031**.
+- **Follow-ons (NOT this session):** batch/directory/glob; a regex or unified-diff apply mode; structured-format
+  (JSON/YAML/CSV) field edits; a sibling `fs.manage` (move/copy/rename/delete/mkdir); more encodings; a read-only or
+  per-file-lock `parallel_safe:true` mode + a tail/follow read; insert-at-line / replace-line-range ops.
 
 ## Modules 19–22 — Video (architectural positions; deferred to Phase C)
 **Note:** the `19–22` here are **architectural positions** (`ARCHITECTURE_MAP.md`), NOT build-order folder numbers — the

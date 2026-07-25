@@ -5,10 +5,10 @@ Owns **reality as it exists now** — not intended architecture. Keep it compact
 is planned (serves scripts and weaker local models) but not yet created.
 
 - **Project phase:** MVP build-out — **re-prioritized 2026-07-25 (D-0029)** to a usable-local-core-first order (see `MODULE_ROADMAP.md → Build priority`). Two build tracks: **Modules** (`modules/`, backend capability) and **Widgets** (`widgets/`, the human-interface layer); the full long-horizon destination is `ARCHITECTURE_MAP.md`.
-- **Active module:** _none in progress._ **Modules 0–19 complete** (0 executor · 1 `skill.bootstrap` · 2
+- **Active module:** _none in progress._ **Modules 0–20 complete** (0 executor · 1 `skill.bootstrap` · 2
   `fs.observer` · 3 `proc.observer` · 4 `uia.inspector` · 5 `uia.actor` · 6 `capture.screen` · 7 `model.gateway` ·
   8 `classify.batch` · 9 `review.processor` · 10 `audio.ingest` · 11 `speech.stt` · 12 `speech.tts` · 13 `voice.live` ·
-  14 `ocr.layout` · 15 `image.util` · 16 `detect.objects` · 17 `image.interpret` · 18 `image.index` · **19 `logic.escalator`**), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure). **The full
+  14 `ocr.layout` · 15 `image.util` · 16 `detect.objects` · 17 `image.interpret` · 18 `image.index` · 19 `logic.escalator` · **20 `doc.io`**), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure). **The full
   audio track (10–13) is complete; the image/document perception block (14–18) is COMPLETE — Modules 14 `ocr.layout`,
   15 `image.util`, 16 `detect.objects`, 17 `image.interpret`, and 18 `image.index` (the fusion capstone) are all done.**
   **Module 8 — Batch Classification & Sorting (`classify.batch`) is MVP complete** — the **first real
@@ -240,6 +240,33 @@ is planned (serves scripts and weaker local models) but not yet created.
   capability exists. Measured, prioritized follow-ons: raise strong-tier `max_tokens` / add a no-reasoning directive; a
   self-consistency **veto** + skeptical judges to cut the 0.20 false-approval; a higher floor / cost-aware early-stop;
   live-calibrate K>1. Full numbers in `modules/19-logic-escalator/CALIBRATION.md` (+ `runtime/calibration/`). See **D-0030**.
+- **Module 20 — Local Document I/O (`doc.io`) is MVP complete this session** — **Phase A #2 (D-0029)**, the cheap,
+  high-utility **document primitive** a local model (the escalator #19, a future `agent.local`, Widgets, unattended
+  executor tasks) calls to do real file work — the local counterpart to the frontier's Read/Write/Edit tools. **One
+  skill, one op per invocation** (`-Op read|write|edit|append`): **read** (whole file or a 1-indexed inclusive
+  `start_line..end_line` range + `max_bytes` cap → content + `{encoding,bom,eol,line_count,byte_count,char_count,
+  sha256}`), **write** (create/overwrite; `overwrite`/`create_dirs`/`eol lf|crlf`), **edit** (exact-string
+  `old_string`→`new_string`; default **exactly one** occurrence — `not_found`/`not_unique` otherwise — with
+  `replace_all`/`expect_count` variants), **append** (`ensure_newline`/`create`). **Deterministic + a tool, not a
+  model**: `determinism:"deterministic"`, `confidence:null`, empty `model_provenance`, **NOT a review-queue producer**
+  (the canonical `review_queue.jsonl` and the **seven-producer set (7/8/11/12/14/16/17) are untouched** — verified live,
+  before==after); **pure PowerShell over cross-platform .NET — no external binary / Python / model / `models.json`
+  change / Module 7 re-verify** (the leanest skill yet). **Safety model** on every mutation: **atomic** temp+rename
+  writes (no torn files; no leftover `.docio-*.tmp`), an optional **`expect_sha256`** optimistic-concurrency
+  precondition (`precondition_failed` — makes a local model's read→reason→edit loop safe against a lost update), a
+  recoverable **`before.<ext>` pre-image** (+ `after.<ext>`; skipped >~8 MB / `-NoPreimage`), and **EOL preservation**
+  (a CRLF file — like these core-docs — stays CRLF, by matching on an LF-normalized view and re-applying the file's EOL;
+  `write` writes `eol`, default lf). **Encoding:** UTF-8 default; read auto-detects/strips a UTF-8/UTF-16LE/UTF-16BE BOM
+  (reported); write = UTF-8 no BOM (contract §3); edit/append preserve the detected encoding+BOM; a binary (NUL) file is
+  refused for read/edit/append (`binary_file`). Byte-level I/O (never `Environment.NewLine`/`Set-Content`/`Out-File`)
+  keeps behavior identical on Windows and Linux. `parallel_safe:false` (first general external-file mutator — writes
+  arbitrary caller-chosen paths; conservative MVP, D-0031), `batch:false`, `streaming:false`. **Tests 88/88 off-machine
+  (cloud pwsh 7.4.6, the **real** skill + the **real** Module 1 wrapper — no mock, `.NET` file I/O is cross-platform,
+  the strongest gate) + 88/88 `-Live` via the executor** (`m20-test-001`, exit 0) — every op + error path (`invalid_op`/
+  `missing_parameter`/`input_not_found`/`path_is_directory`/`parent_not_found`/`already_exists`/`binary_file`/`not_found`/
+  `not_unique`/`count_mismatch`/`precondition_failed`/`invalid_range`/`no_change`) + CRLF/LF/BOM/UTF-16 preservation +
+  atomic (0 stray tmp) + pre-image recoverable + the named-param-overrides-`InputsJson` contract rule + the Module 1
+  wrapper; 8 files sha256 byte-exact + AST-parse OK on the target. See **D-0031**.
 - **Repo / working dir:** **`C:\Users\just_\LifeOrchestrator-Refresh\`** — the clean standalone home for
   **Life Orchestrator** (near-term local-skills track; git-initialized). Layout: `core-docs/` (these docs)
   and `modules/<NN>-<name>/` (one per module). **Reference sources (separate, not built here):** the earlier
@@ -543,6 +570,18 @@ is planned (serves scripts and weaker local models) but not yet created.
   (envelope confidence = min-of-stages; `ocr_text` mirrors the stage) were made mode-robust after the first live run showed OCR
   correctly finds **no text** on a photo (conf 0.1 = the fused record's weakest link). Live smoke: `dog.jpg -All` → 5 detections
   + a full VLM description + min-confidence 0.1, canonical queue **untouched (0→0)**.
+- Module 20: `modules/20-doc-io/tests/Invoke-DocIoTests.ps1` — **88/88 pass (cloud) / 88/88 (live)** (manifest +
+  deterministic/parallel_safe=false/batch/streaming flags; write create/overwrite + sha256==disk + `already_exists` +
+  `create_dirs` + `parent_not_found` + eol=crlf; read whole/range/`invalid_range`/`input_not_found`/`binary_file`/
+  truncation; edit unique/`not_found`/`not_unique`/`replace_all`/`expect_count`/`count_mismatch`/`no_change` + **CRLF
+  preserved** + LF preserved + multiline-old_string-across-EOL + `binary_file` + pre-image recoverable; append
+  ensure-newline/no-double-newline/create/`input_not_found`/CRLF; write-then-edit precondition (`expect_sha256` ok +
+  `precondition_failed`); UTF-8-BOM + UTF-16LE detect/preserve; `invalid_op`/`missing_parameter`/`path_is_directory`;
+  named-param-overrides-`InputsJson`; envelope schema/artifact-sha256; **no leftover `.docio-*.tmp`**; and the Module 1
+  wrapper). The harness is **real-worker & OS-portable** (no mock — .NET file I/O is cross-platform): it generates its
+  own fixtures and ran the **real** skill + **real** Module 1 wrapper on the cloud Linux box (88/88) as the pre-ship gate
+  before the identical harness ran live on the Windows executor (`m20-test-001`, 88/88, exit 0; canonical review queue
+  before==after; 0 stray tmp; 8 shipped files sha256 byte-exact).
 
 ## Known failures / gotchas
 - **image.util truncated its worker meta on a real JPEG `dpi` (2026-07-25, Module 15, fixed).** Pillow returns a JPEG's
@@ -629,9 +668,16 @@ is planned (serves scripts and weaker local models) but not yet created.
   27B load (~90s) approaches the gateway's 120s default, so callers pass a longer `-LoadTimeoutSec` for the strong tier.
 
 ## Next expected action
-0. **Module 19 `logic.escalator` (Local Logic Escalator, Phase A #1) is MVP complete + empirically calibrated this session (D-0030).**
-   The next Phase-A unit per `MODULE_ROADMAP.md → Build priority` is **`doc.io`** (Local Model Doc Read/Write/Edit/Append), then a
-   local orchestrator (`agent.local`), then the generators, then the **Widget** layer (`widgets/`). **Top escalator follow-ons
+0. **Module 20 `doc.io` (Local Document I/O, Phase A #2) is MVP complete this session (D-0031).** The read/write/edit/append
+   deterministic text-document primitive (pure PowerShell + .NET; atomic writes, EOL preservation, `expect_sha256`, recoverable
+   pre-image; not a review producer; no `models.json` change; 88/88 cloud + 88/88 live, `m20-test-001`). **The next Phase-A unit
+   per `MODULE_ROADMAP.md → Build priority` is `agent.local`** — the Local Orchestrator / Agent core (a local model that plans and
+   invokes any Module through the escalator #19), then the generators cheapest-first (`gen.audio`→`gen.image`→`gen.music`→`gen.video`),
+   then `agent.coding`, then the **Widget** layer (`widgets/`). **`doc.io` follow-ons (NOT next session unless wanted):** batch/
+   directory/glob; a regex or unified-diff apply mode; structured-format (JSON/YAML/CSV) field edits; a sibling `fs.manage`
+   (move/copy/rename/delete/mkdir); more encodings; a read-only or per-file-lock `parallel_safe:true` mode + a tail/follow read;
+   insert-at-line / replace-line-range ops. See D-0031. **Prior: Module 19 `logic.escalator` (Phase A #1, D-0030)** — top escalator follow-ons
+   (measured, NOT this session):** raise the strong-tier `max_tokens` / add a no-reasoning directive so the 27B returns a parseable
    (measured, NOT this session):** raise the strong-tier `max_tokens` / add a no-reasoning directive so the 27B returns a parseable
    verdict instead of an empty one (D-0018, confirmed in `m19-calib-003`); a **self-consistency veto** + more skeptical judge prompts
    to cut the measured **0.20 false-approval** rate; a higher floor / cost-aware early-stop (always-mid beat the ladder on the hard
@@ -669,4 +715,4 @@ is planned (serves scripts and weaker local models) but not yet created.
    intra-batch prompt for throughput; calibrated confidence; a side-effecting `sort.files` mover — D-0017);
    audio.ingest (batch/directory ingest; trimming/segmentation → Module 13; denoise/high-pass — D-0019).
 
-- **Last updated:** 2026-07-25 (UTC) · **Last updating agent:** Claude (Cowork — **Module 19 `logic.escalator` (Local Logic Escalator, Phase A #1, D-0030)**: built the escalating tier ladder composing `model.gateway` (tiny→weak→mid→strong) with deterministic ground-truth gates (in-set / JSON-schema+grounding / self-consistency) anchoring every rung — a hard-fail overrides an LLM-judge accept, strong self-consistency short-circuits; orchestrator/non-producer (suppresses child gateway review writes, surfaces `needs_frontier`; canonical queue untouched). Pre-shipped off-machine on cloud pwsh 7.4.6 (24/24 mock-gateway scenarios) → shipped 10 files byte-exact (`m19-verify-001` sha256 + AST-parse OK) → 28/28 with `-Live` (`m19-test-001`, 0 orphans). **Empirically calibrated (`m19-calib-002/003`, the D-0029 experiment):** 3-tier K=1 = 78.6% acc / 0.20 false-approval / −89% cost; 4-tier K=1 = 57.1% (the 27B emits empty verdicts at MVP token caps → fail-safe `needs_frontier`); **does NOT reach the 95% target — reported plainly** with prioritized follow-ons. Added `CALIBRATION.md` + `.gitignore`. Committed with trailers.) · **[prior] Last updated:** 2026-07-25 (UTC) · **Last updating agent:** Claude (Cowork — housekeeping pass, D-0028: (A) folded the three D-0009/D-0011 conventions into SKILL_CONTRACT.md v0.2 (skill-relative artifact roots + absolute paths §3, generic -InputsJson §3.1, lifeorch.skill.invocation_report/0.1 §3.2), keeping the wire schema ids at /0.1 — additive + backward-compatible, so the validators and all existing manifests were untouched; (B) relocated every staged model out of _pending-model-storage into per-owning-module F: homes (LLMs→07-model-gateway, whisper→11-speech-stt, TTS voices→12-speech-tts, detectors→16-detect-objects, VLM→17-image-interpret, embedding→23-artifact-search) + the shared llama.cpp engine→_engines, rewrote models.json (13 models, byte-exact sha256 5aed38db…), de-duplicated the 12 Hz TTS tokenizer (deleted the standalone copy + its declared-only registry entry — each voice keeps its bundled speech_tokenizer), and deleted the emptied _pending-model-storage + its MIGRATION.md; (C) removed the proteus_repo/tools leftover. Re-verified live via the executor (hk-verify-001): all 4 LLM tiers + whisper STT + Qwen3-TTS (bundled tokenizer) + ONNX detector + VLM caption each load from their new homes, 0 orphaned servers. Refreshed the Module 1 README; no skill code changed). · **2026-07-25 (later) — direction pivot D-0029 (docs only, no code):** adopted the Module/Widget vocabulary, created the `widgets/` folder + README, added the `ARCHITECTURE_MAP.md` core-doc (canonical 0-49 spine + the real-time autonomic layer 45-49 + the 6-level operating hierarchy; model names annotated as non-binding candidates), and re-prioritized the build order to a usable-local-core-first sequence (Phase A utility/cost-offload led by the Local Logic Escalator; Phase B the Widget layer; Phase C the deferred research spine). Updated START_HERE / PROJECT_DIRECTION / MODULE_ROADMAP / CURRENT_STATE accordingly.
+- **Last updated:** 2026-07-25 (UTC) · **Last updating agent:** Claude (Cowork — **Module 20 `doc.io` (Local Document I/O, Phase A #2, D-0031)**: built the deterministic **read/write/edit/append** text-document primitive — pure PowerShell over cross-platform .NET (no external binary / Python / model / `models.json` change / Module 7 re-verify), with **atomic** temp+rename writes, **EOL preservation** (CRLF-safe), an **`expect_sha256`** optimistic-concurrency precondition, and a recoverable **`before.<ext>` pre-image**; `determinism:"deterministic"`, **NOT a review producer** (the seven-producer set + canonical `review_queue.jsonl` untouched, verified before==after). Pre-shipped off-machine on cloud pwsh 7.4.6 (the **real** skill + the **real** Module 1 wrapper, **no mock** — 88/88) → shipped 8 files byte-exact (sha256 + AST-parse OK on the target) → **88/88 `-Live`** via the executor (`m20-test-001`, exit 0; 0 stray `.docio-*.tmp`; canonical queue before==after). Added `WORK_ORDER.md`/`README.md`/`skill.json`/`.gitignore`/examples. Committed with trailers.) · **[prior] Last updated:** 2026-07-25 (UTC) · **Last updating agent:** Claude (Cowork — **Module 19 `logic.escalator` (Local Logic Escalator, Phase A #1, D-0030)**: built the escalating tier ladder composing `model.gateway` (tiny→weak→mid→strong) with deterministic ground-truth gates (in-set / JSON-schema+grounding / self-consistency) anchoring every rung — a hard-fail overrides an LLM-judge accept, strong self-consistency short-circuits; orchestrator/non-producer (suppresses child gateway review writes, surfaces `needs_frontier`; canonical queue untouched). Pre-shipped off-machine on cloud pwsh 7.4.6 (24/24 mock-gateway scenarios) → shipped 10 files byte-exact (`m19-verify-001` sha256 + AST-parse OK) → 28/28 with `-Live` (`m19-test-001`, 0 orphans). **Empirically calibrated (`m19-calib-002/003`, the D-0029 experiment):** 3-tier K=1 = 78.6% acc / 0.20 false-approval / −89% cost; 4-tier K=1 = 57.1% (the 27B emits empty verdicts at MVP token caps → fail-safe `needs_frontier`); **does NOT reach the 95% target — reported plainly** with prioritized follow-ons. Added `CALIBRATION.md` + `.gitignore`. Committed with trailers.) · **[prior] Last updated:** 2026-07-25 (UTC) · **Last updating agent:** Claude (Cowork — housekeeping pass, D-0028: (A) folded the three D-0009/D-0011 conventions into SKILL_CONTRACT.md v0.2 (skill-relative artifact roots + absolute paths §3, generic -InputsJson §3.1, lifeorch.skill.invocation_report/0.1 §3.2), keeping the wire schema ids at /0.1 — additive + backward-compatible, so the validators and all existing manifests were untouched; (B) relocated every staged model out of _pending-model-storage into per-owning-module F: homes (LLMs→07-model-gateway, whisper→11-speech-stt, TTS voices→12-speech-tts, detectors→16-detect-objects, VLM→17-image-interpret, embedding→23-artifact-search) + the shared llama.cpp engine→_engines, rewrote models.json (13 models, byte-exact sha256 5aed38db…), de-duplicated the 12 Hz TTS tokenizer (deleted the standalone copy + its declared-only registry entry — each voice keeps its bundled speech_tokenizer), and deleted the emptied _pending-model-storage + its MIGRATION.md; (C) removed the proteus_repo/tools leftover. Re-verified live via the executor (hk-verify-001): all 4 LLM tiers + whisper STT + Qwen3-TTS (bundled tokenizer) + ONNX detector + VLM caption each load from their new homes, 0 orphaned servers. Refreshed the Module 1 README; no skill code changed). · **2026-07-25 (later) — direction pivot D-0029 (docs only, no code):** adopted the Module/Widget vocabulary, created the `widgets/` folder + README, added the `ARCHITECTURE_MAP.md` core-doc (canonical 0-49 spine + the real-time autonomic layer 45-49 + the 6-level operating hierarchy; model names annotated as non-binding candidates), and re-prioritized the build order to a usable-local-core-first sequence (Phase A utility/cost-offload led by the Local Logic Escalator; Phase B the Widget layer; Phase C the deferred research spine). Updated START_HERE / PROJECT_DIRECTION / MODULE_ROADMAP / CURRENT_STATE accordingly.
