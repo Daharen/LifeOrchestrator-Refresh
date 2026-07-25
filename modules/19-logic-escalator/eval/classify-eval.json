@@ -1,0 +1,21 @@
+{
+  "_comment": "Labeled evaluation set for logic.escalator calibration. Closed-set single-label classification with KNOWN-correct labels (the `label` field; the escalator itself ignores it). Built with a DIFFICULTY GRADIENT so the resolve-level distribution is informative: (a) EASY items with explicit context that the tiny 0.5B tier should nail (resolve low, cheap); (b) NAMED-ENTITY items (brands/models) needing some world knowledge; (c) OBSCURE-ENTITY items (rare instruments/animals/vehicles/foods/plants) a 0.5B is likely to miss -- forcing escalation and exposing whether the judging tiers correct the error or rubber-stamp it (false approval). The in-set deterministic gate cannot catch an in-set-but-wrong label, so these items isolate the judge/self-consistency behaviour the calibration must measure.",
+  "kind": "classify",
+  "labels": ["animal", "vehicle", "food", "plant", "instrument"],
+  "tasks": [
+    { "id": "e01", "text": "a golden retriever puppy playing fetch in the yard", "label": "animal" },
+    { "id": "e02", "text": "a red sports car speeding down the race track", "label": "vehicle" },
+    { "id": "e03", "text": "a warm slice of pepperoni pizza on a plate", "label": "food" },
+    { "id": "e04", "text": "a tall oak tree with broad green leaves in the park", "label": "plant" },
+    { "id": "e05", "text": "an acoustic guitar and a stool set up on the stage", "label": "instrument" },
+    { "id": "e06", "text": "a Clydesdale hitched to the delivery wagon", "label": "animal" },
+    { "id": "e07", "text": "a Cessna lined up at the end of the runway", "label": "vehicle" },
+    { "id": "e08", "text": "a Wagyu ribeye seared medium rare", "label": "food" },
+    { "id": "e09", "text": "a Stratocaster plugged into a tube amp", "label": "instrument" },
+    { "id": "e10", "text": "a bonsai carefully trimmed with tiny shears", "label": "plant" },
+    { "id": "e11", "text": "a quokka smiling on the island trail", "label": "animal" },
+    { "id": "e12", "text": "a funicular climbing the steep hillside", "label": "vehicle" },
+    { "id": "e13", "text": "a wedge of Roquefort set out on the board", "label": "food" },
+    { "id": "e14", "text": "a hurdy-gurdy cranked at the village fair", "label": "instrument" }
+  ]
+}

@@ -143,7 +143,11 @@ local drainer 9 → frontier for the residue.** See D-0021.
 it points each child's `review_queue_path` at an in-artifact **`child_review.jsonl`** by default (surfaced in the result
 as `child_review_count`); passing `-ReviewQueuePath` routes the children's flags to a canonical queue instead. This is
 the general pattern for composed skills: **redirect children's review writes to an aggregate, do not re-flag.** The four
-producers above are unchanged. See D-0022.
+producers above are unchanged. See D-0022. **`image.index` (Module 18) and `logic.escalator` (Module 19) follow this same
+orchestrator/non-producer pattern** — #18 redirects its perception children's flags to an in-artifact `child_review.jsonl`;
+#19 (the Local Logic Escalator) suppresses the child gateway's review writes to an in-artifact
+`_gateway_review_suppressed.jsonl` and surfaces `needs_frontier` per task in its own result (a status signal, NOT a queue
+write) — so the canonical `review_queue.jsonl` producer set stays at **seven** (7/8/11/12/14/16/17). See D-0027, D-0030.
 
 ## Fifth producer wired (Module 14)
 `ocr.layout` is the **fifth skill that appends** to `review_queue.jsonl` (after `model.gateway`, `classify.batch`,

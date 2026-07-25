@@ -17,7 +17,7 @@ spine (+ the real-time autonomic layer 45-49 and the 6-level operating hierarchy
 **locally usable core** (cost-offload + a human interface) before the deep-research spine:
 
 **Phase A — Utility & cost-offload Modules (build next, in this order):**
-1. **`logic.escalator` — Local Logic Escalator** (generalizes `review.processor` #9 + `route.tasks` #24):
+1. **`logic.escalator` — Local Logic Escalator** — **MVP COMPLETE 2026-07-25 (folder `modules/19-logic-escalator/`; D-0030; empirically calibrated — see the Module 19 entry below).** (generalizes `review.processor` #9 + `route.tasks` #24):
    the weakest model answers; each higher tier judges the tier below and either accepts it or produces its
    own answer for the next tier to judge; stop when the step up would add no substantial gain (that fixes
    the accepted layer). **Must** anchor rungs with deterministic ground-truth gates (schema / unit-test /
@@ -311,7 +311,37 @@ what to do next**: pick up a Phase-A item (or, if video capability is specifical
   warm-worker pool; batch/directory; cross-stage grounding (detections↔OCR↔caption); an overlay card image (needs an image.util
   draw op); persisting indices into `artifact.search` (#23).
 
-## Modules 19–22 — Video (provisional)
+## Module 19 (build order) — Local Logic Escalator (`logic.escalator`)
+- **id:** `logic.escalator` · **Priority:** Phase A #1 (D-0029) · **Status:** **MVP complete (2026-07-25)**
+- **Folder-number note:** on-disk `modules/19-logic-escalator/`. The `NN-` prefix is a **monotonic build-order counter**
+  (0, 00.1, 1..18, then 19); D-0029 decoupled it from the ARCHITECTURE_MAP 0-49 **architectural positions**.
+  `logic.escalator` has no dedicated spine slot (it generalizes `route.tasks` #24 + `review.processor` #9, pulled forward).
+  The video block's "19 media.decompose" below is an architectural label (deferred to Phase C), not this folder.
+- **Purpose:** an escalating ladder of local model tiers (tiny→weak→mid→strong via `model.gateway`): the weakest answers;
+  each higher tier judges the current answer and either accepts it (stop; accepted layer fixed) or produces its own for the
+  next tier; the top tier's answer is accepted if reached. **Composes the gateway; reimplements nothing.**
+- **Guardrails honored:** (1) **deterministic ground-truth gates anchor every rung** — classify in-set (hard) +
+  self-consistency; extract JSON-schema + all-fields (hard) + source-grounding; generic ungated + self-consistency. A
+  hard-fail overrides an LLM-judge accept; strong self-consistency short-circuits to accept. (2) **Empirically calibrated**
+  (`m19-calib-002/003`): 3-tier K=1 = 78.6% acc / **0.20 false-approval** / −89% cost; 4-tier K=1 = 57.1% (the 27B emits
+  empty verdicts at MVP token caps → fail-safe `needs_frontier`). **Does NOT reach ~95%** with the naive K=1 config —
+  reported plainly; always-mid baseline 92.9%.
+- **Flags:** `determinism:"mixed"`, `parallel_safe:false`, `batch:true`, `streaming:false`. **Orchestrator, NOT a
+  review-queue producer** (suppresses child gateway review writes; surfaces `needs_frontier`; canonical queue untouched;
+  producer set stays at seven). No new model / no `models.json` change / no Module 7 re-verify.
+- **Tests:** **24/24 mock (cloud pre-ship) + 28/28 `-Live`** (`m19-test-001`, exit 0, 0 orphaned `llama-server`). Files
+  sha256 byte-exact + AST-parse OK on the target (`m19-verify-001`).
+- **Implementation:** `modules/19-logic-escalator/` (`Invoke-LogicEscalator.ps1`, `skill.json`, `eval/classify-eval.json`,
+  `tests/{mock-gateway,Invoke-LogicEscalatorTests,Invoke-EscalatorCalibration}.ps1`, `CALIBRATION.md`). **Work order:**
+  `modules/19-logic-escalator/WORK_ORDER.md`. See **D-0030**.
+- **Follow-ons (measured, NOT this session):** raise strong-tier `max_tokens` / no-reasoning directive (D-0018);
+  self-consistency **veto** + skeptical judges (cut the 0.20 false-approval); higher floor / cost-aware early-stop;
+  live-calibrate K>1; `unit_test`/retrieval gates; a `route.tasks` (#24) drain of `needs_frontier`.
+
+## Modules 19–22 — Video (architectural positions; deferred to Phase C)
+**Note:** the `19–22` here are **architectural positions** (`ARCHITECTURE_MAP.md`), NOT build-order folder numbers — the
+Phase-A build pulled `logic.escalator` forward into the on-disk folder `modules/19-logic-escalator/` (entry just above).
+The video block is deferred to Phase C and takes its own next-free folder numbers when built.
 - **19 `media.decompose`** audio/subs/scenes/keyframes/clips/meta/proxies · **20 `track.objects`** identity
   across frames · **21 `video.timeline`** transcription+scenes+OCR+keyframes+detections+tracks → searchable
   timeline · **22 `video.interpret`** selective frames/clips → local VLM.

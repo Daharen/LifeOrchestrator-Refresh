@@ -522,6 +522,21 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   pre-shipped on the cloud box via a captured-real-response seam, 40/40). · **skills:** `image.interpret`. Registry id
   `vlm.qwen2p5-vl-3b` (models.json, `wired:false`). See D-0026.
 
+### `logic.escalator` — Local Logic Escalator (Module 19)
+- **status:** installed · **type:** skill (PowerShell orchestrator; composes `model.gateway` #7 across tiers) ·
+  **location:** `modules\19-logic-escalator\Invoke-LogicEscalator.ps1`.
+- **purpose:** an escalating ladder of local LLM tiers (tiny 0.5B → weak 1.5B → mid 3B → strong 27B via the gateway): the
+  weakest answers; each higher tier judges and accepts-or-produces; **deterministic ground-truth gates** (in-set /
+  JSON-schema+grounding / self-consistency) anchor every rung — a hard-fail overrides an LLM-judge accept, strong
+  self-consistency short-circuits. Cost-offload keystone (Phase A #1). **No new model / no `models.json` change** (composes
+  the four already-wired LLM tiers). `determinism:"mixed"`, `parallel_safe:false`, `batch:true`. Orchestrator, NOT a review
+  producer (suppresses child gateway review writes; surfaces `needs_frontier`).
+- **calibrated (via executor):** 3-tier K=1 = 78.6% acc / 0.20 false-approval / −89% cost; 4-tier = 57.1% (the 27B emits
+  empty verdicts at MVP token caps → fail-safe `needs_frontier`); **does NOT reach ~95%** — reported plainly (see
+  `modules\19-logic-escalator\CALIBRATION.md`).
+- **last test:** 2026-07-25 via executor (**24/24 mock + 28/28 `-Live` — `m19-test-001`**, 0 orphaned `llama-server`;
+  calibration `m19-calib-002/003`; 10 files sha256 byte-exact `m19-verify-001`). · **skills:** `logic.escalator`. See D-0030.
+
 ### `Windows.Media.Ocr` — system OCR engine (used by ocr.layout)
 - **status:** installed (system) · **type:** WinRT API (`Windows.Media.Ocr.OcrEngine`) · **location:** OS component;
   reached via **Windows PowerShell 5.1** at `C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe` (5.1.19041.6456).

@@ -1,0 +1,159 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "logic.escalator",
+  "skill_version": "0.1.0",
+  "contract_version": "0.2",
+  "invocation_id": "910e8365-a90f-47d5-af42-6efde16bea52",
+  "status": "ok",
+  "started_at_utc": "2026-07-25T17:49:43.3072529Z",
+  "finished_at_utc": "2026-07-25T17:49:45.0808599Z",
+  "duration_ms": 1768,
+  "inputs_digest": "sha256:82dc60ad2fb18cec53b7606d96ba11f88a480c89bdd04c1b84990c55ed16dcff",
+  "result": {
+    "kind": "classify",
+    "tiers": [
+      "tiny",
+      "weak",
+      "mid"
+    ],
+    "samples": 1,
+    "accept_consistency": 1.0,
+    "frontier_threshold": 0.5,
+    "count": 1,
+    "resolved_count": 1,
+    "needs_frontier_count": 0,
+    "error_count": 0,
+    "resolve_distribution": {
+      "tiny": 0,
+      "weak": 1,
+      "mid": 0
+    },
+    "cost": {
+      "total_gateway_calls": 3,
+      "total_prompt_tokens": 60,
+      "total_completion_tokens": 3,
+      "total_tokens": 63,
+      "mean_calls_per_task": 3.0,
+      "total_runtime_ms": 15
+    },
+    "tasks": [
+      {
+        "id": "jaguar",
+        "kind": "classify",
+        "status": "ok",
+        "accepted_tier": "weak",
+        "accepted_tier_index": 1,
+        "answer": "vehicle",
+        "confidence": 0.7975,
+        "needs_frontier": false,
+        "accepted_via": "judge",
+        "self_consistency": null,
+        "gate": {
+          "hard_pass": true,
+          "grounded": null,
+          "reason": "accepted_via=judge"
+        },
+        "ladder": [
+          {
+            "tier": "tiny",
+            "tier_index": 0,
+            "role": "answer",
+            "ok": true,
+            "samples": 1,
+            "agreement": null,
+            "answer": "animal",
+            "hardpass": true,
+            "finish_reason": "stop",
+            "error": null
+          },
+          {
+            "tier": "weak",
+            "tier_index": 1,
+            "role": "judge",
+            "ok": true,
+            "parsed": true,
+            "accept": false,
+            "judge_confidence": 0.85,
+            "produced_answer": "vehicle",
+            "finish_reason": "stop",
+            "error": null
+          },
+          {
+            "tier": "mid",
+            "tier_index": 2,
+            "role": "judge",
+            "ok": true,
+            "parsed": true,
+            "accept": true,
+            "judge_confidence": 0.85,
+            "produced_answer": "vehicle",
+            "finish_reason": "stop",
+            "error": null
+          }
+        ],
+        "gateway_calls": 3
+      }
+    ],
+    "is_review_producer": false,
+    "gateway_reviews_suppressed_to": "/tmp/ex-art/910e8365-a90f-47d5-af42-6efde16bea52/_gateway_review_suppressed.jsonl",
+    "labels": [
+      "animal",
+      "vehicle",
+      "food"
+    ]
+  },
+  "confidence": 0.7975,
+  "artifacts": [
+    {
+      "path": "/tmp/ex-art/910e8365-a90f-47d5-af42-6efde16bea52/escalation.json",
+      "kind": "json",
+      "bytes": 2111,
+      "sha256": "558d68d4e4d7049b11750dd36e2adc3235353d9dc9798e9dc34135edb521a1d9"
+    },
+    {
+      "path": "/tmp/ex-art/910e8365-a90f-47d5-af42-6efde16bea52/escalation.md",
+      "kind": "markdown",
+      "bytes": 1076,
+      "sha256": "f049a2bb7a38637f0b43e5716fac17074526cd5c23c27ffaffc66da583e1c426"
+    }
+  ],
+  "model_provenance": [
+    {
+      "tier": "tiny",
+      "model_id": "llm.mock.tiny",
+      "engine": "llama-server",
+      "calls": 1,
+      "prompt_tokens_total": 20,
+      "completion_tokens_total": 1,
+      "total_tokens_total": 21,
+      "runtime_ms_total": 5
+    },
+    {
+      "tier": "weak",
+      "model_id": "llm.mock.weak",
+      "engine": "llama-server",
+      "calls": 1,
+      "prompt_tokens_total": 20,
+      "completion_tokens_total": 1,
+      "total_tokens_total": 21,
+      "runtime_ms_total": 5
+    },
+    {
+      "tier": "mid",
+      "model_id": "llm.mock.mid",
+      "engine": "llama-server",
+      "calls": 1,
+      "prompt_tokens_total": 20,
+      "completion_tokens_total": 1,
+      "total_tokens_total": 21,
+      "runtime_ms_total": 5
+    }
+  ],
+  "diagnostics": {
+    "log": "stderr.txt",
+    "artifact_dir": "/tmp/ex-art/910e8365-a90f-47d5-af42-6efde16bea52",
+    "gateway_reviews_suppressed_to": "/tmp/ex-art/910e8365-a90f-47d5-af42-6efde16bea52/_gateway_review_suppressed.jsonl"
+  },
+  "warnings": [],
+  "error": null
+}

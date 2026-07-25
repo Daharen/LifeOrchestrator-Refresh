@@ -1,0 +1,55 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "logic.escalator",
+  "name": "Local Logic Escalator",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "Run an escalating ladder of local model tiers (tiny 0.5B -> weak 1.5B -> mid 3B -> strong 27B, all via model.gateway) over a batch of tasks. The weakest tier answers; each higher tier judges the current answer and either accepts it (stop -- the accepted layer is the tier that produced the current answer) or produces its own answer for the next tier to judge; the top tier's answer is accepted if reached. Every rung is anchored with DETERMINISTIC ground-truth gates (in-set membership for classify; JSON-schema validity + source grounding for extract; self-consistency across samples) so the ladder never rests on LLM-judges-LLM alone: a hard-fail overrides an LLM-judge ACCEPT (anti-rubber-stamp) and strong self-consistency accepts without a judge (cost saver). Generalizes review.processor (#9) + route.tasks (#24); the cost-offload keystone -- every task a low tier finishes end-to-end is one the frontier allotment never pays for. Orchestrator, NOT a review-queue producer: suppresses the child gateway's review writes and surfaces needs_frontier per task in its own result.",
+  "determinism": "mixed",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-LogicEscalator.ps1",
+    "args_spec": "Named params: -Kind <classify|extract|generic>; -Tasks <array> | -TasksPath <file>; -Labels <array> (classify) / -Fields <array> (extract); -Tiers <ordered alias array, default [tiny,weak,mid,strong]>; -Samples <K self-consistency, default 1>; -SampleTemperature <default 0.7>; -AcceptConsistency <short-circuit agreement, default 1.0>; -FrontierThreshold <default 0.5>; sampling -MaxTokens -Temperature -Seed -MaxInputChars; -LoadTimeoutSec (raise for a cold strong tier); -GpuLayers; plumbing -Registry -GatewayPath -PwshPath -ReviewQueuePath (relocates the suppressed gateway-review sink; this skill never writes the canonical queue). OR -InputsJson '<json {kind,tasks,tasks_path,labels,fields,tiers,samples,sample_temperature,accept_consistency,frontier_threshold,max_tokens,temperature,seed,max_input_chars,load_timeout_s,gpu_layers,registry,gateway_path,pwsh_path,review_queue_path}>'. Optional -ArtifactRoot, -InvocationId.",
+    "calls": ["model.gateway"]
+  },
+  "inputs": [
+    { "name": "kind", "type": "string", "required": false, "default": "classify", "description": "Task kind + its deterministic gate: classify (closed-set label; in-set gate) | extract (named fields; JSON-schema + source-grounding gate) | generic (freeform; ungated, self-consistency only)." },
+    { "name": "tasks", "type": "array", "required": false, "description": "Batch of tasks. classify {id?,text,labels?}; extract {id?,text,fields?}; generic {id?,prompt}." },
+    { "name": "tasks_path", "type": "string", "required": false, "description": "A JSON file: an array of tasks, or an object {kind?,labels?,fields?,tasks:[...]}." },
+    { "name": "labels", "type": "array", "required": false, "description": "Shared closed label set for classify (a per-task `labels` overrides)." },
+    { "name": "fields", "type": "array", "required": false, "description": "Shared field names for extract (a per-task `fields` overrides)." },
+    { "name": "tiers", "type": "array", "required": false, "default": ["tiny","weak","mid","strong"], "description": "Ordered ladder of model.gateway tier aliases (tiny=0.5B, weak=1.5B, mid=3B, strong=27B)." },
+    { "name": "samples", "type": "int", "required": false, "default": 1, "description": "Self-consistency samples per answer step (K). K>1 samples at sample_temperature and majority-votes; agreement >= accept_consistency + a hard-pass short-circuits (accept with no judge call). K=1 is a single greedy answer (no self-consistency signal)." },
+    { "name": "sample_temperature", "type": "number", "required": false, "default": 0.7, "description": "Temperature for the K>1 self-consistency samples." },
+    { "name": "accept_consistency", "type": "number", "required": false, "default": 1.0, "description": "Self-consistency agreement (0..1) at which a hard-passing answer short-circuits-accepts without a judge call." },
+    { "name": "frontier_threshold", "type": "number", "required": false, "default": 0.5, "description": "Per-task confidence below this (or a hard-fail) sets needs_frontier=true (a status signal; NOT a review-queue write)." },
+    { "name": "max_tokens", "type": "int", "required": false, "description": "Override the per-call generation cap (default: kind-specific answer/judge caps)." },
+    { "name": "temperature", "type": "number", "required": false, "default": 0.0, "description": "Greedy temperature for K=1 answers and for judge calls." },
+    { "name": "seed", "type": "int", "required": false, "default": 42, "description": "Base RNG seed passed to the gateway (K>1 uses seed, seed+1, ...)." },
+    { "name": "max_input_chars", "type": "int", "required": false, "default": 2000, "description": "Cap on the task text shown to the model." },
+    { "name": "load_timeout_s", "type": "int", "required": false, "description": "Override the gateway server load timeout; raise for a COLD strong (27B) load (~90s)." },
+    { "name": "gpu_layers", "type": "int", "required": false, "description": "Override the gateway gpu_layers (e.g. to tune the 27B partial offload)." },
+    { "name": "registry", "type": "string", "required": false, "description": "Path to the gateway's models.json (passed through)." },
+    { "name": "gateway_path", "type": "string", "required": false, "description": "Path to Invoke-ModelGateway.ps1 (default: resolved from modules/07-model-gateway)." },
+    { "name": "pwsh_path", "type": "string", "required": false, "description": "pwsh executable used to spawn the gateway child (default the dotnet-tool pwsh)." },
+    { "name": "review_queue_path", "type": "string", "required": false, "description": "Relocates the in-artifact sink for the SUPPRESSED child-gateway review writes. This skill is not a review-queue producer and never writes the canonical review_queue.jsonl." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ kind, tiers, samples, accept_consistency, frontier_threshold, count, resolved_count, needs_frontier_count, error_count, resolve_distribution:{<tier>:n}, cost:{total_gateway_calls, total_prompt_tokens, total_completion_tokens, total_tokens, mean_calls_per_task, total_runtime_ms}, tasks:[ {id, kind, status, accepted_tier, accepted_tier_index, answer, confidence, needs_frontier, accepted_via, self_consistency, gate:{hard_pass,grounded,reason}, ladder:[ {tier, tier_index, role:answer|judge, ok, samples?, agreement?, accept?, judge_confidence?, produced_answer?, hardpass?, finish_reason, error} ], gateway_calls} ], labels?|fields?, is_review_producer:false, gateway_reviews_suppressed_to }"
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4"],
+    "models": ["the four wired GGUF LLM tiers via model.gateway (tiny=0.5B, weak=1.5B, mid=3B, strong=27B)"],
+    "libraries": [],
+    "cpu": "any", "gpu": "nvidia (CUDA) via the gateway", "memory_mb": 4096,
+    "network": false, "filesystem": "write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 3600, "on_timeout": "kill_tree_and_report" },
+  "batch": true,
+  "streaming": false,
+  "parallel_safe": false,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

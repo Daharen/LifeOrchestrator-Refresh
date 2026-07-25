@@ -5,10 +5,10 @@ Owns **reality as it exists now** — not intended architecture. Keep it compact
 is planned (serves scripts and weaker local models) but not yet created.
 
 - **Project phase:** MVP build-out — **re-prioritized 2026-07-25 (D-0029)** to a usable-local-core-first order (see `MODULE_ROADMAP.md → Build priority`). Two build tracks: **Modules** (`modules/`, backend capability) and **Widgets** (`widgets/`, the human-interface layer); the full long-horizon destination is `ARCHITECTURE_MAP.md`.
-- **Active module:** _none in progress._ **Modules 0–18 complete** (0 executor · 1 `skill.bootstrap` · 2
+- **Active module:** _none in progress._ **Modules 0–19 complete** (0 executor · 1 `skill.bootstrap` · 2
   `fs.observer` · 3 `proc.observer` · 4 `uia.inspector` · 5 `uia.actor` · 6 `capture.screen` · 7 `model.gateway` ·
   8 `classify.batch` · 9 `review.processor` · 10 `audio.ingest` · 11 `speech.stt` · 12 `speech.tts` · 13 `voice.live` ·
-  14 `ocr.layout` · 15 `image.util` · 16 `detect.objects` · 17 `image.interpret` · 18 `image.index`), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure). **The full
+  14 `ocr.layout` · 15 `image.util` · 16 `detect.objects` · 17 `image.interpret` · 18 `image.index` · **19 `logic.escalator`**), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure). **The full
   audio track (10–13) is complete; the image/document perception block (14–18) is COMPLETE — Modules 14 `ocr.layout`,
   15 `image.util`, 16 `detect.objects`, 17 `image.interpret`, and 18 `image.index` (the fusion capstone) are all done.**
   **Module 8 — Batch Classification & Sorting (`classify.batch`) is MVP complete** — the **first real
@@ -214,6 +214,32 @@ is planned (serves scripts and weaker local models) but not yet created.
   **Pre-shipped off-machine**: cloud pwsh 7.4.6 AST-parse + a **mock-children** harness (`tests/mock-child.ps1` branching on the
   `-ArtifactRoot` leaf) driving the **real** orchestrator (40/40) — the M13 mock-children gate, since #17's VLM can't run on the
   cloud box. See D-0027.
+- **Module 19 — Local Logic Escalator (`logic.escalator`) is MVP complete this session** — **Phase A #1 (D-0029)**, the
+  cost-offload keystone and the first Phase-A build. A **new module composing `model.gateway` (#7)** across its wired LLM
+  tiers (`tiny`=0.5B → `weak`=1.5B → `mid`=3B → `strong`=27B) — it **reimplements nothing** (spawns the gateway as a child,
+  parses its `lifeorch.skill.result/0.1` envelope, reuses the #8/#9 child-spawn scaffolding). **The escalating ladder:** the
+  weakest tier answers; each higher tier **judges** the current answer and either ACCEPTs it (stop — the accepted layer is the
+  tier that produced the current answer) or produces its own answer for the next tier; the top tier's answer is accepted if
+  reached. **Every rung is anchored with deterministic ground-truth gates** (guardrail 1, D-0029): classify = in-set membership
+  (hard) + self-consistency across K samples; extract = JSON-schema validity + all-fields-present (hard) + source-grounding;
+  generic = ungated + self-consistency. **A hard-fail overrides an LLM-judge ACCEPT** (the anti-rubber-stamp defense) and
+  **strong self-consistency + hard-pass short-circuits to accept with no judge call** (the cost saver). **Orchestrator, NOT a
+  review-queue producer** (like #13/#18): it suppresses the child gateway's review writes to an in-artifact file and surfaces
+  `needs_frontier` per task in its own result — the canonical `review_queue.jsonl` is untouched and the producer set stays at
+  seven. `determinism:"mixed"`, `parallel_safe:false`, `batch:true`, `streaming:false`; **no new model / no `models.json`
+  change / no Module 7 re-verify** (it composes the four already-wired tiers). **Tests 24/24 mock (cloud pre-ship gate on pwsh
+  7.4.6) + 28/28 with `-Live` via the executor** (`m19-test-001`, exit 0, no orphaned `llama-server`) — the mock scenarios prove
+  the short-circuit, escalate-and-resolve, the deterministic in-set gate overriding a judge ACCEPT, needs_frontier, and the
+  child-review suppression. **Empirically calibrated via the executor** (guardrail 2 — the experiment, run not assumed;
+  `m19-calib-002/003`): on a labeled closed-set eval, the 3-tier ladder `[tiny,weak,mid]` K=1 reaches **78.6% accuracy at 2.86
+  params_b-weighted cost/item (−89% vs always-strong)**, resolve distribution tiny 10 / mid 4, **false-approval rate 0.20** (the
+  weak 1.5B judge rubber-stamps 2 in-set-but-wrong tiny answers — the exact D-0029 failure mode, now measured); the 4-tier
+  ladder `[+strong]` K=1 **drops to 57.1%** because the thinking-style 27B emits **empty verdicts at the MVP token caps** (the
+  D-0018 issue, confirmed here) → those 4 escalated items degrade to flagged `needs_frontier` (fail-safe, NOT false approvals).
+  **It does NOT reach the ~95% target** with the naive K=1 config (said plainly); the always-mid baseline (92.9%) shows the
+  capability exists. Measured, prioritized follow-ons: raise strong-tier `max_tokens` / add a no-reasoning directive; a
+  self-consistency **veto** + skeptical judges to cut the 0.20 false-approval; a higher floor / cost-aware early-stop;
+  live-calibrate K>1. Full numbers in `modules/19-logic-escalator/CALIBRATION.md` (+ `runtime/calibration/`). See **D-0030**.
 - **Repo / working dir:** **`C:\Users\just_\LifeOrchestrator-Refresh\`** — the clean standalone home for
   **Life Orchestrator** (near-term local-skills track; git-initialized). Layout: `core-docs/` (these docs)
   and `modules/<NN>-<name>/` (one per module). **Reference sources (separate, not built here):** the earlier
@@ -603,6 +629,14 @@ is planned (serves scripts and weaker local models) but not yet created.
   27B load (~90s) approaches the gateway's 120s default, so callers pass a longer `-LoadTimeoutSec` for the strong tier.
 
 ## Next expected action
+0. **Module 19 `logic.escalator` (Local Logic Escalator, Phase A #1) is MVP complete + empirically calibrated this session (D-0030).**
+   The next Phase-A unit per `MODULE_ROADMAP.md → Build priority` is **`doc.io`** (Local Model Doc Read/Write/Edit/Append), then a
+   local orchestrator (`agent.local`), then the generators, then the **Widget** layer (`widgets/`). **Top escalator follow-ons
+   (measured, NOT this session):** raise the strong-tier `max_tokens` / add a no-reasoning directive so the 27B returns a parseable
+   verdict instead of an empty one (D-0018, confirmed in `m19-calib-003`); a **self-consistency veto** + more skeptical judge prompts
+   to cut the measured **0.20 false-approval** rate; a higher floor / cost-aware early-stop (always-mid beat the ladder on the hard
+   eval); live-calibrate K>1 self-consistency; a `route.tasks` (#24) drain of `needs_frontier` tasks; a `unit_test`/retrieval gate.
+   See D-0030 + `modules/19-logic-escalator/CALIBRATION.md`.
 1. **The image/document perception block (14–18) is COMPLETE** — #14 `ocr.layout`, #15 `image.util`, #16 `detect.objects`,
    #17 `image.interpret`, and now #18 `image.index` (the fusion capstone) are all MVP complete. **The housekeeping pass is done (D-0028), and the build order was re-prioritized (D-0029): the next
    unit is Phase A of `MODULE_ROADMAP.md → Build priority` — start with the **Local Logic Escalator**
@@ -635,4 +669,4 @@ is planned (serves scripts and weaker local models) but not yet created.
    intra-batch prompt for throughput; calibrated confidence; a side-effecting `sort.files` mover — D-0017);
    audio.ingest (batch/directory ingest; trimming/segmentation → Module 13; denoise/high-pass — D-0019).
 
-- **Last updated:** 2026-07-25 (UTC) · **Last updating agent:** Claude (Cowork — housekeeping pass, D-0028: (A) folded the three D-0009/D-0011 conventions into SKILL_CONTRACT.md v0.2 (skill-relative artifact roots + absolute paths §3, generic -InputsJson §3.1, lifeorch.skill.invocation_report/0.1 §3.2), keeping the wire schema ids at /0.1 — additive + backward-compatible, so the validators and all existing manifests were untouched; (B) relocated every staged model out of _pending-model-storage into per-owning-module F: homes (LLMs→07-model-gateway, whisper→11-speech-stt, TTS voices→12-speech-tts, detectors→16-detect-objects, VLM→17-image-interpret, embedding→23-artifact-search) + the shared llama.cpp engine→_engines, rewrote models.json (13 models, byte-exact sha256 5aed38db…), de-duplicated the 12 Hz TTS tokenizer (deleted the standalone copy + its declared-only registry entry — each voice keeps its bundled speech_tokenizer), and deleted the emptied _pending-model-storage + its MIGRATION.md; (C) removed the proteus_repo/tools leftover. Re-verified live via the executor (hk-verify-001): all 4 LLM tiers + whisper STT + Qwen3-TTS (bundled tokenizer) + ONNX detector + VLM caption each load from their new homes, 0 orphaned servers. Refreshed the Module 1 README; no skill code changed). · **2026-07-25 (later) — direction pivot D-0029 (docs only, no code):** adopted the Module/Widget vocabulary, created the `widgets/` folder + README, added the `ARCHITECTURE_MAP.md` core-doc (canonical 0-49 spine + the real-time autonomic layer 45-49 + the 6-level operating hierarchy; model names annotated as non-binding candidates), and re-prioritized the build order to a usable-local-core-first sequence (Phase A utility/cost-offload led by the Local Logic Escalator; Phase B the Widget layer; Phase C the deferred research spine). Updated START_HERE / PROJECT_DIRECTION / MODULE_ROADMAP / CURRENT_STATE accordingly.
+- **Last updated:** 2026-07-25 (UTC) · **Last updating agent:** Claude (Cowork — **Module 19 `logic.escalator` (Local Logic Escalator, Phase A #1, D-0030)**: built the escalating tier ladder composing `model.gateway` (tiny→weak→mid→strong) with deterministic ground-truth gates (in-set / JSON-schema+grounding / self-consistency) anchoring every rung — a hard-fail overrides an LLM-judge accept, strong self-consistency short-circuits; orchestrator/non-producer (suppresses child gateway review writes, surfaces `needs_frontier`; canonical queue untouched). Pre-shipped off-machine on cloud pwsh 7.4.6 (24/24 mock-gateway scenarios) → shipped 10 files byte-exact (`m19-verify-001` sha256 + AST-parse OK) → 28/28 with `-Live` (`m19-test-001`, 0 orphans). **Empirically calibrated (`m19-calib-002/003`, the D-0029 experiment):** 3-tier K=1 = 78.6% acc / 0.20 false-approval / −89% cost; 4-tier K=1 = 57.1% (the 27B emits empty verdicts at MVP token caps → fail-safe `needs_frontier`); **does NOT reach the 95% target — reported plainly** with prioritized follow-ons. Added `CALIBRATION.md` + `.gitignore`. Committed with trailers.) · **[prior] Last updated:** 2026-07-25 (UTC) · **Last updating agent:** Claude (Cowork — housekeeping pass, D-0028: (A) folded the three D-0009/D-0011 conventions into SKILL_CONTRACT.md v0.2 (skill-relative artifact roots + absolute paths §3, generic -InputsJson §3.1, lifeorch.skill.invocation_report/0.1 §3.2), keeping the wire schema ids at /0.1 — additive + backward-compatible, so the validators and all existing manifests were untouched; (B) relocated every staged model out of _pending-model-storage into per-owning-module F: homes (LLMs→07-model-gateway, whisper→11-speech-stt, TTS voices→12-speech-tts, detectors→16-detect-objects, VLM→17-image-interpret, embedding→23-artifact-search) + the shared llama.cpp engine→_engines, rewrote models.json (13 models, byte-exact sha256 5aed38db…), de-duplicated the 12 Hz TTS tokenizer (deleted the standalone copy + its declared-only registry entry — each voice keeps its bundled speech_tokenizer), and deleted the emptied _pending-model-storage + its MIGRATION.md; (C) removed the proteus_repo/tools leftover. Re-verified live via the executor (hk-verify-001): all 4 LLM tiers + whisper STT + Qwen3-TTS (bundled tokenizer) + ONNX detector + VLM caption each load from their new homes, 0 orphaned servers. Refreshed the Module 1 README; no skill code changed). · **2026-07-25 (later) — direction pivot D-0029 (docs only, no code):** adopted the Module/Widget vocabulary, created the `widgets/` folder + README, added the `ARCHITECTURE_MAP.md` core-doc (canonical 0-49 spine + the real-time autonomic layer 45-49 + the 6-level operating hierarchy; model names annotated as non-binding candidates), and re-prioritized the build order to a usable-local-core-first sequence (Phase A utility/cost-offload led by the Local Logic Escalator; Phase B the Widget layer; Phase C the deferred research spine). Updated START_HERE / PROJECT_DIRECTION / MODULE_ROADMAP / CURRENT_STATE accordingly.
