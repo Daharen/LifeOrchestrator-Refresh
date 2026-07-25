@@ -8,7 +8,7 @@
     "llama-server": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\_pending-model-storage\\_engines\\llama.cpp\\bin\\llama-server.exe",
     "_comment": "Staged, verified to run standalone (health + chat) 2026-07-24. Depends on a system CUDA runtime (not on the source folder). If torn down, restage from F:\\Qwen3.5-27B\\llama.cpp\\build\\bin."
   },
-  "defaults": { "llm": "llm.weak.qwen2p5-1p5b", "stt": "stt.whisper.base-en", "tts": "tts.weak.qwen3-0p6b" },
+  "defaults": { "llm": "llm.weak.qwen2p5-1p5b", "stt": "stt.whisper.base-en", "tts": "tts.weak.qwen3-0p6b", "ocr": "ocr.windows.media" },
   "tiers": {
     "llm": {
       "tiny": "llm.weak.qwen2p5-0p5b",
@@ -22,6 +22,10 @@
     "tts": {
       "weak": "tts.weak.qwen3-0p6b",
       "strong": "tts.strong.qwen3-1p7b"
+    },
+    "ocr": {
+      "system": "ocr.windows.media",
+      "tesseract": "ocr.tesseract"
     }
   },
   "models": [
@@ -120,6 +124,26 @@
       "engine": "transformers",
       "params": { "params_b": 0.6, "size_bytes": 1191500000 },
       "notes": "DECLARED only. Discovered under an ACE-Step music suite; copied for portability. Wire in Module 23 (artifact.search). Could also run via llama.cpp llama-server --embedding if converted to GGUF."
+    },
+    {
+      "model_id": "ocr.windows.media",
+      "type": "ocr", "wired": false,
+      "name": "Windows.Media.Ocr (system)", "family": "windows.media.ocr", "format": "system-winrt",
+      "path": null,
+      "engine": "windows.media.ocr",
+      "engine_env": "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "languages": ["en-US"],
+      "params": { "max_image_dimension": 10000 },
+      "notes": "Consumed by ocr.layout (Module 14), which runs Windows.Media.Ocr in a Windows PowerShell 5.1 worker (pwsh 7 cannot load the WinRT projection \u2014 m14-probe-001) and reads its meta file. System WinRT engine: no model file, no GPU, no network; en-US recognizer present; MaxImageDimension=10000. wired:false for model.gateway on purpose (the gateway runs type=llm only). Verified live 2026-07-25 (m14-probe-001 words+boxes+lines+angle ~74 ms; m14-test-001)."
+    },
+    {
+      "model_id": "ocr.tesseract",
+      "type": "ocr", "wired": false,
+      "name": "Tesseract OCR", "family": "tesseract", "format": "executable",
+      "path": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
+      "engine": "tesseract",
+      "params": {},
+      "notes": "DECLARED only. Installed (found by m14-probe-001). A future ocr.layout engine: calibrated per-word confidence + hOCR/TSV boxes + multi-language. Not wired in the Module 14 MVP (only windows.media.ocr)."
     }
   ]
 }

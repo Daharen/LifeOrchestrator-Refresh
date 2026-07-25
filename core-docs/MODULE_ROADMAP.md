@@ -179,10 +179,29 @@ Needs refactor · Deprecated · Replaced.
   (23/23). Work order: `modules/13-voice-live/WORK_ORDER.md`. See D-0022. Follow-on: mic `audio.capture` + streaming
   loop; standalone VAD (stage a model); multi-turn + memory; a warm-worker pool so a turn avoids three cold model loads.
 
-## Modules 14–18 — Image & document perception (provisional)
-- **14 `ocr.layout`** OCR + boxes + reading order · **15 `image.util`** resize/crop/meta/hash/similarity/
-  convert/tile/region · **16 `detect.objects`** class boxes + confidence · **17 `image.interpret`** local
-  multimodal captions/VQA/screen interpretation · **18 `image.index`** integrate 14–17 → markdown + machine index.
+## Modules 14–18 — Image & document perception (14 MVP complete; 15–18 provisional)
+- **14 `ocr.layout`** — OCR + bounding boxes + reading order. ***MVP complete (2026-07-25)*** — the **first perception
+  module** and the first **parallel-safe** stochastic/mixed perception skill. Recognizes the text in one image and returns
+  it with **per-word pixel bounding boxes** and **lines in reading order** (+ text angle, image dims). Drives the system
+  **`Windows.Media.Ocr`** engine (zero install, native, `en-US` recognizer, `MaxImageDimension=10000`) inside a **Windows
+  PowerShell 5.1 worker** (`ocr_worker.ps1`) — pwsh 7 cannot load the WinRT projection here (`m14-probe-001`) — with a
+  **meta-file hand-off** to the pwsh-7 wrapper (`Invoke-OcrLayout.ps1`), the D-0021 pattern in its PS-5.1 variant.
+  Registry-driven (`ocr.windows.media`, `wired:false` for the gateway — decoupled per D-0020). **Confidence** = a
+  documented legibility heuristic (Windows.Media.Ocr exposes no per-word confidence); **fifth review-queue producer**
+  (`verify_ocr` page-level / `verify_no_text` guard, `flagged_by:"ocr.layout"`). **Composes `capture.screen` (Module 6)**
+  via `-Capture` to OCR the live screen. `determinism:"mixed"`, `parallel_safe:true`, `batch:false`. Artifacts
+  `ocr.json`/`ocr.md`. **Tests 30/30 via the executor** (`m14-test-003`, exit 0) — live OCR of a text fixture (words+boxes
+  +reading order), review routing, no-text guard, error paths, the Module 1 wrapper, and the live `capture.screen`
+  composition; real-registry smoke `m14-smoke-001` (7 words, conf 0.9, correct text); **pre-shipped off-machine** on cloud
+  pwsh 7.4.6 (AST-parse + a mock-worker harness driving the *real* wrapper against a captured real meta, 28/28) before any
+  bytes shipped. `models.json` gained `defaults.ocr`/`tiers.ocr` + `ocr.windows.media`/`ocr.tesseract` (additive; Module 7
+  re-verified 28/28). Work order: `modules/14-ocr-layout/WORK_ORDER.md`. See D-0023. **Tesseract** (installed) is declared
+  as `ocr.tesseract` for a second-engine + calibrated-confidence follow-on. Follow-on: wire Tesseract/a VLM (#17) engine;
+  overlay PNG; `MaxImageDimension` downscale; multi-column reflow; batch/PDF OCR.
+- **15 `image.util`** resize/crop/meta/hash/similarity/convert/tile/region · **16 `detect.objects`** class boxes +
+  confidence · **17 `image.interpret`** local multimodal captions/VQA/screen interpretation · **18 `image.index`**
+  integrate 14–17 → markdown + machine index. *(15 is the natural next step — it also unblocks ocr.layout's
+  MaxImageDimension downscale + box overlay follow-ons.)*
 
 ## Modules 19–22 — Video (provisional)
 - **19 `media.decompose`** audio/subs/scenes/keyframes/clips/meta/proxies · **20 `track.objects`** identity

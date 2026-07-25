@@ -1,0 +1,43 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "ocr.layout",
+  "name": "OCR + Layout (Windows.Media.Ocr)",
+  "version": "0.1.0",
+  "contract_version": "0.1",
+  "purpose": "Recognize the text in one image and return it with per-word pixel bounding boxes and lines in reading order, by driving the system Windows.Media.Ocr engine inside a Windows PowerShell 5.1 worker (pwsh 7 cannot load the WinRT projection) and reading the worker's meta file. Resolves the OCR engine from models.json, decoupled from the gateway's wired gate. First image/document perception module and the first genuinely parallel-safe perception skill: populates a documented legibility confidence + model_provenance and routes low-confidence / no-text results to the review queue. Can compose capture.screen (Module 6) as its input source.",
+  "determinism": "mixed",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-OcrLayout.ps1",
+    "args_spec": "Named params -InputFile <path> (image; required unless -Capture); -Language <bcp47>; -Engine <model_id>|-Model <id>; -ConfidenceThreshold <0..1>; -MaxReviewLines <n>; -Capture; -CaptureInputsJson '<json>'; -MinImagePixels <n>; -Registry/-OcrWorkerPath/-Powershell51Path/-CapturePath/-PwshPath/-ReviewQueuePath <override>. OR -InputsJson '<json {input,language,engine,model,confidence_threshold,max_review_lines,capture,capture_inputs,min_image_pixels,registry,ocr_worker_path,powershell51_path,capture_path,pwsh_path,review_queue_path}>'. Optional -ArtifactRoot, -InvocationId."
+  },
+  "inputs": [
+    { "name": "input", "type": "string", "required": false, "description": "Path to the source image (png/jpg/bmp/tif/gif — whatever BitmapDecoder accepts). Required unless capture=true." },
+    { "name": "language", "type": "string", "required": false, "default": "", "description": "BCP-47 recognizer language tag (e.g. en-US). Empty = the engine's user-profile / first available recognizer." },
+    { "name": "engine", "type": "string", "required": false, "default": "ocr.windows.media", "description": "OCR engine model_id in models.json (type=ocr). MVP implements engine=windows.media.ocr; ocr.tesseract is declared but not wired." },
+    { "name": "confidence_threshold", "type": "double", "required": false, "default": 0.5, "description": "Overall legibility confidence below this routes the result to the review queue (verify_ocr); lines below it are marked low_confidence." },
+    { "name": "max_review_lines", "type": "int", "required": false, "default": 25, "description": "Cap on the worst lines carried in the review item detail (worst-confidence first)." },
+    { "name": "capture", "type": "bool", "required": false, "default": false, "description": "When true and no input is given, compose capture.screen (Module 6) to produce the image, then OCR it." },
+    { "name": "capture_inputs", "type": "object", "required": false, "description": "Inputs object passed to capture.screen when capture=true (e.g. {target:'window',title:'*Notepad*'} or {target:'monitor',monitor:'primary'}). Default: primary monitor." },
+    { "name": "min_image_pixels", "type": "int", "required": false, "default": 1, "description": "A zero-word result only emits a verify_no_text review item when width*height >= this." },
+    { "name": "model", "type": "string", "required": false, "description": "Alias for engine (a named -Model wins)." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ input{path,exists,source,capture?}, image{width,height,text_angle}, engine{id,name,engine,recognizer_language,available_languages}, params{language,confidence_threshold}, text, word_count, line_count, lines[{index,text,confidence,low_confidence,bounding_rect{x,y,width,height},words[{text,x,y,width,height}]}], confidence{overall,min_line,low_confidence_lines,reason}, review{threshold,flagged_count,truncated,queue_path}, ocr{engine_env,runtime_ms,max_image_dimension} }"
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4", "Windows PowerShell 5.1 (powershell.exe)", "capture.screen (Module 6, only when -Capture)"],
+    "models": ["ocr.windows.media (system Windows.Media.Ocr engine; en-US recognizer)"],
+    "libraries": [],
+    "cpu": "any", "gpu": "none", "memory_mb": 256,
+    "network": false, "filesystem": "read-write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 180, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

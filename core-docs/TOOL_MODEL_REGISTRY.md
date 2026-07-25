@@ -383,6 +383,52 @@ quality tier · speed · CPU/GPU/mem · network · cost · limitations · last s
   an in-artifact file by default). · **last test:** 2026-07-24 via executor (**tests 21/21**; `m13-test-001`, exit 0; live
   smoke `m13-smoke-001` — full JFK turn, 12.56 s reply). · **skills:** `voice.live`. See D-0022.
 
+### `ocr.layout` — OCR + Layout (Module 14)
+- **status:** installed · **type:** skill (pwsh-7 wrapper + Windows PowerShell 5.1 WinRT worker `ocr_worker.ps1`) ·
+  **location:** `LifeOrchestrator-Refresh/modules/14-ocr-layout/`
+- **invocation:** direct `pwsh -NoProfile -File .\Invoke-OcrLayout.ps1 -InputFile <image> [-Language <bcp47>]
+  [-Engine <model_id>|-Model <id>] [-ConfidenceThreshold <0..1>] [-MaxReviewLines <n>] [-Capture]
+  [-CaptureInputsJson '<json>'] [-Registry|-OcrWorkerPath|-Powershell51Path|-CapturePath|-PwshPath|-ReviewQueuePath
+  <override>]` (or `-InputsJson '<json {input,language,engine,model,confidence_threshold,max_review_lines,capture,
+  capture_inputs,min_image_pixels,registry,ocr_worker_path,powershell51_path,capture_path,pwsh_path,review_queue_path}>'`);
+  wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
+- **supported tasks:** OCR one image → recognized **text + per-word pixel bounding boxes + lines in reading order**
+  (+ text angle). The visual text-extraction complement to `capture.screen`; use for screenshots, scanned pages, UI/canvas
+  text, or — with `-Capture` — text read straight off the live screen (composes `capture.screen`, Module 6).
+- **I/O:** in = an image path (png/jpg/bmp/tif/gif) or a `-Capture` spec; out = `lifeorch.skill.result/0.1` envelope
+  (result = `{input{path,exists,source,capture?}, image{width,height,text_angle}, engine{id,name,engine,
+  recognizer_language,available_languages}, params, text, word_count, line_count, lines[{index,text,confidence,
+  low_confidence,bounding_rect{x,y,width,height},words[{text,x,y,width,height}]}], confidence{overall,min_line,
+  low_confidence_lines,reason}, review{...}, ocr{engine_env,runtime_ms,max_image_dimension}}`) +
+  `runtime/artifacts/<id>/{ocr.json,ocr.md,ocr_args.json,ocr_meta.json,worker.log,result.json,stderr.txt, capture/…}`.
+- **determinism:** **mixed** (deterministic orchestration; perception output) · **confidence:** legibility **heuristic**
+  (fraction of clean words → [0.1,0.9] per line + overall; NOT calibrated; `<threshold` 0.5 → `review_queue.jsonl`
+  `flagged_by:"ocr.layout"`, `verify_ocr`/`verify_no_text`) · **speed:** ~0.5–1 s (per-call `powershell.exe` spawn; the
+  OCR itself ~74 ms) · **CPU/GPU/mem:** low / none / ~256 MB · **network:** none · **cost:** local only.
+- **limitations:** **`parallel_safe:true`** (binds no port/VRAM/CUDA; only shared write is the append-only review queue);
+  one image per invocation (`batch:false`); **Windows.Media.Ocr only** in the MVP (Tesseract declared, not wired);
+  no per-word confidence from the engine (heuristic); an image over `MaxImageDimension` (10000 px) returns
+  `image_too_large` (downscale → Module 15 follow-on); no overlay PNG / multi-column reflow / PDF (follow-ons);
+  **`ocr_worker.ps1` must stay ASCII-only** (Windows PowerShell 5.1 reads a BOM-less `.ps1` as ANSI, not UTF-8). ·
+  **last test:** 2026-07-25 via executor (**tests 30/30**; `m14-test-003`, exit 0; real-registry smoke `m14-smoke-001`).
+  · **skills:** `ocr.layout`. See D-0023.
+
+### `Windows.Media.Ocr` — system OCR engine (used by ocr.layout)
+- **status:** installed (system) · **type:** WinRT API (`Windows.Media.Ocr.OcrEngine`) · **location:** OS component;
+  reached via **Windows PowerShell 5.1** at `C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe` (5.1.19041.6456).
+- **supported tasks:** printed-text OCR → words with `BoundingRect`, lines (reading order), `TextAngle`. Recognizer
+  languages present: **en-US**. `MaxImageDimension = 10000`. Zero install, no admin, no GPU, no network, no model file.
+- **gotcha:** **pwsh 7.4.6 cannot load the WinRT projection** on this box (`m14-probe-001`); reach it only from Windows
+  PowerShell 5.1 via the `System.Runtime.WindowsRuntime` `AsTask`/`Await` reflection pattern (as `ocr_worker.ps1` does).
+  Also: 5.1 parses a BOM-less `.ps1` as ANSI — keep any 5.1 worker ASCII-only. · **last test:** 2026-07-25
+  (`m14-probe-001` live; `m14-test-003`). · **skills:** `ocr.layout`. Registry id `ocr.windows.media` (models.json, `wired:false`).
+
+### `tesseract` — Tesseract OCR (declared; a future ocr.layout engine)
+- **status:** installed, **not yet wired** · **type:** executable · **location:** `C:\Program Files\Tesseract-OCR\tesseract.exe`
+  (found by `m14-probe-001`). · **supported tasks (when wired):** OCR with **calibrated per-word confidence** + hOCR/TSV
+  boxes + multi-language. · **why declared:** the natural second engine behind `ocr.layout -Engine` and the calibrated-
+  confidence follow-on; not built in the Module 14 MVP (one engine, per the one-module rule). Registry id `ocr.tesseract`.
+
 ---
 
 ## Hardware profile (measured 2026-07-24 — DESKTOP-PF5FFMF)

@@ -519,3 +519,57 @@ alternatives · consequences · affects · state (provisional | locked) · revis
   broker (#25) build on. · **affects:** Module 13, Modules 7/10/11/12/9, `TOOL_MODEL_REGISTRY.md`, `MODULE_ROADMAP.md`,
   `REVIEW_QUEUE.md`. · **revisit-if:** mic capture / streaming, standalone VAD (stage a model), multi-turn dialogue +
   memory, or a warm-worker pool is built (each its own scoped follow-on).
+
+### D-0023 — ocr.layout wraps Windows.Media.Ocr via a PowerShell 5.1 worker; mixed; legibility confidence; fifth review producer; composes capture.screen
+- **date:** 2026-07-25 · **state:** locked (engine choice + PS-5.1-worker + meta hand-off + registry-read + review model + capture compose), provisional (confidence heuristic; single OCR engine)
+- **decision:** Module 14 `ocr.layout` — the first module of the image/document perception block (14–18) and the first
+  **parallel-safe** stochastic/mixed perception skill — recognizes the text in one image and returns it with **per-word
+  pixel bounding boxes and lines in reading order**. MVP design, settled after a **probe-first** pass (`m14-probe-001`,
+  do **not** assume an OCR engine exists): (1) **Engine = the system `Windows.Media.Ocr`** (WinRT). Zero install, native
+  to Windows 10, `en-US` recognizer present, `MaxImageDimension=10000`; the probe OCR'd a generated fixture to `"HELLO
+  WORLD The quick brown fox 12345"` (100% correct incl. digits) with word boxes + line grouping + `TextAngle` in ~74 ms.
+  (2) **Reached only via a Windows PowerShell 5.1 worker** — the probe confirmed **pwsh 7.4.6 cannot load the WinRT
+  projection** on this box ("RuntimeException"), but 5.1 can via the classic `System.Runtime.WindowsRuntime` `AsTask`/
+  `Await` reflection. So the skill is a two-part unit like `speech.tts` (D-0021), in a **PowerShell-5.1 worker** variant:
+  a pwsh-7 wrapper (`Invoke-OcrLayout.ps1`) drives `ocr_worker.ps1` (run under `powershell.exe`) and reads its **meta
+  file** (robust to any WinRT/console chatter), never its stdout. (3) **Confidence = a documented legibility heuristic**
+  (Windows.Media.Ocr exposes **no** per-word confidence, unlike whisper token-`p`): the fraction of recognized words that
+  are clean/plausible tokens, mapped to `[0.1,0.9]` per line and overall; a no-text result scores lowest. NOT calibrated
+  correctness. (4) **Fifth review-queue producer** (after 7/8/11/12): overall `< -ConfidenceThreshold` (default 0.5) → one
+  page-level `verify_ocr` item carrying the worst lines (bounded by `-MaxReviewLines`); a text-free non-empty image → one
+  `verify_no_text` item (silent-fail guard). `flagged_by:"ocr.layout"`. Page-level (not per-line) because the confidence
+  is a coarse page-legibility proxy, not a per-unit signal. (5) **Registry-driven, decoupled from the gateway `wired`
+  gate** (mirrors D-0020): resolves the engine from `models.json` (`ocr.windows.media`, type `ocr`, engine
+  `windows.media.ocr`); the entry stays `wired:false` (the gateway runs `type=llm` only — Module 7 re-verified 28/28 with
+  the additive entries). Added `defaults.ocr`/`tiers.ocr`. (6) **Composes `capture.screen` (Module 6)**: with `-Capture`
+  (and optional `-CaptureInputsJson`) and no `-InputFile`, spawns `capture.screen` as a child pwsh and OCRs its PNG —
+  the same child-spawn pattern as `speech.stt`→`audio.ingest`; makes "read the text on my screen" a one-liner. (7)
+  `determinism:"mixed"`, **`parallel_safe:true`** (binds no port/VRAM/CUDA context — the first genuinely parallel-safe
+  perception skill; the only shared-state write is the append-only review queue), `batch:false`, `streaming:false`.
+- **reason:** Smallest useful MVP that opens the perception block and is immediately useful (OCR a screenshot / scanned
+  page / the live screen). Using the built-in `Windows.Media.Ocr` embodies "offload to the local machine with what is
+  already there" — no install, no admin, no model download, no GPU — and it already returns boxes + reading order. The
+  5.1-worker + meta-file hand-off is the robust answer to "pwsh 7 can't reach WinRT here" and reuses the proven D-0021
+  pattern. Reading the engine from the registry keeps engine choice a one-line config change; composing `capture.screen`
+  reuses Module 6 rather than reimplementing capture.
+- **alternatives:** **Tesseract** (also installed at `C:\Program Files\Tesseract-OCR\tesseract.exe`, found by the probe)
+  as the MVP engine (deferred — it is heavier, an external dependency, and CPU-only; but it yields **calibrated per-word
+  confidence** + hOCR/TSV boxes + multi-language, so it is **declared** as `ocr.tesseract` and is the natural next engine
+  behind the `-Engine` seam + the calibrated-confidence follow-on); a Python OCR lib (easyocr/paddleocr/rapidocr —
+  rejected: none installed, and installing needs model downloads); calling WinRT from pwsh 7 directly (rejected — the
+  projection does not load here); parsing the worker's stdout (rejected — a meta file is deterministic, per D-0021);
+  per-line review items (rejected for the MVP — page-level avoids flooding for a coarse page-legibility signal);
+  downscaling images over `MaxImageDimension` and rescaling boxes (deferred — returns a structured `image_too_large`;
+  pairs with `image.util` #15); a drawn overlay PNG of the boxes (deferred — follow-on, cheap once #15 exists); flipping
+  the ocr entry `wired:true` (rejected — misstates that the *gateway* runs it; the skill reads the entry itself).
+- **consequences:** the review queue now has **five** producers (`model.gateway`, `classify.batch`, `speech.stt`,
+  `speech.tts`, `ocr.layout`); Module 9 selects by `flagged_by` and handles the new `verify_ocr`/`verify_no_text` verbs by
+  construction. A **new hard rule surfaced**: any script that runs under Windows PowerShell 5.1 must be **ASCII-only** —
+  5.1 reads a BOM-less `.ps1` as ANSI (not UTF-8), so a UTF-8 em dash in the worker broke parsing (`m14-diag-002`); fixed
+  by making `ocr_worker.ps1` ASCII-only (the pwsh-7 wrapper may keep non-ASCII, as pwsh 7 reads UTF-8). Registry gains
+  `defaults.ocr`/`tiers.ocr` + `ocr.windows.media` (default) and `ocr.tesseract` (declared) entries. Throughput is a
+  per-call `powershell.exe` spawn (~0.5–1 s; the OCR itself ~74 ms) — fine; a warm 5.1 worker is a possible follow-on if
+  it ever dominates. · **affects:** Module 14, Modules 6/9, `TOOL_MODEL_REGISTRY.md`, `models.json`, `REVIEW_QUEUE.md`,
+  `MODULE_ROADMAP.md`, `SKILL_CONTRACT.md` (first parallel-safe stochastic perception skill). · **revisit-if:** Tesseract
+  (or a VLM, #17) is wired as a second engine; a calibrated/semantic confidence, an overlay PNG, `MaxImageDimension`
+  downscaling, multi-column reflow, or batch/PDF OCR is built (each its own scoped follow-on).

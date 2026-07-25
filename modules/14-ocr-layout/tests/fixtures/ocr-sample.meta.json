@@ -1,0 +1,31 @@
+{
+  "ok": true,
+  "engine_language": "en-US",
+  "available_languages": ["en-US"],
+  "max_image_dimension": 10000,
+  "image_w": 700,
+  "image_h": 220,
+  "text": "HELLO WORLD The quick brown fox 12345",
+  "text_angle": 0,
+  "ocr_ms": 74,
+  "line_count": 2,
+  "lines": [
+    {
+      "text": "HELLO WORLD",
+      "words": [
+        { "text": "HELLO", "x": 33, "y": 30, "w": 172, "h": 40 },
+        { "text": "WORLD", "x": 222, "y": 30, "w": 196, "h": 40 }
+      ]
+    },
+    {
+      "text": "The quick brown fox 12345",
+      "words": [
+        { "text": "The", "x": 28, "y": 127, "w": 65, "h": 29 },
+        { "text": "quick", "x": 106, "y": 127, "w": 90, "h": 37 },
+        { "text": "brown", "x": 209, "y": 127, "w": 104, "h": 29 },
+        { "text": "fox", "x": 326, "y": 127, "w": 53, "h": 29 },
+        { "text": "12345", "x": 392, "y": 127, "w": 105, "h": 29 }
+      ]
+    }
+  ]
+}

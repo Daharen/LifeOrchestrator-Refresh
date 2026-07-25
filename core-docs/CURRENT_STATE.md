@@ -5,9 +5,11 @@ Owns **reality as it exists now** — not intended architecture. Keep it compact
 is planned (serves scripts and weaker local models) but not yet created.
 
 - **Project phase:** MVP module build-out.
-- **Active module:** _none in progress._ **Modules 0–13 complete** (0 executor · 1 `skill.bootstrap` · 2
+- **Active module:** _none in progress._ **Modules 0–14 complete** (0 executor · 1 `skill.bootstrap` · 2
   `fs.observer` · 3 `proc.observer` · 4 `uia.inspector` · 5 `uia.actor` · 6 `capture.screen` · 7 `model.gateway` ·
-  8 `classify.batch` · 9 `review.processor` · 10 `audio.ingest` · 11 `speech.stt` · 12 `speech.tts` · 13 `voice.live`), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure). **The full audio track (10–13) is complete.**
+  8 `classify.batch` · 9 `review.processor` · 10 `audio.ingest` · 11 `speech.stt` · 12 `speech.tts` · 13 `voice.live` ·
+  14 `ocr.layout`), plus **Module 00.1 — Executor Watchdog & Recovery (`exec.watchdog`)** (infrastructure). **The full
+  audio track (10–13) is complete; the image/document perception block (14–18) has begun — Module 14 `ocr.layout` is done.**
   **Module 8 — Batch Classification & Sorting (`classify.batch`) is MVP complete** — the **first real
   consumer of `model.gateway`**: for each item in a batch it calls the gateway (default `-Tier weak` = 1.5B) with a
   mode-specific prompt (`classify` one-label / `multilabel` / `extract` fields), parses the completion, computes a
@@ -97,6 +99,26 @@ is planned (serves scripts and weaker local models) but not yet created.
   `m13-smoke-001` heard the JFK line, answered via the 1.5B, and produced a 12.56 s reply (stt 1.8 s / respond 2.7 s /
   speak 54 s). **Pre-shipped off-machine** on cloud pwsh 7.4.6 with a mock-children harness driving the *real*
   orchestrator (23/23). See D-0022.
+- **Module 14 — OCR + Layout (`ocr.layout`) is MVP complete this session** — the **first module of the image/document
+  perception block (14–18)** and the first **parallel-safe** stochastic/mixed perception skill. It recognizes the text in
+  one image and returns it with **per-word pixel bounding boxes + lines in reading order** (+ text angle, image dims).
+  **Probe-first** (`m14-probe-001`; do not assume an OCR engine): the system **`Windows.Media.Ocr`** engine works — zero
+  install, native, `en-US` recognizer, `MaxImageDimension=10000` — OCR'ing a generated fixture to "HELLO WORLD The quick
+  brown fox 12345" (100% correct incl. digits) with word boxes + line grouping + `TextAngle` in ~74 ms. Crucially **pwsh
+  7.4.6 cannot load the WinRT projection** here, so OCR runs in a **Windows PowerShell 5.1 worker** (`ocr_worker.ps1`, the
+  `AsTask`/`Await` reflection pattern) with a **meta-file hand-off** to the pwsh-7 wrapper (`Invoke-OcrLayout.ps1`) — the
+  D-0021 worker+meta pattern in its PS-5.1 variant. **Registry-driven, decoupled from the gateway `wired` gate** (D-0020):
+  resolves `ocr.windows.media` (type `ocr`) from `models.json`, which stays `wired:false` for the gateway. **Confidence** =
+  a documented **legibility heuristic** (Windows.Media.Ocr exposes no per-word confidence); **fifth review-queue producer**
+  (`flagged_by:"ocr.layout"`, page-level `verify_ocr` / `verify_no_text` guard). **Composes `capture.screen` (M6)** via
+  `-Capture` to OCR the live screen. `determinism:"mixed"`, `parallel_safe:true`, `batch:false`. Artifacts
+  `ocr.json`/`ocr.md`. **Tests 30/30 via the executor** (`m14-test-003`, exit 0) — live OCR (words+boxes+reading order),
+  review routing, no-text guard, error paths, Module 1 wrapper, **and the live `capture.screen` composition**; real-registry
+  smoke `m14-smoke-001` (7 words, conf 0.9, correct text); no orphaned processes. **Pre-shipped off-machine**: cloud pwsh
+  7.4.6 AST-parse + a mock-worker harness driving the *real* wrapper against a **captured real meta** (28/28) before any
+  bytes hit Windows. `models.json` gained `defaults.ocr`/`tiers.ocr` + `ocr.windows.media` (default) / `ocr.tesseract`
+  (declared) — **additive; Module 7 re-verified 28/28** (`m14-final-001`). **Tesseract is installed** (`C:\Program
+  Files\Tesseract-OCR\`) and declared as a future second engine. See D-0023.
 - **Repo / working dir:** **`C:\Users\just_\LifeOrchestrator-Refresh\`** — the clean standalone home for
   **Life Orchestrator** (near-term local-skills track; git-initialized). Layout: `core-docs/` (these docs)
   and `modules/<NN>-<name>/` (one per module). **Reference sources (separate, not built here):** the earlier
@@ -189,6 +211,16 @@ is planned (serves scripts and weaker local models) but not yet created.
   2026-07-24 (`m10-ffprobe-001`); used by Module 10.
 - **WinForms + STA runspace** work in the dotnet-tool pwsh (`System.Windows.Forms` loads; an STA runspace
   can host a Form + `Application.Run`) — verified 2026-07-24 (used by the Module 5 probe test).
+- **Windows PowerShell 5.1** (`C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe`, 5.1.19041.6456) — present
+  alongside pwsh 7. **The only runtime that can load the WinRT `Windows.Media.Ocr` projection on this box** (pwsh 7.4.6
+  cannot — `m14-probe-001`). Used by `ocr.layout` (Module 14) as a worker. **Gotcha:** 5.1 reads a BOM-less `.ps1` as
+  ANSI, not UTF-8 — keep any 5.1 worker **ASCII-only** (a UTF-8 em dash broke `ocr_worker.ps1` once; see Known failures).
+- **Windows.Media.Ocr** (system WinRT OCR) — verified live 2026-07-25 (`m14-probe-001`): words + `BoundingRect` + lines
+  (reading order) + `TextAngle`; recognizer `en-US`; `MaxImageDimension=10000`; ~74 ms on a 700x220 fixture. No install,
+  no admin, no GPU, no network. Wired by `ocr.layout` (Module 14); registry id `ocr.windows.media`.
+- **Tesseract OCR** at `C:\Program Files\Tesseract-OCR\tesseract.exe` — **installed** (found by `m14-probe-001`),
+  **declared not wired** (`ocr.tesseract`) as a future `ocr.layout` engine (calibrated per-word confidence + multi-lang).
+  No Python OCR libs (easyocr/paddleocr/rapidocr/pytesseract) in either venv (`onnxruntime`/`PIL`/`cv2` present).
 - Not admin. No system-wide `pwsh` (only the user `~\.dotnet\tools` entry — resolves in new shells).
 
 ## Installed local models
@@ -305,8 +337,24 @@ is planned (serves scripts and weaker local models) but not yet created.
   `tests/mock-child.ps1` (canned envelopes; the tts branch writes a real WAV) so the whole compose/aggregate/envelope
   pipeline runs off-GPU — it ran on the cloud Linux box (23/23) as the pre-ship gate before the identical harness ran
   live on the Windows executor.
+- Module 14: `modules/14-ocr-layout/tests/Invoke-OcrLayoutTests.ps1` — **30/30 pass** (manifest + mixed/parallel_safe=true/
+  batch flags; a **live** OCR of `tests/fixtures/ocr-sample.png` — text contains HELLO/WORLD/quick, `word_count`≥5,
+  `line_count`≥2, lines in reading order, each word an integer pixel `bounding_rect`, overall confidence in (0,1],
+  `model_provenance[1]` engine `windows.media.ocr`, `ocr.json`/`ocr.md` artifacts with sha256; review routing at a forced
+  0.999 threshold → a valid `ocr.layout` `verify_ocr` item; a blank image → `verify_no_text`; `input_not_found` +
+  `engine_not_found` error paths; the Module 1 wrapper; **and the live `capture.screen` composition** (`-Capture` → OCR the
+  primary monitor, source=capture); `m14-test-003`, exit 0; no orphaned processes). The harness is **dual-mode / OS-
+  portable**: `-UseMock` runs the *real* wrapper against a mock worker (`tests/mock-ocr-worker.ps1` + captured real
+  `tests/fixtures/ocr-sample.meta.json`) + a temp registry — it ran on the cloud Linux box (28/28) as the pre-ship gate
+  before the identical harness ran live on the Windows executor. Real-registry smoke `m14-smoke-001` (7 words, conf 0.9).
 
 ## Known failures / gotchas
+- **Windows PowerShell 5.1 reads a BOM-less `.ps1` as ANSI, not UTF-8 (2026-07-25, Module 14).** Any non-ASCII byte in a
+  script run under `powershell.exe` (5.1) corrupts parsing: a UTF-8 em dash in `ocr_worker.ps1` made 5.1 fail with
+  "Unexpected token" / "The hash literal was incomplete" and exit 1 with **no output** (`m14-diag-002`). Because the
+  `ocr.layout` wrapper discarded the worker's stderr, the wrapper only saw "produced no meta". **Rule:** keep any Windows
+  PowerShell 5.1 worker **ASCII-only** (or give it a UTF-8 BOM). pwsh 7 is unaffected (it reads BOM-less as UTF-8), so the
+  pwsh-7 wrapper may keep non-ASCII. Grep `[^\x00-\x7F]` before shipping a 5.1 script.
 - **Cowork `device_stage_files` can return a STALE snapshot (2026-07-24, Module 12).** Re-staging a file to an uploads
   path that was already staged earlier in the session returned the **old** bytes (pre-edit) even though the reported
   `mtimeMs` was current — nearly caused a revert of Module 11's committed doc edits. **Fix/workaround:** to reliably read
@@ -380,21 +428,25 @@ is planned (serves scripts and weaker local models) but not yet created.
   27B load (~90s) approaches the gateway's 120s default, so callers pass a longer `-LoadTimeoutSec` for the strong tier.
 
 ## Next expected action
-1. **The audio track (Modules 10–13) is complete.** The next roadmap block is **Modules 14–18 — Image & document
-   perception** (`ocr.layout`, `image.util`, `detect.objects`, `image.interpret`, `image.index`) — expand and give a work
-   order to whichever is picked (#14 `ocr.layout` is the natural first step; **probe the machine for an OCR engine /
-   local VLM before designing**, per the probe-first discipline). Alternatively, take on the **deferred housekeeping**
-   (below). `voice.live` follow-ons (NOT this session): a mic `audio.capture` skill + a streaming/interactive loop;
-   standalone VAD (stage a VAD ggml model); multi-turn dialogue + memory; a **warm-worker pool** so a voice turn avoids
-   three cold model loads (the shared pressure point with #7/#8/#12). See D-0022.
-2. `review.processor` follow-ons (NOT this session): a frontier/`route.tasks` (#24) drain of `escalated` items;
+1. **Module 14 `ocr.layout` is complete; the perception block (14–18) is under way.** The next step is **Module 15
+   `image.util`** (resize/crop/meta/hash/similarity/convert/tile/region) — the natural follow-on, and it directly unblocks
+   `ocr.layout`'s `MaxImageDimension` downscale + box-overlay follow-ons. Then **#16 `detect.objects`**, **#17
+   `image.interpret`** (a local **VLM** — probe for a vision model first, none is staged yet), **#18 `image.index`**
+   (integrate 14–17). Expand and give a work order to whichever is picked. `ocr.layout` follow-ons (NOT this session):
+   wire **Tesseract** (`ocr.tesseract`, installed) or a VLM as a second `-Engine` for calibrated per-word confidence +
+   multi-language; a drawn **overlay PNG** of the boxes; `MaxImageDimension` **downscale-then-rescale-boxes** (pairs with
+   #15); multi-column reading-order reflow; **batch/directory/PDF-page** OCR. See D-0023.
+2. **Audio-track follow-ons (NOT this session):** a mic `audio.capture` skill + a streaming/interactive loop; standalone
+   VAD (stage a VAD ggml model); multi-turn dialogue + memory; a **warm-worker pool** so a voice turn avoids three cold
+   model loads (the shared pressure point with #7/#8/#12/#14 per-call worker spawns). See D-0022.
+3. `review.processor` follow-ons (NOT this session): a frontier/`route.tasks` (#24) drain of `escalated` items;
    compaction/archival of `resolved` items to keep the live queue small; a warm/persistent gateway worker (shared
    with #8); calibrated/semantic reviewer confidence; **strong-tier prompt/max_tokens tuning** so the 27B emits a
    parseable JSON verdict instead of being escalated on truncated reasoning (observed in `m9-test-003`).
-3. Housekeeping (deferred): fold the D-0009 conventions into `SKILL_CONTRACT.md` and bump the contract version
+4. Housekeeping (deferred): fold the D-0009 conventions into `SKILL_CONTRACT.md` and bump the contract version
    (now exercised by Modules 2–10; DECISION_LOG D-0009/D-0011); relocate staged models per `MIGRATION.md`; the pending
    `proteus_repo/tools/` leftover removal (`ops/finish-game-cleanup.bat`); classify.batch follow-ons (warm-worker /
    intra-batch prompt for throughput; calibrated confidence; a side-effecting `sort.files` mover) — see D-0017; audio.ingest follow-ons (batch/directory ingest; trimming/
    segmentation → Module 13; denoise/high-pass — see D-0019).
 
-- **Last updated:** 2026-07-24 (UTC) · **Last updating agent:** Claude (Cowork — Module 13 voice.live build session; audio track 10–13 complete).
+- **Last updated:** 2026-07-25 (UTC) · **Last updating agent:** Claude (Cowork — Module 14 ocr.layout build session; perception block 14–18 begun; first parallel-safe perception skill; fifth review producer).

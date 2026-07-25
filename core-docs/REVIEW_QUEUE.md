@@ -145,6 +145,22 @@ as `child_review_count`); passing `-ReviewQueuePath` routes the children's flags
 the general pattern for composed skills: **redirect children's review writes to an aggregate, do not re-flag.** The four
 producers above are unchanged. See D-0022.
 
+## Fifth producer wired (Module 14)
+`ocr.layout` is the **fifth skill that appends** to `review_queue.jsonl` (after `model.gateway`, `classify.batch`,
+`speech.stt`, `speech.tts`), and the first from the perception track. It OCRs an image via `Windows.Media.Ocr` and flags
+a **poorly-legible or text-free** result. Because Windows.Media.Ocr exposes **no** per-word confidence, its confidence is
+a documented **legibility heuristic** (the fraction of recognized words that are clean/plausible tokens → `[0.1,0.9]`).
+When the **overall** confidence falls below `-ConfidenceThreshold` (default 0.5), it appends **one page-level**
+`lifeorch.review.item/0.1` with `flagged_by:"ocr.layout"`, `reason:"low_confidence"`,
+`source_ref:"artifact://<invDir>/ocr.json"`, `weak_result = {engine, image, word_count, line_count, reason,
+low_confidence_lines, lines:[…worst lines, bounded by -MaxReviewLines]}`, `requested:"verify_ocr"`. A **text-free
+non-empty image** instead appends one `reason:"uncategorized"`, `requested:"verify_no_text"` item (a silent-OCR-failure
+guard). It is **page-level, not per-line** — the confidence is a coarse page-legibility proxy, not a per-unit signal, and
+per-line items would flood the queue. Module 9 selects by `flagged_by` and handles the new `verify_ocr`/`verify_no_text`
+verbs by construction. Verified end-to-end by the Module 14 tests (a forced 0.999 threshold produced a valid `ocr.layout`
+item; a blank image produced a `verify_no_text` item; `m14-test-003`). **Producers are now 7/8/11/12/14 → local drainer 9
+→ frontier for the residue.** See D-0023.
+
 ## Design flags to revisit (not yet actioned — for a future session/frontier pass)
 - **speech.stt confidence is mean token probability — honest but not calibrated.** A real acoustic signal (richer than
   the gateway's completeness heuristic) but not a probability the transcript is *correct*; replace with a calibrated /
