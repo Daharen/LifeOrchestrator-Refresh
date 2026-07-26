@@ -179,6 +179,32 @@ Ok ($null -ne $res -and $res.route.fell_back -eq $true -and $res.route.applied -
 Ok ($null -ne $res -and @($res.tools_available).Count -eq 3) 'S12 full tool set restored'
 Ok ($null -ne $res -and $res.status -eq 'completed') 'S12 still completes on the full set'
 
+# --- S14: -Profile governor rungs (frugal|floor|max), default floor, and explicit-override precedence ---
+Write-Output "S14 profile rungs:"
+# default (no profile): the mid floor, 8 steps, no ladder
+$r = Run-Agent 'FINISH_AFTER_ONE: make a file' $null
+$res = if ($null -ne $r.env) { $r.env.result } else { $null }
+Ok ($null -ne $res -and $null -eq $res.profile) 'S14 default has no profile'
+Ok ($null -ne $res -and ((@($res.decision_tiers) -join ',') -eq 'mid')) 'S14 default decision floor = mid (no tiny/weak)'
+Ok ($null -ne $res -and $res.max_steps -eq 8) 'S14 default max_steps = 8'
+# floor
+$r = Run-Agent 'FINISH_AFTER_ONE: make a file' @('-Profile','floor')
+$res = if ($null -ne $r.env) { $r.env.result } else { $null }
+Ok ($null -ne $res -and $res.profile -eq 'floor' -and (@($res.decision_tiers) -join ',') -eq 'mid' -and $res.max_steps -eq 8 -and $res.gen_tier -eq 'mid') 'S14 floor = {mid; gen mid; 8}'
+# max: decide at the mid floor, generate with the 27B (gen strong); more headroom
+$r = Run-Agent 'FINISH_AFTER_ONE: make a file' @('-Profile','max')
+$res = if ($null -ne $r.env) { $r.env.result } else { $null }
+Ok ($null -ne $res -and $res.profile -eq 'max' -and (@($res.decision_tiers) -join ',') -eq 'mid' -and $res.gen_tier -eq 'strong' -and $res.max_steps -eq 10) 'S14 max = {mid; gen strong; 10}'
+# precedence: an explicit -MaxSteps overrides the profile rung; the rest of the rung still fills in
+$r = Run-Agent 'FINISH_AFTER_ONE: make a file' @('-Profile','max','-MaxSteps','3')
+$res = if ($null -ne $r.env) { $r.env.result } else { $null }
+Ok ($null -ne $res -and $res.profile -eq 'max' -and $res.max_steps -eq 3 -and $res.gen_tier -eq 'strong' -and (@($res.decision_tiers) -join ',') -eq 'mid') 'S14 explicit -MaxSteps wins over the profile rung'
+# invalid profile -> error envelope (fail closed)
+$errF = Join-Path $work 'err-badprofile.txt'
+$out = & $PwshExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $AgentPath -Goal 'x' -WorkingDir $work -Profile 'bogus' -EscalatorPath $MockPath -GatewayPath $MockPath -ToolsPath $toolsPath -PwshPath $PwshExe -ArtifactRoot $artRoot 2> $errF
+$eng = $null; try { $eng = ($out | Out-String).Trim() | ConvertFrom-Json } catch { }
+Ok ($null -ne $eng -and $eng.status -eq 'error' -and $eng.error.code -eq 'invalid_profile') 'S14 invalid profile -> error envelope'
+
 # cleanup
 try { Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue } catch { }
 

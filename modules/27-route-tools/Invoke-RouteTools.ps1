@@ -13,9 +13,11 @@
 
   Design is the validated experiment m27-router-001 (recorded in WORK_ORDER.md / DECISION_LOG D-0040), REUSED not
   re-derived: a router pass works at the MID (non-thinking) tier -- the 3B emits clean parseable JSON at
-  finish=stop -- but NOT at the STRONG 27B tier, a thinking model that burns the whole token budget on hidden
-  reasoning and emits an empty array. RULE: route.tools uses the MID tier (or any non-thinking model); NEVER the
-  27B. This skill hard-refuses tier=strong.
+  finish=stop -- but is unreliable at the STRONG 27B tier, a thinking model that burns the whole token budget on
+  hidden reasoning and tends to emit an empty array. GUIDANCE: prefer the MID tier (or any non-thinking model)
+  for a pure routing pass. Per D-0043 this skill no longer HARD-refuses tier=strong (the 27B is a first-class
+  governor rung); it SOFT-warns and proceeds -- the deterministic catalog gate makes an empty/garbage selection
+  safe (the consumer falls back to the full tool set).
 
   Composition (reimplements nothing): it calls model.gateway (#7) ONCE at the mid tier with the validated router
   prompt (+ few-shot examples that pin the output format and the confusable catalog entries), parses the JSON
@@ -190,9 +192,12 @@ try {
     }
 
     if ([string]::IsNullOrWhiteSpace($Request)) { throw [PSCustomObject]@{ code='missing_parameter'; message='request is required'; retryable=$false } }
-    # RULE (validated m27-router-001): the router is a MID/non-thinking tier only. The 27B strong tier is a
-    # thinking model that emits an empty array at any reasonable token cap -> hard refuse it here.
-    if ($Tier -eq 'strong') { throw [PSCustomObject]@{ code='strong_tier_forbidden'; message='route.tools must use a mid/non-thinking tier; the strong 27B is a thinking model that emits empty output for this task (m27-router-001). Use tier=mid.'; retryable=$false } }
+    # GUIDANCE (m27-router-001): the router works best at a MID/non-thinking tier; the 27B strong tier is a
+    # thinking model that TENDS to burn the budget on hidden reasoning and emit an empty array for routing.
+    # Per D-0043 the governor no longer HARD-refuses strong (the 27B is a first-class rung it may escalate to);
+    # we SOFT-warn and proceed. The deterministic catalog gate + confidence heuristic already handle an empty
+    # or hallucinated selection safely (empty -> the consumer falls back to the full tool set).
+    if ($Tier -eq 'strong') { $warnings.Add('route.tools was asked to route at the strong 27B tier; that is a thinking model that often emits empty/hidden-reasoning output for routing (m27-router-001). Proceeding, but mid is recommended for a pure routing pass.') }
 
     New-Item -ItemType Directory -Path $invDir -Force | Out-Null
     $childReviewPath = if (-not [string]::IsNullOrWhiteSpace($ReviewQueuePath)) { $ReviewQueuePath } else { Join-Path $invDir 'child_review.jsonl' }

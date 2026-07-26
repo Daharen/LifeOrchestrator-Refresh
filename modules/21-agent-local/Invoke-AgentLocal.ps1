@@ -11,8 +11,13 @@
   Composition (reimplements nothing):
     - DECISION ("which tool next, or finish?") routes THROUGH logic.escalator (#19) as a closed-set
       `classify` task (labels = the registered tool names + `finish`). The escalator's deterministic
-      in-set gate guarantees a valid action (or surfaces needs_frontier); its tiny->weak->mid ladder is
-      the cost-offload.
+      in-set gate guarantees a valid action (or surfaces needs_frontier). The DEFAULT decision floor is
+      the MID (3B) tier -- NOT the tiny/weak ladder: D-0043 (Exp 3) measured that starting the ladder at
+      the 0.5B/1.5B floor makes agent decisions WORSE (a low-tier answer that higher tiers then rubber-
+      stamp), so we decide at a competent floor. The -Profile knob (frugal|floor|max) selects the
+      {decision_tiers, gen_tier, max_steps, max_tokens} rung: floor is the default; max keeps decisions
+      at the mid floor and GENERATES with the 27B (measured: escalating the decision CLASSIFIER to the
+      27B re-breaks decisions with empty output -- D-0043). These are the auto-ramp governor's rungs.
     - ARG-GENERATION and the FINAL ANSWER use model.gateway (#7) directly (one call each).
     - TOOLS are conforming Modules invoked as child skills (the image.index/#18 spawn-and-parse-envelope
       pattern) from a curated closed registry (tools.json); it is the agent's entire capability surface (no
@@ -36,15 +41,17 @@
   pwsh -NoProfile -File .\Invoke-AgentLocal.ps1 -InputsJson '{"goal":"read notes.md and write its line count to stats.txt","working_dir":"C:\\tmp\\scratch","max_steps":4}'
   pwsh -NoProfile -File .\Invoke-AgentLocal.ps1 -Goal "list the .md files here and write them to index.txt" -WorkingDir C:\tmp\scratch -DryRun
   pwsh -NoProfile -File .\Invoke-AgentLocal.ps1 -Goal "make an image of a dog" -Route -WorkingDir C:\tmp\scratch
+  pwsh -NoProfile -File .\Invoke-AgentLocal.ps1 -Goal "generate an image of a dog and place it on my desktop" -Route -Profile max -WorkingDir C:\tmp\scratch
 #>
 [CmdletBinding()]
 param(
     [string]$Goal,
     [string]$WorkingDir,
-    [int]$MaxSteps = 4,
+    [int]$MaxSteps = 8,
     [switch]$DryRun,
-    [string[]]$DecisionTiers = @('tiny','weak','mid'),
+    [string[]]$DecisionTiers = @('mid'),
     [string]$GenTier = 'mid',
+    [string]$Profile,
     [double]$FrontierThreshold = 0.5,
     [int]$MaxObservationChars = 600,
     [int]$MaxTranscriptChars = 4000,
@@ -242,6 +249,7 @@ try {
             if ((Has $p 'dry_run')               -and -not $bound.ContainsKey('DryRun'))              { if ([bool]$p.dry_run) { $DryRun = [switch]$true } }
             if ((Has $p 'decision_tiers')        -and -not $bound.ContainsKey('DecisionTiers'))       { $DecisionTiers = @($p.decision_tiers | ForEach-Object { [string]$_ }) }
             if ((Has $p 'gen_tier')              -and -not $bound.ContainsKey('GenTier'))             { $GenTier = [string]$p.gen_tier }
+            if ((Has $p 'profile')               -and -not $bound.ContainsKey('Profile'))             { $Profile = [string]$p.profile }
             if ((Has $p 'frontier_threshold')    -and -not $bound.ContainsKey('FrontierThreshold'))   { $FrontierThreshold = [double]$p.frontier_threshold }
             if ((Has $p 'max_observation_chars') -and -not $bound.ContainsKey('MaxObservationChars')) { $MaxObservationChars = [int]$p.max_observation_chars }
             if ((Has $p 'max_transcript_chars')  -and -not $bound.ContainsKey('MaxTranscriptChars'))  { $MaxTranscriptChars = [int]$p.max_transcript_chars }
@@ -263,6 +271,37 @@ try {
     }
     if ($bound.ContainsKey('Tools') -and -not [string]::IsNullOrWhiteSpace($Tools)) {
         try { $toolsInline = $Tools | ConvertFrom-Json } catch { throw [PSCustomObject]@{ code='invalid_tools_json'; message='-Tools is not valid JSON'; retryable=$false } }
+    }
+
+    # ---- resource PROFILE (governor rungs): a named preset for {decision_tiers, gen_tier, max_steps, max_tokens}.
+    #      These are the auto-ramp governor's rungs, usable directly as a knob:
+    #        frugal = the old ladder (tiny->weak->mid, small budget) -- cheapest, kept for A/B and cost-floor runs.
+    #        floor  = decide at the competent MID floor (no tiny/weak) -- the DEFAULT; validated fast+clean (D-0043).
+    #        max    = decide at the MID floor, GENERATE with the 27B (gen_tier=strong), more headroom + steps.
+    #                 NB (measured, D-0043 m31-p1-max-001): escalating the DECISION classifier to the 27B via the
+    #                 escalator judge REINTRODUCES the thinking-model empty-output problem at the decision layer
+    #                 (strong emitted an empty label, conf 0.2 -> unknown_tool). So max keeps decisions at mid and
+    #                 spends the 27B where it helps -- generation. Decision-escalation-on-doubt is a Phase 3
+    #                 controller concern (a DIRECT 27B classify call with adequate budget, not the escalator judge).
+    #      Explicit params / InputsJson keys ALWAYS win; the profile only fills what the caller left unspecified. ----
+    if (-not [string]::IsNullOrWhiteSpace($Profile)) {
+        $profKey = $Profile.ToLowerInvariant().Trim()
+        $profBundle = switch ($profKey) {
+            'frugal' { [ordered]@{ tiers=@('tiny','weak','mid'); gen='mid';    steps=6;  tokens=512  } }
+            'floor'  { [ordered]@{ tiers=@('mid');               gen='mid';    steps=8;  tokens=768  } }
+            'max'    { [ordered]@{ tiers=@('mid');               gen='strong'; steps=10; tokens=2048 } }
+            default  { $null }
+        }
+        if ($null -eq $profBundle) { throw [PSCustomObject]@{ code='invalid_profile'; message="profile must be one of: frugal, floor, max (got '$Profile')"; retryable=$false } }
+        $setTiers  = $bound.ContainsKey('DecisionTiers') -or ($null -ne $p -and (Has $p 'decision_tiers'))
+        $setGen    = $bound.ContainsKey('GenTier')       -or ($null -ne $p -and (Has $p 'gen_tier'))
+        $setSteps  = $bound.ContainsKey('MaxSteps')      -or ($null -ne $p -and (Has $p 'max_steps'))
+        $setTokens = $bound.ContainsKey('MaxTokens')     -or ($null -ne $p -and (Has $p 'max_tokens'))
+        if (-not $setTiers)  { $DecisionTiers = @($profBundle.tiers) }
+        if (-not $setGen)    { $GenTier       = [string]$profBundle.gen }
+        if (-not $setSteps)  { $MaxSteps      = [int]$profBundle.steps }
+        if (-not $setTokens) { $MaxTokens     = [int]$profBundle.tokens }
+        Write-Diag "profile '$profKey' applied: tiers=[$($DecisionTiers -join ',')] gen=$GenTier steps=$MaxSteps tokens=$MaxTokens"
     }
 
     if ([string]::IsNullOrWhiteSpace($Goal)) { throw [PSCustomObject]@{ code='missing_parameter'; message='goal is required'; retryable=$false } }
@@ -379,8 +418,9 @@ try {
     if ([string]::IsNullOrWhiteSpace($gatewayEntry)) { throw [PSCustomObject]@{ code='gateway_not_found'; message='model.gateway entrypoint not found (set -GatewayPath)'; retryable=$false } }
 
     # ---- normalized inputs digest ----
+    $profileOut = if ([string]::IsNullOrWhiteSpace($Profile)) { $null } else { $Profile.ToLowerInvariant().Trim() }
     $normInputs = [ordered]@{ goal=$Goal; working_dir=$workDirResolved; max_steps=$MaxSteps; dry_run=[bool]$DryRun;
-        decision_tiers=$DecisionTiers; gen_tier=$GenTier; frontier_threshold=$FrontierThreshold;
+        profile=$profileOut; decision_tiers=$DecisionTiers; gen_tier=$GenTier; frontier_threshold=$FrontierThreshold;
         temperature=$Temperature; seed=$Seed; tools=$toolNames }
     $inputsDigest = 'sha256:' + (Get-Sha256Hex $utf8.GetBytes(($normInputs | ConvertTo-Json -Compress -Depth 8)))
 
@@ -694,6 +734,7 @@ try {
         cost = [ordered]@{ decision_calls=$costDecisionCalls; gen_calls=$costGenCalls; tool_calls=$costToolCalls;
             route_calls=$(if ($Route) { 1 } else { 0 });
             total_gateway_calls=($costGatewayCalls + [int]$routeInfo.route_gateway_calls); total_tokens=($costTokens + [int]$routeInfo.route_tokens); total_runtime_ms=($costRuntimeMs + [int]$routeInfo.route_runtime_ms) }
+        profile = $profileOut
         decision_tiers = $DecisionTiers
         gen_tier = $GenTier
         review = [ordered]@{ mode=$reviewMode; child_review_path=$childReviewPath; child_review_count=$childReviewCount; is_producer=$false }
@@ -723,7 +764,7 @@ try {
             max_steps=$result.max_steps; dry_run=$result.dry_run;
             route_enabled=$result.route_enabled; planned_tools=$result.planned_tools; route=$result.route; outcome=$result.outcome;
             tools_available=$result.tools_available;
-            steps=$result.steps; cost=$result.cost; decision_tiers=$result.decision_tiers; gen_tier=$result.gen_tier;
+            steps=$result.steps; cost=$result.cost; profile=$result.profile; decision_tiers=$result.decision_tiers; gen_tier=$result.gen_tier;
             review=$result.review; model_provenance=$modelProvenance.ToArray() }
         $ajPath = Join-Path $invDir 'agent.json'
         [System.IO.File]::WriteAllText($ajPath, ($aj | ConvertTo-Json -Depth 30), $utf8)

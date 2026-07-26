@@ -127,11 +127,13 @@ Ok ($null -ne $res -and $res.is_review_producer -eq $false) 'S9 is_review_produc
 Ok (Test-Path -LiteralPath $sink) 'S9 gateway review write landed in the redirected sink'
 Ok (-not (Test-Path -LiteralPath $canonical)) 'S9 no canonical review_queue.jsonl written'
 
-# --- S10: strong tier is refused (never calls the 27B) ---
+# --- S10: strong tier is now SOFT-allowed (a first-class governor rung), warns, and still routes (D-0043) ---
 $r = Run-Route 'ROUTE_EMIT=gen.image x' @('-Tier','strong')
-$res = if ($null -ne $r.env) { $r.env } else { $null }
-Write-Output "S10 strong-tier refusal:"
-Ok ($null -ne $res -and $res.status -eq 'error' -and $res.error.code -eq 'strong_tier_forbidden') 'S10 tier=strong -> strong_tier_forbidden'
+$e = $r.env; $res = if ($null -ne $e) { $e.result } else { $null }
+Write-Output "S10 strong-tier soft-allow:"
+Ok ($null -ne $e -and $e.status -ne 'error' -and ($null -eq $e.error)) 'S10 tier=strong no longer refused (no strong_tier_forbidden)'
+Ok ($null -ne $res -and (@($res.tools) -contains 'gen.image')) 'S10 strong tier still routes through the deterministic gate'
+Ok ($null -ne $e -and @(@($e.warnings) -match 'strong').Count -ge 1) 'S10 emits a soft warning recommending mid'
 
 # --- S11: missing request ---
 $errF = Join-Path $work 'err-noreq.txt'
