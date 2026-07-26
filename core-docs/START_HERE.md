@@ -8,7 +8,7 @@ Read this first. It routes you; it does not contain the project's substance.
 We are building a suite of small, independently-invokable **local skills** that frontier and
 local agents can call to do real work on this Windows machine — offloading token cost from the
 cloud onto the local computer. Backend capabilities live in `modules/` (**Modules**); human-interface
-apps that plug into them live in `widgets/` (**Widgets** — the HID layer; see `widgets/README.md`).
+apps that plug into them live in `widgets/` (**Widgets** — the HID layer; see `widgets/README.md`; every Widget ships a double-click `launch.bat` so the user can run it directly, and Widgets are native by default -- D-0038).
 Work proceeds **one scoped Module or Widget per session** (vocabulary + priority in `PROJECT_DIRECTION.md`,
 D-0029; the full destination is `ARCHITECTURE_MAP.md`, the current order is `MODULE_ROADMAP.md → Build priority`).
 

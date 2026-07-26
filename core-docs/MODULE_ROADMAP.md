@@ -32,7 +32,7 @@ spine (+ the real-time autonomic layer 45-49 and the 6-level operating hierarchy
 5. **`agent.coding` -- Coding Agent** -- **DEFERRED 2026-07-26 (D-0037; folder `modules/26-agent-coding/`, WORK_ORDER authored, not built)** (last here -- the frontier already codes well; lowest near-term ROI). A full build-ready MVP is designed in the work order (a specialization of `agent.local` #21 + a GATED code-execution tool); deferred because no safe code-execution substrate exists on this box (`m26-probe-001`: WSL no distro / Windows Sandbox absent+elevation / Docker absent) and the useful slice is the arbitrary-exec capability agent.local deliberately excluded (D-0032). See the Module 26 entry below + D-0037.
 
 **Phase B — Widget layer (human interface; `widgets/`):** led by the **Local Agent Console** (the usability
-keystone), then Launcher/Registry Browser, Review/Escalation Dashboard, Voice Console, Generator Studio,
+keystone) -- **#1 MVP COMPLETE 2026-07-26 (D-0039; `widgets/01-local-agent-console/`; native WinForms, delivered per D-0038; drives `agent.local` #21)** -- then Launcher/Registry Browser, Review/Escalation Dashboard, Voice Console, Generator Studio,
 Document Workspace, System/Executor Monitor. Full list + rationale in `widgets/README.md`.
 
 **Phase C — resume the canonical spine (deferred):** video (19-22) → search/routing/orchestration (23-26) →

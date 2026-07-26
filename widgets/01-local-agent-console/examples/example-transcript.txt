@@ -1,0 +1,23 @@
+Example rendered transcript (from tests/mock-agent-local.ps1; illustrative).
+The real console renders the same shape from a live agent.local run.
+
+GOAL: create notes/hello.txt containing hi from the console
+STATUS: ok   (agent: completed)
+STEPS: 1/4   DRY-RUN: False   NEEDS-FRONTIER: False
+CONFIDENCE: 0.82   DURATION: 5210 ms
+
+FINAL ANSWER:
+  Created notes/hello.txt containing 'hi from agent.local'.
+
+--- TRANSCRIPT (child steps) ---
+
+[Step 1]
+  decide -> doc.io  (conf 0.82, via in_set_gate/mid)
+  args: {"op":"write","path":"notes/hello.txt","content":"hi from agent.local"}
+  tool doc.io: ok
+       artifacts: ...\widgets\01-local-agent-console\runtime\artifacts\<id>\step1
+  obs: wrote 19 bytes to notes/hello.txt (sha256 3f2a...)
+
+--- COST ---
+  gateway calls: 3  (decision 1, gen 2, tool 1)
+  tokens: 412   runtime: 5210 ms

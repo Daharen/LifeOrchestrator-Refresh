@@ -1,0 +1,3 @@
+# Per-run artifacts (agent.local child output, redirected reviews, stdout/stderr).
+runtime/
+*.tmp
