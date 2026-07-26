@@ -15,8 +15,12 @@
       the cost-offload.
     - ARG-GENERATION and the FINAL ANSWER use model.gateway (#7) directly (one call each).
     - TOOLS are conforming Modules invoked as child skills (the image.index/#18 spawn-and-parse-envelope
-      pattern). The default registry (tools.json) ships doc.io (#20) + fs.observer (#2); it is the agent's
-      entire capability surface (no arbitrary-shell tool).
+      pattern) from a curated closed registry (tools.json); it is the agent's entire capability surface (no
+      arbitrary-shell tool).
+    - OPTIONAL -Route pre-pass: with -Route, route.tools (#27) is called FIRST to pre-select the minimal
+      toolset for the goal, and the ReAct loop is then CONSTRAINED to that subset (a smaller decision space ->
+      the weak local tiers decide + terminate better). If the router returns nothing usable it falls back to
+      the full set. The selection is surfaced as result.planned_tools.
 
   Guardrails: a hard max_steps budget; a -DryRun plan-preview (plans tools+args, invokes nothing);
   needs_frontier surfaced as a status field (never a frontier call / queue write). ORCHESTRATOR, NOT a
@@ -31,6 +35,7 @@
   pwsh -NoProfile -File .\Invoke-AgentLocal.ps1 -Goal "Create hello.txt containing 'hi from agent.local'" -WorkingDir C:\tmp\scratch
   pwsh -NoProfile -File .\Invoke-AgentLocal.ps1 -InputsJson '{"goal":"read notes.md and write its line count to stats.txt","working_dir":"C:\\tmp\\scratch","max_steps":4}'
   pwsh -NoProfile -File .\Invoke-AgentLocal.ps1 -Goal "list the .md files here and write them to index.txt" -WorkingDir C:\tmp\scratch -DryRun
+  pwsh -NoProfile -File .\Invoke-AgentLocal.ps1 -Goal "make an image of a dog" -Route -WorkingDir C:\tmp\scratch
 #>
 [CmdletBinding()]
 param(
@@ -48,6 +53,9 @@ param(
     [int]$MaxTokens = 512,
     [string]$ToolsPath,
     [string]$Tools,
+    [switch]$Route,
+    [string]$RouteToolsPath,
+    [string]$RouteTier = 'mid',
     [string]$EscalatorPath,
     [string]$GatewayPath,
     [string]$Registry,
@@ -231,6 +239,9 @@ try {
             if ((Has $p 'max_tokens')            -and -not $bound.ContainsKey('MaxTokens'))           { $MaxTokens = [int]$p.max_tokens }
             if ((Has $p 'tools_path')            -and -not $bound.ContainsKey('ToolsPath'))           { $ToolsPath = [string]$p.tools_path }
             if  (Has $p 'tools')                 { $toolsInline = $p.tools }
+            if ((Has $p 'route')                 -and -not $bound.ContainsKey('Route'))               { if ([bool]$p.route) { $Route = [switch]$true } }
+            if ((Has $p 'route_tools_path')      -and -not $bound.ContainsKey('RouteToolsPath'))      { $RouteToolsPath = [string]$p.route_tools_path }
+            if ((Has $p 'route_tier')            -and -not $bound.ContainsKey('RouteTier'))           { $RouteTier = [string]$p.route_tier }
             if ((Has $p 'escalator_path')        -and -not $bound.ContainsKey('EscalatorPath'))       { $EscalatorPath = [string]$p.escalator_path }
             if ((Has $p 'gateway_path')          -and -not $bound.ContainsKey('GatewayPath'))         { $GatewayPath = [string]$p.gateway_path }
             if ((Has $p 'registry')              -and -not $bound.ContainsKey('Registry'))            { $Registry = [string]$p.registry }
@@ -295,6 +306,56 @@ try {
     foreach ($m in $missing) { $warnings.Add("tool '$($m.tool)' entrypoint not resolved: $($m.entrypoint_raw)") }
     $usableTools = @($toolDefs | Where-Object { -not [string]::IsNullOrWhiteSpace($_.entrypoint) })
     if (@($usableTools).Count -lt 1) { throw [PSCustomObject]@{ code='no_usable_tools'; message='no tool in the registry resolved to an existing entrypoint'; retryable=$false } }
+
+    # ---- optional ROUTE pre-pass: pre-select the toolset via route.tools (#27), then CONSTRAIN the loop ----
+    $fullUsableTools = @($usableTools)
+    $plannedTools = $null
+    $routeInfo = [ordered]@{ enabled=[bool]$Route; entrypoint_found=$false; applied=$false; fell_back=$false;
+        planned_tools=$null; route_status=$null; route_confidence=$null;
+        full_tool_count=@($fullUsableTools).Count; constrained_tool_count=@($fullUsableTools).Count;
+        route_gateway_calls=0; route_tokens=0; route_runtime_ms=0 }
+    if ($Route) {
+        $routeEntry = Resolve-Child $RouteToolsPath '..\27-route-tools\Invoke-RouteTools.ps1'
+        if ([string]::IsNullOrWhiteSpace($routeEntry)) {
+            $warnings.Add('route.tools entrypoint not found; running with the full tool set')
+            $routeInfo.fell_back = $true
+        } else {
+            $routeInfo.entrypoint_found = $true
+            $catForRoute = @($fullUsableTools | ForEach-Object { [ordered]@{ tool=$_.tool; skill_id=$_.skill_id; description=$_.description } })
+            $routeIn = [ordered]@{ request=$Goal; tools=$catForRoute; tier=$RouteTier; temperature=$Temperature; seed=$Seed; review_queue_path=$childReviewPath; pwsh_path=$PwshPath }
+            if (-not [string]::IsNullOrWhiteSpace($Registry)) { $routeIn.registry = $Registry }
+            if ($LoadTimeoutSec -gt 0) { $routeIn.load_timeout_s = $LoadTimeoutSec }
+            $routeSub = Join-Path $invDir 'route'
+            $swR = [System.Diagnostics.Stopwatch]::StartNew()
+            $routeR = Invoke-Child $routeEntry ($routeIn | ConvertTo-Json -Compress -Depth 12) $routeSub
+            $swR.Stop()
+            $routeInfo.route_runtime_ms = [int]$swR.Elapsed.TotalMilliseconds
+            $routeEnv = $routeR.env
+            Add-Provenance $modelProvenance $routeEnv 'route'
+            if ((Test-ChildOk $routeEnv) -and (Has $routeEnv 'result') -and (Has $routeEnv.result 'tools')) {
+                $routeInfo.route_status = [string](Prop $routeEnv 'status' 'ok')
+                $routeInfo.route_confidence = (Prop $routeEnv 'confidence' $null)
+                if (Has $routeEnv.result 'cost') { $routeInfo.route_gateway_calls = [int](Prop $routeEnv.result.cost 'gateway_calls' 0); $routeInfo.route_tokens = [int](Prop $routeEnv.result.cost 'total_tokens' 0) }
+                $sel = @(@($routeEnv.result.tools) | ForEach-Object { [string]$_ })
+                $routeInfo.planned_tools = $sel; $plannedTools = $sel
+                if (@($sel).Count -gt 0) {
+                    $constrained = @($fullUsableTools | Where-Object { $sel -contains $_.tool })
+                    if (@($constrained).Count -gt 0) { $usableTools = $constrained; $routeInfo.applied = $true }
+                    else { $warnings.Add('route.tools returned only ids not in the registry; running with the full tool set'); $routeInfo.fell_back = $true }
+                } else {
+                    $routeInfo.fell_back = $true   # legitimate empty selection -> full set (a safe fallback)
+                }
+                Write-Diag "route -> [$(@($sel) -join ', ')] applied=$($routeInfo.applied) fell_back=$($routeInfo.fell_back)"
+            } else {
+                $ec = if ($null -ne $routeEnv) { Get-ChildErrCode $routeEnv } else { 'no_envelope' }
+                $warnings.Add("route.tools did not return a usable selection ($ec); running with the full tool set")
+                $routeInfo.fell_back = $true
+                Write-Diag "route failed: $ec -- $(Limit-Text $routeR.err 300)"
+            }
+        }
+        $routeInfo.constrained_tool_count = @($usableTools).Count
+    }
+    $plannedToolsOut = $plannedTools
 
     $toolNames = @($usableTools | ForEach-Object { $_.tool })
     $labels = @($toolNames + 'finish')
@@ -549,19 +610,32 @@ try {
 
     if (-not $finished -and $null -eq $stopReason) { $stopReason = 'max_steps' }
 
+    # ===== deterministic OUTCOME summary (grounding: the final answer must not over-claim) =====
+    $invokedSteps = @($steps.ToArray() | Where-Object { $null -ne $_.tool -and $_.tool.invoked -eq $true })
+    $succeededTools = @($invokedSteps | Where-Object { @('ok','partial') -contains [string]$_.tool.status } | ForEach-Object { [string]$_.tool.skill_id })
+    $failedTools = @($invokedSteps | Where-Object { -not (@('ok','partial') -contains [string]$_.tool.status) } | ForEach-Object { [string]$_.tool.skill_id })
+    $outcome = [ordered]@{ tools_invoked=@($invokedSteps).Count; tools_succeeded=@($succeededTools).Count; tools_failed=@($failedTools).Count; succeeded_tools=$succeededTools; failed_tools=$failedTools }
+    $outcomeLine = "Tools invoked: $($outcome.tools_invoked) (succeeded: $($outcome.tools_succeeded), failed: $($outcome.tools_failed))."
+    if (@($succeededTools).Count -gt 0) { $outcomeLine += ' Succeeded: ' + (@($succeededTools) -join ', ') + '.' }
+    if (@($failedTools).Count -gt 0)    { $outcomeLine += ' Failed: ' + (@($failedTools) -join ', ') + '.' }
+    if ([bool]$DryRun) { $outcomeLine = '[dry-run] no tool was actually invoked; this was a plan only.' }
+
     # ===== FINAL ANSWER via the gateway =====
     $finalAnswer = $null
     $transWindowF = Limit-Text (($transcript.ToArray()) -join "`n") $MaxTranscriptChars
-    $ansSystem = "You are a local task agent. Write a brief, plain final answer for the user. No preamble."
+    $ansSystem = "You are a local task agent. Write a brief, plain final answer for the user. No preamble. Base any claim of success ONLY on the ACTUAL TOOL OUTCOMES; never claim the goal was achieved if no tool succeeded, and if a tool failed or none ran, say so plainly."
     $ansPrompt = @(
         "GOAL: $Goal",
         "",
         "STEPS TAKEN:",
         $transWindowF,
         "",
-        $(if ($finished) { "The agent decided the goal is complete. Summarize what was accomplished in 1-3 sentences." }
-          elseif ($stopReason -eq 'max_steps') { "The step budget was reached before finishing. State what was done and what still remains, in 1-3 sentences." }
-          else { "The agent stopped early ($stopReason). State what was done and why it stopped, in 1-3 sentences." })
+        "ACTUAL TOOL OUTCOMES (ground your answer in these; do not over-claim):",
+        $outcomeLine,
+        "",
+        $(if ($finished) { "The agent decided the goal is complete. Summarize what was actually accomplished (per the outcomes above) in 1-3 sentences." }
+          elseif ($stopReason -eq 'max_steps') { "The step budget was reached before finishing. State what was actually done and what still remains, in 1-3 sentences." }
+          else { "The agent stopped early ($stopReason). State what was actually done and why it stopped, in 1-3 sentences." })
     ) -join "`n"
     $finSub = Join-Path $invDir 'final'
     $swS = [System.Diagnostics.Stopwatch]::StartNew()
@@ -595,10 +669,15 @@ try {
         step_count = $steps.Count
         max_steps = $MaxSteps
         dry_run = [bool]$DryRun
+        route_enabled = [bool]$Route
+        planned_tools = $plannedToolsOut
+        route = $routeInfo
+        outcome = $outcome
         tools_available = @($usableTools | ForEach-Object { [ordered]@{ tool=$_.tool; skill_id=$_.skill_id; side_effecting=$_.side_effecting } })
         steps = $steps.ToArray()
         cost = [ordered]@{ decision_calls=$costDecisionCalls; gen_calls=$costGenCalls; tool_calls=$costToolCalls;
-            total_gateway_calls=$costGatewayCalls; total_tokens=$costTokens; total_runtime_ms=$costRuntimeMs }
+            route_calls=$(if ($Route) { 1 } else { 0 });
+            total_gateway_calls=($costGatewayCalls + [int]$routeInfo.route_gateway_calls); total_tokens=($costTokens + [int]$routeInfo.route_tokens); total_runtime_ms=($costRuntimeMs + [int]$routeInfo.route_runtime_ms) }
         decision_tiers = $DecisionTiers
         gen_tier = $GenTier
         review = [ordered]@{ mode=$reviewMode; child_review_path=$childReviewPath; child_review_count=$childReviewCount; is_producer=$false }
@@ -625,7 +704,9 @@ try {
         $aj = [ordered]@{ schema='lifeorch.agent.run/0.1'; invocation_id=$InvocationId; generated_at_utc=$startedAt.ToString('o');
             goal=$result.goal; working_dir=$result.working_dir; status=$result.status; final_answer=$result.final_answer;
             needs_frontier=$result.needs_frontier; stop_reason=$result.stop_reason; step_count=$result.step_count;
-            max_steps=$result.max_steps; dry_run=$result.dry_run; tools_available=$result.tools_available;
+            max_steps=$result.max_steps; dry_run=$result.dry_run;
+            route_enabled=$result.route_enabled; planned_tools=$result.planned_tools; route=$result.route; outcome=$result.outcome;
+            tools_available=$result.tools_available;
             steps=$result.steps; cost=$result.cost; decision_tiers=$result.decision_tiers; gen_tier=$result.gen_tier;
             review=$result.review; model_provenance=$modelProvenance.ToArray() }
         $ajPath = Join-Path $invDir 'agent.json'
@@ -637,7 +718,12 @@ try {
         [void]$mb.AppendLine("**Goal:** $($result.goal)")
         if (-not [string]::IsNullOrWhiteSpace([string]$result.working_dir)) { [void]$mb.AppendLine("**Working dir:** $($result.working_dir)") }
         [void]$mb.AppendLine("**Status:** $($result.status)   **stop:** $($result.stop_reason)   **steps:** $($result.step_count)/$($result.max_steps)   **needs_frontier:** $($result.needs_frontier)   **dry_run:** $($result.dry_run)")
-        [void]$mb.AppendLine("**Tools:** " + (@($result.tools_available | ForEach-Object { $_.tool }) -join ', '))
+        if ($result.route_enabled) {
+            $pt = if ($null -ne $result.planned_tools) { (@($result.planned_tools) -join ', ') } else { '(none)' }
+            [void]$mb.AppendLine("**Routed (route.tools):** planned=[$pt]   applied=$($result.route.applied)   fell_back=$($result.route.fell_back)")
+        }
+        [void]$mb.AppendLine("**Tools available to the loop:** " + (@($result.tools_available | ForEach-Object { $_.tool }) -join ', '))
+        [void]$mb.AppendLine("**Outcome:** " + $outcomeLine)
         [void]$mb.AppendLine('')
         foreach ($st in @($result.steps)) {
             $d = $st.decision

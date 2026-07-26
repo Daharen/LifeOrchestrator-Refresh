@@ -148,6 +148,27 @@ if (-not [string]::IsNullOrWhiteSpace($WrapperPath) -and (Test-Path -LiteralPath
     Write-Output "S10 Module-1 wrapper: SKIPPED (no -WrapperPath)"
 }
 
+# --- S11: -Route constrains the loop to the routed subset ---
+$r = Run-Agent 'FINISH_AFTER_ONE: make a file' @('-Route','-RouteToolsPath',$MockPath)
+$e = $r.env; $res = if ($null -ne $e) { $e.result } else { $null }
+Write-Output "S11 route-constrain:"
+Ok ($null -ne $res -and $res.route_enabled -eq $true) 'S11 route_enabled true'
+Ok ($null -ne $res -and @($res.planned_tools).Count -eq 1 -and @($res.planned_tools)[0] -eq 'doc.io') 'S11 planned_tools = [doc.io]'
+Ok ($null -ne $res -and $res.route.applied -eq $true -and $res.route.fell_back -eq $false) 'S11 route applied (not fell back)'
+Ok ($null -ne $res -and @($res.tools_available).Count -eq 1) 'S11 loop constrained to 1 tool'
+Ok ($null -ne $res -and $res.status -eq 'completed') 'S11 still completes'
+Ok ($null -ne $res -and @($res.outcome.succeeded_tools) -contains 'doc.io') 'S11 outcome grounds doc.io success'
+Ok ($null -ne $e -and (@($e.model_provenance | Where-Object { $_.stage -eq 'route' }).Count -ge 1)) 'S11 route provenance stage present'
+
+# --- S12: -Route with an empty selection falls back to the full set ---
+$r = Run-Agent 'ROUTE_EMPTY FINISH_AFTER_ONE: make a file' @('-Route','-RouteToolsPath',$MockPath)
+$res = if ($null -ne $r.env) { $r.env.result } else { $null }
+Write-Output "S12 route-empty-fallback:"
+Ok ($null -ne $res -and @($res.planned_tools).Count -eq 0) 'S12 planned_tools empty'
+Ok ($null -ne $res -and $res.route.fell_back -eq $true -and $res.route.applied -eq $false) 'S12 fell back to full set'
+Ok ($null -ne $res -and @($res.tools_available).Count -eq 2) 'S12 full tool set restored'
+Ok ($null -ne $res -and $res.status -eq 'completed') 'S12 still completes on the full set'
+
 # cleanup
 try { Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue } catch { }
 

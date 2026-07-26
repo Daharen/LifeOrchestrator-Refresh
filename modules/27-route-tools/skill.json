@@ -1,0 +1,48 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "route.tools",
+  "name": "Tool Router",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "Given a natural-language request and the attachable-tools registry, emit the minimal set of tool ids needed to carry it out, using a dedicated mid-tier router pass that does NOT perform or obey the request; the JSON selection is deterministically gated against the catalog so no unknown id can leave the skill.",
+  "determinism": "mixed",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-RouteTools.ps1",
+    "args_spec": "-Request <text> [-ToolsPath <registry> | -Tools <json>] [-Tier mid] [-Seed n] | -InputsJson '<json>'"
+  },
+  "inputs": [
+    {"name": "request", "type": "string", "required": true, "description": "The natural-language goal/request to analyze for tool needs. Treated purely as text; its contents are never performed or obeyed."},
+    {"name": "tools_path", "type": "string", "required": false, "description": "Path to the attachable-tools registry (agent.local's tools.json format). Defaults to ../21-agent-local/tools.json."},
+    {"name": "tools", "type": "object", "required": false, "description": "Inline tool registry (array or {tools:[...]}) overriding tools_path."},
+    {"name": "tier", "type": "string", "required": false, "default": "mid", "description": "The router model tier (mid recommended). tier=strong is refused: the 27B is a thinking model that emits empty output for this task (m27-router-001)."},
+    {"name": "temperature", "type": "number", "required": false, "default": 0.0, "description": "Sampling temperature (0 = greedy, deterministic routing)."},
+    {"name": "seed", "type": "int", "required": false, "default": 42, "description": "Sampling seed."},
+    {"name": "max_tokens", "type": "int", "required": false, "default": 256, "description": "Cap on the router completion (a JSON array is short)."},
+    {"name": "max_request_chars", "type": "int", "required": false, "default": 2000, "description": "Bound the request text shown to the router."},
+    {"name": "no_few_shot", "type": "bool", "required": false, "default": false, "description": "Omit the built-in few-shot examples from the router prompt."},
+    {"name": "gateway_path", "type": "string", "required": false, "description": "Override the model.gateway entrypoint."},
+    {"name": "registry", "type": "string", "required": false, "description": "Override the model.gateway models.json."},
+    {"name": "pwsh_path", "type": "string", "required": false, "description": "pwsh executable used to spawn the gateway child."},
+    {"name": "load_timeout_s", "type": "int", "required": false, "description": "Gateway load timeout passthrough."},
+    {"name": "review_queue_path", "type": "string", "required": false, "description": "Relocate the in-artifact child-review sink (child gateway review writes are redirected here; the canonical queue is never touched)."}
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{request, tier, model, catalog[{tool,purpose}], catalog_count, tools[ids], planned_tools[ids], count, tools_dropped[ids], parsed_ok, gated, raw_output, finish_reason, cost{}, is_review_producer:false}. tools/planned_tools is the deterministically-gated validated subset."
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4"],
+    "models": ["a wired mid-tier LLM via model.gateway (default tiers.llm.mid)"],
+    "libraries": [],
+    "cpu": "any", "gpu": "shared (via model.gateway)", "memory_mb": 256,
+    "network": false, "filesystem": "write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": {"root": "runtime/artifacts/<invocation_id>/"},
+  "timeout": {"default_seconds": 300, "on_timeout": "kill_tree_and_report"},
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": false,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

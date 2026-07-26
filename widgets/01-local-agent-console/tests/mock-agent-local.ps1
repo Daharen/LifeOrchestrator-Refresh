@@ -22,12 +22,14 @@ $ErrorActionPreference = 'Continue'
 $goal = $Goal
 $dryRun = $false
 $maxSteps = 4
+$route = $false
 if ($InputsJson) {
     try {
         $o = $InputsJson | ConvertFrom-Json
         if ($o.PSObject.Properties['goal']) { $goal = [string]$o.goal }
         if ($o.PSObject.Properties['dry_run']) { $dryRun = [bool]$o.dry_run }
         if ($o.PSObject.Properties['max_steps']) { $maxSteps = [int]$o.max_steps }
+        if ($o.PSObject.Properties['route']) { $route = [bool]$o.route }
     } catch { }
 }
 if (-not $goal) { $goal = '(no goal)' }
@@ -89,6 +91,10 @@ $result = [ordered]@{
     step_count      = 1
     max_steps       = $maxSteps
     dry_run         = $dryRun
+    route_enabled   = $route
+    planned_tools   = $(if ($route) { @('doc.io') } else { $null })
+    route           = [ordered]@{ enabled = $route; entrypoint_found = $route; applied = $route; fell_back = $false; planned_tools = $(if ($route) { @('doc.io') } else { $null }); route_status = $(if ($route) { 'ok' } else { $null }); route_confidence = $(if ($route) { 0.7 } else { $null }); full_tool_count = 10; constrained_tool_count = $(if ($route) { 1 } else { 10 }); route_gateway_calls = $(if ($route) { 1 } else { 0 }); route_tokens = $(if ($route) { 41 } else { 0 }); route_runtime_ms = $(if ($route) { 420 } else { 0 }) }
+    outcome         = [ordered]@{ tools_invoked = $(if ($toolInvoked) { 1 } else { 0 }); tools_succeeded = $(if ($toolInvoked) { 1 } else { 0 }); tools_failed = 0; succeeded_tools = $(if ($toolInvoked) { @('doc.io') } else { @() }); failed_tools = @() }
     tools_available = @(
         [ordered]@{ tool = 'doc.io'; skill_id = 'doc.io'; side_effecting = $true },
         [ordered]@{ tool = 'fs.observer'; skill_id = 'fs.observer'; side_effecting = $false }

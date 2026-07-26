@@ -741,3 +741,7 @@ portable copies came from (the deleted `MIGRATION.md`'s content) are recorded in
 
 **Discipline:** never list a tool as `installed` you have not actually invoked on this machine. Prefer
 `planned` until verified, and record the `last successful test` date on every status change.
+
+### `route.tools` -- Tool Router (Module 27)
+- **Added 2026-07-26 (D-0040).** A skill (not a model): given a request + the attachable-tools registry (agent.local's `tools.json`), it calls `model.gateway` at the MID tier with the validated router prompt (m27-router-001) and DETERMINISTICALLY GATES the emitted JSON array against the catalog -> the minimal validated tool-id subset. Fast, non-executing, injection-resistant; `tier=strong` is REFUSED (the 27B thinking tier emits empty output). Orchestrator/non-producer. **No new model / no `models.json` change.** Composes #7. Entrypoint `modules/27-route-tools/Invoke-RouteTools.ps1`. Tests: 34/34 off-machine + `m28-verify-001`/`m28-harness-001`/`m28-live-001` live. See D-0040.
+- **Also 2026-07-26 (D-0041):** `agent.local` (#21) gained `-Route` + a curated 10-tool `tools.json` (doc.io/fs.observer/capture.screen/ocr.layout/detect.objects/image.interpret/speech.stt/audio.ingest/gen.image/gen.music); the Local Agent Console gained Plan/Run. `fs.manage` (copy/move/mkdir) deferred as the next gap. See D-0041.

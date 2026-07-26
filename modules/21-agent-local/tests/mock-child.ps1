@@ -50,7 +50,22 @@ function Emit-Error($code) {
     exit 0
 }
 
-if ($leaf -like 'decision-*') {
+if ($leaf -eq 'route') {
+    # ---- mock route.tools: pre-select a toolset from the request markers ----
+    $req = if (Has $p 'request') { [string]$p.request } else { '' }
+    if ($req -match 'ROUTE_EMPTY') { $sel = @() }
+    elseif ($req -match 'TWO_TOOLS') { $sel = @('fs.observer','doc.io') }
+    else { $sel = @('doc.io') }
+    $result = [ordered]@{
+        request=$req; tier='mid'; model='llm.mock.mid'; catalog=@(); catalog_count=0
+        tools=$sel; planned_tools=$sel; count=@($sel).Count; tools_dropped=@(); parsed_ok=$true; gated=$true
+        raw_output=('[' + ((@($sel) | ForEach-Object { '"' + $_ + '"' }) -join ',') + ']'); finish_reason='stop'
+        cost=[ordered]@{ gateway_calls=1; total_tokens=15; runtime_ms=2 }; is_review_producer=$false
+    }
+    $prov = @([ordered]@{ model_id='llm.mock.mid'; engine='llama-server'; calls=1; prompt_tokens_total=30; completion_tokens_total=4; total_tokens_total=34; runtime_ms_total=2 })
+    Emit $result 0.7 $prov
+}
+elseif ($leaf -like 'decision-*') {
     # ---- mock escalator: choose an action from the decision text markers ----
     $text = ''
     if ((Has $p 'tasks') -and @($p.tasks).Count -gt 0) { $t0 = @($p.tasks)[0]; if (Has $t0 'text') { $text = [string]$t0.text } }

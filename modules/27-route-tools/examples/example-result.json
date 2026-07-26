@@ -1,0 +1,101 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "route.tools",
+  "skill_version": "0.1.0",
+  "contract_version": "0.2",
+  "invocation_id": "27259f60-93bc-492d-9034-93854ad5d414",
+  "status": "ok",
+  "started_at_utc": "2026-07-26T05:27:33.0444897Z",
+  "finished_at_utc": "2026-07-26T05:27:33.8126275Z",
+  "duration_ms": 764,
+  "inputs_digest": "sha256:3727fbbe038584a023b074a8b08a9988ae9ec6a8510d6a344088ca8ec08e406b",
+  "result": {
+    "request": "make an image of a dog",
+    "tier": "mid",
+    "model": "llm.mid.qwen2p5-3b",
+    "tools_source": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\21-agent-local\\tools.json",
+    "catalog": [
+      {
+        "tool": "doc.io",
+        "purpose": "Read, write, edit, or append a UTF-8 text file."
+      },
+      {
+        "tool": "fs.observer",
+        "purpose": "List and search a directory tree, read-only."
+      },
+      {
+        "tool": "gen.image",
+        "purpose": "Generate an image from a text prompt (local Stable Diffusion)."
+      },
+      {
+        "tool": "gen.music",
+        "purpose": "Compose a short instrumental music clip from a text prompt."
+      }
+    ],
+    "catalog_count": 4,
+    "tools": [
+      "gen.image"
+    ],
+    "planned_tools": [
+      "gen.image"
+    ],
+    "count": 1,
+    "tools_dropped": [],
+    "parsed_ok": true,
+    "gated": true,
+    "raw_output": "[\"gen.image\"]",
+    "finish_reason": "stop",
+    "cost": {
+      "gateway_calls": 1,
+      "total_tokens": 41,
+      "runtime_ms": 429
+    },
+    "review": {
+      "mode": "redirected_in_artifact",
+      "child_review_path": "/tmp/tmp.DedN11jnDT/art/27259f60-93bc-492d-9034-93854ad5d414/child_review.jsonl",
+      "is_producer": false
+    },
+    "is_review_producer": false,
+    "child_reviews_redirected_to": "/tmp/tmp.DedN11jnDT/art/27259f60-93bc-492d-9034-93854ad5d414/child_review.jsonl"
+  },
+  "confidence": 0.7,
+  "artifacts": [
+    {
+      "path": "/tmp/tmp.DedN11jnDT/art/27259f60-93bc-492d-9034-93854ad5d414/route.json",
+      "kind": "json",
+      "bytes": 1324,
+      "sha256": "5f6df822e28cb8fbc6b84e7894adb571e84b379be085c0686bca830645570097"
+    },
+    {
+      "path": "/tmp/tmp.DedN11jnDT/art/27259f60-93bc-492d-9034-93854ad5d414/route.md",
+      "kind": "markdown",
+      "bytes": 451,
+      "sha256": "56bc286262342ebb2edce0592ff322b739397109bb00bbc96c35281e48e67eb1"
+    }
+  ],
+  "model_provenance": [
+    {
+      "stage": "route",
+      "model_id": "llm.mid.qwen2p5-3b",
+      "version": "qwen2.5-3b-instruct-q4_k_m",
+      "family": "mock",
+      "engine": "llama-server",
+      "engine_build": "b8661",
+      "device": "cuda:0",
+      "params": {},
+      "prompt_tokens": 40,
+      "completion_tokens": 1,
+      "total_tokens": 41,
+      "finish_reason": "stop",
+      "timings": null,
+      "runtime_ms": 4
+    }
+  ],
+  "diagnostics": {
+    "log": "stderr.txt",
+    "artifact_dir": "/tmp/tmp.DedN11jnDT/art/27259f60-93bc-492d-9034-93854ad5d414",
+    "child_reviews_redirected_to": "/tmp/tmp.DedN11jnDT/art/27259f60-93bc-492d-9034-93854ad5d414/child_review.jsonl"
+  },
+  "warnings": [],
+  "error": null
+}

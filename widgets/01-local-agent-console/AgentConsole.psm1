@@ -92,6 +92,7 @@ function Resolve-AgentConsolePaths {
     [CmdletBinding()]
     param(
         [string]$AgentLocalPath,
+        [string]$RouteToolsPath,
         [string]$PwshPath,
         [string]$WidgetRoot
     )
@@ -105,6 +106,9 @@ function Resolve-AgentConsolePaths {
     if (-not $AgentLocalPath) {
         $AgentLocalPath = Join-Path $repoRoot (Join-Path 'modules' (Join-Path '21-agent-local' 'Invoke-AgentLocal.ps1'))
     }
+    if (-not $RouteToolsPath) {
+        $RouteToolsPath = Join-Path $repoRoot (Join-Path 'modules' (Join-Path '27-route-tools' 'Invoke-RouteTools.ps1'))
+    }
     if (-not $PwshPath) {
         # Self-referential pwsh path via $PSHOME dodges the dotnet-tool 'dotnet.exe' locator gotcha.
         $cand = Join-Path $PSHOME 'pwsh.exe'
@@ -115,6 +119,7 @@ function Resolve-AgentConsolePaths {
         WidgetRoot     = $WidgetRoot
         RepoRoot       = $repoRoot
         AgentLocalPath = $AgentLocalPath
+        RouteToolsPath = $RouteToolsPath
         PwshPath       = $PwshPath
     }
 }
@@ -128,6 +133,7 @@ function Start-AgentLocalProcess {
         [string]$WorkingDir,
         [int]$MaxSteps = 4,
         [switch]$DryRun,
+        [switch]$Route,
         [string[]]$DecisionTiers,
         [string]$GenTier,
         [string]$AgentLocalPath,
@@ -155,6 +161,7 @@ function Start-AgentLocalProcess {
     New-Item -ItemType Directory -Path $ArtifactRoot -Force -ErrorAction SilentlyContinue | Out-Null
 
     $inputs = [ordered]@{ goal = $Goal; max_steps = $MaxSteps; dry_run = [bool]$DryRun }
+    if ($Route) { $inputs['route'] = $true }
     if ($WorkingDir) { $inputs['working_dir'] = $WorkingDir }
     if ($DecisionTiers -and $DecisionTiers.Count -gt 0) { $inputs['decision_tiers'] = @($DecisionTiers) }
     if ($GenTier) { $inputs['gen_tier'] = $GenTier }
@@ -282,6 +289,7 @@ function Invoke-AgentLocalRun {
         [string]$WorkingDir,
         [int]$MaxSteps = 4,
         [switch]$DryRun,
+        [switch]$Route,
         [string[]]$DecisionTiers,
         [string]$GenTier,
         [string]$AgentLocalPath,
@@ -289,11 +297,161 @@ function Invoke-AgentLocalRun {
         [string]$ArtifactRoot,
         [string]$WidgetRoot
     )
-    $h = Start-AgentLocalProcess -Goal $Goal -WorkingDir $WorkingDir -MaxSteps $MaxSteps -DryRun:$DryRun `
+    $h = Start-AgentLocalProcess -Goal $Goal -WorkingDir $WorkingDir -MaxSteps $MaxSteps -DryRun:$DryRun -Route:$Route `
         -DecisionTiers $DecisionTiers -GenTier $GenTier -AgentLocalPath $AgentLocalPath -PwshPath $PwshPath `
         -ArtifactRoot $ArtifactRoot -WidgetRoot $WidgetRoot
     try { $h.Process.WaitForExit() } catch { }
     return Complete-AgentLocalRun -Handle $h
+}
+
+# ---------- route.tools (Plan path): spawn / complete / run ----------
+
+function Start-RouteToolsProcess {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Goal,
+        [string]$RouteTier = 'mid',
+        [string]$RouteToolsPath,
+        [string]$PwshPath,
+        [string]$ArtifactRoot,
+        [string]$InvocationId,
+        [hashtable]$Sync,
+        [string]$WidgetRoot
+    )
+    $paths = Resolve-AgentConsolePaths -RouteToolsPath $RouteToolsPath -PwshPath $PwshPath -WidgetRoot $WidgetRoot
+    $routePath = $paths.RouteToolsPath
+    if (-not [System.IO.Path]::IsPathRooted($routePath)) {
+        $rp = Resolve-Path -LiteralPath $routePath -ErrorAction SilentlyContinue
+        if ($rp) { $routePath = $rp.Path }
+    }
+    if (-not (Test-Path -LiteralPath $routePath)) { throw "route.tools entrypoint not found: $routePath" }
+    if (-not $InvocationId) { $InvocationId = [guid]::NewGuid().ToString() }
+    if (-not $ArtifactRoot) {
+        $ArtifactRoot = Join-Path (Join-Path $paths.WidgetRoot (Join-Path 'runtime' 'artifacts')) $InvocationId
+    }
+    New-Item -ItemType Directory -Path $ArtifactRoot -Force -ErrorAction SilentlyContinue | Out-Null
+
+    $inputs = [ordered]@{ request = $Goal; tier = $RouteTier }
+    $inputsJson = ($inputs | ConvertTo-Json -Compress -Depth 6)
+
+    $psi = [System.Diagnostics.ProcessStartInfo]::new()
+    $psi.FileName = $paths.PwshPath
+    foreach ($a in @('-NoProfile', '-NonInteractive', '-File', $routePath, '-InputsJson', $inputsJson, '-ArtifactRoot', $ArtifactRoot)) {
+        [void]$psi.ArgumentList.Add($a)
+    }
+    $psi.UseShellExecute = $false
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    $psi.CreateNoWindow = $true
+    if (Test-Path -LiteralPath $paths.RepoRoot) { $psi.WorkingDirectory = $paths.RepoRoot }
+
+    $proc = [System.Diagnostics.Process]::new()
+    $proc.StartInfo = $psi
+    [void]$proc.Start()
+    $outTask = $proc.StandardOutput.ReadToEndAsync()
+    $errTask = $proc.StandardError.ReadToEndAsync()
+
+    $startedUtc = [datetime]::UtcNow
+    if ($Sync) { $Sync['child_pid'] = $proc.Id; $Sync['started_utc'] = $startedUtc }
+    return [pscustomobject]@{
+        Process      = $proc
+        StdoutTask   = $outTask
+        StderrTask   = $errTask
+        ArtifactRoot = $ArtifactRoot
+        InvocationId = $InvocationId
+        InputsJson   = $inputsJson
+        Paths        = $paths
+        StartedUtc   = $startedUtc
+        Goal         = $Goal
+        Kind         = 'route'
+    }
+}
+
+function Complete-RouteToolsRun {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Handle)
+    $proc = $Handle.Process
+    try { $proc.WaitForExit() } catch { }
+    $stdout = ''; $stderr = ''
+    try { $stdout = $Handle.StdoutTask.GetAwaiter().GetResult() } catch { }
+    try { $stderr = $Handle.StderrTask.GetAwaiter().GetResult() } catch { }
+    if ($null -eq $stdout) { $stdout = '' }
+    if ($null -eq $stderr) { $stderr = '' }
+    $exit = $null; try { $exit = $proc.ExitCode } catch { }
+    $parseError = $null
+    $envelope = ConvertFrom-EnvelopeJson -Text $stdout -ErrorRef ([ref]$parseError)
+    $result = if ($envelope) { Get-Prop $envelope 'result' } else { $null }
+    $status = if ($envelope) { [string](Get-Prop $envelope 'status' 'unknown') } else { 'error' }
+    $stderrTail = if ($stderr.Length -gt 1200) { $stderr.Substring($stderr.Length - 1200) } else { $stderr }
+    $ok = ($exit -eq 0 -and $null -ne $envelope -and ($status -eq 'ok' -or $status -eq 'partial'))
+    $error = $null
+    if (-not $ok) {
+        if ($envelope -and (Get-Prop $envelope 'error')) {
+            $e = Get-Prop $envelope 'error'
+            $error = [pscustomobject]@{ code = [string](Get-Prop $e 'code' 'error'); message = [string](Get-Prop $e 'message' '') }
+        }
+        elseif ($null -eq $envelope) { $error = [pscustomobject]@{ code = 'no_envelope'; message = ("route.tools produced no valid result envelope (exit=$exit). " + [string]$parseError) } }
+        else { $error = [pscustomobject]@{ code = 'not_ok'; message = "route.tools returned status '$status' (exit=$exit)." } }
+    }
+    $elapsedMs = [int]([datetime]::UtcNow - $Handle.StartedUtc).TotalMilliseconds
+    return [pscustomobject]@{
+        ok = $ok; status = $status; envelope = $envelope; result = $result; exit_code = $exit
+        stderr_tail = $stderrTail; raw_stdout = $stdout; parse_error = $parseError; error = $error
+        elapsed_ms = $elapsedMs; goal = $Handle.Goal; artifact_root = $Handle.ArtifactRoot; kind = 'route'
+    }
+}
+
+function Invoke-RouteToolsRun {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Goal,
+        [string]$RouteTier = 'mid',
+        [string]$RouteToolsPath,
+        [string]$PwshPath,
+        [string]$ArtifactRoot,
+        [string]$WidgetRoot
+    )
+    $h = Start-RouteToolsProcess -Goal $Goal -RouteTier $RouteTier -RouteToolsPath $RouteToolsPath -PwshPath $PwshPath -ArtifactRoot $ArtifactRoot -WidgetRoot $WidgetRoot
+    try { $h.Process.WaitForExit() } catch { }
+    return Complete-RouteToolsRun -Handle $h
+}
+
+function Format-RoutePlan {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Run)
+    $sb = [System.Text.StringBuilder]::new()
+    function _addp([string]$line = '') { [void]$sb.AppendLine($line) }
+
+    if ($null -eq (Get-Prop $Run 'envelope')) {
+        _addp 'No valid selection envelope was returned by route.tools.'
+        _addp ''
+        _addp ("exit code : " + [string](Get-Prop $Run 'exit_code'))
+        _addp ("parse note: " + [string](Get-Prop $Run 'parse_error'))
+        $tail = [string](Get-Prop $Run 'stderr_tail')
+        if ($tail) { _addp ''; _addp 'stderr (tail):'; _addp (Limit-Text $tail 1000) }
+        return $sb.ToString()
+    }
+    $envObj = $Run.envelope
+    $res = Get-Prop $Run 'result'
+    _addp ('PLAN for goal: ' + [string](Get-Prop $res 'request' (Get-Prop $Run 'goal')))
+    _addp ('ROUTER: ' + [string](Get-Prop $res 'tier' 'mid') + ' (' + [string](Get-Prop $res 'model' 'n/a') + ')' +
+           '   confidence: ' + $(if ($null -eq (Get-Prop $envObj 'confidence')) { 'n/a' } else { [string](Get-Prop $envObj 'confidence') }) +
+           '   ' + [string](Get-Prop $Run 'elapsed_ms') + ' ms')
+    _addp ''
+    $tools = @(Get-Prop $res 'tools')
+    _addp ('SELECTED TOOLS (' + $tools.Count + '):')
+    if ($tools.Count -eq 0) { _addp '  (none -- no catalog tool fits this request)' }
+    else { foreach ($t in $tools) { _addp ('  - ' + [string]$t) } }
+    $dropped = @(Get-Prop $res 'tools_dropped')
+    if ($dropped.Count -gt 0) { _addp ''; _addp ('GATED OUT (unknown ids): ' + ($dropped -join ', ')) }
+    _addp ''
+    _addp '--- CATALOG considered ---'
+    foreach ($c in @(Get-Prop $res 'catalog')) { _addp ('  ' + [string](Get-Prop $c 'tool') + ': ' + (Limit-Text ([string](Get-Prop $c 'purpose')) 120)) }
+    _addp ''
+    _addp 'Press Run to plan AND execute (the agent routes, then runs constrained to these tools).'
+    $topErr = Get-Prop $envObj 'error'
+    if ($topErr) { _addp ''; _addp ('ERROR: ' + [string](Get-Prop $topErr 'code' 'error') + ': ' + [string](Get-Prop $topErr 'message' '')) }
+    return $sb.ToString()
 }
 
 # ---------- render ----------
@@ -332,6 +490,20 @@ function Format-AgentTranscript {
     $conf = Get-Prop $envObj 'confidence'
     _add ('CONFIDENCE: ' + $(if ($null -eq $conf) { 'n/a' } else { [string]$conf }) +
           '   DURATION: ' + [string](Get-Prop $envObj 'duration_ms' (Get-Prop $Run 'elapsed_ms')) + ' ms')
+    if (Get-Prop $res 'route_enabled' $false) {
+        $planned = @(Get-Prop $res 'planned_tools')
+        $rt = Get-Prop $res 'route'
+        _add ('ROUTED (route.tools): planned=[' + ($planned -join ', ') + ']' +
+              '   applied=' + [string](Get-Prop $rt 'applied' $false) +
+              '   fell_back=' + [string](Get-Prop $rt 'fell_back' $false))
+    }
+    $oc = Get-Prop $res 'outcome'
+    if ($oc) {
+        $succ = @(Get-Prop $oc 'succeeded_tools'); $fail = @(Get-Prop $oc 'failed_tools')
+        _add ('TOOLS RAN: ' + [string](Get-Prop $oc 'tools_invoked' 0) +
+              '  (ok: ' + $(if ($succ.Count) { $succ -join ', ' } else { 'none' }) +
+              '; failed: ' + $(if ($fail.Count) { $fail -join ', ' } else { 'none' }) + ')')
+    }
     _add ''
 
     $finalAnswer = Get-Prop $res 'final_answer'
@@ -402,4 +574,5 @@ function Format-AgentTranscript {
 Export-ModuleMember -Function `
     Resolve-AgentConsolePaths, Start-AgentLocalProcess, Stop-AgentLocalProcess, `
     Complete-AgentLocalRun, Invoke-AgentLocalRun, Format-AgentTranscript, `
+    Start-RouteToolsProcess, Complete-RouteToolsRun, Invoke-RouteToolsRun, Format-RoutePlan, `
     ConvertFrom-EnvelopeJson, Get-Prop, Test-HasProp

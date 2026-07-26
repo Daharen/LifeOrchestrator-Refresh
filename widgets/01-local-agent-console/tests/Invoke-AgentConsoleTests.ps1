@@ -14,7 +14,8 @@
 param(
     [switch]$Live,
     [string]$PwshPath,
-    [string]$AgentLocalPath
+    [string]$AgentLocalPath,
+    [string]$RouteToolsPath
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -28,6 +29,7 @@ if (-not $PwshPath) {
     if (-not (Test-Path $PwshPath)) { $PwshPath = Join-Path $PSHOME 'pwsh' }
 }
 $mockPath = Join-Path $here 'mock-agent-local.ps1'
+$mockRoutePath = Join-Path $here 'mock-route-tools.ps1'
 
 $script:pass = 0; $script:fail = 0; $script:skip = 0
 function Ok([string]$name, $cond, [string]$detail = '') {
@@ -39,7 +41,7 @@ function Skip([string]$name, [string]$why) { $script:skip++; Write-Host "  [SKIP
 Write-Host "=== Local Agent Console tests (Live=$Live, IsWindows=$IsWindows) ==="
 
 # 1. exported functions exist
-foreach ($fn in 'Resolve-AgentConsolePaths', 'Start-AgentLocalProcess', 'Complete-AgentLocalRun', 'Invoke-AgentLocalRun', 'Format-AgentTranscript', 'ConvertFrom-EnvelopeJson', 'Stop-AgentLocalProcess') {
+foreach ($fn in 'Resolve-AgentConsolePaths', 'Start-AgentLocalProcess', 'Complete-AgentLocalRun', 'Invoke-AgentLocalRun', 'Format-AgentTranscript', 'ConvertFrom-EnvelopeJson', 'Stop-AgentLocalProcess', 'Start-RouteToolsProcess', 'Complete-RouteToolsRun', 'Invoke-RouteToolsRun', 'Format-RoutePlan') {
     Ok "function exists: $fn" ([bool](Get-Command $fn -ErrorAction SilentlyContinue))
 }
 
@@ -48,6 +50,7 @@ $toParse = @(
     (Join-Path $widgetRoot 'AgentConsole.psm1'),
     (Join-Path $widgetRoot 'Show-AgentConsole.ps1'),
     $mockPath,
+    $mockRoutePath,
     (Join-Path $here 'Invoke-AgentConsoleTests.ps1')
 )
 foreach ($f in $toParse) {
@@ -59,6 +62,7 @@ foreach ($f in $toParse) {
 # 3. path resolution
 $paths = Resolve-AgentConsolePaths
 Ok "resolve: agent.local path" ($paths.AgentLocalPath -like '*21-agent-local*Invoke-AgentLocal.ps1')
+Ok "resolve: route.tools path" ($paths.RouteToolsPath -like '*27-route-tools*Invoke-RouteTools.ps1')
 Ok "resolve: repo root exists" (Test-Path $paths.RepoRoot)
 
 # 4. completed run via the mock
@@ -114,6 +118,27 @@ Ok "transcript robust on sparse envelope" ((-not $threw) -and $ts.Length -gt 0)
 $e2 = ConvertFrom-EnvelopeJson -Text ("banner line`n{`"a`":1,`"b`":{`"c`":2}}`ntrailing junk")
 Ok "envelope-json extracts from noise" ($null -ne $e2 -and $e2.a -eq 1 -and $e2.b.c -eq 2)
 
+# 12b. Plan path (route.tools) via the mock
+$plan = Invoke-RouteToolsRun -Goal 'make an image of a dog' -RouteToolsPath $mockRoutePath -PwshPath $PwshPath
+Ok "plan: ok" ($plan.ok) ("status=$($plan.status) exit=$($plan.exit_code) parse=$($plan.parse_error)")
+Ok "plan: skill_id route.tools" ((Get-Prop $plan.envelope 'skill_id') -eq 'route.tools')
+$ptools = @(Get-Prop $plan.result 'tools')
+Ok "plan: selected gen.image" ($ptools.Count -eq 1 -and $ptools[0] -eq 'gen.image')
+$pf = Format-RoutePlan -Run $plan
+foreach ($needle in 'PLAN for goal', 'SELECTED TOOLS', 'gen.image', 'CATALOG') {
+    Ok "plan transcript contains '$needle'" ($pf -match [regex]::Escape($needle))
+}
+$planNone = Invoke-RouteToolsRun -Goal 'NONE tell me a joke' -RouteToolsPath $mockRoutePath -PwshPath $PwshPath
+Ok "plan: empty selection renders" ((Format-RoutePlan -Run $planNone) -match 'none')
+
+# 12c. Run with -Route: transcript surfaces planned_tools + what ran
+$routed = Invoke-AgentLocalRun -Goal 'make a file' -AgentLocalPath $mockPath -PwshPath $PwshPath -Route -DryRun:$false
+Ok "routed run: route_enabled" ((Get-Prop $routed.result 'route_enabled') -eq $true)
+Ok "routed run: planned_tools present" (@(Get-Prop $routed.result 'planned_tools') -contains 'doc.io')
+$rtt = Format-AgentTranscript -Run $routed
+Ok "routed transcript shows ROUTED" ($rtt -match 'ROUTED')
+Ok "routed transcript shows TOOLS RAN" ($rtt -match 'TOOLS RAN')
+
 # 13. launch.bat shape
 $launch = Join-Path $widgetRoot 'launch.bat'
 $lc = if (Test-Path $launch) { Get-Content $launch -Raw } else { '' }
@@ -125,6 +150,11 @@ Ok "launch.bat runs Show-AgentConsole.ps1" ($lc -match 'Show-AgentConsole\.ps1')
 if ($Live -and $IsWindows) {
     $sta = & $PwshPath -NoProfile -STA -File (Join-Path $widgetRoot 'Show-AgentConsole.ps1') -SelfTest 2>&1
     Ok "WinForms form builds (SelfTest)" (($sta -join "`n") -match 'SELFTEST_FORM_OK') (($sta -join ' | '))
+
+    $realRoute = if ($RouteToolsPath) { $RouteToolsPath } else { $paths.RouteToolsPath }
+    $rplan = Invoke-RouteToolsRun -Goal 'make an image of a dog' -RouteToolsPath $realRoute -PwshPath $PwshPath
+    Ok "real route.tools: envelope skill_id" ((Get-Prop $rplan.envelope 'skill_id') -eq 'route.tools') ("status=$($rplan.status) exit=$($rplan.exit_code)")
+    Ok "real route.tools: renders a plan" ((Format-RoutePlan -Run $rplan).Length -gt 0)
 
     $realAgent = if ($AgentLocalPath) { $AgentLocalPath } else { $paths.AgentLocalPath }
     $before = @(Get-Process -Name 'llama-server' -ErrorAction SilentlyContinue).Count

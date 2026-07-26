@@ -14,6 +14,7 @@
 param(
     [switch]$SelfTest,
     [string]$AgentLocalPath,
+    [string]$RouteToolsPath,
     [string]$PwshPath
 )
 $ErrorActionPreference = 'Stop'
@@ -27,7 +28,9 @@ $script:ConsoleState = @{
     handle         = $null
     sync           = $null
     startedUtc     = $null
+    mode           = 'run'
     agentLocalPath = $AgentLocalPath
+    routeToolsPath = $RouteToolsPath
     pwshPath       = $PwshPath
 }
 
@@ -80,8 +83,8 @@ function New-AgentConsoleForm {
     $stepsBox.Location = [System.Drawing.Point]::new(612, 97)
     $stepsBox.Size = [System.Drawing.Size]::new(52, 22)
     $stepsBox.Minimum = 1
-    $stepsBox.Maximum = 12
-    $stepsBox.Value = 4
+    $stepsBox.Maximum = 20
+    $stepsBox.Value = 10
     $stepsBox.Anchor = 'Top,Right'
 
     $dryRunBox = [System.Windows.Forms.CheckBox]::new()
@@ -91,18 +94,29 @@ function New-AgentConsoleForm {
     $dryRunBox.Checked = $true
     $dryRunBox.Anchor = 'Top,Right'
 
+    $planBtn = [System.Windows.Forms.Button]::new()
+    $planBtn.Text = 'Plan'
+    $planBtn.Location = [System.Drawing.Point]::new(12, 124)
+    $planBtn.Size = [System.Drawing.Size]::new(90, 26)
+
     $runBtn = [System.Windows.Forms.Button]::new()
     $runBtn.Text = 'Run'
-    $runBtn.Location = [System.Drawing.Point]::new(12, 124)
+    $runBtn.Location = [System.Drawing.Point]::new(108, 124)
     $runBtn.Size = [System.Drawing.Size]::new(90, 26)
 
     $cancelBtn = [System.Windows.Forms.Button]::new()
     $cancelBtn.Text = 'Cancel'
-    $cancelBtn.Location = [System.Drawing.Point]::new(110, 124)
+    $cancelBtn.Location = [System.Drawing.Point]::new(204, 124)
     $cancelBtn.Size = [System.Drawing.Size]::new(90, 26)
     $cancelBtn.Enabled = $false
 
-    $top.Controls.AddRange(@($lblGoal, $goalBox, $lblWd, $wdBox, $lblSteps, $stepsBox, $dryRunBox, $runBtn, $cancelBtn))
+    $lblHint = [System.Windows.Forms.Label]::new()
+    $lblHint.Text = 'Plan = route.tools only (which tools this goal needs).  Run = route + execute.'
+    $lblHint.Location = [System.Drawing.Point]::new(304, 130)
+    $lblHint.AutoSize = $true
+    $lblHint.ForeColor = [System.Drawing.Color]::DimGray
+
+    $top.Controls.AddRange(@($lblGoal, $goalBox, $lblWd, $wdBox, $lblSteps, $stepsBox, $dryRunBox, $planBtn, $runBtn, $cancelBtn, $lblHint))
 
     # ----- center: split transcript / raw -----
     $split = [System.Windows.Forms.SplitContainer]::new()
@@ -158,6 +172,7 @@ function New-AgentConsoleForm {
     $script:ConsoleState.wdBox         = $wdBox
     $script:ConsoleState.stepsBox      = $stepsBox
     $script:ConsoleState.dryRunBox     = $dryRunBox
+    $script:ConsoleState.planBtn       = $planBtn
     $script:ConsoleState.runBtn        = $runBtn
     $script:ConsoleState.cancelBtn     = $cancelBtn
     $script:ConsoleState.transcriptBox = $transcriptBox
@@ -167,6 +182,7 @@ function New-AgentConsoleForm {
     $script:ConsoleState.costLabel     = $costLabel
     $script:ConsoleState.timer         = $timer
 
+    $planBtn.Add_Click({ Start-ConsolePlan })
     $runBtn.Add_Click({ Start-ConsoleRun })
     $cancelBtn.Add_Click({ Stop-ConsoleRun })
     $timer.Add_Tick({ Update-ConsoleRun })
@@ -184,6 +200,40 @@ function Set-ConsoleText {
     $Box.Text = $norm
 }
 
+function Start-ConsolePlan {
+    $st = $script:ConsoleState
+    $goal = $st.goalBox.Text.Trim()
+    if ([string]::IsNullOrWhiteSpace($goal)) {
+        [void][System.Windows.Forms.MessageBox]::Show('Please enter a goal first.', 'Local Agent Console')
+        return
+    }
+    Set-ConsoleText $st.transcriptBox "Planning (route.tools) ...`r`n(selecting the tools this goal needs - loading the router model can take a moment)"
+    $st.rawBox.Text = ''
+    $st.mode = 'plan'
+    $st.planBtn.Enabled = $false
+    $st.runBtn.Enabled = $false
+    $st.cancelBtn.Enabled = $true
+    $st.stateLabel.Text = 'State: Planning'
+    $st.costLabel.Text = 'Cost: -'
+    $st.startedUtc = [datetime]::UtcNow
+    $sync = [hashtable]::Synchronized(@{})
+    $st.sync = $sync
+    try {
+        $h = Start-RouteToolsProcess -Goal $goal -Sync $sync `
+            -RouteToolsPath $st.routeToolsPath `
+            -PwshPath $st.pwshPath
+        $st.handle = $h
+        $st.timer.Start()
+    }
+    catch {
+        $st.stateLabel.Text = 'State: Error'
+        Set-ConsoleText $st.transcriptBox ("Failed to start route.tools:`r`n" + $_.Exception.Message)
+        $st.planBtn.Enabled = $true
+        $st.runBtn.Enabled = $true
+        $st.cancelBtn.Enabled = $false
+    }
+}
+
 function Start-ConsoleRun {
     $st = $script:ConsoleState
     $goal = $st.goalBox.Text.Trim()
@@ -191,8 +241,10 @@ function Start-ConsoleRun {
         [void][System.Windows.Forms.MessageBox]::Show('Please enter a goal first.', 'Local Agent Console')
         return
     }
-    Set-ConsoleText $st.transcriptBox "Running agent.local ...`r`n(goal submitted - loading the local models can take a minute or two)"
+    Set-ConsoleText $st.transcriptBox "Running agent.local (route + execute) ...`r`n(goal submitted - loading the local models can take a minute or two)"
     $st.rawBox.Text = ''
+    $st.mode = 'run'
+    $st.planBtn.Enabled = $false
     $st.runBtn.Enabled = $false
     $st.cancelBtn.Enabled = $true
     $st.stateLabel.Text = 'State: Running'
@@ -205,6 +257,7 @@ function Start-ConsoleRun {
             -WorkingDir ($st.wdBox.Text.Trim()) `
             -MaxSteps ([int]$st.stepsBox.Value) `
             -DryRun:([bool]$st.dryRunBox.Checked) `
+            -Route `
             -Sync $sync `
             -AgentLocalPath $st.agentLocalPath `
             -PwshPath $st.pwshPath
@@ -214,6 +267,7 @@ function Start-ConsoleRun {
     catch {
         $st.stateLabel.Text = 'State: Error'
         Set-ConsoleText $st.transcriptBox ("Failed to start agent.local:`r`n" + $_.Exception.Message)
+        $st.planBtn.Enabled = $true
         $st.runBtn.Enabled = $true
         $st.cancelBtn.Enabled = $false
     }
@@ -227,19 +281,27 @@ function Update-ConsoleRun {
     if (-not $st.handle.Process.HasExited) { return }
 
     $st.timer.Stop()
-    $run = Complete-AgentLocalRun -Handle $st.handle
-    Set-ConsoleText $st.transcriptBox (Format-AgentTranscript -Run $run)
-    if ($run.envelope) {
-        Set-ConsoleText $st.rawBox ($run.envelope | ConvertTo-Json -Depth 12)
+    if ($st.mode -eq 'plan') {
+        $run = Complete-RouteToolsRun -Handle $st.handle
+        Set-ConsoleText $st.transcriptBox (Format-RoutePlan -Run $run)
+        if ($run.envelope) { Set-ConsoleText $st.rawBox ($run.envelope | ConvertTo-Json -Depth 12) }
+        else { Set-ConsoleText $st.rawBox ("RAW STDOUT:`r`n" + $run.raw_stdout + "`r`n`r`nSTDERR (tail):`r`n" + $run.stderr_tail) }
+        $rc = if ($run.result) { Get-Prop $run.result 'count' } else { $null }
+        $st.costLabel.Text = ('Plan: ' + [string]$rc + ' tool(s) selected')
+        $st.stateLabel.Text = if ($run.ok) { 'State: Planned' } else { 'State: Plan finished (' + $run.status + ')' }
     }
     else {
-        Set-ConsoleText $st.rawBox ("RAW STDOUT:`r`n" + $run.raw_stdout + "`r`n`r`nSTDERR (tail):`r`n" + $run.stderr_tail)
+        $run = Complete-AgentLocalRun -Handle $st.handle
+        Set-ConsoleText $st.transcriptBox (Format-AgentTranscript -Run $run)
+        if ($run.envelope) { Set-ConsoleText $st.rawBox ($run.envelope | ConvertTo-Json -Depth 12) }
+        else { Set-ConsoleText $st.rawBox ("RAW STDOUT:`r`n" + $run.raw_stdout + "`r`n`r`nSTDERR (tail):`r`n" + $run.stderr_tail) }
+        $cost = if ($run.result) { Get-Prop $run.result 'cost' } else { $null }
+        if ($cost) {
+            $st.costLabel.Text = ('Cost: ' + [string](Get-Prop $cost 'total_gateway_calls' '?') + ' gateway calls, ' + [string](Get-Prop $cost 'total_tokens' '?') + ' tokens')
+        }
+        $st.stateLabel.Text = if ($run.ok) { 'State: Done' } else { 'State: Finished (' + $run.status + ')' }
     }
-    $cost = if ($run.result) { Get-Prop $run.result 'cost' } else { $null }
-    if ($cost) {
-        $st.costLabel.Text = ('Cost: ' + [string](Get-Prop $cost 'total_gateway_calls' '?') + ' gateway calls, ' + [string](Get-Prop $cost 'total_tokens' '?') + ' tokens')
-    }
-    $st.stateLabel.Text = if ($run.ok) { 'State: Done' } else { 'State: Finished (' + $run.status + ')' }
+    $st.planBtn.Enabled = $true
     $st.runBtn.Enabled = $true
     $st.cancelBtn.Enabled = $false
     $st.handle = $null
@@ -251,6 +313,7 @@ function Stop-ConsoleRun {
     $st.timer.Stop()
     $st.stateLabel.Text = 'State: Cancelled'
     $st.transcriptBox.AppendText("`r`n`r`n[cancelled by user]")
+    $st.planBtn.Enabled = $true
     $st.runBtn.Enabled = $true
     $st.cancelBtn.Enabled = $false
     $st.handle = $null

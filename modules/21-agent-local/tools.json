@@ -1,6 +1,6 @@
 {
   "schema": "lifeorch.agent.tools/0.1",
-  "description": "Default closed tool registry for agent.local (Module 21). Each tool is a conforming Life Orchestrator Module invoked as a child skill via -InputsJson/-ArtifactRoot. Entrypoints are repo-relative. This registry IS the agent's entire capability surface; there is deliberately no arbitrary-shell/code-exec tool. Extend by adding conforming skills.",
+  "description": "Curated closed tool registry for agent.local (Module 21) -- the attachable-tools registry that route.tools (#27) reads to build its catalog. Each tool is a conforming Life Orchestrator Module invoked as a child skill via -InputsJson/-ArtifactRoot; entrypoints are repo-relative. This registry IS the agent's entire capability surface; there is deliberately no arbitrary-shell/code-exec tool. Descriptions are one-line and sharp because BOTH the router (which tool to pick) and the arg-generator (how to call it) read them. GPU-bound tools (gen.image, gen.music, image.interpret, speech.stt) bind CUDA/a port; the agent runs one tool per step sequentially, so they never contend. Extend by adding conforming skills.",
   "tools": [
     {
       "tool": "doc.io",
@@ -21,6 +21,86 @@
       "args_example": { "path": ".", "depth": 2, "pattern": "*.md" },
       "required": ["path"],
       "side_effecting": false
+    },
+    {
+      "tool": "capture.screen",
+      "skill_id": "capture.screen",
+      "entrypoint": "modules/06-capture-screen/Invoke-CaptureScreen.ps1",
+      "description": "Take a screenshot of a monitor, a window, or a screen rectangle and save it as an image file. Use it to grab the screen so another tool can read or analyze it.",
+      "args_hint": "Optional: target (monitor|window|app|region), monitor (primary|all|<index>), title or app (to pick a window), x/y/width/height (for region), format (png|jpg). No input is needed to capture the primary monitor.",
+      "args_example": { "target": "monitor", "monitor": "primary", "format": "png" },
+      "required": [],
+      "side_effecting": false
+    },
+    {
+      "tool": "ocr.layout",
+      "skill_id": "ocr.layout",
+      "entrypoint": "modules/14-ocr-layout/Invoke-OcrLayout.ps1",
+      "description": "Read the text out of an image (OCR): returns the recognized words with pixel positions and lines in reading order. Can OCR an image file OR grab the live screen itself when told to capture -- use it directly for 'what does the text on my screen say'.",
+      "args_hint": "Provide input (path to an image). To OCR the live screen instead, set capture=true (no input needed). Optional: language.",
+      "args_example": { "input": "screenshot.png" },
+      "required": [],
+      "side_effecting": false
+    },
+    {
+      "tool": "detect.objects",
+      "skill_id": "detect.objects",
+      "entrypoint": "modules/16-detect-objects/Invoke-DetectObjects.ps1",
+      "description": "Detect objects in an image (COCO-80 classes) and return each as a class label with a confidence score and a bounding box. Can also detect on the live screen when told to capture.",
+      "args_hint": "Provide input (path to an image), or set capture=true to detect on the live screen. Optional: classes (only report these labels), score_threshold.",
+      "args_example": { "input": "photo.jpg" },
+      "required": [],
+      "side_effecting": false
+    },
+    {
+      "tool": "image.interpret",
+      "skill_id": "image.interpret",
+      "entrypoint": "modules/17-image-interpret/Invoke-ImageInterpret.ps1",
+      "description": "Interpret an image with a local vision-language model: caption it, describe it in detail, or answer a question about it. Can also interpret the live screen when told to capture. Use it for open-ended 'what is in this picture / on my screen' questions (not plain text extraction -- that is ocr.layout).",
+      "args_hint": "Provide input (path to an image) and optionally prompt (a question) and mode (caption|describe|vqa|screen). Set capture=true to interpret the live screen.",
+      "args_example": { "input": "photo.jpg", "mode": "describe" },
+      "required": [],
+      "side_effecting": false
+    },
+    {
+      "tool": "speech.stt",
+      "skill_id": "speech.stt",
+      "entrypoint": "modules/11-speech-stt/Invoke-SpeechStt.ps1",
+      "description": "Transcribe an audio or video file into timestamped text (speech-to-text). Use it to turn a recording into words.",
+      "args_hint": "Required: input (path to an audio/media file, e.g. a .wav/.mp3/.m4a/.mp4). Optional: language.",
+      "args_example": { "input": "recording.wav" },
+      "required": ["input"],
+      "side_effecting": false
+    },
+    {
+      "tool": "audio.ingest",
+      "skill_id": "audio.ingest",
+      "entrypoint": "modules/10-audio-ingest/Invoke-AudioIngest.ps1",
+      "description": "Convert or normalize an audio/media file to another format, sample rate, channel count, or loudness, producing a new audio file. Use it to change an audio file's format (e.g. m4a -> mp3) or make it whisper-ready.",
+      "args_hint": "Required: input (path to an audio/media file). Optional: format (wav|mp3|flac|opus|ogg|m4a), sample_rate, channels, loudness (none|peak|ebu).",
+      "args_example": { "input": "clip.m4a", "format": "mp3" },
+      "required": ["input"],
+      "side_effecting": true
+    },
+    {
+      "tool": "gen.image",
+      "skill_id": "gen.image",
+      "entrypoint": "modules/23-gen-image/Invoke-GenImage.ps1",
+      "description": "Generate an IMAGE (a picture / drawing / photo) from a text prompt with a local Stable Diffusion model, saved as an image file. Use it for 'make/draw a picture of X'.",
+      "args_hint": "Required: prompt (what to depict). Optional: negative_prompt, width/height (multiples of 8, 128..1024), steps, seed, format (png|jpg|webp).",
+      "args_example": { "prompt": "a photograph of a dog", "width": 512, "height": 512 },
+      "required": ["prompt"],
+      "side_effecting": true
+    },
+    {
+      "tool": "gen.music",
+      "skill_id": "gen.music",
+      "entrypoint": "modules/24-gen-music/Invoke-GenMusic.ps1",
+      "description": "Compose a short piece of instrumental MUSIC (melodies played on instruments -- NOT plain beeps/tones) from a text prompt, saved as an audio file. Use it for 'write/make a tune / melody / piece of music'.",
+      "args_hint": "Required: prompt (the style/mood, e.g. 'calm solo piano'). Optional: duration (1..30 seconds), format (wav|mp3|...).",
+      "args_example": { "prompt": "a calm solo piano melody", "duration": 8 },
+      "required": ["prompt"],
+      "side_effecting": true
     }
   ]
 }

@@ -264,3 +264,6 @@ untouched live (1→1). **Producers are now 7/8/11/12/14/16/17/23 → local drai
   token budget on reasoning and hit `max_tokens` before emitting the `{verdict,…}` JSON, so `review.processor`
   correctly **escalated** it (unparseable → frontier). Follow-on: tune the strong-tier prompt / raise its
   `max_tokens` / add a no-reasoning directive so the 27B returns a parseable verdict and resolves more items locally.
+
+## 2026-07-26 -- route.tools (#27) + agent.local `-Route` + Console Plan/Run are NON-producers (D-0040/D-0041)
+`route.tools` (Module 27, the mid-tier Tool Router) is an orchestrator that redirects its child gateway's review writes to an in-artifact `child_review.jsonl` and never writes the canonical `review_queue.jsonl`; agent.local's new `-Route` path and the Local Agent Console's Plan/Run likewise redirect child flags. **The review-queue producer set is UNCHANGED (ten: 7/8/11/12/14/16/17/23/24/25).** Verified live: `m28-live-001` + `m28-e2e-001` left the canonical queue before==after (1 line -> 1 line).
