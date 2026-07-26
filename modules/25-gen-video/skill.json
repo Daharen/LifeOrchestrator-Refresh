@@ -1,0 +1,49 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "gen.video",
+  "name": "Local Video Generation (AnimateDiff)",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "Generate one short silent video clip from a text prompt with a local AnimateDiff pipeline. Drives a diffusers AnimateDiffPipeline -- an SD-1.5 base (reused from gen.image #23) plus an AnimateDiff-Lightning MotionAdapter (4-step, fp16, CUDA) -- via a Python worker (video_gen_infer.py) under the speech venv with a meta-file hand-off to a PowerShell wrapper (the D-0021/D-0034/D-0035 pattern). Resolves the video-gen model from models.json (type=video-gen), decoupled from the gateway wired gate. Produces an MP4 (H.264 via the present ffmpeg) or an animated GIF (via Pillow). Binds the CUDA context / VRAM, so parallel_safe:false. Populates confidence (a generation-completeness / non-blank + non-static heuristic) + model_provenance and routes failed / blank / static / low-confidence generations to the review queue (the tenth producer). Default model video.animatediff-lightning (AnimateDiff-Lightning 4-step on SD 1.5, CreativeML-OpenRAIL-M). The motion sibling of gen.image (#23, neural stills) and the fourth (last) generator.",
+  "determinism": "mixed",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-GenVideo.ps1",
+    "args_spec": "Named params -Prompt <text> (required); -NegativePrompt <text>; -NumFrames <n> (16; 2..64); -Width/-Height <px> (512; mult 8, 128..1024); -Steps <n> (4; 1..12, Lightning is 4/8-step); -Guidance <n> (1.0; 0..15, Lightning uses ~1.0); -Fps <n> (8; 1..30); -Seed <n> (-1 = random; actual seed recorded); -Format <mp4|gif> (mp4); -ConfidenceThreshold <0..1> (0.5, review floor); -Model <model_id> | -Tier <alias>; -Offload <bool> (false; force diffusers CPU-offload); overrides -Registry/-PythonPath/-VideoInferPath/-FfmpegPath/-ReviewQueuePath/-PwshPath. OR -InputsJson '<json {prompt,negative_prompt,num_frames,width,height,steps,guidance,fps,seed,format,confidence_threshold,model,tier,offload,registry,python_path,video_infer_path,ffmpeg_path,review_queue_path,pwsh_path}>'. Optional -ArtifactRoot, -InvocationId.",
+    "engine": "diffusers AnimateDiffPipeline (SD-1.5 + AnimateDiff-Lightning MotionAdapter; CUDA; Python worker under the speech venv; MP4 via ffmpeg)"
+  },
+  "inputs": [
+    { "name": "prompt", "type": "string", "required": true, "description": "Text description of the clip to generate (e.g. 'a drone shot over a misty forest at sunrise')." },
+    { "name": "negative_prompt", "type": "string", "required": false, "default": "bad quality, worst quality, low resolution, blurry", "description": "What to avoid in the generation." },
+    { "name": "num_frames", "type": "int", "required": false, "default": 16, "description": "Number of frames (2..64). AnimateDiff is trained around 16." },
+    { "name": "width", "type": "int", "required": false, "default": 512, "description": "Frame width in pixels (multiple of 8, 128..1024). SD 1.5 is trained at 512." },
+    { "name": "height", "type": "int", "required": false, "default": 512, "description": "Frame height in pixels (multiple of 8, 128..1024)." },
+    { "name": "steps", "type": "int", "required": false, "default": 4, "description": "Denoising steps (1..12). AnimateDiff-Lightning is a 4-step (or 8-step) distilled model." },
+    { "name": "guidance", "type": "double", "required": false, "default": 1.0, "description": "Classifier-free guidance scale (0..15). AnimateDiff-Lightning uses ~1.0." },
+    { "name": "fps", "type": "int", "required": false, "default": 8, "description": "Playback frames per second for the encoded clip (1..30). duration_s = num_frames / fps." },
+    { "name": "seed", "type": "int", "required": false, "default": -1, "description": "RNG seed. -1 = random (the actual chosen seed is recorded). A fixed seed >= 0 is byte-reproducible on this GPU." },
+    { "name": "format", "type": "string", "required": false, "default": "mp4", "description": "Output container: mp4 (H.264 via ffmpeg) | gif (animated GIF via Pillow)." },
+    { "name": "confidence_threshold", "type": "double", "required": false, "default": 0.5, "description": "Envelope confidence below this routes the generation to the review queue (verify_generation)." },
+    { "name": "model", "type": "string", "required": false, "description": "video-gen model_id in models.json (type=video-gen). Default = defaults.video (video.animatediff-lightning)." },
+    { "name": "tier", "type": "string", "required": false, "description": "video tier alias resolved via tiers.video. A named -Model wins." },
+    { "name": "offload", "type": "bool", "required": false, "default": false, "description": "Force diffusers model CPU-offload (lower VRAM, slower). Off by default: the default 16-frame 512 clip peaks ~4.75 GB and fits on the 11 GB GPU. The worker also auto-retries with offload on a CUDA OOM." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ input{prompt,negative_prompt,chars}, model{id,name,family,engine,engine_env,device,dtype,base,adapter,path}, request{num_frames,width,height,steps,guidance,seed,fps,format}, video{path,format,codec,width,height,num_frames,fps,duration_s,bytes,sha256}, motion{mean_abs_interframe_diff,per_frame_std_min,pixel_std}, confidence{overall,reason}, review{threshold,flagged,queue_path}, generation{load_ms,gen_ms,runtime_ms,vram_peak_gb,offload,diffusers,torch} }"
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4", "python (speech venv) + diffusers 0.35", "ffmpeg (for -Format mp4)"],
+    "models": ["video.animatediff-lightning (AnimateDiff-Lightning 4-step on Stable Diffusion 1.5, diffusers; CreativeML-OpenRAIL-M)"],
+    "libraries": ["diffusers", "torch (cu128)", "safetensors", "Pillow", "numpy"],
+    "cpu": "any", "gpu": "cuda (RTX 2080 Ti; AnimateDiff-Lightning 16f/512 peaks ~4.75 GB VRAM full-GPU)", "memory_mb": 8192,
+    "network": false, "filesystem": "read-write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 600, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": false,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

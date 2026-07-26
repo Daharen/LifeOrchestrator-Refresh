@@ -1,0 +1,63 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "gen.video",
+  "skill_version": "0.1.0",
+  "contract_version": "0.2",
+  "invocation_id": "c1a4e2b0-5d66-4f3e-9c02-7b2f3e4d5c61",
+  "status": "ok",
+  "started_at_utc": "2026-07-26T01:20:00.0000000Z",
+  "finished_at_utc": "2026-07-26T01:21:00.4000000Z",
+  "duration_ms": 60400,
+  "inputs_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "result": {
+    "input": { "prompt": "a cinematic drone shot over a misty pine forest at sunrise", "negative_prompt": "bad quality, worst quality, low resolution, blurry", "chars": 57 },
+    "model": {
+      "id": "video.animatediff-lightning",
+      "name": "AnimateDiff-Lightning 4-step (SD 1.5)",
+      "family": "animatediff",
+      "engine": "diffusers",
+      "engine_env": "F:\\My_Programs\\Local_Computer_Speech_Large_Data\\python_env\\Scripts\\python.exe",
+      "device": "cuda",
+      "dtype": "float16",
+      "base": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\23-gen-image\\stable-diffusion-v1-5",
+      "adapter": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\25-gen-video\\animatediff-lightning\\animatediff_lightning_4step_diffusers.safetensors",
+      "path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\25-gen-video\\animatediff-lightning"
+    },
+    "request": { "num_frames": 16, "width": 512, "height": 512, "steps": 4, "guidance": 1.0, "seed": 42, "fps": 8, "format": "mp4" },
+    "video": {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\25-gen-video\\runtime\\artifacts\\c1a4e2b0-5d66-4f3e-9c02-7b2f3e4d5c61\\video.mp4",
+      "format": "mp4", "codec": "h264", "width": 512, "height": 512, "num_frames": 16, "fps": 8, "duration_s": 2.0,
+      "bytes": 712195, "sha256": "d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3"
+    },
+    "motion": { "mean_abs_interframe_diff": 41.576, "per_frame_std_min": 30.39, "pixel_std": 44.36 },
+    "confidence": { "overall": 0.9, "reason": "has_content" },
+    "review": { "threshold": 0.5, "flagged": false, "queue_path": null },
+    "generation": { "load_ms": 6200, "gen_ms": 57000, "runtime_ms": 60000, "vram_peak_gb": 4.75, "offload": false, "diffusers": "0.35.2", "torch": "2.11.0+cu128" }
+  },
+  "confidence": 0.9,
+  "artifacts": [
+    { "path": "C:\\Users\\just_\\...\\artifacts\\c1a4e2b0\\video.mp4", "kind": "mp4", "bytes": 712195, "sha256": "d4c3b2a1...6e5d4c3" },
+    { "path": "C:\\Users\\just_\\...\\artifacts\\c1a4e2b0\\gen.json", "kind": "json", "bytes": 1240, "sha256": "..." },
+    { "path": "C:\\Users\\just_\\...\\artifacts\\c1a4e2b0\\gen.md", "kind": "markdown", "bytes": 560, "sha256": "..." }
+  ],
+  "model_provenance": [
+    {
+      "model_id": "video.animatediff-lightning",
+      "name": "AnimateDiff-Lightning 4-step (SD 1.5)",
+      "family": "animatediff",
+      "format": "diffusers+motion-adapter",
+      "version": "animatediff-lightning-4step",
+      "engine": "diffusers",
+      "engine_env": "F:\\My_Programs\\Local_Computer_Speech_Large_Data\\python_env\\Scripts\\python.exe",
+      "device": "cuda",
+      "dtype": "float16",
+      "params": { "num_frames": 16, "width": 512, "height": 512, "steps": 4, "guidance": 1.0, "seed": 42, "fps": 8, "offload": false },
+      "frames": 16,
+      "video_seconds": 2.0,
+      "runtime_ms": 60000
+    }
+  ],
+  "diagnostics": { "log": "stderr.txt", "artifact_dir": "C:\\Users\\just_\\...\\artifacts\\c1a4e2b0-5d66-4f3e-9c02-7b2f3e4d5c61" },
+  "warnings": [],
+  "error": null
+}
