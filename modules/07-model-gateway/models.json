@@ -8,8 +8,11 @@
     "llama-server": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\_engines\\llama.cpp\\bin\\llama-server.exe",
     "_comment": "Staged, verified to run standalone (health + chat) 2026-07-24. Depends on a system CUDA runtime (not on the source folder). If torn down, restage from F:\\Qwen3.5-27B\\llama.cpp\\build\\bin."
   },
-  "defaults": { "llm": "llm.weak.qwen2p5-1p5b", "stt": "stt.whisper.base-en", "tts": "tts.weak.qwen3-0p6b", "ocr": "ocr.windows.media", "detector": "detect.yolox.nano", "vlm": "vlm.qwen2p5-vl-3b", "image": "image.sd15" },
+  "defaults": { "llm": "llm.weak.qwen2p5-1p5b", "stt": "stt.whisper.base-en", "tts": "tts.weak.qwen3-0p6b", "ocr": "ocr.windows.media", "detector": "detect.yolox.nano", "vlm": "vlm.qwen2p5-vl-3b", "image": "image.sd15", "music": "music.musicgen-small" },
   "tiers": {
+    "music": {
+      "small": "music.musicgen-small"
+    },
     "image": {
       "sd15": "image.sd15"
     },
@@ -197,6 +200,20 @@
       "license": "CreativeML-OpenRAIL-M",
       "params": { "variant": "fp16", "native_resolution": 512, "default_steps": 20, "default_guidance": 7.5, "default_scheduler": "dpm++", "size_bytes": 2134194467, "unet_sha256": "c83908253f9a64d08c25fc90874c9c8aef9a329ce1ca5fb909d73b0c83d1ea21", "vae_sha256": "4fbcf0ebe55a0984f5a5e00d8c4521d52359af7229bb4d81890039d2aa16dd7c", "text_encoder_sha256": "77795e2023adcf39bc29a884661950380bd093cf0750a966d473d1718dc9ef4e" },
       "notes": "Consumed by gen.image (Module 23), which runs this diffusers folder via the StableDiffusionPipeline (fp16, CUDA) in a Python worker (gen_image_infer.py) under this engine_env (the speech venv; diffusers 0.35.2 + torch 2.11+cu128) and reads its meta file. wired:false for model.gateway on purpose (the gateway runs type=llm only; gen.image reads this entry itself, decoupled from the wired gate like speech.tts/image.interpret). Downloaded from stable-diffusion-v1-5/stable-diffusion-v1-5 (fp16 variant) and staged to F: + load-and-generate verified live 2026-07-25 (m23-probe-002: 512x512 in 2.8 s, VRAM peak 2.61 GB, non-blank). CreativeML OpenRAIL-M. FLUX.1-schnell (Apache-2.0, needs offload on 11 GB) and SDXL/SDXL-Turbo are documented follow-on tiers."
+    },
+    {
+      "model_id": "music.musicgen-small",
+      "type": "music-gen", "wired": false,
+      "name": "MusicGen Small (transformers)", "family": "musicgen", "format": "transformers-dir",
+      "version": "facebook/musicgen-small",
+      "path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\24-gen-music\\musicgen-small",
+      "engine": "transformers",
+      "engine_env": "F:\\My_Programs\\Local_Computer_Speech_Large_Data\\python_env\\Scripts\\python.exe",
+      "license": "CC-BY-NC-4.0",
+      "sampling_rate": 32000,
+      "frame_rate": 50,
+      "params": { "dtype": "float32", "max_duration_s": 30, "size_bytes": 2367667757, "safetensors_sha256": "1bdc99d43eb6c775967df24b65b0a9f847c0907e95664698d93b5a1c35f5090d" },
+      "notes": "Consumed by gen.music (Module 24), which runs this MusicGen model via transformers MusicgenForConditionalGeneration (CUDA) in a Python worker (music_gen_infer.py) under this engine_env (the speech venv; transformers 4.57.3 + torch 2.11+cu128 + soundfile) and reads its meta file. Produces one 32 kHz mono instrumental clip; a non-wav format/rate is produced by composing audio.ingest (#10). wired:false for model.gateway on purpose (the gateway runs type=llm only; gen.music reads this entry itself, decoupled from the wired gate like speech.tts/image.interpret/gen.image). Downloaded from facebook/musicgen-small and staged to F: (~2.37 GB after pruning the redundant audiocraft-format weights; safetensors sha256 recorded) + load-and-generate verified live 2026-07-25 (m24-probe-002: 5.06 s clip in 7.6 s, VRAM peak 2.4 GB, seed byte-reproducible). NO new library install (transformers already ships MusicGen). CC-BY-NC-4.0 (non-commercial; a deliberate deviation from the Apache-2.0 preference, precedented by SD 1.5's OpenRAIL-M in gen.image). MusicGen Medium/Large and Stable Audio Open are documented follow-on tiers; MusicgenMelody (melody-conditioned) is a follow-on."
     }
   ]
 }

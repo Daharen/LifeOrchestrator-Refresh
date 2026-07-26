@@ -1,0 +1,63 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "gen.music",
+  "skill_version": "0.1.0",
+  "contract_version": "0.2",
+  "invocation_id": "b7d2f1a0-3c55-4e2d-8b91-6a1f2e3d4c50",
+  "status": "ok",
+  "started_at_utc": "2026-07-25T23:50:00.0000000Z",
+  "finished_at_utc": "2026-07-25T23:50:12.4000000Z",
+  "duration_ms": 12400,
+  "inputs_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "result": {
+    "input": { "prompt": "upbeat 8-bit chiptune, energetic", "chars": 31 },
+    "model": {
+      "id": "music.musicgen-small",
+      "name": "MusicGen Small (transformers)",
+      "family": "musicgen",
+      "engine": "transformers",
+      "engine_env": "F:\\My_Programs\\Local_Computer_Speech_Large_Data\\python_env\\Scripts\\python.exe",
+      "device": "cuda:0",
+      "dtype": "float32",
+      "path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\24-gen-music\\musicgen-small"
+    },
+    "request": { "duration_s": 8.0, "guidance": 3.0, "temperature": 1.0, "top_k": 250, "top_p": 0.0, "seed": 42, "max_new_tokens": 400, "format": "wav", "sample_rate": 0 },
+    "audio": {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\24-gen-music\\runtime\\artifacts\\b7d2f1a0-3c55-4e2d-8b91-6a1f2e3d4c50\\music.wav",
+      "format": "wav", "sample_rate": 32000, "channels": 1, "samples": 256000, "duration_s": 8.0,
+      "bytes": 512044, "sha256": "c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2",
+      "rms": 0.3472, "peak": 0.99, "normalized": true, "native_sample_rate": 32000, "converted": false
+    },
+    "confidence": { "overall": 0.9, "reason": "has_content" },
+    "review": { "threshold": 0.5, "flagged": false, "queue_path": null },
+    "generation": { "load_ms": 2100, "gen_ms": 9800, "runtime_ms": 12000, "real_time_factor": 1.5, "vram_peak_gb": 2.41, "transformers": "4.57.3", "torch": "2.11.0+cu128" }
+  },
+  "confidence": 0.9,
+  "artifacts": [
+    { "path": "C:\\Users\\just_\\...\\artifacts\\b7d2f1a0\\music.wav", "kind": "wav", "bytes": 512044, "sha256": "c3d2e1f0...5b4c3d2" },
+    { "path": "C:\\Users\\just_\\...\\artifacts\\b7d2f1a0\\gen.json", "kind": "json", "bytes": 1180, "sha256": "..." },
+    { "path": "C:\\Users\\just_\\...\\artifacts\\b7d2f1a0\\gen.md", "kind": "markdown", "bytes": 520, "sha256": "..." }
+  ],
+  "model_provenance": [
+    {
+      "model_id": "music.musicgen-small",
+      "name": "MusicGen Small (transformers)",
+      "family": "musicgen",
+      "format": "transformers-dir",
+      "version": "facebook/musicgen-small",
+      "engine": "transformers",
+      "engine_env": "F:\\My_Programs\\Local_Computer_Speech_Large_Data\\python_env\\Scripts\\python.exe",
+      "device": "cuda:0",
+      "dtype": "float32",
+      "params": { "duration_s": 8.0, "guidance": 3.0, "temperature": 1.0, "top_k": 250, "top_p": 0.0, "seed": 42, "max_new_tokens": 400 },
+      "sample_rate": 32000,
+      "audio_samples": 256000,
+      "audio_seconds": 8.0,
+      "runtime_ms": 12000,
+      "real_time_factor": 1.5
+    }
+  ],
+  "diagnostics": { "log": "stderr.txt", "artifact_dir": "C:\\Users\\just_\\...\\artifacts\\b7d2f1a0-3c55-4e2d-8b91-6a1f2e3d4c50" },
+  "warnings": [],
+  "error": null
+}

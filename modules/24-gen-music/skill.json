@@ -1,0 +1,48 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "gen.music",
+  "name": "Local Music Generation (MusicGen)",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "Generate one short piece of instrumental music from a text prompt with a local MusicGen model. Drives transformers MusicgenForConditionalGeneration (CUDA) via a Python worker (music_gen_infer.py) under the speech venv with a meta-file hand-off to a PowerShell wrapper (the D-0021 speech.tts pattern). Resolves the music-gen model from models.json (type=music-gen), decoupled from the gateway wired gate. Produces a 32 kHz mono WAV; an optional non-wav -Format / -SampleRate is produced by composing audio.ingest (#10). Binds the CUDA context / VRAM, so parallel_safe:false. Populates confidence (a generation-completeness / non-silent heuristic) + model_provenance and routes failed / silent / low-confidence generations to the review queue (the ninth producer). Default model music.musicgen-small (MusicGen Small, transformers, CC-BY-NC-4.0). The music-generation sibling of gen.audio (#22, procedural sound) and gen.image (#23, neural images).",
+  "determinism": "mixed",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-GenMusic.ps1",
+    "args_spec": "Named params -Prompt <text> (required); -Duration <seconds> (8; 1..30); -Guidance <n> (3.0; 0..15, classifier-free guidance); -Temperature <n> (1.0; 0..2, 0 = greedy); -TopK <n> (250; >=0); -TopP <n> (0.0; 0..1, 0 = off); -Seed <n> (-1 = random; actual seed recorded); -Normalize <bool> (true, peak-normalize to avoid clipping); -Format <wav|mp3|flac|opus|ogg|m4a> (wav); -SampleRate <hz> (0 = native 32000); -ConfidenceThreshold <0..1> (0.5, review floor); -Model <model_id> | -Tier <alias>; overrides -Registry/-PythonPath/-MusicInferPath/-AudioIngestPath/-ReviewQueuePath/-PwshPath. OR -InputsJson '<json {prompt,duration,guidance,temperature,top_k,top_p,seed,normalize,format,sample_rate,confidence_threshold,model,tier,registry,python_path,music_infer_path,audio_ingest_path,review_queue_path,pwsh_path}>'. Optional -ArtifactRoot, -InvocationId.",
+    "engine": "transformers MusicgenForConditionalGeneration (CUDA; Python worker under the speech venv)"
+  },
+  "inputs": [
+    { "name": "prompt", "type": "string", "required": true, "description": "Text description of the music to generate (e.g. 'upbeat 8-bit chiptune, energetic')." },
+    { "name": "duration", "type": "double", "required": false, "default": 8.0, "description": "Target length in seconds (1..30). Converted to max_new_tokens via the model frame rate (~50 Hz)." },
+    { "name": "guidance", "type": "double", "required": false, "default": 3.0, "description": "Classifier-free guidance scale (0..15). Higher = follow the prompt more strictly." },
+    { "name": "temperature", "type": "double", "required": false, "default": 1.0, "description": "Sampling temperature (0..2). 0 = greedy (deterministic, do_sample off)." },
+    { "name": "top_k", "type": "int", "required": false, "default": 250, "description": "Top-k sampling cutoff (>=0; 0 = off)." },
+    { "name": "top_p", "type": "double", "required": false, "default": 0.0, "description": "Nucleus (top-p) sampling cutoff (0..1; 0 = off)." },
+    { "name": "seed", "type": "int", "required": false, "default": -1, "description": "RNG seed. -1 = random (the actual chosen seed is recorded). A fixed seed >= 0 is reproducible on this GPU." },
+    { "name": "normalize", "type": "bool", "required": false, "default": true, "description": "Peak-normalize the output to <= 0.99 to avoid PCM clipping (MusicGen can exceed +-1.0)." },
+    { "name": "format", "type": "string", "required": false, "default": "wav", "description": "Output audio format: wav | mp3 | flac | opus | ogg | m4a. Non-wav is produced via audio.ingest (#10)." },
+    { "name": "sample_rate", "type": "int", "required": false, "default": 0, "description": "Output sample rate in Hz (8000..192000). 0 = native 32000. A non-native rate is resampled via audio.ingest." },
+    { "name": "confidence_threshold", "type": "double", "required": false, "default": 0.5, "description": "Envelope confidence below this routes the generation to the review queue (verify_generation)." },
+    { "name": "model", "type": "string", "required": false, "description": "music-gen model_id in models.json (type=music-gen). Default = defaults.music (music.musicgen-small)." },
+    { "name": "tier", "type": "string", "required": false, "description": "music tier alias resolved via tiers.music. A named -Model wins." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ input{prompt,chars}, model{id,name,family,engine,engine_env,device,dtype,path}, request{duration_s,guidance,temperature,top_k,top_p,seed,max_new_tokens,format,sample_rate}, audio{path,format,sample_rate,channels,samples,duration_s,bytes,sha256,rms,peak,normalized,native_sample_rate,converted}, confidence{overall,reason}, review{threshold,flagged,queue_path}, generation{load_ms,gen_ms,runtime_ms,real_time_factor,vram_peak_gb,transformers,torch} }"
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4", "python (speech venv) + transformers 4.57", "ffmpeg (only for non-wav -Format, via audio.ingest)"],
+    "models": ["music.musicgen-small (MusicGen Small, transformers; CC-BY-NC-4.0)"],
+    "libraries": ["transformers", "torch (cu128)", "soundfile", "numpy"],
+    "cpu": "any", "gpu": "cuda (RTX 2080 Ti; MusicGen Small runs on GPU, ~2.4 GB VRAM)", "memory_mb": 6144,
+    "network": false, "filesystem": "read-write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 300, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": false,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}
