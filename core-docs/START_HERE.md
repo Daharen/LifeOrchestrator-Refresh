@@ -3,6 +3,13 @@
 **You are a fresh Claude instance joining Life Orchestrator (near-term "local skills" track).**
 Read this first. It routes you; it does not contain the project's substance.
 
+> **ACTIVE WORK -- read `core-docs/HANDOFF.md` FIRST (2026-07-26).** The project paused normal module
+> build-out for a **local-agent correction arc** (D-0043 governor Phase 1; D-0044 strong tier -> Qwen3.5-9B,
+> fully GPU-resident). There is an open reliability issue (D-0032: the agent decides `finish` prematurely, so
+> multi-tool goals do not reliably complete) and a small correction backlog. `HANDOFF.md` tells you how to
+> (a) continue the corrections or (b) return to normal `MODULE_ROADMAP.md` progress, with the current
+> disclaimers. Read it before picking an "active module."
+
 ## What this project is (one line)
 
 We are building a suite of small, independently-invokable **local skills** that frontier and
