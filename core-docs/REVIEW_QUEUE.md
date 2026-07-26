@@ -267,3 +267,6 @@ untouched live (1→1). **Producers are now 7/8/11/12/14/16/17/23 → local drai
 
 ## 2026-07-26 -- route.tools (#27) + agent.local `-Route` + Console Plan/Run are NON-producers (D-0040/D-0041)
 `route.tools` (Module 27, the mid-tier Tool Router) is an orchestrator that redirects its child gateway's review writes to an in-artifact `child_review.jsonl` and never writes the canonical `review_queue.jsonl`; agent.local's new `-Route` path and the Local Agent Console's Plan/Run likewise redirect child flags. **The review-queue producer set is UNCHANGED (ten: 7/8/11/12/14/16/17/23/24/25).** Verified live: `m28-live-001` + `m28-e2e-001` left the canonical queue before==after (1 line -> 1 line).
+
+## 2026-07-26 -- fs.manage (#28) is a NON-producer (D-0042)
+`fs.manage` (copy/move/mkdir) is deterministic (`confidence:null`, empty `model_provenance`) and does NOT write the canonical `review_queue.jsonl`. **The review-queue producer set is UNCHANGED (ten: 7/8/11/12/14/16/17/23/24/25).** Verified live: `m29-after-003` left the canonical queue before==after.

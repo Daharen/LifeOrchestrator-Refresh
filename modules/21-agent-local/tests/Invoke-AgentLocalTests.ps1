@@ -25,7 +25,8 @@ $artRoot = Join-Path $work 'art'
 # ---- mock tool registry: doc.io + fs.observer both point at the mock child ----
 $mockTools = [ordered]@{ schema='lifeorch.agent.tools/0.1'; tools=@(
     [ordered]@{ tool='doc.io'; skill_id='doc.io'; entrypoint=$MockPath; description='mock doc io'; args_hint='op,path'; args_example=@{op='write';path='x.txt';content='y'}; required=@('op','path'); side_effecting=$true },
-    [ordered]@{ tool='fs.observer'; skill_id='fs.observer'; entrypoint=$MockPath; description='mock fs observer'; args_hint='path'; args_example=@{path='.'}; required=@('path'); side_effecting=$false }
+    [ordered]@{ tool='fs.observer'; skill_id='fs.observer'; entrypoint=$MockPath; description='mock fs observer'; args_hint='path'; args_example=@{path='.'}; required=@('path'); side_effecting=$false },
+    [ordered]@{ tool='fs.manage'; skill_id='fs.manage'; entrypoint=$MockPath; description='mock fs manage'; args_hint='op,source,dest'; args_example=@{op='copy';source='a';dest='desktop'}; required=@('op'); side_effecting=$true; resolve_paths=$false }
 ) }
 $toolsPath = Join-Path $work 'mock-tools.json'
 [System.IO.File]::WriteAllText($toolsPath, ($mockTools | ConvertTo-Json -Depth 12), [System.Text.UTF8Encoding]::new($false))
@@ -160,13 +161,22 @@ Ok ($null -ne $res -and $res.status -eq 'completed') 'S11 still completes'
 Ok ($null -ne $res -and @($res.outcome.succeeded_tools) -contains 'doc.io') 'S11 outcome grounds doc.io success'
 Ok ($null -ne $e -and (@($e.model_provenance | Where-Object { $_.stage -eq 'route' }).Count -ge 1)) 'S11 route provenance stage present'
 
+# --- S13: a resolve_paths=false tool receives an un-prefixed known-folder dest ---
+$r = Run-Agent 'MANAGE_PATH: put the file on the desktop' @('-Route','-RouteToolsPath',$MockPath)
+$res = if ($null -ne $r.env) { $r.env.result } else { $null }
+Write-Output "S13 resolve_paths=false:"
+Ok ($null -ne $res -and (@($res.planned_tools) -contains 'fs.manage')) 'S13 routed to fs.manage'
+Ok ($null -ne $res -and @($res.steps)[0].decision.chosen_tool -eq 'fs.manage' -and @($res.steps)[0].tool.invoked -eq $true) 'S13 fs.manage invoked'
+Ok ($null -ne $res -and [string](@($res.steps)[0].args.dest) -eq 'desktop') 'S13 dest NOT prefixed with working_dir (resolve_paths=false honored)'
+Ok ($null -ne $res -and $res.status -eq 'completed') 'S13 completes'
+
 # --- S12: -Route with an empty selection falls back to the full set ---
 $r = Run-Agent 'ROUTE_EMPTY FINISH_AFTER_ONE: make a file' @('-Route','-RouteToolsPath',$MockPath)
 $res = if ($null -ne $r.env) { $r.env.result } else { $null }
 Write-Output "S12 route-empty-fallback:"
 Ok ($null -ne $res -and @($res.planned_tools).Count -eq 0) 'S12 planned_tools empty'
 Ok ($null -ne $res -and $res.route.fell_back -eq $true -and $res.route.applied -eq $false) 'S12 fell back to full set'
-Ok ($null -ne $res -and @($res.tools_available).Count -eq 2) 'S12 full tool set restored'
+Ok ($null -ne $res -and @($res.tools_available).Count -eq 3) 'S12 full tool set restored'
 Ok ($null -ne $res -and $res.status -eq 'completed') 'S12 still completes on the full set'
 
 # cleanup

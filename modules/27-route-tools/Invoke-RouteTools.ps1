@@ -270,7 +270,13 @@ try {
             'capture.screen: take a screenshot of a monitor or window',
             'ocr.layout: read the text out of an image file, or directly off the screen when told to capture',
             'REQUEST: what does the text on my screen say',
-            '["ocr.layout"]'
+            '["ocr.layout"]',
+            '',
+            'CATALOG:',
+            'gen.image: generate an image from a text prompt',
+            'fs.manage: move, copy, or place an existing file into a folder such as the Desktop or Downloads',
+            'REQUEST: make a picture of a cat and put it on my desktop',
+            '["gen.image","fs.manage"]'
         ) -join "`n"
         $routerSystem = $routerSystem + "`n" + $fewShot
     }

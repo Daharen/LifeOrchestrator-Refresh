@@ -55,6 +55,7 @@ if ($leaf -eq 'route') {
     $req = if (Has $p 'request') { [string]$p.request } else { '' }
     if ($req -match 'ROUTE_EMPTY') { $sel = @() }
     elseif ($req -match 'TWO_TOOLS') { $sel = @('fs.observer','doc.io') }
+    elseif ($req -match 'MANAGE_PATH') { $sel = @('fs.manage') }
     else { $sel = @('doc.io') }
     $result = [ordered]@{
         request=$req; tier='mid'; model='llm.mock.mid'; catalog=@(); catalog_count=0
@@ -78,6 +79,8 @@ elseif ($leaf -like 'decision-*') {
         $answer = 'fs.observer'
     } elseif ($text -match 'TWO_TOOLS') {
         if ($hasStep2) { $answer = 'finish' } elseif ($hasStep1) { $answer = 'doc.io' } else { $answer = 'fs.observer' }
+    } elseif ($text -match 'MANAGE_PATH') {
+        if ($hasStep1) { $answer = 'finish' } else { $answer = 'fs.manage' }
     } else {
         # FINISH_AFTER_ONE (default): a single primary tool, then finish
         if ($hasStep1) { $answer = 'finish' } else { $answer = 'doc.io' }
@@ -108,6 +111,7 @@ elseif ($leaf -like 'arggen-*') {
     elseif ($prompt -match 'TOOL_ERR') { $text = '{"op":"read","path":"__MOCK_TOOLERR__"}' }
     elseif ($prompt -match 'TOOL:\s*doc\.io') { $text = '{"op":"write","path":"mock_out.txt","content":"mock content"}' }
     elseif ($prompt -match 'TOOL:\s*fs\.observer') { $text = '{"path":".","pattern":"*.md"}' }
+    elseif ($prompt -match 'TOOL:\s*fs\.manage') { $text = '{"op":"copy","source":"C:\\src\\y.png","dest":"desktop"}' }
     $result = [ordered]@{
         model='llm.mock.mid'; engine='llama-server'; mode='chat'; selected_from='tier:mid'
         output=[ordered]@{ role='assistant'; text=$text }
@@ -131,6 +135,11 @@ elseif ($leaf -like 'tool-*') {
     # ---- mock tool: doc.io / fs.observer shaped result, or an error on the toolerr marker ----
     $raw = if ($null -ne $InputsJson) { $InputsJson } else { '' }
     if ($raw -match '__MOCK_TOOLERR__') { Emit-Error 'mock_tool_error' }
+    if ((Has $p 'op') -and (@('copy','move','mkdir') -contains [string]$p.op)) {
+        # fs.manage shape: echo the received source/dest so the harness can assert path resolution
+        $result = [ordered]@{ op=[string]$p.op; source=$(if(Has $p 'source'){[string]$p.source}else{''}); dest=$(if(Has $p 'dest'){[string]$p.dest}else{''}); filename='y.png'; dest_was_dir=$true; bytes=10; sha256='deadbeefmock' }
+        Emit $result $null @()
+    }
     if (Has $p 'op') {
         $op = [string]$p.op
         $path = if (Has $p 'path') { [string]$p.path } else { '' }

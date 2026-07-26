@@ -101,6 +101,17 @@
       "args_example": { "prompt": "a calm solo piano melody", "duration": 8 },
       "required": ["prompt"],
       "side_effecting": true
+    },
+    {
+      "tool": "fs.manage",
+      "skill_id": "fs.manage",
+      "entrypoint": "modules/28-fs-manage/Invoke-FsManage.ps1",
+      "description": "Move, copy, or PLACE an existing file into a folder (e.g. onto the Desktop or into Downloads), or make a folder. Use it to put a file a previous step produced where the user asked (e.g. 'place it on my desktop'). NOT for editing text -- that is doc.io.",
+      "args_hint": "op (copy|move|mkdir). copy/move need source (the existing file's full path -- copy it verbatim from the previous step's observation, e.g. its image=... path) and dest (the target: a known folder name like 'desktop'/'downloads'/'documents'/'pictures', or ~, or a full path; a bare folder keeps the source filename). mkdir needs path.",
+      "args_example": { "op": "copy", "source": "C:\\path\\to\\image.png", "dest": "desktop" },
+      "required": ["op"],
+      "side_effecting": true,
+      "resolve_paths": false
     }
   ]
 }

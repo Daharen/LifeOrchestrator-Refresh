@@ -1,0 +1,40 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "fs.manage",
+  "name": "File Manage (copy/move/mkdir)",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "Deterministic last-mile file placement: copy or move an existing file to a destination (a folder or a file path), or make a folder. Smart path resolution understands known folders (desktop/downloads/documents/pictures/music/videos/home/temp), ~, and %ENV% vars, so 'put it on my desktop' works by default; an existing destination is not overwritten unless overwrite is set.",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-FsManage.ps1",
+    "args_spec": "-Op copy|move|mkdir [-Source <file> -Dest <folder|file>] [-Path <dir>] [-Overwrite] | -InputsJson '<json>'"
+  },
+  "inputs": [
+    {"name": "op", "type": "string", "required": true, "description": "Operation: copy | move | mkdir."},
+    {"name": "source", "type": "string", "required": false, "description": "copy/move: the existing file's path (absolute, ~, %ENV%, known-folder, or relative). Take it from the previous step's produced-file path."},
+    {"name": "dest", "type": "string", "required": false, "description": "copy/move: the destination. A folder (known-folder like 'desktop', an existing dir, a trailing-slash path, or an extension-less path) keeps the source's filename; a full file path renames it."},
+    {"name": "path", "type": "string", "required": false, "description": "mkdir: the folder to create (parents are created)."},
+    {"name": "overwrite", "type": "bool", "required": false, "default": false, "description": "copy/move: replace an existing destination file (else already_exists)."},
+    {"name": "create_dirs", "type": "bool", "required": false, "default": true, "description": "copy/move: create missing destination parent directories."}
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "copy/move: {op, source, dest (final absolute path), dest_folder, filename, dest_was_dir, overwrote, bytes, sha256, source_still_exists}. mkdir: {op, path, created, existed}."
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4"],
+    "models": [],
+    "libraries": [],
+    "cpu": "any", "gpu": "none", "memory_mb": 128,
+    "network": false, "filesystem": "write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": {"root": "runtime/artifacts/<invocation_id>/"},
+  "timeout": {"default_seconds": 60, "on_timeout": "kill_tree_and_report"},
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": false,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

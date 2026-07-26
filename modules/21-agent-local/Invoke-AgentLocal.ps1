@@ -204,6 +204,17 @@ function Get-Observation($env, [string]$skillId, [int]$max) {
                 if ($names.Count -gt 0) { $parts.Add("match_names=[" + ($names -join ', ') + "]") }
             }
         }
+        'gen.image' {
+            if ((Has $r 'image') -and $null -ne $r.image) {
+                $parts.Add("image=$([string](Prop $r.image 'path' ''))")
+                $parts.Add("size=$([string](Prop $r.image 'width' '?'))x$([string](Prop $r.image 'height' '?')) format=$([string](Prop $r.image 'format' ''))")
+            } else { $parts.Add('generated') }
+        }
+        'fs.manage' {
+            $parts.Add("op=$([string](Prop $r 'op' ''))")
+            if (Has $r 'dest') { $parts.Add("dest=$([string](Prop $r 'dest' ''))") }
+            if (Has $r 'path') { $parts.Add("path=$([string](Prop $r 'path' ''))") }
+        }
         default {
             $parts.Add("result=" + (Limit-Text (($r | ConvertTo-Json -Compress -Depth 6)) ([Math]::Max(120, $max - 40))))
         }
@@ -300,6 +311,7 @@ try {
             args_example  = (Prop $t 'args_example' $null)
             required      = @((Prop $t 'required' @()) | ForEach-Object { [string]$_ })
             side_effecting= [bool](Prop $t 'side_effecting' $false)
+            resolve_paths = [bool](Prop $t 'resolve_paths' $true)
         })
     }
     $missing = @($toolDefs | Where-Object { [string]::IsNullOrWhiteSpace($_.entrypoint) })
@@ -517,7 +529,9 @@ try {
         $argSystem = "You produce arguments for a tool call. Output ONLY a single JSON object and nothing else (no prose, no code fences)."
         $argPrompt = @(
             "GOAL: $Goal",
-            $(if (-not [string]::IsNullOrWhiteSpace($workDirResolved)) { "WORKING_DIR: $workDirResolved (use paths under here; a bare filename is fine)" } else { "" }),
+            $(if (-not $chosenTool.resolve_paths) { "PATHS: this tool resolves paths itself. For a destination folder use a KNOWN-FOLDER NAME exactly ('desktop', 'downloads', 'documents', 'pictures') or an absolute path -- do NOT prefix it with any directory. For a source use the EXACT file path shown in the observation above." }
+              elseif (-not [string]::IsNullOrWhiteSpace($workDirResolved)) { "WORKING_DIR: $workDirResolved (use paths under here; a bare filename is fine)" }
+              else { "" }),
             "",
             "TOOL: $($chosenTool.tool)  (skill_id=$($chosenTool.skill_id))",
             "TOOL PURPOSE: $($chosenTool.description)",
@@ -553,11 +567,13 @@ try {
             continue
         }
 
-        # resolve relative path-like args against working_dir
+        # resolve relative path-like args against working_dir -- UNLESS the tool resolves its own paths
+        # (e.g. fs.manage, which understands known folders like 'desktop', ~, and %ENV%; joining those to
+        # working_dir would break them).
         $argHash = [ordered]@{}
         foreach ($pn in $argObj.PSObject.Properties.Name) {
             $val = $argObj.$pn
-            if ($val -is [string] -and -not [string]::IsNullOrWhiteSpace($workDirResolved) -and
+            if ($chosenTool.resolve_paths -and $val -is [string] -and -not [string]::IsNullOrWhiteSpace($workDirResolved) -and
                 (@('path','input','output','out','file','dest','destination') -contains $pn.ToLowerInvariant()) -and
                 -not [System.IO.Path]::IsPathRooted([string]$val)) {
                 $val = Join-Path $workDirResolved ([string]$val)

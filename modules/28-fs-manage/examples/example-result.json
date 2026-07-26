@@ -1,0 +1,46 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "fs.manage",
+  "skill_version": "0.1.0",
+  "contract_version": "0.2",
+  "invocation_id": "e699eb00-5d33-463f-ac67-d3d3ab7c4aa4",
+  "status": "ok",
+  "started_at_utc": "2026-07-26T06:49:05.6000567Z",
+  "finished_at_utc": "2026-07-26T06:49:05.8115023Z",
+  "duration_ms": 207,
+  "inputs_digest": "sha256:c49adbea5a92fc44fd20549fb35337df9ff3474f6613726bd767911ef57d7865",
+  "result": {
+    "op": "copy",
+    "source": "C:\\Users\\just_\\AppData\\Local\\Temp\\gen\\image.png",
+    "dest": "C:\\Users\\just_\\OneDrive\\Desktop\\image.png",
+    "dest_folder": "C:\\Users\\just_\\OneDrive\\Desktop",
+    "filename": "image.png",
+    "dest_was_dir": true,
+    "overwrote": false,
+    "bytes": 24,
+    "sha256": "6bf719097a904bccfa8fd7cbc557b15633906495ecbd006478e7f6c060079018",
+    "source_still_exists": true
+  },
+  "confidence": null,
+  "artifacts": [
+    {
+      "path": "/tmp/tmp.wTBKsyEX9X/art/e699eb00-5d33-463f-ac67-d3d3ab7c4aa4/manage.json",
+      "kind": "json",
+      "bytes": 556,
+      "sha256": "090fc6e1ec84eeb6cf022ab1fd8ca47a59058f082d561211ddd38f4295cf76af"
+    },
+    {
+      "path": "/tmp/tmp.wTBKsyEX9X/art/e699eb00-5d33-463f-ac67-d3d3ab7c4aa4/manage.md",
+      "kind": "markdown",
+      "bytes": 385,
+      "sha256": "59ef8ac1a93c95f17754e60259ea1e3ac2f1a1833de4fd39d0033acd82347bd4"
+    }
+  ],
+  "model_provenance": [],
+  "diagnostics": {
+    "log": "stderr.txt",
+    "artifact_dir": "/tmp/tmp.wTBKsyEX9X/art/e699eb00-5d33-463f-ac67-d3d3ab7c4aa4"
+  },
+  "warnings": [],
+  "error": null
+}
