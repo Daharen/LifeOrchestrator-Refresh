@@ -179,6 +179,12 @@ try {
         $msgList.Add([ordered]@{ role = 'user'; content = $Prompt })
     }
     $msgArr = $msgList.ToArray()
+    if ((Has $m 'no_think') -and [bool]$m.no_think) {
+        $sysIdx = -1
+        for ($i = 0; $i -lt $msgList.Count; $i++) { if ([string]$msgList[$i].role -eq 'system') { $sysIdx = $i; break } }
+        if ($sysIdx -ge 0) { $msgList[$sysIdx].content = ([string]$msgList[$sysIdx].content).TrimEnd() + ' /no_think' }
+        else { $msgList.Insert(0, [ordered]@{ role = 'system'; content = '/no_think' }) }
+    }
     $stopArr = @()
     if ($null -ne $Stop -and @($Stop).Count -gt 0) { $stopArr = @($Stop) }
 

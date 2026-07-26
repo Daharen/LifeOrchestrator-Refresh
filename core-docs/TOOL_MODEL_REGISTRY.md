@@ -748,3 +748,12 @@ portable copies came from (the deleted `MIGRATION.md`'s content) are recorded in
 
 ### `fs.manage` -- File Manage (copy/move/mkdir) (Module 28)
 - **Added 2026-07-26 (D-0042).** A deterministic tool (not a model): copy/move/mkdir with smart path resolution -- known folders (desktop/downloads/documents/pictures/music/videos/home/temp via `[Environment]::GetFolderPath`, so a OneDrive-redirected Desktop is found), `~`, `%ENV%`, absolute, relative; a folder dest keeps the source filename; overwrite-guarded. Pure PowerShell + .NET; **no external binary / Python / model / `models.json` change**; not a review producer. `modules/28-fs-manage/Invoke-FsManage.ps1`. Wired into `agent.local`'s `tools.json` with `resolve_paths:false` (agent passes its path args verbatim). Tests 21/21 off-machine + `m29-verify-001` 25/25 + the REAL e2e `m29-after-003` (a dog image on the real Desktop). See D-0042.
+
+## Strong LLM tier update -- D-0044 (2026-07-26)
+
+`tiers.llm.strong`: `llm.strong.qwen3p5-27b` -> **`llm.strong.qwen3p5-9b`** (Qwen3.5-9B Q4_K_M, bartowski).
+- **Why:** the 27B is ~16 GB Q4 on an 11 GB card = PARTIAL offload (CPU-bound ~2 tok/s; a 30-min agent timeout, D-0043). The 9B fits FULLY on the GPU (~6.9 GB, ngl 99, ~4.3 GB headroom) -> GPU-bound ~68 tok/s, clean output.
+- **Engine:** Qwen3.5-9B is a hybrid attention-SSM arch the box engine **b8661 cannot load** (missing `ssm_conv1d`). A side-by-side **llama.cpp b10092 (CUDA 12.4, self-contained cudart/cublas)** is staged at `_engines\llama.cpp-b10092\bin\`; the 9B entry pins `engine_path` to it (per-model override the gateway already supported). Every other tier stays on b8661 -- no global change. Driver 591.74 / CUDA 13.1 max / CUDA 13.2 toolkit / compute 7.5; cu12.4 chosen for guaranteed driver compat.
+- **Thinking control:** new optional model field **`no_think: true`** -> the gateway appends ` /no_think` to the system message (Qwen3.5 reasoning off; default llama-server flags otherwise leave it ON and it emits empty content at finish=length). Set on the 9B entry.
+- **Registry:** added `llm.strong.qwen3p5-9b` (engine_path=b10092, gpu_layers=99, context=8192, no_think=true, sha256 d784ce9e...). The `llm.strong.qwen3p5-27b` entry is RETAINED (reachable via -Model) but no longer the tier. Consumers of `-Tier strong` (governor max gen_tier, review.processor #9) now get the 9B -- faster.
+- **Residual:** end-to-end placement is gated by the D-0032 terminator (mid-tier premature `finish`), orthogonal to this swap.

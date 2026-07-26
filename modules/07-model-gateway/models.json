@@ -30,7 +30,7 @@
       "tiny": "llm.weak.qwen2p5-0p5b",
       "weak": "llm.weak.qwen2p5-1p5b",
       "mid": "llm.weak.qwen2p5-3b",
-      "strong": "llm.strong.qwen3p5-27b"
+      "strong": "llm.strong.qwen3p5-9b"
     },
     "stt": {
       "base": "stt.whisper.base-en"
@@ -46,6 +46,18 @@
   },
   "models": [
     {
+      "model_id": "llm.strong.qwen3p5-9b",
+      "type": "llm", "wired": true,
+      "name": "Qwen3.5-9B", "family": "qwen3.5", "format": "gguf", "quant": "Q4_K_M",
+      "version": "Qwen_Qwen3.5-9B-Q4_K_M",
+      "no_think": true,
+      "path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\07-model-gateway\\llm\\Qwen3.5-9B-Q4_K_M\\Qwen_Qwen3.5-9B-Q4_K_M.gguf",
+      "engine": "llama-server",
+      "engine_path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\_engines\\llama.cpp-b10092\\bin\\llama-server.exe",
+      "context": 8192, "gpu_layers": 99,
+      "params": { "params_b": 9, "size_bytes": 6169341984, "sha256": "d784ce9eda1a5a7b51e8f705a9e6310844bf4f173654d115823c775fdea56d43" },
+      "notes": "Strong tier (D-0044): a fully-GPU-resident replacement for the partial-offload 27B. Qwen3.5-9B Q4_K_M (bartowski) is a hybrid attention-SSM arch that the box default engine b8661 cannot load (missing ssm_conv1d), so THIS entry pins engine_path to a side-by-side llama.cpp b10092 (CUDA 12.4, self-contained cudart/cublas) staged 2026-07-26; every other tier stays on b8661. Loads fully on the RTX 2080 Ti at ~6.9 GB VRAM (ngl 99, ~4.3 GB headroom) -> GPU-bound ~68 tok/s vs the 27B ~2 tok/s partial offload. Reasoning OFF by default for the 9B (think=False via default llama-server flags); clean JSON/gen verified live (m32-engup-001). Used for GENERATION (governor max gen_tier + review.processor adjudication); decisions stay at the mid floor (D-0043). The 27B entry is retained (reachable via -Model llm.strong.qwen3p5-27b) but is no longer the strong tier."
+    },    {
       "model_id": "llm.weak.qwen2p5-0p5b",
       "type": "llm", "wired": true,
       "name": "Qwen2.5-0.5B-Instruct", "family": "qwen2.5", "format": "gguf", "quant": "Q4_K_M",
