@@ -54,6 +54,8 @@ if ($leaf -eq 'route') {
     # ---- mock route.tools: pre-select a toolset from the request markers ----
     $req = if (Has $p 'request') { [string]$p.request } else { '' }
     if ($req -match 'ROUTE_EMPTY') { $sel = @() }
+    elseif ($req -match 'PREMATURE_FINISH') { $sel = @('doc.io','fs.manage') }
+    elseif ($req -match 'REPEAT_LOOP') { $sel = @('doc.io') }
     elseif ($req -match 'TWO_TOOLS') { $sel = @('fs.observer','doc.io') }
     elseif ($req -match 'MANAGE_PATH') { $sel = @('fs.manage') }
     else { $sel = @('doc.io') }
@@ -81,6 +83,12 @@ elseif ($leaf -like 'decision-*') {
         if ($hasStep2) { $answer = 'finish' } elseif ($hasStep1) { $answer = 'doc.io' } else { $answer = 'fs.observer' }
     } elseif ($text -match 'MANAGE_PATH') {
         if ($hasStep1) { $answer = 'finish' } else { $answer = 'fs.manage' }
+    } elseif ($text -match 'PREMATURE_FINISH') {
+        # D-0032: the model ALWAYS wants to finish (even before any tool has run) -> exercises the terminator
+        $answer = 'finish'
+    } elseif ($text -match 'REPEAT_LOOP') {
+        # D-0032: the model ALWAYS re-picks the same tool (never finishes) -> exercises the repeat-action guard
+        $answer = 'doc.io'
     } else {
         # FINISH_AFTER_ONE (default): a single primary tool, then finish
         if ($hasStep1) { $answer = 'finish' } else { $answer = 'doc.io' }

@@ -205,6 +205,57 @@ $out = & $PwshExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $Agen
 $eng = $null; try { $eng = ($out | Out-String).Trim() | ConvertFrom-Json } catch { }
 Ok ($null -ne $eng -and $eng.status -eq 'error' -and $eng.error.code -eq 'invalid_profile') 'S14 invalid profile -> error envelope'
 
+# --- S15: D-0032 terminator BLOCKS a premature finish and forces each unsatisfied planned tool (route/planned mode) ---
+$r = Run-Agent 'PREMATURE_FINISH: generate a dog and place it on my desktop' @('-Route','-RouteToolsPath',$MockPath)
+$res = if ($null -ne $r.env) { $r.env.result } else { $null }
+Write-Output "S15 terminator-forces-planned:"
+Ok ($null -ne $res -and $res.status -eq 'completed') 'S15 completed (did not stall or stop early)'
+Ok ($null -ne $res -and @($res.planned_tools).Count -eq 2 -and (@($res.planned_tools) -contains 'doc.io') -and (@($res.planned_tools) -contains 'fs.manage')) 'S15 planned_tools = [doc.io, fs.manage]'
+Ok ($null -ne $res -and $res.step_count -eq 3) 'S15 exactly 3 steps (forced doc.io, forced fs.manage, finish)'
+Ok ($null -ne $res -and @($res.steps)[0].decision.chosen_tool -eq 'doc.io' -and @($res.steps)[0].tool.invoked -eq $true) 'S15 step1 forced doc.io despite finish decision'
+Ok ($null -ne $res -and @($res.steps)[0].decision.terminator.finish_blocked -eq $true) 'S15 step1 terminator.finish_blocked recorded'
+Ok ($null -ne $res -and @($res.steps)[1].decision.chosen_tool -eq 'fs.manage' -and @($res.steps)[1].tool.invoked -eq $true) 'S15 step2 forced the remaining planned tool fs.manage'
+Ok ($null -ne $res -and @($res.steps)[2].decision.chosen_tool -eq 'finish') 'S15 step3 finish accepted once all planned tools succeeded'
+Ok ($null -ne $res -and $res.terminator.enabled -eq $true -and $res.terminator.mode -eq 'planned') 'S15 terminator enabled in planned mode'
+Ok ($null -ne $res -and $res.terminator.finish_blocked_count -ge 2) 'S15 finish blocked at least twice'
+Ok ($null -ne $res -and (@($res.outcome.succeeded_tools) -contains 'doc.io') -and (@($res.outcome.succeeded_tools) -contains 'fs.manage')) 'S15 both planned tools actually succeeded (grounded)'
+
+# --- S16: D-0032 repeat-action guard blocks re-running an already-succeeded (tool,args) and finishes deterministically ---
+$r = Run-Agent 'REPEAT_LOOP: keep making the same file over and over' @('-Route','-RouteToolsPath',$MockPath,'-MaxSteps','6')
+$res = if ($null -ne $r.env) { $r.env.result } else { $null }
+Write-Output "S16 repeat-guard:"
+Ok ($null -ne $res -and $res.status -eq 'completed') 'S16 completed (did NOT loop to max_steps)'
+Ok ($null -ne $res -and $res.stop_reason -eq 'finish') 'S16 stop_reason=finish (deterministic finish)'
+Ok ($null -ne $res -and $res.step_count -eq 2) 'S16 exactly 2 steps (run once, then repeat-blocked + finish)'
+Ok ($null -ne $res -and @($res.steps)[0].decision.chosen_tool -eq 'doc.io' -and @($res.steps)[0].tool.invoked -eq $true) 'S16 step1 doc.io invoked'
+Ok ($null -ne $res -and @($res.steps)[1].tool.invoked -eq $false -and @($res.steps)[1].tool.status -eq 'skipped_repeat') 'S16 step2 repeat NOT re-invoked'
+Ok ($null -ne $res -and @($res.steps)[1].decision.terminator.repeat_blocked -eq $true) 'S16 step2 terminator.repeat_blocked recorded'
+Ok ($null -ne $res -and $res.terminator.repeat_blocked_count -eq 1) 'S16 repeat_blocked_count = 1'
+Ok ($null -ne $res -and $res.outcome.tools_invoked -eq 1) 'S16 doc.io invoked exactly once'
+
+# --- S17: a well-behaved routed run is NOT spuriously blocked (terminator on, zero blocks) ---
+$r = Run-Agent 'FINISH_AFTER_ONE: make a file' @('-Route','-RouteToolsPath',$MockPath)
+$res = if ($null -ne $r.env) { $r.env.result } else { $null }
+Write-Output "S17 terminator-no-false-positive:"
+Ok ($null -ne $res -and $res.status -eq 'completed') 'S17 completed'
+Ok ($null -ne $res -and $res.terminator.enabled -eq $true) 'S17 terminator enabled (default ON under -Route)'
+Ok ($null -ne $res -and $res.terminator.finish_blocked_count -eq 0) 'S17 no spurious finish blocks'
+Ok ($null -ne $res -and $res.terminator.repeat_blocked_count -eq 0) 'S17 no spurious repeat blocks'
+Ok ($null -ne $res -and $res.step_count -eq 2) 'S17 two steps (tool + finish)'
+
+# --- S18: default OFF without -Route; routing-off heuristic (>=1 side-effecting) when explicitly enabled ---
+$r = Run-Agent 'FINISH_AFTER_ONE: make a file' $null
+$res = if ($null -ne $r.env) { $r.env.result } else { $null }
+Write-Output "S18 default-off + heuristic fallback:"
+Ok ($null -ne $res -and $res.terminator.enabled -eq $false) 'S18 terminator OFF by default when -Route absent'
+$r = Run-Agent 'PREMATURE_FINISH: generate a dog and place it on my desktop' @('-RequirePlannedToolsBeforeFinish')
+$res = if ($null -ne $r.env) { $r.env.result } else { $null }
+Ok ($null -ne $res -and $res.status -eq 'completed') 'S18 heuristic run completes'
+Ok ($null -ne $res -and $res.terminator.mode -eq 'heuristic') 'S18 heuristic mode (routing off, goal implies an output)'
+Ok ($null -ne $res -and @($res.steps)[0].decision.chosen_tool -eq 'doc.io' -and @($res.steps)[0].tool.invoked -eq $true) 'S18 step1 forced a side-effecting tool (doc.io)'
+Ok ($null -ne $res -and $res.terminator.finish_blocked_count -ge 1) 'S18 heuristic blocked the premature finish at least once'
+Ok ($null -ne $res -and @($res.steps)[1].decision.chosen_tool -eq 'finish') 'S18 step2 finish accepted after one side-effecting success'
+
 # cleanup
 try { Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue } catch { }
 

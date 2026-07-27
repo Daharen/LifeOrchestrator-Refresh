@@ -61,6 +61,7 @@ param(
     [string]$ToolsPath,
     [string]$Tools,
     [switch]$Route,
+    [switch]$RequirePlannedToolsBeforeFinish,
     [string]$RouteToolsPath,
     [string]$RouteTier = 'mid',
     [string]$EscalatorPath,
@@ -228,6 +229,29 @@ function Get-Observation($env, [string]$skillId, [int]$max) {
     }
     return (Limit-Text ("status=$st; " + ($parts -join '; ')) $max)
 }
+# D-0032 deterministic terminator: does the goal imply PRODUCING/PLACING an output (vs a pure read/answer)?
+# Used only as the routing-off fallback (require >=1 successful side-effecting tool for such goals).
+function Test-GoalImpliesOutput([string]$goal) {
+    if ([string]::IsNullOrWhiteSpace($goal)) { return $false }
+    if ($goal -imatch '\b(creat|make|makes|making|made|generat|writ|wrote|sav|saves|saving|plac|placing|put|puts|add|adds|adding|build|builds|building|built|produc|download|render|draw|draws|drawing|export|copy|copies|copying|mov|renam|delet|append|convert|compos|screenshot|capture)\w*') { return $true }
+    if ($goal -imatch '\b(image|picture|photo|file|files|document|report|folder|song|music|audio|wallpaper|desktop|downloads)\b') { return $true }
+    return $false
+}
+# D-0032 repeat-action guard: a stable signature for (tool, materially-significant args) to detect a
+# repeated already-succeeded action. Ignores the injected review_queue_path plumbing key; key/value
+# comparison is order- and case-insensitive so "materially the same" args collapse to one signature.
+function Get-ArgSignature([string]$toolName, $argHash) {
+    $pairs = New-Object System.Collections.Generic.List[string]
+    if ($null -ne $argHash) {
+        $keys = @($argHash.Keys | Where-Object { [string]$_ -ne 'review_queue_path' } | Sort-Object { [string]$_ })
+        foreach ($k in $keys) {
+            $v = $argHash[$k]
+            $vs = if ($null -eq $v) { '' } elseif (($v -is [string]) -or ($v -is [ValueType])) { [string]$v } else { ($v | ConvertTo-Json -Compress -Depth 8) }
+            $pairs.Add((([string]$k).ToLowerInvariant()) + '=' + $vs.Trim().ToLowerInvariant())
+        }
+    }
+    return (([string]$toolName).ToLowerInvariant() + '|' + ($pairs -join '&'))
+}
 
 $status = 'ok'; $errorObj = $null; $result = $null; $inputsDigest = $null
 $confidence = $null
@@ -240,6 +264,7 @@ $steps = New-Object System.Collections.Generic.List[object]
 try {
     # ---- merge -InputsJson (explicit named params win) ----
     $p = $null; $toolsInline = $null
+    $reqParamProvided = $bound.ContainsKey('RequirePlannedToolsBeforeFinish')
     if (-not [string]::IsNullOrWhiteSpace($InputsJson)) {
         try { $p = $InputsJson | ConvertFrom-Json } catch { throw [PSCustomObject]@{ code='invalid_inputs_json'; message='-InputsJson is not valid JSON'; retryable=$false } }
         if ($null -ne $p) {
@@ -261,6 +286,7 @@ try {
             if ((Has $p 'route')                 -and -not $bound.ContainsKey('Route'))               { if ([bool]$p.route) { $Route = [switch]$true } }
             if ((Has $p 'route_tools_path')      -and -not $bound.ContainsKey('RouteToolsPath'))      { $RouteToolsPath = [string]$p.route_tools_path }
             if ((Has $p 'route_tier')            -and -not $bound.ContainsKey('RouteTier'))           { $RouteTier = [string]$p.route_tier }
+            if ((Has $p 'require_planned_tools_before_finish') -and -not $bound.ContainsKey('RequirePlannedToolsBeforeFinish')) { $reqParamProvided = $true; if ([bool]$p.require_planned_tools_before_finish) { $RequirePlannedToolsBeforeFinish = [switch]$true } }
             if ((Has $p 'escalator_path')        -and -not $bound.ContainsKey('EscalatorPath'))       { $EscalatorPath = [string]$p.escalator_path }
             if ((Has $p 'gateway_path')          -and -not $bound.ContainsKey('GatewayPath'))         { $GatewayPath = [string]$p.gateway_path }
             if ((Has $p 'registry')              -and -not $bound.ContainsKey('Registry'))            { $Registry = [string]$p.registry }
@@ -472,10 +498,44 @@ try {
     $costGatewayCalls = 0; $costTokens = 0; $costRuntimeMs = 0
     $finished = $false; $stopReason = $null; $anyDecisionNeedsFrontier = $false
 
+    # ===== D-0032 deterministic terminator + repeat-guard configuration (model-independent) =====
+    #   reqEffective: enforce the terminator? Default ON when -Route (an explicit switch / InputsJson key wins).
+    #   mode 'planned'   : routing applied -> block finish until EVERY planned (routed) tool has succeeded >=1.
+    #   mode 'heuristic' : routing off/fell-back + goal implies an output -> block finish until >=1 side-effecting
+    #                      tool has succeeded (the lighter fallback).
+    #   mode 'none'      : nothing to enforce (finish accepted as decided) -- e.g. dry-run, read-only goal, off.
+    #   The override is always capped by the step budget (each forced/blocked step consumes one step).
+    $reqEffective = if ($reqParamProvided) { [bool]$RequirePlannedToolsBeforeFinish } else { [bool]$Route }
+    $routeApplied = [bool]$routeInfo.applied
+    $goalImpliesOutput = Test-GoalImpliesOutput $Goal
+    if ($routeApplied) { $termReqDefs = @($usableTools); $termMode = 'planned' }
+    elseif ($reqEffective -and $goalImpliesOutput) { $termReqDefs = @($usableTools | Where-Object { $_.side_effecting }); $termMode = 'heuristic' }
+    else { $termReqDefs = @(); $termMode = 'none' }
+    $enforceTerminator = ($reqEffective -and (-not [bool]$DryRun) -and ($termMode -ne 'none') -and (@($termReqDefs).Count -gt 0))
+    if (-not $enforceTerminator -and $termMode -ne 'planned') { $termMode = 'none' }
+    $termReqNames = @($termReqDefs | ForEach-Object { $_.tool })
+    $succeededToolSet = New-Object 'System.Collections.Generic.HashSet[string]'
+    $succeededSignatures = New-Object 'System.Collections.Generic.HashSet[string]'
+    $finishBlockedReason = $null; $finishBlockedCount = 0; $forcedStepCount = 0; $repeatBlockedCount = 0
+    $forceNextTool = $null
+    Write-Diag "terminator: enforce=$enforceTerminator mode=$termMode required=[$($termReqNames -join ',')]"
+
     for ($stepIdx = 1; $stepIdx -le $MaxSteps; $stepIdx++) {
         $stepId = "step-$stepIdx"
         $transWindow = Limit-Text (($transcript.ToArray()) -join "`n") $MaxTranscriptChars
 
+        # ===== D-0032: if a required tool was force-selected last step, run it now (skip the model decision) =====
+        $forcedThisStep = $false
+        if ($null -ne $forceNextTool) {
+            if (@($usableTools | Where-Object { $_.tool -eq $forceNextTool }).Count -gt 0) { $forcedThisStep = $true; $chosen = $forceNextTool }
+            $forceNextTool = $null
+        }
+        if ($forcedThisStep) {
+            $decConf = $null; $accTier = 'terminator'; $accVia = 'forced'; $decNeedsFrontier = $false; $decOk = $true
+            $forcedStepCount++
+            $transcript.Add("STEP ${stepIdx}: [terminator] forcing required tool '$chosen' (not yet succeeded); skipping the model decision.")
+            Write-Diag "step $stepIdx FORCED -> '$chosen'"
+        } else {
         # ===== 1) DECIDE the next action THROUGH the escalator (closed-set classify) =====
         $decisionText = @(
             "You are a local task agent. Decide the SINGLE best next action for the goal.",
@@ -517,6 +577,7 @@ try {
         }
         if ($null -ne $decConf) { $decisionConfs.Add([double]$decConf) }
         if ($decNeedsFrontier) { $anyDecisionNeedsFrontier = $true }
+        } # end model-decision branch (skipped when a required tool was force-selected)
 
         # validate the chosen label is in-set (the escalator's gate should guarantee this)
         $isFinish = ($null -ne $chosen -and $chosen -eq 'finish')
@@ -528,7 +589,7 @@ try {
 
         $stepRec = [ordered]@{
             index = $stepIdx
-            decision = [ordered]@{ chosen_tool=$chosen; confidence=$decConf; accepted_tier=$accTier; accepted_via=$accVia; needs_frontier=$decNeedsFrontier; ok=$decOk }
+            decision = [ordered]@{ chosen_tool=$chosen; confidence=$decConf; accepted_tier=$accTier; accepted_via=$accVia; needs_frontier=$decNeedsFrontier; ok=$decOk; forced=$forcedThisStep }
             args = $null
             args_raw = $null
             tool = [ordered]@{ skill_id=$null; invoked=$false; status=$null; error=$null; artifact_dir=$null }
@@ -547,12 +608,30 @@ try {
 
         Write-Diag "step $stepIdx decision -> '$chosen' (tier=$accTier via=$accVia conf=$decConf frontier=$decNeedsFrontier)"
 
-        # ===== finish? =====
+        # ===== finish? (D-0032 deterministic terminator gates a PREMATURE finish) =====
         if ($isFinish) {
-            $transcript.Add("STEP ${stepIdx}: decided to FINISH.")
-            $steps.Add([pscustomobject]$stepRec)
-            $finished = $true; $stopReason = 'finish'
-            break
+            $unsat = @($termReqDefs | Where-Object { -not $succeededToolSet.Contains($_.tool) })
+            $doneForFinish = if ($termMode -eq 'heuristic') { @($unsat).Count -lt @($termReqDefs).Count } else { @($unsat).Count -eq 0 }
+            if ($enforceTerminator -and (-not $doneForFinish) -and (@($unsat).Count -gt 0)) {
+                # block the finish: a required tool has not yet succeeded -> force the first unsatisfied one this step
+                $forceName = [string]$unsat[0].tool
+                $isFinish = $false; $chosen = $forceName
+                $cm = @($usableTools | Where-Object { $_.tool -eq $forceName }); if ($cm.Count -gt 0) { $chosenTool = $cm[0] }
+                $finishBlockedCount++
+                $unsatNames = @($unsat | ForEach-Object { $_.tool })
+                $finishBlockedReason = "finish requested at step $stepIdx but required tool(s) not yet succeeded: [$($unsatNames -join ', ')]; forced '$forceName'"
+                $stepRec.decision.chosen_tool = $chosen
+                $stepRec.decision.terminator = [ordered]@{ finish_blocked=$true; forced_tool=$forceName; unsatisfied=$unsatNames; mode=$termMode }
+                $transcript.Add("STEP ${stepIdx}: finish requested but required tool(s) [$($unsatNames -join ', ')] not done; forcing '$forceName' instead.")
+                Write-Diag "step $stepIdx finish BLOCKED (unsat=[$($unsatNames -join ',')]); forcing '$forceName'"
+                # fall through to arg-generation + invocation for the forced tool (do NOT break)
+            } else {
+                if ($enforceTerminator) { $stepRec.decision.terminator = [ordered]@{ finish_blocked=$false; done=$true; mode=$termMode } }
+                $transcript.Add("STEP ${stepIdx}: decided to FINISH.")
+                $steps.Add([pscustomobject]$stepRec)
+                $finished = $true; $stopReason = 'finish'
+                break
+            }
         }
         if ($null -eq $chosenTool) {
             # escalator returned a label that is not a known tool nor finish (should not happen with the in-set gate)
@@ -622,6 +701,31 @@ try {
         }
         $stepRec.args = $argHash
 
+        # ===== D-0032 repeat-action guard: never re-run an already-succeeded (tool, materially-same args) =====
+        $argSig = Get-ArgSignature $chosenTool.tool $argHash
+        if ($enforceTerminator -and (-not [bool]$DryRun) -and $succeededSignatures.Contains($argSig)) {
+            $repeatBlockedCount++
+            $unsat2 = @($termReqDefs | Where-Object { -not $succeededToolSet.Contains($_.tool) })
+            $doneNow = if ($termMode -eq 'heuristic') { @($unsat2).Count -lt @($termReqDefs).Count } else { @($unsat2).Count -eq 0 }
+            $stepRec.tool.skill_id = $chosenTool.skill_id
+            $stepRec.tool.invoked = $false
+            $stepRec.tool.status = 'skipped_repeat'
+            $stepRec.decision.terminator = [ordered]@{ repeat_blocked=$true; done=$doneNow; mode=$termMode }
+            $obs = "[terminator] '$($chosenTool.tool)' already succeeded with equivalent args; not repeating."
+            $stepRec.observation = Limit-Text $obs $MaxObservationChars
+            $transcript.Add("STEP ${stepIdx}: $obs")
+            Write-Diag "step $stepIdx repeat BLOCKED for '$($chosenTool.tool)' (done=$doneNow)"
+            $steps.Add([pscustomobject]$stepRec)
+            if ($doneNow) {
+                if ($null -eq $finishBlockedReason) { $finishBlockedReason = "all required tools already succeeded; finished deterministically after a repeated '$($chosenTool.tool)' choice" }
+                $finished = $true; $stopReason = 'finish'
+                break
+            } else {
+                $forceNextTool = [string]$unsat2[0].tool   # drive the next unsatisfied required tool next step
+                continue
+            }
+        }
+
         # ===== 3) INVOKE the tool (unless dry-run) =====
         $stepRec.tool.skill_id = $chosenTool.skill_id
         if ($DryRun) {
@@ -652,6 +756,8 @@ try {
             $stepRec.observation = $obs
             $transcript.Add("STEP ${stepIdx}: ran $($chosenTool.tool) -> $obs")
             Write-Diag "step $stepIdx tool $($chosenTool.skill_id) ok"
+            [void]$succeededToolSet.Add($chosenTool.tool)   # D-0032: mark this tool + args signature satisfied
+            [void]$succeededSignatures.Add($argSig)
         } else {
             $ec = if ($null -ne $toolEnv) { Get-ChildErrCode $toolEnv } else { 'no_envelope' }
             $stepRec.tool.status = if ($null -ne $toolEnv -and (Has $toolEnv 'status')) { [string]$toolEnv.status } else { 'error' }
@@ -729,6 +835,7 @@ try {
         planned_tools = $plannedToolsOut
         route = $routeInfo
         outcome = $outcome
+        terminator = [ordered]@{ enabled=[bool]$enforceTerminator; mode=$termMode; require_planned_tools_before_finish=[bool]$reqEffective; required_tools=$termReqNames; finish_blocked_count=$finishBlockedCount; forced_steps=$forcedStepCount; repeat_blocked_count=$repeatBlockedCount; finish_blocked_reason=$finishBlockedReason }
         tools_available = @($usableTools | ForEach-Object { [ordered]@{ tool=$_.tool; skill_id=$_.skill_id; side_effecting=$_.side_effecting } })
         steps = $steps.ToArray()
         cost = [ordered]@{ decision_calls=$costDecisionCalls; gen_calls=$costGenCalls; tool_calls=$costToolCalls;
@@ -763,6 +870,7 @@ try {
             needs_frontier=$result.needs_frontier; stop_reason=$result.stop_reason; step_count=$result.step_count;
             max_steps=$result.max_steps; dry_run=$result.dry_run;
             route_enabled=$result.route_enabled; planned_tools=$result.planned_tools; route=$result.route; outcome=$result.outcome;
+            terminator=$result.terminator;
             tools_available=$result.tools_available;
             steps=$result.steps; cost=$result.cost; profile=$result.profile; decision_tiers=$result.decision_tiers; gen_tier=$result.gen_tier;
             review=$result.review; model_provenance=$modelProvenance.ToArray() }
