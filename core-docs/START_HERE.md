@@ -9,7 +9,7 @@ Read this first. It routes you; it does not contain the project's substance.
 > do; deterministic modules are Claude's hands; model modules only where machine- or human-checkable).
 > **Widget #3 -- the Verification Console -- SHIPPED (D-0051, commit `f7e7b289`; 73/73 cloud + 80/80 live):**
 > the human-AUDIT surface where Claude hands Nicholas a verification packet and he runs + checks it locally and
-> exports a result Claude reads back. **The FAN-OUT ORCHESTRATOR SHIPPED (D-0054: `orchestrate.fanout`, Module 30; commit `2ffe162e`; 51/51 cloud + 51/51 live) -- built on res.lease #29; both multi-instance primitives now exist.** Next unit: a **fan-out DOGFOOD** (write a real 2-worker plan, Nicholas runs it, validate the loop end-to-end) -- or wire res.lease consumers / Governor Phase 2 (D-0054). Cadence: **housekeeping -> implement one unit -> housekeeping -> handoff**, repeat. Read
+> exports a result Claude reads back. **The FAN-OUT ORCHESTRATOR SHIPPED (D-0054: `orchestrate.fanout`, Module 30; commit `2ffe162e`; 51/51 cloud + 51/51 live) -- built on res.lease #29; both multi-instance primitives now exist.** **Fan-out DOGFOOD iteration 1 COMPLETE (D-0055, plan fo-1-20ed8a0b): 3 workers shipped -- res.lease gpu->model.gateway #7 (0c6d5c9, 42/42), res.lease git->dev.ship (5530418, 39/39), frontier.bridge #31 built (f52f21d, 65/65); 0 conflicts, 3/3 done, handoff emitted a verification packet.** Next unit: **iteration 2** -- the remaining res.lease consumer (doc:<path> into the core-doc edit flow) / Governor Phase 2 (D-0055). Cadence: **housekeeping -> implement one unit -> housekeeping -> handoff**, repeat. Read
 > `core-docs/HANDOFF.md` + `DECISION_LOG.md` D-0050/D-0051 before picking work.
 
 ## What this project is (one line)
