@@ -1,0 +1,33 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "frontier.bridge",
+  "skill_version": "0.1.0",
+  "contract_version": "0.2",
+  "invocation_id": "8f3c2b41-0a2e-4d77-9c11-2a4f9e0b7c55",
+  "status": "ok",
+  "started_at_utc": "2026-07-27T22:30:00.0000000Z",
+  "finished_at_utc": "2026-07-27T22:30:00.1200000Z",
+  "duration_ms": 120,
+  "inputs_digest": "sha256:2b9d7f0c5a1e3b8d4c6a2f9e1d0b7c3a5e8f4d2c1b0a9e8d7c6b5a4f3e2d1c0b",
+  "result": {
+    "action": "pack",
+    "pack_path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\31-frontier-bridge\\runtime\\artifacts\\8f3c2b41-0a2e-4d77-9c11-2a4f9e0b7c55\\frontier-pack-8f3c2b41.md",
+    "manifest_path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\31-frontier-bridge\\runtime\\artifacts\\8f3c2b41-0a2e-4d77-9c11-2a4f9e0b7c55\\manifest.json",
+    "return_file": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\31-frontier-bridge\\runtime\\artifacts\\8f3c2b41-0a2e-4d77-9c11-2a4f9e0b7c55\\frontier-pack-8f3c2b41.answer.md",
+    "file_count": 2,
+    "total_bytes": 42,
+    "skipped_count": 1,
+    "boundary": "outbound-local-only; no network contacted; the human is the sole courier (D-0052)",
+    "instructions_for_user": "Copy the contents of the pack file into your OWN external model session (e.g. ChatGPT), paste the answer into the return file, then have Claude run action 'read-return' on the return file. frontier.bridge itself never contacts any external service."
+  },
+  "confidence": null,
+  "artifacts": [
+    {"path": "C:\\...\\frontier-pack-8f3c2b41.md", "kind": "markdown", "bytes": 1179, "sha256": "..."},
+    {"path": "C:\\...\\manifest.json", "kind": "json", "bytes": 861, "sha256": "..."},
+    {"path": "C:\\...\\frontier-pack-8f3c2b41.answer.md", "kind": "markdown", "bytes": 369, "sha256": "..."}
+  ],
+  "model_provenance": [],
+  "diagnostics": {"log": "stderr.txt"},
+  "warnings": ["skipped (binary): C:\\...\\src\\logo.png"],
+  "error": null
+}

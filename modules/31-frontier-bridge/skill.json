@@ -1,0 +1,47 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "frontier.bridge",
+  "name": "Frontier Bridge (local context packager)",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "Assemble a Claude-written prompt + selected local files into ONE copy-paste pack the user manually carries to their own external model session, plus read the pasted answer back. LOCAL-ONLY, NO-NETWORK: never contacts any external AI service (D-0052).",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-FrontierBridge.ps1",
+    "args_spec": "Named params or -InputsJson '<object>'. Action: pack | read-return. See inputs."
+  },
+  "inputs": [
+    {"name": "action", "type": "string", "required": false, "default": "pack", "description": "pack | read-return."},
+    {"name": "prompt", "type": "string", "required": false, "description": "Claude-written instructions/context (required for action=pack)."},
+    {"name": "question", "type": "string", "required": false, "description": "The specific question, emphasised at the end of the pack."},
+    {"name": "paths", "type": "string[]", "required": false, "description": "Explicit file paths and/or globs to include."},
+    {"name": "folder", "type": "string", "required": false, "description": "A folder whose files are included."},
+    {"name": "include", "type": "string[]", "required": false, "description": "Include globs (folder mode)."},
+    {"name": "exclude", "type": "string[]", "required": false, "description": "Exclude globs (folder mode)."},
+    {"name": "recurse", "type": "bool", "required": false, "default": true, "description": "Recurse the folder."},
+    {"name": "max_file_bytes", "type": "int", "required": false, "default": 2000000, "description": "Skip any single file larger than this."},
+    {"name": "max_total_bytes", "type": "int", "required": false, "default": 20000000, "description": "Stop including files once the pack would exceed this."},
+    {"name": "title", "type": "string", "required": false, "description": "Human title for the pack."},
+    {"name": "out_name", "type": "string", "required": false, "description": "Base name for the pack file."},
+    {"name": "return_file", "type": "string", "required": false, "description": "pack: override the return-file location. read-return: the file the user pasted the answer into (required for read-return)."}
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "pack: {pack_path, manifest_path, return_file, file_count, total_bytes, skipped_count, boundary, instructions_for_user}. read-return: {return_file, bytes, sha256, encoding, captured, char_count, content}."
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4"],
+    "models": [],
+    "libraries": [],
+    "cpu": "any", "gpu": "none", "memory_mb": 128,
+    "network": false, "filesystem": "read", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": {"root": "runtime/artifacts/<invocation_id>/"},
+  "timeout": {"default_seconds": 120, "on_timeout": "kill_tree_and_report"},
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}
