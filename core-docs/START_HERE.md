@@ -3,15 +3,15 @@
 **You are a fresh Claude instance joining Life Orchestrator (near-term "local skills" track).**
 Read this first. It routes you; it does not contain the project's substance.
 
-> **ACTIVE WORK -- read `core-docs/HANDOFF.md` FIRST (2026-07-27).** The local-agent correction arc is
-> COMPLETE (D-0043 governor Phase 1; D-0044 strong tier -> Qwen3.5-9B; **D-0046 deterministic terminator --
-> the old D-0032 premature-`finish` reliability bug is RESOLVED: multi-tool goals now finish reliably at the
-> floor default**). The project has RESUMED capability expansion per `MODULE_ROADMAP.md -> Build priority`,
-> with an infrastructure unit first (now DONE): **the executor JOB-RUNNER + `dev.ship` unit harness (D-0047/D-0048)**
-> that collapses the per-unit ship/verify/test/commit ceremony. **Phase B Widget #2 (Module Launcher / Registry
-> Browser) then SHIPPED (D-0049)**; the next unit is **Phase B Widget #3 (Review / Escalation Dashboard)**. Ship
-> every unit through the job-runner (HANDOFF section 3). `HANDOFF.md` carries the active-unit spec + the current disclaimers. Read it before picking
-> an "active module."
+> **ACTIVE WORK -- iterate loop, running HOT (2026-07-27, D-0050).** The local-agent correction arc is CLOSED
+> (D-0043/44/46) and the per-unit ship ceremony is automated (D-0048 job-runner). Past MVP, the project now
+> drives ONE spine -- the OFFLOAD / AUDIT LOOP under the **verify-cost rule** (Claude offloads only what is
+> cheaper to VERIFY than to do; the deterministic modules are Claude's hands; the model modules only where
+> machine- or human-checkable). Cadence: **housekeeping -> implement one unit -> housekeeping -> handoff**,
+> repeat. **Active unit: Widget #3 -- the Verification Console** -- the human-AUDIT surface that lets Nicholas
+> verify offloaded work and take subtasks Claude hands him (reorients the old "Review / Escalation Dashboard").
+> Read `core-docs/HANDOFF.md` + `DECISION_LOG.md` D-0050 before picking work. Multi-instance buildout (several
+> Claudes driving the box) is a live direction -- it needs a GPU-lease / commit-lock / doc-ownership layer first.
 
 ## What this project is (one line)
 

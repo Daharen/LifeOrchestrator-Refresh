@@ -3,8 +3,8 @@
 **Read this after `START_HERE.md`, before you pick an "active module."** The local-agent CORRECTION ARC IS
 COMPLETE (D-0043 governor Phase 1; D-0044 strong tier -> Qwen3.5-9B; D-0046 deterministic terminator) and the
 per-unit ship ceremony is now automated (D-0048 job-runner, section 3). Capability expansion has RESUMED per
-`MODULE_ROADMAP.md -> Build priority`; Widget #2 (Module Launcher / Registry Browser) SHIPPED (D-0049); the next unit is Widget #3 (section 4). Full history: `DECISION_LOG.md`
-(D-0043, D-0044, D-0046, D-0047, D-0048, D-0049) + `claude/ADAPTIVE_RESOURCE_GOVERNOR.md`. This doc is the map.
+`MODULE_ROADMAP.md -> Build priority`; Widget #2 (Module Launcher / Registry Browser) SHIPPED (D-0049); the next unit is Widget #3 -- the Verification Console (section 4), driving the D-0050 offload/audit-loop spine. Full history: `DECISION_LOG.md`
+(D-0043, D-0044, D-0046, D-0047, D-0048, D-0049, D-0050) + `claude/ADAPTIVE_RESOURCE_GOVERNOR.md`. This doc is the map.
 
 ## 0. Where the project lives (locations)
 
@@ -64,23 +64,43 @@ notify the harness). The index-clean guard means it can never fold in the user's
 `Show-AgentConsole.ps1` edit. Full inputs schema: the `Invoke-DevShip.ps1` header + `modules/00-bootstrap-executor/README.md`.
 Mirror-to-Project is still a frontier step (`project_write`); everything else on-device goes through the runner.
 
-## 4. Next unit -- resume capability expansion (Widget #3) + deferred substrate follow-ons
+## 4. Next unit -- the AUDIT-LOOP spine: Widget #3 = the Verification Console (D-0050)
 
-Resume `MODULE_ROADMAP.md -> Build priority`. **Widget #2 (Module Launcher / Registry Browser) SHIPPED 2026-07-27 (D-0049; `widgets/02-module-launcher/`; browses
-`modules/*/skill.json` + runs any Module through the Module 1 wrapper `Invoke-Skill.ps1`; 62/62 cloud + 71/71 live via
-the job-runner, commit `a699ac6`).** The **next capability unit = Phase B Widget #3 -- Review /
-Escalation Dashboard** (then Voice Console, Generator Studio, Document Workspace,
-System/Executor Monitor; `widgets/README.md`). Multi-tool agent runs are reliable at the floor default (D-0046),
-so a Widget driving `agent.local` is safe (use floor, not max). **Ship it with the job-runner (section 3).**
+**Direction reset (D-0050).** Past MVP the project drives ONE spine -- the OFFLOAD / AUDIT LOOP under the
+**verify-cost rule**: Claude offloads a task to a module only when verifying its output is cheaper than doing
+it itself. The deterministic modules (fs/doc/image/audio/ocr/capture) are Claude's HANDS (verify-cost ~0, do
+what Claude cannot) -> always offload. The local-MODEL modules have high verify-cost on this hardware, so only
+their MACHINE-checkable or cheaply HUMAN-checkable slices are worth offloading (the generators are the USER
+track, not offload). Two ways to crush verify-cost: deterministic ground-truth gates, and Nicholas as a cheap
+HUMAN auditor -- which is why the next unit is a human-audit surface.
+
+**Next unit = Phase B Widget #3 -- the Verification Console** (reorients the old "Review / Escalation
+Dashboard"). Claude writes a VERIFICATION PACKET (per item: the Module + inputs, or a described human action;
+the expected result / spec; a checklist); the console lets Nicholas RUN each runnable item locally through the
+Module 1 wrapper `Invoke-Skill.ps1` (the Widget 02 machinery), SEE inputs / outputs / artifacts, tick the
+checklist, add notes, and EXPORT a verification-result JSON Claude reads back -- and it doubles as the channel
+for Claude to hand Nicholas human-doable subtasks. Native WinForms + a WinForms-free driver core + a thin STA
+shell + `launch.bat` + dual-mode tests (the D-0038 / D-0039 / D-0049 pattern); reimplements nothing; NOT a
+review producer. **Ship it with the job-runner (section 3).**
+
+**Cadence (D-0050): housekeeping -> implement one unit -> housekeeping -> handoff, run HOT this month.**
+**Multi-instance buildout** (several Claudes driving the box concurrently) is a live direction: the executor
+already runs concurrent isolated tasks and deterministic modules are `parallel_safe`, but it first needs a
+resource-arbitration layer -- a GPU LEASE (model modules are `parallel_safe:false`), a git / commit LOCK
+(index.lock collisions), and DOC-OWNERSHIP (shared core-docs) -- an early candidate unit if adopted.
+
 **Deferred substrate follow-ons (do when they earn it):** Governor Phase 2 (warm/persistent llama-server --
-removes per-call cold loads + the orphan risk; the ~26-min cold `max` run in D-0046 is the motivation); 9B
-arg-gen hardening (unblocks `-Profile max`); Governor Phase 3 (auto-ramp controller).
+removes per-call cold loads + the orphan risk); 9B arg-gen hardening (unblocks `-Profile max`); Governor
+Phase 3 (auto-ramp). A **narrowing pass** on the model modules (pin them to specialized, machine-checkable
+slices) is the natural depth follow-on that makes more model-module work clear the verify-cost bar.
 
 ## 5. How to choose (for the driver)
 
-Take **Widget #3** next (capability expansion, section 4), unless warm-server speed or `-Profile max`
-reliability matters more right now -- then do a deferred substrate follow-on (section 4). Either way, SHIP IT
-WITH THE JOB-RUNNER (section 3). One scoped unit per session (D-0029).
+Default: take **Widget #3 -- the Verification Console** (section 4) -- it is the active unit and unblocks the
+audit loop. Deviate only if warm-server speed or `-Profile max` reliability is the bigger pain right now (do a
+deferred substrate follow-on), or if multi-instance buildout is being stood up (build the resource-arbitration
+lock / lease layer first). SHIP EVERY UNIT WITH THE JOB-RUNNER (section 3). One scoped unit per instance;
+under multi-instance, coordinate by locks (D-0050 relaxes the single-active-unit rule to one-per-instance).
 
 ## 6. Operational setup + gotchas (condensed)
 
@@ -100,4 +120,4 @@ WITH THE JOB-RUNNER (section 3). One scoped unit per session (D-0029).
   Mirror changed core-docs to the Project by fresh-copying to a never-staged `runtime\mNNmirror\` path before
   `device_stage_files` (re-staging a previously-staged path returns STALE bytes).
 
-_Last updated 2026-07-27 (D-0049). Widget #2 (Module Launcher / Registry Browser) SHIPPED via the job-runner (commit `a699ac6`; 62/62 cloud + 71/71 live). Next unit: Widget #3 (Review / Escalation Dashboard). Ship every unit with the job-runner (section 3); use the floor profile for end-to-end agent runs (max has a 9B arg-gen residual)._
+_Last updated 2026-07-27 (D-0050). Housekeeping pass: recorded the past-MVP offload/verify-cost doctrine + the audit-loop spine (D-0050), reoriented Widget #3 to the Verification Console, set the iterate-loop cadence + the multi-instance direction. [prior] 2026-07-27 (D-0049). Widget #2 (Module Launcher / Registry Browser) SHIPPED via the job-runner (commit `a699ac6`; 62/62 cloud + 71/71 live). Next unit: Widget #3 (Review / Escalation Dashboard). Ship every unit with the job-runner (section 3); use the floor profile for end-to-end agent runs (max has a 9B arg-gen residual)._

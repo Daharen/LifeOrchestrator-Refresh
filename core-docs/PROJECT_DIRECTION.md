@@ -32,6 +32,13 @@ Widgets make it usable by a human. (Widget is the adopted name for the HID / hum
   frontier allotment never pays for. The current build order lives in `MODULE_ROADMAP.md → Build priority`.
 - **Cut the frontier''s own operating overhead (2026-07-27, D-0047).** Offloading work locally only nets out if DRIVING the local system is cheap too. The per-unit ship/verify/test/commit/mirror ceremony is now the dominant frontier-token sink, so an executor JOB-RUNNER + a `dev.ship` unit harness (Module 0 expansion) is the immediate infra unit before the next capability Module/Widget. Corrections complete (D-0043/44/46); capability expansion resumes per `MODULE_ROADMAP.md → Build priority`.
 
+## Offload economics & phase (2026-07-27, D-0050)
+
+- **Verify-cost offload rule.** Claude offloads a task to a local module ONLY when verifying the module's output is cheaper than Claude producing it itself. The DETERMINISTIC modules (fs/doc/image/audio/ocr/capture) have verify-cost ~0 and do what Claude cannot (touch this box) -> always offload; they are Claude's hands. The local-MODEL modules have HIGH verify-cost on current hardware, so Claude offloads only their MACHINE-checkable or cheaply HUMAN-checkable slices -- expanding their input contracts does NOT fix this (the ceiling is the model tier, not the interface). Quality is rarely why Claude delegates; LOCALITY and cheap BULK are.
+- **Two audiences.** "Useful to the user" = a personal local-capability suite Nicholas drives himself (Widgets + generators + local models). "Useful to Claude" = offload (deterministic hands + a reliable spine + cheap-to-audit bulk). The generators are the USER track, not offload.
+- **Phase.** NOW = a Claude-leads BRIDGE: Claude leads, minimizes its own tokens, offloads the cheap-to-verify parts, keeps local tasks NARROW / specialized. NORTH STAR (~2-3 yrs, on a 6090 / A100-class box): a local model strong enough to act autonomously, frontier only via API.
+- **Spine = the AUDIT LOOP.** Crush verify-cost two ways: deterministic ground-truth gates + Nicholas as a human auditor (the Verification Console, Widget #3). See `MODULE_ROADMAP.md -> Build priority` and `DECISION_LOG.md` D-0050.
+
 ## Perception and reasoning policy
 
 - **Stochastic perception and reasoning are acceptable.** Deterministic canonical collapse is a
