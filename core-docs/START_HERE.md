@@ -7,9 +7,10 @@ Read this first. It routes you; it does not contain the project's substance.
 > COMPLETE (D-0043 governor Phase 1; D-0044 strong tier -> Qwen3.5-9B; **D-0046 deterministic terminator --
 > the old D-0032 premature-`finish` reliability bug is RESOLVED: multi-tool goals now finish reliably at the
 > floor default**). The project has RESUMED capability expansion per `MODULE_ROADMAP.md -> Build priority`,
-> with ONE immediate infrastructure unit first: **the executor JOB-RUNNER (Module 0 expansion) + a `dev.ship`
-> unit harness (D-0047)** that collapses the per-unit ship/verify/test/commit/mirror ceremony to cut frontier
-> token overhead. `HANDOFF.md` carries the active-unit spec + the current disclaimers. Read it before picking
+> with an infrastructure unit first (now DONE): **the executor JOB-RUNNER + `dev.ship` unit harness (D-0047/D-0048)**
+> that collapses the per-unit ship/verify/test/commit ceremony. **Phase B Widget #2 (Module Launcher / Registry
+> Browser) then SHIPPED (D-0049)**; the next unit is **Phase B Widget #3 (Review / Escalation Dashboard)**. Ship
+> every unit through the job-runner (HANDOFF section 3). `HANDOFF.md` carries the active-unit spec + the current disclaimers. Read it before picking
 > an "active module."
 
 ## What this project is (one line)

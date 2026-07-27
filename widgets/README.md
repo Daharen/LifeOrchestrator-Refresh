@@ -38,7 +38,11 @@ and a couple of generators). Ordered most usability-per-effort first:
    through the Local Logic Escalator and can invoke any registered Module -- and renders its result envelope +
    child transcript. Delivers the whole package "vicariously through the local model," the way the frontier
    agent does today. This is the milestone that makes the system usable locally.
-2. **Module Launcher & Registry Browser** -- discover + run any installed Module directly (discoverability).
+2. **Module Launcher & Registry Browser** -- **BUILT: MVP complete 2026-07-27 (D-0049; `widgets/02-module-launcher/`).**
+   Discover + run any installed Module directly (discoverability): browse every `modules/*/skill.json` (id / purpose /
+   inputs / requirements / flags; malformed manifests surfaced) and run any one **through the Module 1 wrapper
+   `Invoke-Skill.ps1`**, rendering its invocation report + result envelope. Native WinForms over a WinForms-free driver
+   core -- the Widget #1 pattern (D-0039). Reimplements nothing; not a review-queue producer.
 3. **Review / Escalation Dashboard** -- a human surface over the review queue + the escalation ladder
    (watch / approve / adjudicate flagged items and escalation ladders).
 4. **Voice Console** -- push-to-talk / live loop over `voice.live` (Module 13).

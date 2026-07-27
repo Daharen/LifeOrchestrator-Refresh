@@ -3,8 +3,8 @@
 **Read this after `START_HERE.md`, before you pick an "active module."** The local-agent CORRECTION ARC IS
 COMPLETE (D-0043 governor Phase 1; D-0044 strong tier -> Qwen3.5-9B; D-0046 deterministic terminator) and the
 per-unit ship ceremony is now automated (D-0048 job-runner, section 3). Capability expansion has RESUMED per
-`MODULE_ROADMAP.md -> Build priority`; the next unit is Widget #2 (section 4). Full history: `DECISION_LOG.md`
-(D-0043, D-0044, D-0046, D-0047, D-0048) + `claude/ADAPTIVE_RESOURCE_GOVERNOR.md`. This doc is the map.
+`MODULE_ROADMAP.md -> Build priority`; Widget #2 (Module Launcher / Registry Browser) SHIPPED (D-0049); the next unit is Widget #3 (section 4). Full history: `DECISION_LOG.md`
+(D-0043, D-0044, D-0046, D-0047, D-0048, D-0049) + `claude/ADAPTIVE_RESOURCE_GOVERNOR.md`. This doc is the map.
 
 ## 0. Where the project lives (locations)
 
@@ -26,6 +26,7 @@ per-unit ship ceremony is now automated (D-0048 job-runner, section 3). Capabili
 - **D-0044 -- Strong tier -> Qwen3.5-9B** (`0bef73a`): fully GPU-resident (~6.9 GB, ~68 tok/s) via side-by-side llama.cpp b10092; a gateway `no_think` hook.
 - **D-0046 -- D-0032 deterministic terminator** (`59dea8e`): a `finish` is blocked until every routed planned tool has succeeded; never re-run a done (tool,args); default ON under `-Route`. Live: dog goal at the floor default lands on the real Desktop EVERY run (3/3). The old premature-`finish` reliability bug is RESOLVED at the floor default (max residual in #1 below).
 - **D-0048 -- Module 0 job-runner** (`5644b9ba`): `dev.ship` (Invoke-DevShip.ps1) + `exec-job.sh` collapse the per-unit gate+commit ceremony to a few calls (section 3). 27/27 + 24/24 off-machine; dogfood: committed BY dev.ship itself.
+- **D-0049 -- Widget #2 Module Launcher / Registry Browser** (`a699ac6`): browse every installed Module from its `skill.json` + run any one directly through the Module 1 wrapper `Invoke-Skill.ps1`; WinForms-free core + thin STA shell (the Widget #1 pattern). 62/62 cloud + **71/71 `-Live`** (real registry scan >=20 modules + a real `fs.observer` run through the wrapper, 0 orphans) -- the FIRST unit shipped end-to-end through the job-runner.
 
 ## 2. Disclaimers / known issues (read before trusting the stack)
 
@@ -63,10 +64,12 @@ notify the harness). The index-clean guard means it can never fold in the user's
 `Show-AgentConsole.ps1` edit. Full inputs schema: the `Invoke-DevShip.ps1` header + `modules/00-bootstrap-executor/README.md`.
 Mirror-to-Project is still a frontier step (`project_write`); everything else on-device goes through the runner.
 
-## 4. Next unit -- resume capability expansion (Widget #2) + deferred substrate follow-ons
+## 4. Next unit -- resume capability expansion (Widget #3) + deferred substrate follow-ons
 
-Resume `MODULE_ROADMAP.md -> Build priority`. **Next capability unit = Phase B Widget #2 -- Module Launcher /
-Registry Browser** (then Review/Escalation Dashboard, Voice Console, Generator Studio, Document Workspace,
+Resume `MODULE_ROADMAP.md -> Build priority`. **Widget #2 (Module Launcher / Registry Browser) SHIPPED 2026-07-27 (D-0049; `widgets/02-module-launcher/`; browses
+`modules/*/skill.json` + runs any Module through the Module 1 wrapper `Invoke-Skill.ps1`; 62/62 cloud + 71/71 live via
+the job-runner, commit `a699ac6`).** The **next capability unit = Phase B Widget #3 -- Review /
+Escalation Dashboard** (then Voice Console, Generator Studio, Document Workspace,
 System/Executor Monitor; `widgets/README.md`). Multi-tool agent runs are reliable at the floor default (D-0046),
 so a Widget driving `agent.local` is safe (use floor, not max). **Ship it with the job-runner (section 3).**
 **Deferred substrate follow-ons (do when they earn it):** Governor Phase 2 (warm/persistent llama-server --
@@ -75,7 +78,7 @@ arg-gen hardening (unblocks `-Profile max`); Governor Phase 3 (auto-ramp control
 
 ## 5. How to choose (for the driver)
 
-Take **Widget #2** next (capability expansion, section 4), unless warm-server speed or `-Profile max`
+Take **Widget #3** next (capability expansion, section 4), unless warm-server speed or `-Profile max`
 reliability matters more right now -- then do a deferred substrate follow-on (section 4). Either way, SHIP IT
 WITH THE JOB-RUNNER (section 3). One scoped unit per session (D-0029).
 
@@ -97,4 +100,4 @@ WITH THE JOB-RUNNER (section 3). One scoped unit per session (D-0029).
   Mirror changed core-docs to the Project by fresh-copying to a never-staged `runtime\mNNmirror\` path before
   `device_stage_files` (re-staging a previously-staged path returns STALE bytes).
 
-_Last updated 2026-07-27 (D-0048). Job-runner SHIPPED (dev.ship + exec-job.sh) -- USE IT to ship every unit (section 3). Next unit: Widget #2. Use the floor profile for end-to-end agent runs (max has a 9B arg-gen residual)._
+_Last updated 2026-07-27 (D-0049). Widget #2 (Module Launcher / Registry Browser) SHIPPED via the job-runner (commit `a699ac6`; 62/62 cloud + 71/71 live). Next unit: Widget #3 (Review / Escalation Dashboard). Ship every unit with the job-runner (section 3); use the floor profile for end-to-end agent runs (max has a 9B arg-gen residual)._
