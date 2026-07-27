@@ -43,7 +43,7 @@ and a couple of generators). Ordered most usability-per-effort first:
    inputs / requirements / flags; malformed manifests surfaced) and run any one **through the Module 1 wrapper
    `Invoke-Skill.ps1`**, rendering its invocation report + result envelope. Native WinForms over a WinForms-free driver
    core -- the Widget #1 pattern (D-0039). Reimplements nothing; not a review-queue producer.
-3. **Review / Escalation Dashboard** -- a human surface over the review queue + the escalation ladder
+3. **Verification Console (Widget #3, SHIPPED D-0051)** -- a human surface over the review queue + the escalation ladder
    (watch / approve / adjudicate flagged items and escalation ladders).
 4. **Voice Console** -- push-to-talk / live loop over `voice.live` (Module 13).
 5. **Generator Studio** -- prompt -> preview -> save over the image / audio / music / video generators.

@@ -3,15 +3,16 @@
 **You are a fresh Claude instance joining Life Orchestrator (near-term "local skills" track).**
 Read this first. It routes you; it does not contain the project's substance.
 
-> **ACTIVE WORK -- iterate loop, running HOT (2026-07-27, D-0050).** The local-agent correction arc is CLOSED
-> (D-0043/44/46) and the per-unit ship ceremony is automated (D-0048 job-runner). Past MVP, the project now
-> drives ONE spine -- the OFFLOAD / AUDIT LOOP under the **verify-cost rule** (Claude offloads only what is
-> cheaper to VERIFY than to do; the deterministic modules are Claude's hands; the model modules only where
-> machine- or human-checkable). Cadence: **housekeeping -> implement one unit -> housekeeping -> handoff**,
-> repeat. **Active unit: Widget #3 -- the Verification Console** -- the human-AUDIT surface that lets Nicholas
-> verify offloaded work and take subtasks Claude hands him (reorients the old "Review / Escalation Dashboard").
-> Read `core-docs/HANDOFF.md` + `DECISION_LOG.md` D-0050 before picking work. Multi-instance buildout (several
-> Claudes driving the box) is a live direction -- it needs a GPU-lease / commit-lock / doc-ownership layer first.
+> **ACTIVE WORK -- iterate loop, running HOT (2026-07-27, D-0050/D-0051).** The correction arc is CLOSED
+> (D-0043/44/46), the ship ceremony is automated (D-0048 job-runner), and the project drives ONE spine -- the
+> OFFLOAD / AUDIT LOOP under the **verify-cost rule** (Claude offloads only what is cheaper to VERIFY than to
+> do; deterministic modules are Claude's hands; model modules only where machine- or human-checkable).
+> **Widget #3 -- the Verification Console -- SHIPPED (D-0051, commit `f7e7b289`; 73/73 cloud + 80/80 live):**
+> the human-AUDIT surface where Claude hands Nicholas a verification packet and he runs + checks it locally and
+> exports a result Claude reads back. **Next unit: the resource-arbitration / lock-lease layer** (GPU lease +
+> commit lock + doc-ownership) -- it unblocks MULTI-INSTANCE buildout and the user's FAN-OUT ORCHESTRATOR
+> (D-0051). Cadence: **housekeeping -> implement one unit -> housekeeping -> handoff**, repeat. Read
+> `core-docs/HANDOFF.md` + `DECISION_LOG.md` D-0050/D-0051 before picking work.
 
 ## What this project is (one line)
 

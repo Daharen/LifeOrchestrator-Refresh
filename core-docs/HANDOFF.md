@@ -28,6 +28,8 @@ per-unit ship ceremony is now automated (D-0048 job-runner, section 3). Capabili
 - **D-0048 -- Module 0 job-runner** (`5644b9ba`): `dev.ship` (Invoke-DevShip.ps1) + `exec-job.sh` collapse the per-unit gate+commit ceremony to a few calls (section 3). 27/27 + 24/24 off-machine; dogfood: committed BY dev.ship itself.
 - **D-0049 -- Widget #2 Module Launcher / Registry Browser** (`a699ac6`): browse every installed Module from its `skill.json` + run any one directly through the Module 1 wrapper `Invoke-Skill.ps1`; WinForms-free core + thin STA shell (the Widget #1 pattern). 62/62 cloud + **71/71 `-Live`** (real registry scan >=20 modules + a real `fs.observer` run through the wrapper, 0 orphans) -- the FIRST unit shipped end-to-end through the job-runner.
 
+- **D-0051 -- Widget #3 Verification Console** (`f7e7b289`): the human-AUDIT surface for the offload/verify-cost spine -- Claude writes a verification packet (module+inputs+expected+checklist, or a `human_action`), Nicholas runs each `run_module` item locally through `Invoke-Skill.ps1`, checks it, and exports a `lifeorch.verification.result/0.1` Claude reads back. WinForms-free core + thin STA shell + dual-mode tests (the Widget 01/02 pattern). 73/73 cloud + **80/80 `-Live`** (WinForms SelfTest + a real `fs.observer` run through the real wrapper, 0 orphans).
+
 ## 2. Disclaimers / known issues (read before trusting the stack)
 
 1. **`-Profile max` is NOT reliable end-to-end -- a 9B arg-gen residual, NOT the terminator.** At the FLOOR
@@ -64,43 +66,42 @@ notify the harness). The index-clean guard means it can never fold in the user's
 `Show-AgentConsole.ps1` edit. Full inputs schema: the `Invoke-DevShip.ps1` header + `modules/00-bootstrap-executor/README.md`.
 Mirror-to-Project is still a frontier step (`project_write`); everything else on-device goes through the runner.
 
-## 4. Next unit -- the AUDIT-LOOP spine: Widget #3 = the Verification Console (D-0050)
+## 4. Next unit -- resume the spine: the resource-arbitration lock/lease layer (then the fan-out orchestrator)
 
-**Direction reset (D-0050).** Past MVP the project drives ONE spine -- the OFFLOAD / AUDIT LOOP under the
-**verify-cost rule**: Claude offloads a task to a module only when verifying its output is cheaper than doing
-it itself. The deterministic modules (fs/doc/image/audio/ocr/capture) are Claude's HANDS (verify-cost ~0, do
-what Claude cannot) -> always offload. The local-MODEL modules have high verify-cost on this hardware, so only
-their MACHINE-checkable or cheaply HUMAN-checkable slices are worth offloading (the generators are the USER
-track, not offload). Two ways to crush verify-cost: deterministic ground-truth gates, and Nicholas as a cheap
-HUMAN auditor -- which is why the next unit is a human-audit surface.
+**Widget #3 -- the Verification Console -- SHIPPED (D-0051, `f7e7b289`; 73/73 cloud + 80/80 live).** The
+audit-loop surface exists: Claude writes a verification packet, Nicholas runs + checks each item locally
+through `Invoke-Skill.ps1` and exports a `lifeorch.verification.result/0.1`. `human_action` items are the
+handed-subtask channel.
 
-**Next unit = Phase B Widget #3 -- the Verification Console** (reorients the old "Review / Escalation
-Dashboard"). Claude writes a VERIFICATION PACKET (per item: the Module + inputs, or a described human action;
-the expected result / spec; a checklist); the console lets Nicholas RUN each runnable item locally through the
-Module 1 wrapper `Invoke-Skill.ps1` (the Widget 02 machinery), SEE inputs / outputs / artifacts, tick the
-checklist, add notes, and EXPORT a verification-result JSON Claude reads back -- and it doubles as the channel
-for Claude to hand Nicholas human-doable subtasks. Native WinForms + a WinForms-free driver core + a thin STA
-shell + `launch.bat` + dual-mode tests (the D-0038 / D-0039 / D-0049 pattern); reimplements nothing; NOT a
-review producer. **Ship it with the job-runner (section 3).**
+**Recommended next unit = the resource-arbitration / lock-lease layer.** It is the prerequisite for the
+MULTI-INSTANCE buildout (D-0050) and the user's FAN-OUT ORCHESTRATOR (D-0051): several Claude instances driving
+the box at once need a **GPU LEASE** (every model module is `parallel_safe:false` -- one llama-server / one
+pipeline at a time; heavy render/model runs block others), a **git/commit LOCK** (index.lock collisions have
+already bitten -- D-0048/D-0049), and **DOC-OWNERSHIP** (concurrent edits to shared core-docs collide). Build a
+small lease/lock convention (a `runtime/leases/` dir or an executor lease concept) so N instances coordinate;
+then the "one active unit per session" rule (D-0029) relaxes to "one unit per instance, coordinated by locks."
 
-**Cadence (D-0050): housekeeping -> implement one unit -> housekeeping -> handoff, run HOT this month.**
-**Multi-instance buildout** (several Claudes driving the box concurrently) is a live direction: the executor
-already runs concurrent isolated tasks and deterministic modules are `parallel_safe`, but it first needs a
-resource-arbitration layer -- a GPU LEASE (model modules are `parallel_safe:false`), a git / commit LOCK
-(index.lock collisions), and DOC-OWNERSHIP (shared core-docs) -- an early candidate unit if adopted.
+**Then the FAN-OUT ORCHESTRATOR (D-0051):** one orchestrator spins up N worker prompts (trial of 2, scale as
+viable, clamp to 1 for GPU-heavy units), collects progress reports, and its final handoff emits worker prompts
++ one check-in prompt for Nicholas + the report-back cadence, then closes docs and issues the next iteration.
+The Verification Console's packet/result is its human-I/O.
+
+**Alternate units (if the lock layer is not wanted yet):** (a) a **Verification Console dogfood** -- Claude
+writes a real packet for a just-built unit and Nicholas runs it, to validate the audit loop end-to-end and
+surface UX gaps; (b) a **narrowing pass** on the model modules (pin them to specialized, machine-checkable
+slices so more model-module work clears the verify-cost bar).
 
 **Deferred substrate follow-ons (do when they earn it):** Governor Phase 2 (warm/persistent llama-server --
-removes per-call cold loads + the orphan risk); 9B arg-gen hardening (unblocks `-Profile max`); Governor
-Phase 3 (auto-ramp). A **narrowing pass** on the model modules (pin them to specialized, machine-checkable
-slices) is the natural depth follow-on that makes more model-module work clear the verify-cost bar.
+removes per-call cold loads + the orphan risk); 9B arg-gen hardening (unblocks `-Profile max`); Governor Phase 3.
 
 ## 5. How to choose (for the driver)
 
-Default: take **Widget #3 -- the Verification Console** (section 4) -- it is the active unit and unblocks the
-audit loop. Deviate only if warm-server speed or `-Profile max` reliability is the bigger pain right now (do a
-deferred substrate follow-on), or if multi-instance buildout is being stood up (build the resource-arbitration
-lock / lease layer first). SHIP EVERY UNIT WITH THE JOB-RUNNER (section 3). One scoped unit per instance;
-under multi-instance, coordinate by locks (D-0050 relaxes the single-active-unit rule to one-per-instance).
+Default: build **the resource-arbitration / lock-lease layer** (section 4) -- it unblocks the multi-instance
+buildout and the fan-out orchestrator the user asked for. If multi-instance is not being stood up yet, do a
+**Verification Console dogfood** or a **model-module narrowing pass** (section 4) to advance the audit-loop
+spine, or a **deferred substrate follow-on** if warm-server speed / `-Profile max` is the bigger pain. SHIP
+EVERY UNIT WITH THE JOB-RUNNER (section 3). One scoped unit per instance; under multi-instance, coordinate by
+locks (D-0050/D-0051 relax the single-active-unit rule to one-per-instance).
 
 ## 6. Operational setup + gotchas (condensed)
 
@@ -120,4 +121,4 @@ under multi-instance, coordinate by locks (D-0050 relaxes the single-active-unit
   Mirror changed core-docs to the Project by fresh-copying to a never-staged `runtime\mNNmirror\` path before
   `device_stage_files` (re-staging a previously-staged path returns STALE bytes).
 
-_Last updated 2026-07-27 (D-0050). Housekeeping pass: recorded the past-MVP offload/verify-cost doctrine + the audit-loop spine (D-0050), reoriented Widget #3 to the Verification Console, set the iterate-loop cadence + the multi-instance direction. [prior] 2026-07-27 (D-0049). Widget #2 (Module Launcher / Registry Browser) SHIPPED via the job-runner (commit `a699ac6`; 62/62 cloud + 71/71 live). Next unit: Widget #3 (Review / Escalation Dashboard). Ship every unit with the job-runner (section 3); use the floor profile for end-to-end agent runs (max has a 9B arg-gen residual)._
+_Last updated 2026-07-27 (D-0051). Widget #3 Verification Console SHIPPED via the job-runner (commit f7e7b289; 73/73 cloud + 80/80 live); next = the resource-arbitration lock/lease layer (unblocks multi-instance + the fan-out orchestrator, D-0051). [prior] (D-0050). Housekeeping pass: recorded the past-MVP offload/verify-cost doctrine + the audit-loop spine (D-0050), reoriented Widget #3 to the Verification Console, set the iterate-loop cadence + the multi-instance direction. [prior] 2026-07-27 (D-0049). Widget #2 (Module Launcher / Registry Browser) SHIPPED via the job-runner (commit `a699ac6`; 62/62 cloud + 71/71 live). Next unit: Widget #3 (Review / Escalation Dashboard). Ship every unit with the job-runner (section 3); use the floor profile for end-to-end agent runs (max has a 9B arg-gen residual)._
