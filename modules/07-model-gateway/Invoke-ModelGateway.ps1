@@ -38,13 +38,21 @@ param(
     [string]$ReviewQueuePath,
     [string]$InputsJson,
     [string]$ArtifactRoot = (Join-Path $PSScriptRoot 'runtime/artifacts'),
-    [string]$InvocationId
+    [string]$InvocationId,
+    # --- GPU lease wiring (res.lease #29) ---
+    [string]$GpuLease = 'auto',          # off | auto | wait | require
+    [int]$GpuLeaseWaitSeconds = 900,     # wait budget for -GpuLease wait|require (auto forces 0)
+    [int]$GpuLeaseTtlSeconds = 1800,     # lease TTL; renewed only if a run outlives it
+    [string]$GpuLeaseHolder,             # stable holder id; default $env:LIFEORCH_INSTANCE else model.gateway:<pid>
+    [string]$LeaseDir,                   # shared lease dir passthrough (default: res.lease resolves it)
+    [string]$ResLeasePath,               # override path to Invoke-ResLease.ps1 (default: auto-resolve)
+    [string]$PwshPath                    # pwsh used to spawn res.lease (default: resolve via PATH)
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$SKILL_ID = 'model.gateway'; $SKILL_VERSION = '0.1.0'; $CONTRACT = '0.1'
+$SKILL_ID = 'model.gateway'; $SKILL_VERSION = '0.2.0'; $CONTRACT = '0.1'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $CONF_THRESHOLD = 0.5
 $utf8 = [System.Text.UTF8Encoding]::new($false)
@@ -73,6 +81,55 @@ function Resolve-RepoRoot([string]$start) {
         }
     } catch { }
     return $null
+}
+# ---- res.lease (#29) integration: resolve pwsh + the lease script, and shell out to it ----
+function Get-PwshExe {
+    if (-not [string]::IsNullOrWhiteSpace($PwshPath)) { return $PwshPath }
+    if (-not [string]::IsNullOrWhiteSpace($env:LIFEORCH_PWSH)) { return $env:LIFEORCH_PWSH }
+    try { $c = Get-Command pwsh -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1; if ($null -ne $c -and $c.Source) { return $c.Source } } catch { }
+    try { $mm = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName; if ($mm -match '(?i)pwsh') { return $mm } } catch { }
+    return 'pwsh'
+}
+function Resolve-ResLeasePath {
+    if (-not [string]::IsNullOrWhiteSpace($ResLeasePath)) {
+        if (Test-Path -LiteralPath $ResLeasePath -PathType Leaf) { return (Resolve-Path -LiteralPath $ResLeasePath).Path }
+        return $null
+    }
+    $root = Resolve-RepoRoot $PSScriptRoot
+    if ($null -ne $root) {
+        $cand = Join-Path $root 'modules/29-resource-lease/Invoke-ResLease.ps1'
+        if (Test-Path -LiteralPath $cand -PathType Leaf) { return (Resolve-Path -LiteralPath $cand).Path }
+    }
+    $sib = Join-Path (Split-Path -Parent $PSScriptRoot) '29-resource-lease/Invoke-ResLease.ps1'
+    if (Test-Path -LiteralPath $sib -PathType Leaf) { return (Resolve-Path -LiteralPath $sib).Path }
+    return $null
+}
+# Run one res.lease action as a SEPARATE pwsh process (its `exit 0` must not terminate this script) and
+# return the parsed .result object, or $null on any failure (caller treats $null as "lease unavailable").
+function Invoke-GpuLeaseAction {
+    param(
+        [string]$LeaseAction, [string]$Resource, [string]$Holder,
+        [int]$Ttl = 1800, [double]$Wait = 0, [string]$LeaseIdArg, [string]$LeaseDirArg,
+        [string]$RlPath, [string]$PwshExe
+    )
+    if ([string]::IsNullOrWhiteSpace($RlPath) -or [string]::IsNullOrWhiteSpace($PwshExe)) { return $null }
+    $a = @('-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File', $RlPath,
+           '-Action', $LeaseAction, '-Resource', $Resource, '-Holder', $Holder)
+    if ($LeaseAction -eq 'acquire') { $a += @('-TtlSeconds', "$Ttl", '-WaitSeconds', "$Wait") }
+    if (-not [string]::IsNullOrWhiteSpace($LeaseIdArg))  { $a += @('-LeaseId', $LeaseIdArg) }
+    if (-not [string]::IsNullOrWhiteSpace($LeaseDirArg)) { $a += @('-LeaseDir', $LeaseDirArg) }
+    $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+    try {
+        $out = & $PwshExe @a 2>$null
+        $txt = ([string]($out | Out-String)).Trim()
+        if ([string]::IsNullOrWhiteSpace($txt)) { return $null }
+        $envObj = $txt | ConvertFrom-Json
+        if ($null -ne $envObj -and (Has $envObj 'result') -and $null -ne $envObj.result) { return $envObj.result }
+        return $null
+    } catch {
+        Write-Diag "res.lease $LeaseAction invocation error: $($_.Exception.Message)"
+        return $null
+    } finally { $ErrorActionPreference = $prev }
 }
 
 $status = 'ok'; $errorObj = $null; $result = $null; $inputsDigest = $null
@@ -108,6 +165,13 @@ try {
             if (Has $p 'context')        { $Context = [int]$p.context }
             if (Has $p 'load_timeout_s') { $LoadTimeoutSec = [int]$p.load_timeout_s }
             if (Has $p 'review_queue_path') { $ReviewQueuePath = [string]$p.review_queue_path }
+            if (Has $p 'gpu_lease')        { $GpuLease = [string]$p.gpu_lease }
+            if (Has $p 'gpu_lease_wait_s')  { $GpuLeaseWaitSeconds = [int]$p.gpu_lease_wait_s }
+            if (Has $p 'gpu_lease_ttl_s')   { $GpuLeaseTtlSeconds = [int]$p.gpu_lease_ttl_s }
+            if (Has $p 'gpu_lease_holder')  { $GpuLeaseHolder = [string]$p.gpu_lease_holder }
+            if (Has $p 'lease_dir')        { $LeaseDir = [string]$p.lease_dir }
+            if (Has $p 'res_lease_path')    { $ResLeasePath = [string]$p.res_lease_path }
+            if (Has $p 'pwsh_path')        { $PwshPath = [string]$p.pwsh_path }
         }
     }
     New-Item -ItemType Directory -Path $invDir -Force | Out-Null
@@ -196,38 +260,103 @@ try {
     $usePort = if ($Port -gt 0) { $Port } else { Get-FreePort 8140 }
     if ($usePort -le 0) { throw [PSCustomObject]@{ code = 'no_free_port'; message = 'could not find a free loopback port'; retryable = $true } }
 
-    # ---- start server, health-wait, complete, stop ----
+    # ---- GPU lease (res.lease #29): acquire BEFORE starting llama-server; release AFTER teardown ----
+    $glMode = if ([string]::IsNullOrWhiteSpace($GpuLease)) { 'auto' } else { $GpuLease.ToLowerInvariant() }
+    if (@('off','auto','wait','require') -notcontains $glMode) { $warnings.Add("unknown -GpuLease '$GpuLease'; using 'auto'"); $glMode = 'auto' }
+    $glHolder = if (-not [string]::IsNullOrWhiteSpace($GpuLeaseHolder)) { $GpuLeaseHolder }
+                elseif (-not [string]::IsNullOrWhiteSpace($env:LIFEORCH_INSTANCE)) { $env:LIFEORCH_INSTANCE }
+                else { "model.gateway:$PID" }
+    $leaseState = [ordered]@{
+        mode = $glMode; requested = ($glMode -ne 'off'); available = $null
+        acquired = $false; owned = $false; already_held = $false; reclaimed_stale = $false
+        lease_id = $null; holder = $glHolder; held_by = $null; released = $null; note = $null
+    }
     $srvLog = Join-Path $invDir 'server.out.log'; $srvErr = Join-Path $invDir 'server.err.log'
     $srvArgs = @('-m', $modelPath, '-ngl', "$ngl", '-c', "$ctx", '--host', '127.0.0.1', '--port', "$usePort", '--no-warmup')
-    Write-Diag "starting llama-server pid? port=$usePort model=$($m.model_id) ngl=$ngl ctx=$ctx"
-    $sp = $null; $healthOk = $false; $healthMs = $null; $loadStart = [System.Diagnostics.Stopwatch]::StartNew()
+    $sp = $null; $healthOk = $false; $healthMs = $null; $loadStart = $null
     $resp = $null
     try {
-        $sp = Start-Process -FilePath $enginePath -ArgumentList $srvArgs -RedirectStandardOutput $srvLog -RedirectStandardError $srvErr -PassThru -WindowStyle Hidden
-        $deadline = (Get-Date).AddSeconds($LoadTimeoutSec)
-        while ((Get-Date) -lt $deadline) {
-            if ($sp.HasExited) { throw [PSCustomObject]@{ code = 'server_start_failed'; message = "llama-server exited during load (code $($sp.ExitCode)); see server.err.log"; retryable = $true } }
-            try { $h = Invoke-WebRequest -Uri "http://127.0.0.1:$usePort/health" -UseBasicParsing -TimeoutSec 2; if ($h.StatusCode -eq 200) { $healthOk = $true; break } } catch { }
-            Start-Sleep -Milliseconds 500
+        # -- acquire the gpu lease (graceful fallback: log + proceed if res.lease is absent; wait|proceed|require per the switch) --
+        if ($glMode -ne 'off') {
+            $rlPath = Resolve-ResLeasePath
+            if ($null -eq $rlPath) {
+                $leaseState.available = $false
+                $leaseState.note = 'res.lease not found; proceeding without GPU arbitration'
+                $warnings.Add('gpu lease: res.lease module not found; proceeding without a lease (graceful fallback)')
+                Write-Diag $leaseState.note
+            } else {
+                $leaseState.available = $true
+                $glWait = if ($glMode -eq 'auto') { 0 } else { $GpuLeaseWaitSeconds }
+                $acq = Invoke-GpuLeaseAction -LeaseAction 'acquire' -Resource 'gpu' -Holder $glHolder -Ttl $GpuLeaseTtlSeconds -Wait $glWait -LeaseDirArg $LeaseDir -RlPath $rlPath -PwshExe (Get-PwshExe)
+                if ($null -eq $acq) {
+                    $leaseState.available = $false
+                    $leaseState.note = 'res.lease invocation failed; proceeding without GPU arbitration'
+                    $warnings.Add('gpu lease: res.lease invocation failed; proceeding without a lease (graceful fallback)')
+                    Write-Diag $leaseState.note
+                } elseif ([bool]$acq.acquired) {
+                    $leaseState.acquired = $true
+                    $leaseState.lease_id = [string]$acq.lease_id
+                    $leaseState.already_held = [bool]$acq.already_held
+                    $leaseState.reclaimed_stale = [bool]$acq.reclaimed_stale
+                    $leaseState.owned = (-not [bool]$acq.already_held)   # release only what we freshly created
+                    Write-Diag "gpu lease acquired lease_id=$($leaseState.lease_id) already_held=$($leaseState.already_held) reclaimed_stale=$($leaseState.reclaimed_stale) owned=$($leaseState.owned)"
+                } else {
+                    $leaseState.held_by = [string]$acq.held_by
+                    if ($glMode -eq 'require') {
+                        throw [PSCustomObject]@{ code = 'gpu_lease_unavailable'; message = "gpu lease held by '$($acq.held_by)'; -GpuLease require did not acquire within $glWait s"; retryable = $true }
+                    }
+                    $leaseState.note = "contended (held by '$($acq.held_by)'); proceeding"
+                    $warnings.Add("gpu lease: $($leaseState.note) (log+proceed)")
+                    Write-Diag "gpu lease contended held_by=$($acq.held_by); proceeding"
+                }
+            }
         }
-        $loadStart.Stop(); $healthMs = [int]$loadStart.Elapsed.TotalMilliseconds
-        if (-not $healthOk) { throw [PSCustomObject]@{ code = 'health_timeout'; message = "llama-server did not become healthy within $LoadTimeoutSec s"; retryable = $true } }
 
-        $bodyObj = [ordered]@{ model = $m.model_id; messages = $msgArr; max_tokens = $MaxTokens; temperature = $Temperature; top_p = $TopP; top_k = $TopK; seed = $Seed }
-        if ($stopArr.Count -gt 0) { $bodyObj.stop = $stopArr }
-        $body = $bodyObj | ConvertTo-Json -Depth 8
-        $genSw = [System.Diagnostics.Stopwatch]::StartNew()
+        # ---- start server, health-wait, complete, stop ----
+        Write-Diag "starting llama-server pid? port=$usePort model=$($m.model_id) ngl=$ngl ctx=$ctx"
+        $loadStart = [System.Diagnostics.Stopwatch]::StartNew()
         try {
-            $resp = Invoke-RestMethod -Uri "http://127.0.0.1:$usePort/v1/chat/completions" -Method Post -Body $body -ContentType 'application/json' -TimeoutSec ([Math]::Max(30, $LoadTimeoutSec))
-        } catch {
-            throw [PSCustomObject]@{ code = 'completion_failed'; message = "chat completion request failed: $($_.Exception.Message)"; retryable = $true }
+            $sp = Start-Process -FilePath $enginePath -ArgumentList $srvArgs -RedirectStandardOutput $srvLog -RedirectStandardError $srvErr -PassThru -WindowStyle Hidden
+            $deadline = (Get-Date).AddSeconds($LoadTimeoutSec)
+            while ((Get-Date) -lt $deadline) {
+                if ($sp.HasExited) { throw [PSCustomObject]@{ code = 'server_start_failed'; message = "llama-server exited during load (code $($sp.ExitCode)); see server.err.log"; retryable = $true } }
+                try { $h = Invoke-WebRequest -Uri "http://127.0.0.1:$usePort/health" -UseBasicParsing -TimeoutSec 2; if ($h.StatusCode -eq 200) { $healthOk = $true; break } } catch { }
+                Start-Sleep -Milliseconds 500
+            }
+            $loadStart.Stop(); $healthMs = [int]$loadStart.Elapsed.TotalMilliseconds
+            if (-not $healthOk) { throw [PSCustomObject]@{ code = 'health_timeout'; message = "llama-server did not become healthy within $LoadTimeoutSec s"; retryable = $true } }
+
+            $bodyObj = [ordered]@{ model = $m.model_id; messages = $msgArr; max_tokens = $MaxTokens; temperature = $Temperature; top_p = $TopP; top_k = $TopK; seed = $Seed }
+            if ($stopArr.Count -gt 0) { $bodyObj.stop = $stopArr }
+            $body = $bodyObj | ConvertTo-Json -Depth 8
+            $genSw = [System.Diagnostics.Stopwatch]::StartNew()
+            try {
+                $resp = Invoke-RestMethod -Uri "http://127.0.0.1:$usePort/v1/chat/completions" -Method Post -Body $body -ContentType 'application/json' -TimeoutSec ([Math]::Max(30, $LoadTimeoutSec))
+            } catch {
+                throw [PSCustomObject]@{ code = 'completion_failed'; message = "chat completion request failed: $($_.Exception.Message)"; retryable = $true }
+            }
+            $genSw.Stop()
         }
-        $genSw.Stop()
+        finally {
+            if ($null -ne $sp) {
+                try { & taskkill /PID $sp.Id /T /F 2>$null | Out-Null } catch { }
+                try { if (-not $sp.HasExited) { $sp.Kill($true) } } catch { }
+            }
+        }
     }
     finally {
-        if ($null -ne $sp) {
-            try { & taskkill /PID $sp.Id /T /F 2>$null | Out-Null } catch { }
-            try { if (-not $sp.HasExited) { $sp.Kill($true) } } catch { }
+        # release the gpu lease AFTER the server is fully torn down (only a lease we freshly acquired)
+        if ($leaseState.owned -and -not [string]::IsNullOrWhiteSpace([string]$leaseState.lease_id) -and $leaseState.available) {
+            $rel = Invoke-GpuLeaseAction -LeaseAction 'release' -Resource 'gpu' -Holder $glHolder -LeaseIdArg ([string]$leaseState.lease_id) -LeaseDirArg $LeaseDir -RlPath (Resolve-ResLeasePath) -PwshExe (Get-PwshExe)
+            if ($null -ne $rel -and [bool]$rel.released) {
+                $leaseState.released = $true
+                Write-Diag "gpu lease released lease_id=$($leaseState.lease_id)"
+            } else {
+                $leaseState.released = $false
+                $rr = if ($null -ne $rel) { [string]$rel.reason } else { 'invoke_failed' }
+                $warnings.Add("gpu lease: release unconfirmed (reason=$rr)")
+                Write-Diag "gpu lease release unconfirmed reason=$rr"
+            }
         }
     }
 
@@ -267,7 +396,7 @@ try {
         request = [ordered]@{ messages = $msgArr; max_tokens = $MaxTokens; temperature = $Temperature; top_p = $TopP; top_k = $TopK; seed = $Seed; stop = $stopArr }
         output = [ordered]@{ role = 'assistant'; text = $content }
         generation = [ordered]@{ finish_reason = $finish; prompt_tokens = $ptok; completion_tokens = $ctok; total_tokens = $ttok; timings = $timings }
-        server = [ordered]@{ port = $usePort; health_ms = $healthMs; gpu_layers = $ngl; context = $ctx }
+        server = [ordered]@{ port = $usePort; health_ms = $healthMs; gpu_layers = $ngl; context = $ctx; gpu_lease = $leaseState }
     }
 
     $modelProvenance = @(

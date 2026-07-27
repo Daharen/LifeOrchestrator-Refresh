@@ -31,7 +31,8 @@ $reg = (Get-Content -LiteralPath (Join-Path $moduleRoot 'models.json') -Raw) | C
 $types = @($reg.models | ForEach-Object { $_.type }) | Sort-Object -Unique
 Check 'registry declares llm+stt+tts+embedding' (($types -contains 'llm') -and ($types -contains 'stt') -and ($types -contains 'tts') -and ($types -contains 'embedding'))
 $wiredLlms = @($reg.models | Where-Object { $_.type -eq 'llm' -and $_.wired })
-Check 'four wired LLMs' ($wiredLlms.Count -eq 4)
+# Registry wired LLMs: 3 weak tiers (0.5b/1.5b/3b) + strong 9b (D-0044) + demoted-but-wired 27b = 5.
+Check 'wired LLMs match registry (5)' ($wiredLlms.Count -eq 5)
 
 # ---- error paths (no model load; must be valid error envelopes, exit 0) ----
 $e1 = RunEntry @('-Model','llm.bogus.does-not-exist','-Prompt','hi')
@@ -100,6 +101,46 @@ if (Test-Path -LiteralPath $rq) {
     Check 'review item schema+reason' ($item.schema -eq 'lifeorch.review.item/0.1' -and $item.reason -eq 'low_confidence' -and $item.flagged_by -eq 'model.gateway')
     Remove-Item -LiteralPath $rq -Force -ErrorAction SilentlyContinue
 }
+
+# ---- LIVE: GPU lease wiring (res.lease #29) -- acquire before run, release after teardown ----
+$reslease = Join-Path $modulesDir '29-resource-lease/Invoke-ResLease.ps1'
+function RunRl([string[]]$a) { $o = & $PwshPath -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $reslease @a; return (([string]($o | Out-String)).Trim() | ConvertFrom-Json) }
+Check 'reslease present' (Test-Path -LiteralPath $reslease)
+$ld = Join-Path $env:TEMP ("gw-lease-" + [Guid]::NewGuid().ToString('N'))
+
+# (a) wait mode, lease FREE -> gateway acquires (owns) it across the run and releases after teardown
+$gl  = RunEntry @('-Tier','tiny','-Prompt','Reply with exactly one word: PONG','-MaxTokens','8','-Temperature','0.1','-Seed','42','-GpuLease','wait','-GpuLeaseWaitSeconds','60','-LeaseDir',$ld,'-PwshPath',$PwshPath)
+$ogl = $gl | ConvertFrom-Json
+Check 'lease(a): run ok (wait mode, free)' ($ogl.status -eq 'ok')
+$gll = $ogl.result.server.gpu_lease
+Check 'lease(a): acquired + owned' ($gll.acquired -eq $true -and $gll.owned -eq $true)
+Check 'lease(a): has lease_id' (-not [string]::IsNullOrWhiteSpace([string]$gll.lease_id))
+Check 'lease(a): released after teardown' ($gll.released -eq $true)
+Check 'lease(a): free after run (status not held)' ((RunRl @('-Action','status','-Resource','gpu','-LeaseDir',$ld)).result.held -eq $false)
+
+# (b) contended -> auto mode logs + proceeds and does NOT touch the other holder's lease
+$pre = RunRl @('-Action','acquire','-Resource','gpu','-Holder','other-holder','-TtlSeconds','120','-LeaseDir',$ld)
+Check 'lease(b): pre-acquired by other holder' ($pre.result.acquired -eq $true)
+$gc  = RunEntry @('-Tier','tiny','-Prompt','Reply with exactly one word: PONG','-MaxTokens','8','-Temperature','0.1','-Seed','42','-GpuLease','auto','-LeaseDir',$ld,'-PwshPath',$PwshPath)
+$ogc = $gc | ConvertFrom-Json
+$gcl = $ogc.result.server.gpu_lease
+Check 'lease(b): proceeds while contended' ($ogc.status -eq 'ok')
+Check 'lease(b): not owned when contended' ($gcl.acquired -eq $false -and $gcl.owned -eq $false)
+Check 'lease(b): reports held_by' ($gcl.held_by -eq 'other-holder')
+Check 'lease(b): other holder still holds after run' ((RunRl @('-Action','status','-Resource','gpu','-LeaseDir',$ld)).result.holder -eq 'other-holder')
+RunRl @('-Action','release','-Resource','gpu','-Holder','other-holder','-LeaseDir',$ld) | Out-Null
+
+# (c) res.lease ABSENT -> graceful proceed (bad -ResLeasePath), generation unaffected
+$ga  = RunEntry @('-Tier','tiny','-Prompt','Reply with exactly one word: PONG','-MaxTokens','8','-Temperature','0.1','-Seed','42','-GpuLease','auto','-ResLeasePath','C:\nope\no-reslease.ps1','-LeaseDir',$ld,'-PwshPath',$PwshPath)
+$oga = $ga | ConvertFrom-Json
+Check 'lease(c): graceful when res.lease absent' ($oga.status -eq 'ok' -and $oga.result.server.gpu_lease.available -eq $false -and $oga.result.server.gpu_lease.acquired -eq $false)
+
+# (d) off mode -> no lease interaction, generation unchanged
+$gf  = RunEntry @('-Tier','tiny','-Prompt','Reply with exactly one word: PONG','-MaxTokens','8','-Temperature','0.1','-Seed','42','-GpuLease','off','-LeaseDir',$ld,'-PwshPath',$PwshPath)
+$ogf = $gf | ConvertFrom-Json
+Check 'lease(d): off mode still generates' ($ogf.status -eq 'ok')
+Check 'lease(d): off mode not requested/acquired' ($ogf.result.server.gpu_lease.requested -eq $false -and $ogf.result.server.gpu_lease.acquired -eq $false)
+Remove-Item -LiteralPath $ld -Recurse -Force -ErrorAction SilentlyContinue
 
 # ---- no orphaned server processes ----
 Start-Sleep -Milliseconds 500

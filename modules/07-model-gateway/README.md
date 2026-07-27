@@ -59,11 +59,31 @@ Below **0.5** the skill appends a `lifeorch.review.item/0.1` to `review_queue.js
 (see `REVIEW_QUEUE.md`). The real signal for consumers is in `model_provenance[]` (finish_reason, token
 counts, timings).
 
+## GPU lease (res.lease #29)
+
+The gateway holds the shared **`gpu`** lease around the `llama-server` run so multiple instances never drive the
+single GPU at once (every model module is `parallel_safe:false`). It **acquires the lease before starting the
+server and releases it after teardown**, by shelling out to `modules/29-resource-lease/Invoke-ResLease.ps1`
+(same atomic primitive + same shared lease dir every coordinating process resolves).
+
+`-GpuLease` selects the behaviour, with a **graceful fallback** that never breaks a generation:
+
+- `auto` (default) — non-blocking acquire; if the lease is **contended**, log a warning and **proceed**.
+- `wait` — block up to `-GpuLeaseWaitSeconds` for the lease, then proceed if still contended.
+- `require` — error (`gpu_lease_unavailable`, retryable) if it cannot acquire.
+- `off` — do not touch the lease.
+
+If **res.lease is absent** (or the call fails) the gateway logs and proceeds without arbitration. It only
+releases a lease it **freshly acquired** (a same-holder re-attach, `already_held`, is left for the outer owner).
+Lease outcome is reported under `result.server.gpu_lease`. Knobs: `-GpuLeaseTtlSeconds`, `-GpuLeaseHolder`
+(default `$env:LIFEORCH_INSTANCE` else `model.gateway:<pid>`), `-LeaseDir`, `-ResLeasePath`, `-PwshPath`
+(all also settable via `-InputsJson`).
+
 ## Result shape
 
 `result = { model, engine, mode, selected_from, request{messages,sampling}, output{role,text},
 generation{finish_reason, prompt_tokens, completion_tokens, total_tokens, timings},
-server{port, health_ms, gpu_layers, context} }`
+server{port, health_ms, gpu_layers, context, gpu_lease{mode, acquired, owned, lease_id, held_by, released}} }`
 
 Artifacts (under `runtime/artifacts/<invocation_id>/`): `output.txt` (raw completion), `exchange.json`
 (request + response), `result.json` (the envelope), `stderr.txt`, plus `server.out.log`/`server.err.log`.

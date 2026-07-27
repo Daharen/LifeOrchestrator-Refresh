@@ -2,14 +2,14 @@
   "schema": "lifeorch.skill.manifest/0.1",
   "skill_id": "model.gateway",
   "name": "Local Model Gateway",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "contract_version": "0.1",
   "purpose": "A common interface for local and frontier agents to run local models on this machine. MVP runs local LLMs (GGUF text) through the built llama.cpp llama-server, selected from a declarative registry (models.json) by model id or tier alias. The registry also declares STT/TTS/embedding models (staged, but wired in their own later modules). First stochastic/mixed skill: records full model_provenance and a generation-completeness confidence.",
   "determinism": "mixed",
   "invocation": {
     "method": "pwsh-file",
     "entrypoint": "Invoke-ModelGateway.ps1",
-    "args_spec": "Named params: -Model <model_id> | -Tier <tiny|weak|mid|strong>; -Prompt <s> [-System <s>]; sampling -MaxTokens -Temperature -TopP -TopK -Seed [-Stop <s[]>]; -Registry <models.json> -Port <int> -GpuLayers <int> -Context <int> -LoadTimeoutSec <int> -ReviewQueuePath <path>. OR -InputsJson '<json {model,tier,prompt,system,messages,max_tokens,temperature,top_p,top_k,seed,stop,registry,port,gpu_layers,context,load_timeout_s,review_queue_path}>'. Optional -ArtifactRoot, -InvocationId."
+    "args_spec": "Named params: -Model <model_id> | -Tier <tiny|weak|mid|strong>; -Prompt <s> [-System <s>]; sampling -MaxTokens -Temperature -TopP -TopK -Seed [-Stop <s[]>]; -Registry <models.json> -Port <int> -GpuLayers <int> -Context <int> -LoadTimeoutSec <int> -ReviewQueuePath <path>. GPU lease (res.lease #29): -GpuLease <off|auto|wait|require> -GpuLeaseWaitSeconds <int> -GpuLeaseTtlSeconds <int> -GpuLeaseHolder <id> -LeaseDir <dir> -ResLeasePath <path> -PwshPath <path>. OR -InputsJson '<json {model,tier,prompt,system,messages,max_tokens,temperature,top_p,top_k,seed,stop,registry,port,gpu_layers,context,load_timeout_s,review_queue_path,gpu_lease,gpu_lease_wait_s,gpu_lease_ttl_s,gpu_lease_holder,lease_dir,res_lease_path,pwsh_path}>'. Optional -ArtifactRoot, -InvocationId."
   },
   "inputs": [
     { "name": "model", "type": "string", "required": false, "description": "Explicit registry model_id (e.g. llm.weak.qwen2p5-1p5b). Highest precedence." },
@@ -27,11 +27,18 @@
     { "name": "port", "type": "int", "required": false, "description": "Loopback port for llama-server (default: auto-pick a free port from 8140)." },
     { "name": "gpu_layers", "type": "int", "required": false, "description": "Override the registry's gpu_layers for this run." },
     { "name": "context", "type": "int", "required": false, "description": "Override the registry's context window for this run." },
-    { "name": "load_timeout_s", "type": "int", "required": false, "default": 120, "description": "Max seconds to wait for the server to become healthy." }
+    { "name": "load_timeout_s", "type": "int", "required": false, "default": 120, "description": "Max seconds to wait for the server to become healthy." },
+    { "name": "gpu_lease", "type": "string", "required": false, "default": "auto", "description": "GPU-lease mode (res.lease #29): off | auto (non-blocking, log+proceed if contended) | wait (block up to gpu_lease_wait_s, then proceed) | require (error if it cannot acquire). Acquired before llama-server starts, released after teardown. Absent res.lease -> graceful proceed." },
+    { "name": "gpu_lease_wait_s", "type": "int", "required": false, "default": 900, "description": "Blocking wait budget for gpu_lease wait|require (auto forces 0)." },
+    { "name": "gpu_lease_ttl_s", "type": "int", "required": false, "default": 1800, "description": "Lease TTL seconds." },
+    { "name": "gpu_lease_holder", "type": "string", "required": false, "description": "Stable holder id; default $env:LIFEORCH_INSTANCE else model.gateway:<pid>." },
+    { "name": "lease_dir", "type": "string", "required": false, "description": "Shared lease dir passthrough to res.lease (all coordinating processes must resolve the same dir)." },
+    { "name": "res_lease_path", "type": "string", "required": false, "description": "Override path to Invoke-ResLease.ps1 (default: auto-resolve via repo root / sibling module)." },
+    { "name": "pwsh_path", "type": "string", "required": false, "description": "pwsh used to spawn res.lease as a child process (default: resolve via PATH)." }
   ],
   "outputs": {
     "result_shape": "object",
-    "description": "{ model, engine, mode, selected_from, request{messages,sampling}, output{role,text}, generation{finish_reason,prompt_tokens,completion_tokens,total_tokens,timings}, server{port,health_ms,gpu_layers,context} }"
+    "description": "{ model, engine, mode, selected_from, request{messages,sampling}, output{role,text}, generation{finish_reason,prompt_tokens,completion_tokens,total_tokens,timings}, server{port,health_ms,gpu_layers,context,gpu_lease{mode,requested,available,acquired,owned,already_held,lease_id,holder,held_by,released}} }"
   },
   "requirements": {
     "executables": ["pwsh>=7.4", "llama-server (llama.cpp CUDA b8661)"],
