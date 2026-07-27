@@ -48,6 +48,27 @@ function Run-DevShip([string]$repo, $inputsObj, [switch]$NoCommit) {
 }
 function Head([string]$repo) { return ((& git -C $repo rev-parse HEAD) | Out-String).Trim() }
 
+# --- git-lease test helpers (drive the REAL res.lease, Module 29, against an ISOLATED temp lease dir) ---
+$ResLeaseReal = (Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) '29-resource-lease/Invoke-ResLease.ps1')
+function Install-ResLease([string]$repo) {
+    # Make res.lease reachable at <repo>/modules/29-resource-lease/ so dev.ship (RepoRoot=$repo) finds it.
+    $dst = Join-Path $repo 'modules/29-resource-lease'
+    New-Item -ItemType Directory -Path $dst -Force | Out-Null
+    Copy-Item -LiteralPath $ResLeaseReal -Destination (Join-Path $dst 'Invoke-ResLease.ps1') -Force
+}
+function New-LeaseDir {
+    $d = Join-Path ([System.IO.Path]::GetTempPath()) ("devship-leases-" + [Guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $d -Force | Out-Null
+    return $d
+}
+function ResLease([string]$leaseDir, [string[]]$argv) {
+    # Call res.lease directly with an explicit -LeaseDir (no reliance on env). Returns the parsed envelope.
+    $full = @('-NoLogo', '-NoProfile', '-File', $ResLeaseReal) + $argv + @('-LeaseDir', $leaseDir)
+    $out = & $PwshExe @full 2>$null | Out-String
+    $e = $null; try { $e = ($out.Trim()) | ConvertFrom-Json } catch { }
+    return $e
+}
+
 $GOOD_PS = "param()`nWrite-Output 'ok'`n"
 $BAD_PS  = "param(`nWrite-Output 'oops'`n"   # unclosed param( -> parse error
 $TRAILERS = "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`nClaude-Session: https://claude.ai/code/session_test"
@@ -178,6 +199,70 @@ $r = Run-DevShip $repo $in; $e = $r.env
 Write-Output "S8 missing file:"
 Ok ($null -ne $e -and $e.sha.ok -eq $false -and (@($e.sha.mismatches) | Where-Object { $_.reason -eq 'missing' }).Count -ge 1) 'S8 missing file recorded as a mismatch'
 Ok ($null -ne $e -and $e.ok -eq $false -and $e.commit.committed -eq $false) 'S8 ok=false, no commit'
+
+# --- S9: git lease ACQUIRED + RELEASED around a green commit (real res.lease, isolated lease dir) ---
+if (Test-Path -LiteralPath $ResLeaseReal -PathType Leaf) {
+    $repo = New-Repo; Install-ResLease $repo; $ld = New-LeaseDir
+    $g = Add-File $repo 'mod/good.ps1' $GOOD_PS
+    $h0 = Head $repo
+    $in = [ordered]@{
+        files = @(@{ path = 'mod/good.ps1'; sha256 = (Sha $g) })
+        commit = $true; commit_files = @('mod/good.ps1'); commit_message = "git lease test`n`n$TRAILERS"
+        git_lease_ttl_seconds = 60; git_lease_wait_seconds = 10
+    }
+    $env:LIFEORCH_LEASE_DIR = $ld
+    $r = Run-DevShip $repo $in; $e = $r.env
+    $env:LIFEORCH_LEASE_DIR = $null
+    Write-Output "S9 git lease acquired + released around commit:"
+    Ok ($null -ne $e -and (Has $e 'git_lease') -and $e.git_lease.used -eq $true -and $e.git_lease.acquired -eq $true) 'S9 git_lease used=true, acquired=true'
+    Ok ($null -ne $e -and -not [string]::IsNullOrWhiteSpace([string]$e.git_lease.lease_id)) 'S9 lease_id reported'
+    Ok ($null -ne $e -and $e.commit.committed -eq $true) 'S9 commit landed under the lease'
+    Ok ((Head $repo) -ne $h0) 'S9 HEAD advanced'
+    $st = ResLease $ld @('-Action', 'status', '-Resource', 'git')
+    Ok ($null -ne $st -and (Has $st 'result') -and $st.result.held -eq $false) 'S9 lease released after commit (status: not held)'
+} else {
+    Write-Output "S9 SKIPPED (res.lease not found at $ResLeaseReal)"
+}
+
+# --- S10: graceful fallback when res.lease is ABSENT -> commit still lands, behaviour unchanged ---
+$repo = New-Repo   # deliberately NO Install-ResLease
+$g = Add-File $repo 'mod/good.ps1' $GOOD_PS
+$h0 = Head $repo
+$in = [ordered]@{
+    files = @(@{ path = 'mod/good.ps1'; sha256 = (Sha $g) })
+    commit = $true; commit_files = @('mod/good.ps1'); commit_message = "absent lease`n`n$TRAILERS"
+}
+$r = Run-DevShip $repo $in; $e = $r.env
+Write-Output "S10 graceful fallback (res.lease absent):"
+Ok ($null -ne $e -and (Has $e 'git_lease') -and $e.git_lease.used -eq $false -and $e.git_lease.reason -eq 'reslease_absent') 'S10 git_lease.used=false, reason=reslease_absent'
+Ok ($null -ne $e -and $e.commit.committed -eq $true) 'S10 commit still lands (behaviour unchanged)'
+Ok ((Head $repo) -ne $h0) 'S10 HEAD advanced'
+
+# --- S11: CONTENTION -- a foreign holder holds 'git'; dev.ship can't acquire in the wait -> proceeds + warns ---
+if (Test-Path -LiteralPath $ResLeaseReal -PathType Leaf) {
+    $repo = New-Repo; Install-ResLease $repo; $ld = New-LeaseDir
+    $pre = ResLease $ld @('-Action', 'acquire', '-Resource', 'git', '-Holder', 'other-worker', '-TtlSeconds', '300', '-WaitSeconds', '0')
+    $preOk = ($null -ne $pre -and (Has $pre 'result') -and $pre.result.acquired -eq $true)
+    $preLid = if ($preOk) { [string]$pre.result.lease_id } else { $null }
+    $g = Add-File $repo 'mod/good.ps1' $GOOD_PS
+    $h0 = Head $repo
+    $in = [ordered]@{
+        files = @(@{ path = 'mod/good.ps1'; sha256 = (Sha $g) })
+        commit = $true; commit_files = @('mod/good.ps1'); commit_message = "contended lease`n`n$TRAILERS"
+        git_lease_ttl_seconds = 60; git_lease_wait_seconds = 2
+    }
+    $env:LIFEORCH_LEASE_DIR = $ld
+    $r = Run-DevShip $repo $in; $e = $r.env
+    $env:LIFEORCH_LEASE_DIR = $null
+    Write-Output "S11 contention -> proceed with warning:"
+    Ok $preOk 'S11 pre-held the git lease as a foreign holder'
+    Ok ($null -ne $e -and (Has $e 'git_lease') -and $e.git_lease.used -eq $true -and $e.git_lease.acquired -eq $false -and $e.git_lease.reason -eq 'acquire_unavailable_proceeding') 'S11 dev.ship could not acquire (used=true, acquired=false)'
+    Ok ($null -ne $e -and $e.commit.committed -eq $true) 'S11 commit still lands (index.lock backstop; no real concurrent git)'
+    Ok ($null -ne $e -and ((@($e.warnings) -join ' ') -match 'git lease not acquired')) 'S11 fallback warning recorded'
+    if ($preOk) { [void](ResLease $ld @('-Action', 'release', '-Resource', 'git', '-LeaseId', $preLid)) }
+} else {
+    Write-Output "S11 SKIPPED (res.lease not found)"
+}
 
 Write-Output ""
 Write-Output ("==== RESULT pass=$pass fail=$fail ====")

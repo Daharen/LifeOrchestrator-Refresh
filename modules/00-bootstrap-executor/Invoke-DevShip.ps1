@@ -11,6 +11,9 @@
      3. TEST     run test_argv (argv-style; {PWSH}/{REPO} tokens) and capture exit code + a tail;
      4. COMMIT   ONLY IF sha+ast+tests are all green AND the index is clean of unrelated staged files:
                  git add -- <exactly commit_files>, then git commit -F <message-with-trailers>.
+                 The index-check + add + commit run under the res.lease 'git' lease (Module 29) so
+                 concurrent instances serialize their commits; ABSENT/disabled/contended -> proceed
+                 (git's own .git/index.lock is the backstop, so behaviour is never worse than pre-lease).
      5. ORPHANS  optionally count named processes (e.g. llama-server) for the summary.
   The commit gate is deterministic and fail-closed: a failed sha/ast/test check NEVER commits. The
   index-clean guard refuses to commit when files outside commit_files are already staged (so it can
@@ -46,6 +49,20 @@ function Get-FileSha256([string]$path) {
         return ([System.BitConverter]::ToString($sha.ComputeHash($bytes))).Replace('-', '').ToLowerInvariant()
     } finally { $sha.Dispose() }
 }
+# Run res.lease (Module 29) as a CHILD process and return its parsed envelope, or $null on any failure
+# (missing script / non-JSON / crash) so every caller can fall back gracefully. NEVER dot-source res.lease:
+# it ends with `exit 0`, which would terminate dev.ship.
+function Invoke-ResLeaseAction([string]$pwshExe, [string]$script, [string]$repoRoot, [string[]]$argv) {
+    if ([string]::IsNullOrWhiteSpace($script) -or -not (Test-Path -LiteralPath $script -PathType Leaf)) { return $null }
+    $out = $null
+    Push-Location $repoRoot
+    try {
+        $global:LASTEXITCODE = 0
+        $out = & $pwshExe -NoLogo -NoProfile -File $script @argv 2>$null | Out-String
+    } catch { return $null } finally { Pop-Location }
+    if ([string]::IsNullOrWhiteSpace($out)) { return $null }
+    try { return ($out | ConvertFrom-Json) } catch { return $null }
+}
 
 $warnings = New-Object System.Collections.Generic.List[string]
 $result = $null
@@ -72,6 +89,11 @@ try {
     $astCheck = if ($null -ne $p) { [bool](Prop $p 'ast_check' $true) } else { $true }
     $commitRequested = if ($NoCommit) { $false } elseif ($null -ne $p) { [bool](Prop $p 'commit' $false) } else { $false }
     $allowDirtyIndex = if ($null -ne $p) { [bool](Prop $p 'allow_dirty_index' $false) } else { $false }
+    # git-lease knobs (res.lease 'git'): serialize concurrent commits across instances. Default ON; degrades gracefully.
+    $useGitLease    = if ($null -ne $p) { [bool](Prop $p 'git_lease' $true) } else { $true }
+    $gitLeaseTtl    = if ($null -ne $p) { [int](Prop $p 'git_lease_ttl_seconds' 120) } else { 120 }
+    $gitLeaseWait   = if ($null -ne $p) { [double](Prop $p 'git_lease_wait_seconds' 120) } else { 120 }
+    $gitLeaseHolder = if ($null -ne $p) { [string](Prop $p 'git_lease_holder' '') } else { '' }
 
     # ---- 1) VERIFY sha256 of each shipped file ----
     $files = @(); if ($null -ne $p -and (Has $p 'files')) { $files = @($p.files) }
@@ -143,6 +165,8 @@ try {
 
     # ---- 4) COMMIT (fail-closed) ----
     $commitAttempted = $false; $committed = $false; $headSha = $null; $stagedFiles = @(); $reasonSkipped = $null
+    # git-lease telemetry (additive to the result; always present so consumers can rely on it).
+    $gitLease = [ordered]@{ used = $false; acquired = $false; lease_id = $null; waited_ms = $null; reason = $null }
     if ($commitRequested) {
         $commitFiles = @(); if ($null -ne $p -and (Has $p 'commit_files')) { $commitFiles = @($p.commit_files | ForEach-Object { [string]$_ }) }
         $commitMsg = if ($null -ne $p) { [string](Prop $p 'commit_message' '') } else { '' }
@@ -153,28 +177,65 @@ try {
         } elseif ([string]::IsNullOrWhiteSpace($commitMsg)) {
             $reasonSkipped = 'no_commit_message'
         } else {
-            $preStaged = @((& git -C $RepoRoot diff --cached --name-only) 2>$null | Where-Object { $_.Trim().Length -gt 0 })
-            $normCommit = @($commitFiles | ForEach-Object { $_.Replace('\', '/') })
-            $extra = @($preStaged | Where-Object { $normCommit -notcontains $_.Replace('\', '/') })
-            if (-not $allowDirtyIndex -and $extra.Count -gt 0) {
-                $reasonSkipped = "index_not_clean: unrelated staged files: $([string]::Join(', ', $extra))"
-                Write-Diag $reasonSkipped
+            # ---- git critical section: serialize the index-check + add + commit across instances via the
+            #      res.lease 'git' lease (Module 29). ADDITIVE to the index-clean guard below. GRACEFUL: if
+            #      res.lease is absent, disabled, or the lease can't be acquired within the wait, we PROCEED --
+            #      git's own .git/index.lock stays the backstop, so behaviour is never worse than pre-lease. ----
+            $resleaseScript = Join-Path $RepoRoot 'modules/29-resource-lease/Invoke-ResLease.ps1'
+            $leaseId = $null
+            if (-not $useGitLease) {
+                $gitLease.reason = 'disabled'
+            } elseif (-not (Test-Path -LiteralPath $resleaseScript -PathType Leaf)) {
+                $gitLease.reason = 'reslease_absent'; Write-Diag 'res.lease absent; committing without a git lease (behaviour unchanged)'
             } else {
-                $commitAttempted = $true
-                foreach ($cf in $commitFiles) { & git -C $RepoRoot add -- $cf | Out-Null }
-                $mf = Join-Path ([System.IO.Path]::GetTempPath()) ("devship-msg-" + [Guid]::NewGuid().ToString('N') + '.txt')
-                [System.IO.File]::WriteAllText($mf, ($commitMsg -replace "`r?`n", "`r`n"), $utf8)
-                $commitOut = (& git -C $RepoRoot commit -F $mf 2>&1 | Out-String)
-                $commitRc = $LASTEXITCODE
-                Remove-Item -LiteralPath $mf -Force -ErrorAction SilentlyContinue
-                if ($commitRc -eq 0) {
-                    $committed = $true
-                    $headSha = ((& git -C $RepoRoot rev-parse HEAD) | Out-String).Trim()
-                    $stagedFiles = @((& git -C $RepoRoot show --pretty=format: --name-only HEAD) | Where-Object { $_.Trim().Length -gt 0 })
+                $gitLease.used = $true
+                $holder = if (-not [string]::IsNullOrWhiteSpace($gitLeaseHolder)) { $gitLeaseHolder }
+                          elseif (-not [string]::IsNullOrWhiteSpace($env:LIFEORCH_INSTANCE)) { $env:LIFEORCH_INSTANCE }
+                          else { "dev.ship:$PID" }
+                $acqArgv = @('-Action', 'acquire', '-Resource', 'git', '-Holder', $holder, '-TtlSeconds', "$gitLeaseTtl", '-WaitSeconds', "$gitLeaseWait")
+                $acqEnv = Invoke-ResLeaseAction $resolvedPwsh $resleaseScript $RepoRoot $acqArgv
+                if ($null -ne $acqEnv -and (Has $acqEnv 'result') -and [bool](Prop $acqEnv.result 'acquired' $false)) {
+                    $leaseId = [string](Prop $acqEnv.result 'lease_id' '')
+                    $gitLease.acquired = $true; $gitLease.lease_id = $leaseId; $gitLease.waited_ms = (Prop $acqEnv.result 'waited_ms' $null)
+                    Write-Diag "git lease acquired (holder=$holder lease_id=$leaseId waited_ms=$($gitLease.waited_ms))"
                 } else {
-                    $tail3 = (($commitOut -split "`r?`n") | Where-Object { $_.Trim().Length -gt 0 } | Select-Object -Last 3) -join ' '
-                    $reasonSkipped = "git_commit_failed(rc=$commitRc): $tail3"
+                    $gitLease.reason = 'acquire_unavailable_proceeding'
+                    $warnings.Add('git lease not acquired within wait; proceeding (git index.lock is the backstop)')
+                    Write-Diag 'git lease NOT acquired; proceeding (index.lock backstop)'
+                }
+            }
+            try {
+                $preStaged = @((& git -C $RepoRoot diff --cached --name-only) 2>$null | Where-Object { $_.Trim().Length -gt 0 })
+                $normCommit = @($commitFiles | ForEach-Object { $_.Replace('\', '/') })
+                $extra = @($preStaged | Where-Object { $normCommit -notcontains $_.Replace('\', '/') })
+                if (-not $allowDirtyIndex -and $extra.Count -gt 0) {
+                    $reasonSkipped = "index_not_clean: unrelated staged files: $([string]::Join(', ', $extra))"
                     Write-Diag $reasonSkipped
+                } else {
+                    $commitAttempted = $true
+                    foreach ($cf in $commitFiles) { & git -C $RepoRoot add -- $cf | Out-Null }
+                    $mf = Join-Path ([System.IO.Path]::GetTempPath()) ("devship-msg-" + [Guid]::NewGuid().ToString('N') + '.txt')
+                    [System.IO.File]::WriteAllText($mf, ($commitMsg -replace "`r?`n", "`r`n"), $utf8)
+                    $commitOut = (& git -C $RepoRoot commit -F $mf 2>&1 | Out-String)
+                    $commitRc = $LASTEXITCODE
+                    Remove-Item -LiteralPath $mf -Force -ErrorAction SilentlyContinue
+                    if ($commitRc -eq 0) {
+                        $committed = $true
+                        $headSha = ((& git -C $RepoRoot rev-parse HEAD) | Out-String).Trim()
+                        $stagedFiles = @((& git -C $RepoRoot show --pretty=format: --name-only HEAD) | Where-Object { $_.Trim().Length -gt 0 })
+                    } else {
+                        $tail3 = (($commitOut -split "`r?`n") | Where-Object { $_.Trim().Length -gt 0 } | Select-Object -Last 3) -join ' '
+                        $reasonSkipped = "git_commit_failed(rc=$commitRc): $tail3"
+                        Write-Diag $reasonSkipped
+                    }
+                }
+            } finally {
+                if ($gitLease.acquired -and -not [string]::IsNullOrWhiteSpace($leaseId)) {
+                    $relArgv = @('-Action', 'release', '-Resource', 'git', '-LeaseId', $leaseId)
+                    $relEnv = Invoke-ResLeaseAction $resolvedPwsh $resleaseScript $RepoRoot $relArgv
+                    $relOk = ($null -ne $relEnv -and (Has $relEnv 'result') -and [bool](Prop $relEnv.result 'released' $false))
+                    if (-not $relOk) { $warnings.Add('git lease release did not confirm (the lease will expire via its TTL)') }
+                    Write-Diag "git lease released=$relOk"
                 }
             }
         }
@@ -200,6 +261,7 @@ try {
         ast            = [ordered]@{ checked = $astChecked; ok = $astOk; errors = $astErrors.ToArray() }
         tests          = [ordered]@{ ran = $testsRan; exit_code = $testsExit; pass = $testsPass; tail = $testsTail }
         commit         = [ordered]@{ requested = $commitRequested; attempted = $commitAttempted; committed = $committed; head_sha = $headSha; staged = $stagedFiles; reason_skipped = $reasonSkipped }
+        git_lease      = $gitLease
         orphans        = $orph
         warnings       = $warnings.ToArray()
         error          = $null
