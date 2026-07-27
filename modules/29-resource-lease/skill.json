@@ -1,0 +1,42 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "res.lease",
+  "name": "Resource Lease / Lock",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "A filesystem lease/lock so several processes on this one machine arbitrate contended resources: acquire/release/renew/status/list a named lease with a TTL. Atomic (CreateNew = open O_CREAT|O_EXCL), race-safe stale reclaim, holder identity + a lease_id token, blocking or non-blocking acquire. Conventional resources: gpu (one model run at a time), git (commit lock), doc:<path> (doc-ownership). The multi-instance coordination primitive.",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-ResLease.ps1",
+    "args_spec": "-Action acquire|release|renew|status|list -Resource <name> [-Holder <id>] [-TtlSeconds <n>] [-WaitSeconds <n>] [-LeaseId <id>] [-Note <s>] [-LeaseDir <dir>] | -InputsJson '<json>'"
+  },
+  "inputs": [
+    {"name": "action", "type": "string", "required": true, "description": "acquire | release | renew | status | list (one per invocation)."},
+    {"name": "resource", "type": "string", "required": false, "description": "The resource name (required for all but list). Conventional: gpu, git, doc:<path>; any string works."},
+    {"name": "holder", "type": "string", "required": false, "description": "Stable identity of the caller. Default: $env:LIFEORCH_INSTANCE, else <host>:<pid>:<guid8>. Set a stable holder per instance so re-attach + release-by-holder work."},
+    {"name": "ttl_seconds", "type": "int", "required": false, "default": 120, "description": "acquire/renew: the lease lifetime; an expired lease is reclaimable. Renew before it expires."},
+    {"name": "wait_seconds", "type": "number", "required": false, "default": 0, "description": "acquire: block/poll up to this long for the resource to free. 0 = try once (non-blocking)."},
+    {"name": "lease_id", "type": "string", "required": false, "description": "release/renew: the token returned by acquire (proves you hold this exact lease)."},
+    {"name": "note", "type": "string", "required": false, "description": "Free text stored in the lease (e.g. what the holder is doing)."},
+    {"name": "lease_dir", "type": "string", "required": false, "description": "Override the shared lease directory (default $env:LIFEORCH_LEASE_DIR, else runtime/leases). All processes MUST resolve the same dir."}
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "acquire: {acquired, lease_id, holder, expires_at_utc, ttl_seconds, waited_ms, reclaimed_stale, already_held, held_by}. release: {released, reason, held_by}. renew: {renewed, lease_id, expires_at_utc, renew_count, reason}. status: {exists, held, stale, holder, lease_id, expires_at_utc, seconds_remaining}. list: {count, leases:[...]}."
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4"],
+    "models": [],
+    "libraries": [],
+    "cpu": "any", "gpu": "none", "memory_mb": 128,
+    "network": false, "filesystem": "write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": {"root": "runtime/artifacts/<invocation_id>/"},
+  "timeout": {"default_seconds": 120, "on_timeout": "kill_tree_and_report"},
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}
