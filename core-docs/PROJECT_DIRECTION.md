@@ -30,6 +30,7 @@ Widgets make it usable by a human. (Widget is the adopted name for the HID / hum
   a few utility Modules (doc I/O, generators), and the Widget layer that makes them human-usable **before**
   resuming the slower architecture spine. Every task a local model finishes end-to-end is a task the weekly
   frontier allotment never pays for. The current build order lives in `MODULE_ROADMAP.md → Build priority`.
+- **Cut the frontier''s own operating overhead (2026-07-27, D-0047).** Offloading work locally only nets out if DRIVING the local system is cheap too. The per-unit ship/verify/test/commit/mirror ceremony is now the dominant frontier-token sink, so an executor JOB-RUNNER + a `dev.ship` unit harness (Module 0 expansion) is the immediate infra unit before the next capability Module/Widget. Corrections complete (D-0043/44/46); capability expansion resumes per `MODULE_ROADMAP.md → Build priority`.
 
 ## Perception and reasoning policy
 

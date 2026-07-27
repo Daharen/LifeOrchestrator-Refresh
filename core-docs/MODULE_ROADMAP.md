@@ -11,6 +11,8 @@ Needs refactor · Deprecated · Replaced.
 
 ## Build priority (2026-07-25 pivot — D-0029)
 
+> **2026-07-27 (D-0047) -- correction arc COMPLETE; capability expansion RESUMED.** D-0043 (mid decision floor), D-0044 (9B strong tier), and D-0046 (deterministic terminator -- the D-0032 premature-`finish` bug is fixed; multi-tool goals finish reliably at the floor default) closed the reliability corrections. **ONE infrastructure unit comes first, before the next capability item:** the executor JOB-RUNNER (Module 0 expansion) + a `dev.ship` unit harness (collapses the per-unit ship/verify/test/commit/mirror ceremony to cut frontier token overhead). After it, resume this Build priority -- next capability unit = **Phase B Widget #2 (Module Launcher / Registry Browser)**; multi-tool agent runs are reliable at the floor default now, so a Widget driving `agent.local` is safe. Deferred substrate follow-ons: Governor Phase 2 (warm server), 9B arg-gen hardening (unblocks -Profile max), Governor Phase 3.
+
 **The per-module numbers in this doc are architectural positions, not a build sequence.** The full 0-49
 spine (+ the real-time autonomic layer 45-49 and the 6-level operating hierarchy) lives in
 `ARCHITECTURE_MAP.md`. **Modules 0-18 + 00.1 are built.** The near-term order is re-prioritized to deliver a
