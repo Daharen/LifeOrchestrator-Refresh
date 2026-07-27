@@ -1,0 +1,73 @@
+{
+  "schema": "lifeorch.verification.result/0.1",
+  "packet_id": "vp-fixture-001",
+  "title": "Fixture: verify two deterministic modules + one hand check",
+  "verified_by": "nicholas",
+  "verified_at_utc": "2026-07-27T20:00:00.0000000Z",
+  "summary": { "total": 3, "pass": 2, "fail": 0, "partial": 1, "skipped": 0 },
+  "items": [
+    {
+      "id": "fsobs-1",
+      "kind": "run_module",
+      "title": "fs.observer lists the repo root",
+      "ran": true,
+      "run_summary": {
+        "ok": true,
+        "skill_id": "fs.observer",
+        "skill_status": "ok",
+        "wrapper_exit": 0,
+        "confidence": null,
+        "artifacts": [
+          { "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\widgets\\03-verification-console\\runtime\\artifacts\\<id>\\tree.md", "kind": "markdown", "bytes": 512 }
+        ],
+        "artifact_root": "C:\\Users\\just_\\...\\runtime\\artifacts\\<id>",
+        "elapsed_ms": 640,
+        "error": null
+      },
+      "checks": [
+        { "id": "c1", "text": "status == ok", "verdict": "pass", "note": "" },
+        { "id": "c2", "text": "a tree.md artifact exists and is non-empty", "verdict": "pass", "note": "512 bytes" },
+        { "id": "c3", "text": "the listed entries include core-docs and modules", "verdict": "pass", "note": "" }
+      ],
+      "overall": "pass",
+      "notes": "clean deterministic listing, as expected."
+    },
+    {
+      "id": "docio-1",
+      "kind": "run_module",
+      "title": "doc.io reads START_HERE.md",
+      "ran": true,
+      "run_summary": {
+        "ok": true,
+        "skill_id": "doc.io",
+        "skill_status": "ok",
+        "wrapper_exit": 0,
+        "confidence": null,
+        "artifacts": [],
+        "artifact_root": "C:\\Users\\just_\\...\\runtime\\artifacts\\<id>",
+        "elapsed_ms": 210,
+        "error": null
+      },
+      "checks": [
+        { "id": "c1", "text": "status == ok", "verdict": "pass", "note": "" },
+        { "id": "c2", "text": "result content is the START_HERE doc (mentions Life Orchestrator)", "verdict": "pass", "note": "" }
+      ],
+      "overall": "pass",
+      "notes": ""
+    },
+    {
+      "id": "human-1",
+      "kind": "human_action",
+      "title": "Eyeball that the Verification Console renders",
+      "ran": false,
+      "run_summary": null,
+      "checks": [
+        { "id": "c1", "text": "item list shows all items", "verdict": "pass", "note": "" },
+        { "id": "c2", "text": "detail pane shows the selected item", "verdict": "pass", "note": "" },
+        { "id": "c3", "text": "checklist + overall verdict + notes are editable", "verdict": "unchecked", "note": "notes box a little short; fine for MVP" }
+      ],
+      "overall": "partial",
+      "notes": "UI is usable; minor: enlarge the notes box in a later pass."
+    }
+  ]
+}

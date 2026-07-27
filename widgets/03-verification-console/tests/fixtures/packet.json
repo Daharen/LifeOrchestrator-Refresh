@@ -1,0 +1,50 @@
+{
+  "schema": "lifeorch.verification.packet/0.1",
+  "packet_id": "vp-fixture-001",
+  "title": "Fixture: verify two deterministic modules + one hand check",
+  "created_by": "claude",
+  "created_at_utc": "2026-07-27T00:00:00.0000000Z",
+  "report_back": "on_all",
+  "intro": "Example packet for the Verification Console. Run each module item, confirm the checklist, record an overall verdict + notes, and export the result.",
+  "items": [
+    {
+      "id": "fsobs-1",
+      "kind": "run_module",
+      "title": "fs.observer lists the repo root",
+      "skill_id": "fs.observer",
+      "skill_dir": "modules/02-fs-observer",
+      "inputs_json": { "path": ".", "depth": 1 },
+      "expected": "status ok; a tree.md + index.json artifact; the listing includes core-docs and modules.",
+      "checklist": [
+        { "id": "c1", "text": "status == ok" },
+        { "id": "c2", "text": "a tree.md artifact exists and is non-empty" },
+        "the listed entries include core-docs and modules"
+      ]
+    },
+    {
+      "id": "docio-1",
+      "kind": "run_module",
+      "title": "doc.io reads START_HERE.md",
+      "skill_id": "doc.io",
+      "skill_dir": "modules/20-doc-io",
+      "inputs_json": "{\"op\":\"read\",\"path\":\"core-docs/START_HERE.md\"}",
+      "expected": "status ok; result content is the START_HERE doc; sha256 reported.",
+      "checklist": [
+        { "id": "c1", "text": "status == ok" },
+        { "id": "c2", "text": "result content is the START_HERE doc (mentions Life Orchestrator)" }
+      ]
+    },
+    {
+      "id": "human-1",
+      "kind": "human_action",
+      "title": "Eyeball that the Verification Console renders",
+      "action_text": "Open this console via launch.bat, load a packet, and confirm the item list, detail pane, run output, and checklist all render and are readable.",
+      "expected": "The UI is usable: panes sized, text readable, buttons responsive.",
+      "checklist": [
+        "item list shows all items",
+        "detail pane shows the selected item",
+        "checklist + overall verdict + notes are editable"
+      ]
+    }
+  ]
+}

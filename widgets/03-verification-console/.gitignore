@@ -1,0 +1,2 @@
+# Widget 03 - Verification Console: ignore per-run scratch (module run artifacts, staged results).
+runtime/
