@@ -226,3 +226,22 @@ single-instance lock, and file preservation). It exits non-zero if any fail.
 Later versions may add a local API for submission/inspection, persistent
 execution lanes, model/agent adapters, and resource (e.g. GPU) scheduling. None
 of that exists in this first pass.
+---
+
+## Job-runner: `dev.ship` + `exec-job.sh` (D-0047 / D-0048)
+
+Two tooling files collapse the per-unit ship/gate/commit ceremony that a frontier driver would otherwise hand-drive across ~40 calls.
+
+### `Invoke-DevShip.ps1` (`dev.ship`)
+
+One executor job that, FAIL-CLOSED and in order: (1) verifies each shipped file's `sha256`, (2) AST-parses every `*.ps1`, (3) runs `test_argv`, (4) commits ONLY IF sha+ast+tests are all green AND the index has no unrelated staged files (`git add -- <exactly commit_files>` + `git commit -F` with trailers), (5) optionally counts orphan processes. Emits one compact `lifeorch.devship.result/0.1` object on stdout; exits 0 iff `ok`.
+
+InputsJson keys: `files` (`[{path, sha256}]`, sha optional per file), `ast_check` (bool, default true), `test_argv` (argv array; `{PWSH}` and `{REPO}` tokens are substituted), `commit` (bool), `commit_files` (paths -- only these are staged), `commit_message` (include the required trailers), `check_orphans` (process names), `allow_dirty_index` (bool, default false). Params: `-InputsJson`, `-RepoRoot` (default: repo above this module), `-NoCommit` (force commit off). The index-clean guard is why it can never fold in an unrelated working edit.
+
+### `exec-job.sh` (device-side client)
+
+Run via `device_bash`. Subcommands: `submit <id> <timeout> <task.ps1> [desc]`, `wait <id> [maxwait=40]`, `run <id> <timeout> <task.ps1> [maxwait] [desc]`, `devship <id> <inputs.json> [timeout=900] [maxwait=40]`, `status <id>`. It mirrors `Submit-BootstrapTask.ps1`'s on-disk contract (staging/<id>.tmp -> atomic mv -> pending/<id>) and prints a compact result (status + the job's stdout). `EXEC_RT` env var overrides the runtime dir (used by the tests). Note: `device_bash` caps a call at ~45s, so `wait` polls up to `maxwait` then returns `STATE=running` -- re-run `wait <id>` for a long (GPU) job.
+
+### Tests
+
+`tests/Invoke-DevShipTests.ps1` (27 assertions; drives the real `dev.ship` against throwaway temp git repos) and `tests/Test-ExecJob.sh` (24 assertions; exercises `exec-job.sh` against a mock runtime). Both run off-machine on any box with pwsh 7 + git.
