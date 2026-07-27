@@ -3,7 +3,7 @@
 **Read this after `START_HERE.md`, before you pick an "active module."** The local-agent CORRECTION ARC IS
 COMPLETE (D-0043 governor Phase 1; D-0044 strong tier -> Qwen3.5-9B; D-0046 deterministic terminator) and the
 per-unit ship ceremony is now automated (D-0048 job-runner, section 3). Capability expansion has RESUMED per
-`MODULE_ROADMAP.md -> Build priority`; Widget #2 (Module Launcher / Registry Browser) SHIPPED (D-0049); the next unit is Widget #3 -- the Verification Console (section 4), driving the D-0050 offload/audit-loop spine. Full history: `DECISION_LOG.md`
+`MODULE_ROADMAP.md -> Build priority`; Widget #2 (Module Launcher / Registry Browser) SHIPPED (D-0049); the fan-out orchestrator #30 has SHIPPED (D-0054); the current frontier is a fan-out dogfood (section 4), driving the D-0050 offload/audit-loop spine. Full history: `DECISION_LOG.md`
 (D-0043, D-0044, D-0046, D-0047, D-0048, D-0049, D-0050) + `claude/ADAPTIVE_RESOURCE_GOVERNOR.md`. This doc is the map.
 
 ## 0. Where the project lives (locations)
@@ -73,7 +73,7 @@ audit-loop surface exists: Claude writes a verification packet, Nicholas runs + 
 through `Invoke-Skill.ps1` and exports a `lifeorch.verification.result/0.1`. `human_action` items are the
 handed-subtask channel.
 
-**The resource-arbitration / lock-lease layer SHIPPED (D-0053: `res.lease`, Module 29; commit 36d7e0be; 38/38 cloud + 41/41 live).** The recommended next unit is now the **fan-out orchestrator** (below). It is the prerequisite for the
+**The resource-arbitration / lock-lease layer SHIPPED (D-0053: `res.lease`, Module 29).** **The FAN-OUT ORCHESTRATOR SHIPPED (D-0054: `orchestrate.fanout`, Module 30; commit `2ffe162e`; 51/51 cloud + 51/51 live via the job-runner)** -- built on #29; both multi-instance primitives now exist. The recommended next unit is a **fan-out DOGFOOD** (write a real 2-worker plan, Nicholas runs it end-to-end) -- or wire res.lease consumers (`gpu`/`git`/`doc:*`) into the model modules + dev.ship. It is the prerequisite for the
 MULTI-INSTANCE buildout (D-0050) and the user's FAN-OUT ORCHESTRATOR (D-0051): several Claude instances driving
 the box at once need a **GPU LEASE** (every model module is `parallel_safe:false` -- one llama-server / one
 pipeline at a time; heavy render/model runs block others), a **git/commit LOCK** (index.lock collisions have
@@ -81,7 +81,7 @@ already bitten -- D-0048/D-0049), and **DOC-OWNERSHIP** (concurrent edits to sha
 small lease/lock convention (a `runtime/leases/` dir or an executor lease concept) so N instances coordinate;
 then the "one active unit per session" rule (D-0029) relaxes to "one unit per instance, coordinated by locks."
 
-**Then the FAN-OUT ORCHESTRATOR (D-0051):** one orchestrator spins up N worker prompts (trial of 2, scale as
+**The FAN-OUT ORCHESTRATOR (SHIPPED, D-0054) -- `orchestrate.fanout` #30, driven per `modules/30-orchestrate-fanout/FANOUT_PROTOCOL.md`:** one orchestrator spins up N worker prompts (trial of 2, scale as
 viable, clamp to 1 for GPU-heavy units), collects progress reports, and its final handoff emits worker prompts
 + one check-in prompt for Nicholas + the report-back cadence, then closes docs and issues the next iteration.
 The Verification Console's packet/result is its human-I/O.
@@ -96,8 +96,7 @@ removes per-call cold loads + the orphan risk); 9B arg-gen hardening (unblocks `
 
 ## 5. How to choose (for the driver)
 
-Default: build **the resource-arbitration / lock-lease layer** (section 4) -- it unblocks the multi-instance
-buildout and the fan-out orchestrator the user asked for. If multi-instance is not being stood up yet, do a
+Default: run a **fan-out DOGFOOD** of `orchestrate.fanout` #30 (section 4) -- write a real 2-worker plan and have Nicholas run it, to validate the multi-instance loop end-to-end and surface UX gaps. Alternatively wire res.lease consumers, or do Governor Phase 2 (warm server). If multi-instance is not being stood up yet, do a
 **Verification Console dogfood** or a **model-module narrowing pass** (section 4) to advance the audit-loop
 spine, or a **deferred substrate follow-on** if warm-server speed / `-Profile max` is the bigger pain. SHIP
 EVERY UNIT WITH THE JOB-RUNNER (section 3). One scoped unit per instance; under multi-instance, coordinate by
@@ -121,4 +120,4 @@ locks (D-0050/D-0051 relax the single-active-unit rule to one-per-instance).
   Mirror changed core-docs to the Project by fresh-copying to a never-staged `runtime\mNNmirror\` path before
   `device_stage_files` (re-staging a previously-staged path returns STALE bytes).
 
-_Last updated 2026-07-27 (D-0051). Widget #3 Verification Console SHIPPED via the job-runner (commit f7e7b289; 73/73 cloud + 80/80 live); res.lease (Module 29) SHIPPED via the job-runner (D-0053, commit 36d7e0be; 38/38 cloud + 41/41 live); next = the fan-out orchestrator (built on the lease layer, D-0051). [prior] (D-0050). Housekeeping pass: recorded the past-MVP offload/verify-cost doctrine + the audit-loop spine (D-0050), reoriented Widget #3 to the Verification Console, set the iterate-loop cadence + the multi-instance direction. [prior] 2026-07-27 (D-0049). Widget #2 (Module Launcher / Registry Browser) SHIPPED via the job-runner (commit `a699ac6`; 62/62 cloud + 71/71 live). Next unit: Widget #3 (Review / Escalation Dashboard). Ship every unit with the job-runner (section 3); use the floor profile for end-to-end agent runs (max has a 9B arg-gen residual)._
+_Last updated 2026-07-27 (D-0054). orchestrate.fanout (Module 30) SHIPPED via the job-runner (commit `2ffe162e`; 51/51 cloud + 51/51 live) -- the fan-out orchestrator on res.lease #29 (plan schedule + GPU clamp + doc-ownership conflicts + embedded gpu->git->doc lease commands + one worker prompt each + one Nicholas check-in + a res.lease preflight; report/status/ready-cadence; handoff emits a Verification Console packet + next-iteration prompts); ships FANOUT_PROTOCOL.md; both multi-instance primitives (#29 lease + #30 orchestrator) now exist; next = a fan-out dogfood. [prior] Last updated 2026-07-27 (D-0051). Widget #3 Verification Console SHIPPED via the job-runner (commit f7e7b289; 73/73 cloud + 80/80 live); res.lease (Module 29) SHIPPED via the job-runner (D-0053, commit 36d7e0be; 38/38 cloud + 41/41 live); next = the fan-out orchestrator (built on the lease layer, D-0051). [prior] (D-0050). Housekeeping pass: recorded the past-MVP offload/verify-cost doctrine + the audit-loop spine (D-0050), reoriented Widget #3 to the Verification Console, set the iterate-loop cadence + the multi-instance direction. [prior] 2026-07-27 (D-0049). Widget #2 (Module Launcher / Registry Browser) SHIPPED via the job-runner (commit `a699ac6`; 62/62 cloud + 71/71 live). Next unit: Widget #3 (Review / Escalation Dashboard). Ship every unit with the job-runner (section 3); use the floor profile for end-to-end agent runs (max has a 9B arg-gen residual)._
