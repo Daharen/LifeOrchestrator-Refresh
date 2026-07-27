@@ -128,6 +128,11 @@ try {
     $ids = @($reg | ForEach-Object { [string]$_.skill_id })
     $sortedIds = @($ids | Sort-Object)
     Ok "registry: sorted by skill_id" (($ids -join '|') -eq ($sortedIds -join '|'))
+    # regression (D-0049): @()-collected registry must be N proper entries, NOT a single wrapper array
+    # (the pwsh 7.4.6 `return ,$x` double-wrap gotcha). This is EXACTLY the UI's collection path.
+    $regAt = @(Get-ModuleRegistry -ModulesDir $fixModules)
+    Ok "registry @()-collected: 3 entries not 1 wrapper" ($regAt.Count -eq 3) ("count=" + $regAt.Count)
+    Ok "registry @()-collected: element is an entry with a string skill_id" ($regAt.Count -ge 1 -and ($regAt[0].skill_id -is [string]) -and [bool]($regAt[0].PSObject.Properties['manifest_ok']))
 
     # 5. list line + input template + detail
     Ok "list line: doc.io renders" ((Format-ModuleListLine -Entry $docE) -match 'doc\.io')
@@ -207,6 +212,10 @@ if ($Live -and $IsWindows) {
     $rFs = @($realReg) | Where-Object { $_.skill_id -eq 'fs.observer' } | Select-Object -First 1
     Ok "real registry: doc.io + fs.observer present, manifest_ok" ($null -ne $rDoc -and $rDoc.manifest_ok -and $null -ne $rFs -and $rFs.manifest_ok)
     Ok "real registry: entrypoints exist on disk" ($null -ne $rFs -and $rFs.entrypoint_exists)
+    # regression (D-0049): the UI calls Get-ModuleRegistry with NO -ModulesDir and @()-collects it
+    $realAt = @(Get-ModuleRegistry)
+    Ok "real registry (default @()-collected): >= 20 entries" ($realAt.Count -ge 20) ("count=" + $realAt.Count)
+    Ok "real registry (default @()-collected): element has a string skill_id" ($realAt.Count -ge 1 -and ($realAt[0].skill_id -is [string]))
 
     # a REAL fs.observer run through the real Module 1 wrapper (cheap, deterministic, no GPU)
     $realWrap = if ($InvokeSkillPath) { $InvokeSkillPath } else { $paths.InvokeSkillPath }

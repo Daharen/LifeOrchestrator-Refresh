@@ -143,7 +143,7 @@ function Get-ModuleRegistry {
 
     if (-not $ModulesDir) { $ModulesDir = (Resolve-ModuleLauncherPaths -WidgetRoot $WidgetRoot).ModulesDir }
     $entries = New-Object System.Collections.Generic.List[object]
-    if (-not (Test-Path -LiteralPath $ModulesDir -PathType Container)) { return , $entries.ToArray() }
+    if (-not (Test-Path -LiteralPath $ModulesDir -PathType Container)) { return $entries.ToArray() }
 
     $dirs = @(Get-ChildItem -LiteralPath $ModulesDir -Directory -ErrorAction SilentlyContinue | Sort-Object Name)
     foreach ($d in $dirs) {
@@ -202,7 +202,10 @@ function Get-ModuleRegistry {
     }
 
     $sorted = @($entries.ToArray() | Sort-Object { [string]$_.skill_id })
-    return , $sorted
+    # NOTE: return WITHOUT a leading comma. `return ,$sorted` double-wraps the array so a caller's
+    # @(Get-ModuleRegistry) yields a 1-element array whose single element is the whole array (the
+    # documented pwsh 7.4.6 "array double-wrap" gotcha). Returning the array lets @(...) re-collect N.
+    return $sorted
 }
 
 function Format-ModuleListLine {

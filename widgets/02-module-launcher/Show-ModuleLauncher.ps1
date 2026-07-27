@@ -113,7 +113,7 @@ function New-ModuleLauncherForm {
     $detailBox.Dock = 'Fill'
     $detailBox.ReadOnly = $true
     $detailBox.Font = $mono
-    $detailBox.WordWrap = $false
+    $detailBox.WordWrap = $true
     $detailBox.Text = 'Select a module on the left to see its purpose, inputs, and requirements.'
     $moduleSplit.Panel2.Controls.Add($detailBox)
     $moduleSplit.Panel2.Controls.Add($lblDetail)
@@ -193,7 +193,7 @@ function New-ModuleLauncherForm {
     $resultBox.Dock = 'Fill'
     $resultBox.ReadOnly = $true
     $resultBox.Font = $mono
-    $resultBox.WordWrap = $false
+    $resultBox.WordWrap = $true
     $resultBox.Text = 'Select a module, edit the inputs JSON, and press Run module.'
     $resultSplit.Panel1.Controls.Add($resultBox)
     $resultSplit.Panel1.Controls.Add($lblResult)
@@ -237,6 +237,9 @@ function New-ModuleLauncherForm {
     $script:LauncherState.elapsedLabel = $elapsedLabel
     $script:LauncherState.countLabel   = $countLabel
     $script:LauncherState.timer        = $timer
+    $script:LauncherState.outerSplit   = $outer
+    $script:LauncherState.moduleSplit  = $moduleSplit
+    $script:LauncherState.resultSplit  = $resultSplit
 
     $moduleList.Add_SelectedIndexChanged({ Show-SelectedModule })
     $filterBox.Add_TextChanged({ Update-ModuleFilter })
@@ -244,7 +247,7 @@ function New-ModuleLauncherForm {
     $runBtn.Add_Click({ Start-LauncherRun })
     $cancelBtn.Add_Click({ Stop-LauncherRun })
     $timer.Add_Tick({ Update-LauncherRun })
-    $form.Add_Shown({ Update-ModuleRegistry })
+    $form.Add_Shown({ Set-InitialLayout; Update-ModuleRegistry })
     $form.Add_FormClosing({
             if ($script:LauncherState.handle) { try { Stop-ModuleProcess -Handle $script:LauncherState.handle } catch { } }
         })
@@ -385,6 +388,16 @@ function Stop-LauncherRun {
     $st.refreshBtn.Enabled = $true
     $st.cancelBtn.Enabled = $false
     $st.handle = $null
+}
+
+function Set-InitialLayout {
+    # Set the splitter positions AFTER the form is shown, when the containers have their real size.
+    # (Setting SplitterDistance at construction fails silently -- the container is still ~150px, so a
+    #  360px distance is out of range -- which is why the panels were mis-sized on first paint.)
+    $st = $script:LauncherState
+    Set-SplitterDistanceSafe $st.outerSplit 360                                  # left browser column width
+    Set-SplitterDistanceSafe $st.moduleSplit ([int]($st.moduleSplit.Height * 0.55))  # list over detail
+    Set-SplitterDistanceSafe $st.resultSplit ([int]($st.resultSplit.Height * 0.6))   # result over raw
 }
 
 # ----- entry -----
