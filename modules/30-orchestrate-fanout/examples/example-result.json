@@ -1,0 +1,107 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "orchestrate.fanout",
+  "skill_version": "0.1.0",
+  "contract_version": "0.2",
+  "invocation_id": "cfc74918-8280-4475-8abf-deb50f245cf3",
+  "status": "ok",
+  "started_at_utc": "2026-07-27T21:35:39.9617880Z",
+  "finished_at_utc": "2026-07-27T21:35:40.4799591Z",
+  "duration_ms": 513,
+  "inputs_digest": "sha256:c8f795b5e57c000cbfb49883b9561780885bf7609f5cd6692815d3589da8beab",
+  "result": {
+    "action": "plan",
+    "plan_id": "fo-1-0def84b0",
+    "iteration": 1,
+    "title": "iteration 5 -- two units",
+    "max_parallel": 2,
+    "report_back": "on_all",
+    "workers": [
+      {
+        "id": "agentcoding",
+        "gpu": false,
+        "docs": [],
+        "leases": "git",
+        "acquire_commands": "pwsh -NoProfile -File modules/29-resource-lease/Invoke-ResLease.ps1 -Action acquire -Resource \"git\" -Holder \"agentcoding\" -TtlSeconds 1800 -WaitSeconds 900",
+        "release_commands": "pwsh -NoProfile -File modules/29-resource-lease/Invoke-ResLease.ps1 -Action release -Resource \"git\" -Holder \"agentcoding\"",
+        "prompt_path": "/tmp/tmp.z7AjCrSKaD/art/cfc74918-8280-4475-8abf-deb50f245cf3/workers/worker-agentcoding.prompt.md"
+      },
+      {
+        "id": "docio-regex",
+        "gpu": false,
+        "docs": [
+          "CURRENT_STATE.md"
+        ],
+        "leases": [
+          "git",
+          "doc:CURRENT_STATE.md"
+        ],
+        "acquire_commands": [
+          "pwsh -NoProfile -File modules/29-resource-lease/Invoke-ResLease.ps1 -Action acquire -Resource \"git\" -Holder \"docio-regex\" -TtlSeconds 1800 -WaitSeconds 900",
+          "pwsh -NoProfile -File modules/29-resource-lease/Invoke-ResLease.ps1 -Action acquire -Resource \"doc:CURRENT_STATE.md\" -Holder \"docio-regex\" -TtlSeconds 1800 -WaitSeconds 900"
+        ],
+        "release_commands": [
+          "pwsh -NoProfile -File modules/29-resource-lease/Invoke-ResLease.ps1 -Action release -Resource \"doc:CURRENT_STATE.md\" -Holder \"docio-regex\"",
+          "pwsh -NoProfile -File modules/29-resource-lease/Invoke-ResLease.ps1 -Action release -Resource \"git\" -Holder \"docio-regex\""
+        ],
+        "prompt_path": "/tmp/tmp.z7AjCrSKaD/art/cfc74918-8280-4475-8abf-deb50f245cf3/workers/worker-docio-regex.prompt.md"
+      }
+    ],
+    "dispatch_now": [
+      "agentcoding",
+      "docio-regex"
+    ],
+    "queued": [],
+    "conflicts": {
+      "gpu_serialized": [],
+      "doc_contention": []
+    },
+    "preflight": {
+      "ran": false,
+      "held": [],
+      "note": "preflight disabled"
+    },
+    "check_in_prompt_path": "/tmp/tmp.z7AjCrSKaD/art/cfc74918-8280-4475-8abf-deb50f245cf3/check-in.prompt.md",
+    "plan_dir": "/tmp/tmp.z7AjCrSKaD/plans/fo-1-0def84b0"
+  },
+  "confidence": null,
+  "artifacts": [
+    {
+      "path": "/tmp/tmp.z7AjCrSKaD/art/cfc74918-8280-4475-8abf-deb50f245cf3/check-in.prompt.md",
+      "kind": "markdown",
+      "bytes": 537,
+      "sha256": "3e0905c22e910e65f79f50fe52f25c82b1229043f4833f0d2f722783ca895381"
+    },
+    {
+      "path": "/tmp/tmp.z7AjCrSKaD/art/cfc74918-8280-4475-8abf-deb50f245cf3/fanout.json",
+      "kind": "json",
+      "bytes": 2455,
+      "sha256": "de3285fb5ce8ecda4bc61178606ffce4e0ef58ce11903a6aada0918e5ad5718e"
+    },
+    {
+      "path": "/tmp/tmp.z7AjCrSKaD/art/cfc74918-8280-4475-8abf-deb50f245cf3/fanout.md",
+      "kind": "markdown",
+      "bytes": 481,
+      "sha256": "2547aea8a2703bd1cc25b4694732d9495af8b324fb854932cbb2b6f25f6bc56b"
+    },
+    {
+      "path": "/tmp/tmp.z7AjCrSKaD/art/cfc74918-8280-4475-8abf-deb50f245cf3/workers/worker-agentcoding.prompt.md",
+      "kind": "markdown",
+      "bytes": 1904,
+      "sha256": "fc17f3ecea2d040fefd66defad393652f51ed8c3013f9f038a2fbabae123e143"
+    },
+    {
+      "path": "/tmp/tmp.z7AjCrSKaD/art/cfc74918-8280-4475-8abf-deb50f245cf3/workers/worker-docio-regex.prompt.md",
+      "kind": "markdown",
+      "bytes": 2123,
+      "sha256": "a56ac2e6bfd6cbe7213fa4ed22022c70f08741794ddbebaef3756cd870644f00"
+    }
+  ],
+  "model_provenance": [],
+  "diagnostics": {
+    "log": "stderr.txt",
+    "artifact_dir": "/tmp/tmp.z7AjCrSKaD/art/cfc74918-8280-4475-8abf-deb50f245cf3"
+  },
+  "warnings": [],
+  "error": null
+}

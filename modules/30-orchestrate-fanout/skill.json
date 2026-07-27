@@ -1,0 +1,50 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "orchestrate.fanout",
+  "name": "Fan-out Orchestrator",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "Deterministic scaffolding for N parallel worker Cowork sessions (D-0050/D-0051), built on res.lease #29. plan turns worker unit-specs into a collision-safe fan-out plan (ordered gpu->git->doc leases per worker, dispatch_now trial of max_parallel clamped to one GPU worker, doc-ownership + GPU conflict flags, one prompt per worker + one Nicholas check-in prompt, an optional read-only res.lease preflight); report records worker progress; status rolls it up + computes ready_for_handoff per the cadence; handoff assembles the next-iteration prompts, one check-in, and a Verification Console packet (lifeorch.verification.packet/0.1). It never spawns or drives any AI session -- it only emits prompts and collects reports.",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-OrchestrateFanout.ps1",
+    "args_spec": "-Action plan|report|status|handoff|list [-Title <s>] [-Iteration <n>] [-MaxParallel <n>] [-ReportBack on_all|on_each] [-WorkersJson '<json array>'] [-PlanId <id>] [-WorkerId <id>] [-State started|progress|blocked|done|failed] [-Summary <s>] [-Needs <s>] [-NextWorkersJson '<json array>'] [-PlansDir <dir>] [-LeaseDir <dir>] [-ResLeasePath <path>] [-NoPreflight] [-LeaseTtlSeconds <n>] [-LeaseWaitSeconds <n>] | -InputsJson '<json>'"
+  },
+  "inputs": [
+    {"name": "action", "type": "string", "required": true, "description": "plan | report | status | handoff | list (one per invocation)."},
+    {"name": "workers", "type": "array", "required": false, "description": "plan: [{id, label?, unit, gpu?:bool, docs?:[paths], needs_git?:bool=true, inputs?, skill_id?, skill_dir?, notes?}]. Via -WorkersJson or InputsJson.workers."},
+    {"name": "title", "type": "string", "required": false, "description": "plan: a human title for the fan-out iteration."},
+    {"name": "iteration", "type": "int", "required": false, "default": 1, "description": "plan/handoff: the iteration number."},
+    {"name": "max_parallel", "type": "int", "required": false, "default": 2, "description": "plan: initial dispatch width (trial of 2). Clamped to at most one GPU worker regardless."},
+    {"name": "report_back", "type": "string", "required": false, "default": "on_all", "description": "plan: on_all (handoff when every worker is terminal) | on_each (>=1 terminal)."},
+    {"name": "plan_id", "type": "string", "required": false, "description": "report/status/handoff: the plan to act on (returned by plan)."},
+    {"name": "worker_id", "type": "string", "required": false, "description": "report: which worker is reporting."},
+    {"name": "state", "type": "string", "required": false, "description": "report: started | progress | blocked | done | failed."},
+    {"name": "summary", "type": "string", "required": false, "description": "report: one line on what the worker did."},
+    {"name": "needs", "type": "string", "required": false, "description": "report: what a blocked worker needs."},
+    {"name": "next_workers", "type": "array", "required": false, "description": "handoff: next-iteration worker specs (same shape as workers). Via -NextWorkersJson or InputsJson.next_workers."},
+    {"name": "plans_dir", "type": "string", "required": false, "description": "Override the shared plans dir (default $env:LIFEORCH_FANOUT_DIR, else runtime/plans). All instances MUST resolve the same dir."},
+    {"name": "lease_dir", "type": "string", "required": false, "description": "The shared res.lease dir threaded into worker acquire/release commands + the preflight."},
+    {"name": "res_lease_path", "type": "string", "required": false, "description": "Path to Invoke-ResLease.ps1 for the plan preflight (default: sibling module). Preflight skips cleanly if absent."},
+    {"name": "no_preflight", "type": "bool", "required": false, "default": false, "description": "plan: skip the read-only res.lease list preflight."}
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "plan: {plan_id, workers:[{id, leases, acquire_commands, release_commands, prompt_path}], dispatch_now, queued, conflicts:{gpu_serialized, doc_contention}, preflight, check_in_prompt_path, plan_dir}. report: {recorded, report_file}. status: {workers:[{id, state, ...}], counts, ready_for_handoff}. handoff: {next_iteration, summary, worker_prompts_next, check_in_prompt_path, verification_packet_path, handoff_path}. list: {count, plans:[...]}."
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4"],
+    "models": [],
+    "libraries": [],
+    "cpu": "any", "gpu": "none", "memory_mb": 128,
+    "network": false, "filesystem": "write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": {"root": "runtime/artifacts/<invocation_id>/"},
+  "timeout": {"default_seconds": 120, "on_timeout": "kill_tree_and_report"},
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}
