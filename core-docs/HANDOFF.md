@@ -73,7 +73,7 @@ audit-loop surface exists: Claude writes a verification packet, Nicholas runs + 
 through `Invoke-Skill.ps1` and exports a `lifeorch.verification.result/0.1`. `human_action` items are the
 handed-subtask channel.
 
-**Recommended next unit = the resource-arbitration / lock-lease layer.** It is the prerequisite for the
+**The resource-arbitration / lock-lease layer SHIPPED (D-0053: `res.lease`, Module 29; commit 36d7e0be; 38/38 cloud + 41/41 live).** The recommended next unit is now the **fan-out orchestrator** (below). It is the prerequisite for the
 MULTI-INSTANCE buildout (D-0050) and the user's FAN-OUT ORCHESTRATOR (D-0051): several Claude instances driving
 the box at once need a **GPU LEASE** (every model module is `parallel_safe:false` -- one llama-server / one
 pipeline at a time; heavy render/model runs block others), a **git/commit LOCK** (index.lock collisions have
@@ -121,4 +121,4 @@ locks (D-0050/D-0051 relax the single-active-unit rule to one-per-instance).
   Mirror changed core-docs to the Project by fresh-copying to a never-staged `runtime\mNNmirror\` path before
   `device_stage_files` (re-staging a previously-staged path returns STALE bytes).
 
-_Last updated 2026-07-27 (D-0051). Widget #3 Verification Console SHIPPED via the job-runner (commit f7e7b289; 73/73 cloud + 80/80 live); next = the resource-arbitration lock/lease layer (unblocks multi-instance + the fan-out orchestrator, D-0051). [prior] (D-0050). Housekeeping pass: recorded the past-MVP offload/verify-cost doctrine + the audit-loop spine (D-0050), reoriented Widget #3 to the Verification Console, set the iterate-loop cadence + the multi-instance direction. [prior] 2026-07-27 (D-0049). Widget #2 (Module Launcher / Registry Browser) SHIPPED via the job-runner (commit `a699ac6`; 62/62 cloud + 71/71 live). Next unit: Widget #3 (Review / Escalation Dashboard). Ship every unit with the job-runner (section 3); use the floor profile for end-to-end agent runs (max has a 9B arg-gen residual)._
+_Last updated 2026-07-27 (D-0051). Widget #3 Verification Console SHIPPED via the job-runner (commit f7e7b289; 73/73 cloud + 80/80 live); res.lease (Module 29) SHIPPED via the job-runner (D-0053, commit 36d7e0be; 38/38 cloud + 41/41 live); next = the fan-out orchestrator (built on the lease layer, D-0051). [prior] (D-0050). Housekeeping pass: recorded the past-MVP offload/verify-cost doctrine + the audit-loop spine (D-0050), reoriented Widget #3 to the Verification Console, set the iterate-loop cadence + the multi-instance direction. [prior] 2026-07-27 (D-0049). Widget #2 (Module Launcher / Registry Browser) SHIPPED via the job-runner (commit `a699ac6`; 62/62 cloud + 71/71 live). Next unit: Widget #3 (Review / Escalation Dashboard). Ship every unit with the job-runner (section 3); use the floor profile for end-to-end agent runs (max has a 9B arg-gen residual)._

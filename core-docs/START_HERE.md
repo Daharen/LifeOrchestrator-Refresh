@@ -9,7 +9,7 @@ Read this first. It routes you; it does not contain the project's substance.
 > do; deterministic modules are Claude's hands; model modules only where machine- or human-checkable).
 > **Widget #3 -- the Verification Console -- SHIPPED (D-0051, commit `f7e7b289`; 73/73 cloud + 80/80 live):**
 > the human-AUDIT surface where Claude hands Nicholas a verification packet and he runs + checks it locally and
-> exports a result Claude reads back. **Next unit: the resource-arbitration / lock-lease layer** (GPU lease +
+> exports a result Claude reads back. **The resource-arbitration / lock-lease layer SHIPPED (D-0053: `res.lease`, Module 29). Next unit: the FAN-OUT ORCHESTRATOR** (GPU lease +
 > commit lock + doc-ownership) -- it unblocks MULTI-INSTANCE buildout and the user's FAN-OUT ORCHESTRATOR
 > (D-0051). Cadence: **housekeeping -> implement one unit -> housekeeping -> handoff**, repeat. Read
 > `core-docs/HANDOFF.md` + `DECISION_LOG.md` D-0050/D-0051 before picking work.
