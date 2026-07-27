@@ -1,0 +1,3 @@
+# Per-run artifacts (wrapper stdout/stderr, each launched module's output).
+runtime/
+*.tmp

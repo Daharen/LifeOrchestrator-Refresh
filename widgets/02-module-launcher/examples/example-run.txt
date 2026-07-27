@@ -1,0 +1,46 @@
+Example: browsing the registry and running fs.observer through the Module Launcher.
+
+--- LEFT PANE: the module list (sorted by skill_id, filtered to "fs") ---
+  fs.manage   -  File Manage
+  fs.observer  -  Filesystem Observer
+
+--- DETAIL PANE (fs.observer selected) ---
+fs.observer   -   Filesystem Observer
+folder: 02-fs-observer   version: 0.1.0   contract: 0.1
+determinism: deterministic   parallel_safe: True   batch: False   streaming: False
+entrypoint: Invoke-FsObserver.ps1   timeout: 120s
+
+PURPOSE:
+  List, search, and index a directory tree deterministically (depth-bounded, with
+  metadata) without screenshots; emits a markdown tree and a JSON index.
+
+REQUIREMENTS: gpu=none  filesystem=read  network=False  screen=False  audio=False
+
+INPUTS:
+  - path (string, required)
+      Root directory to inspect.
+  - depth (int, optional)  default=3
+      Max recursion depth (entries at depths 1..depth).
+  - pattern (string, optional)
+      Optional name glob (e.g. *.md) for the matches list.
+  ...
+
+--- INPUTS BOX (pre-filled template, then edited) ---
+{ "path": "core-docs", "depth": 1 }
+
+--- RESULT PANE (after Run module) ---
+MODULE: fs.observer
+WRAPPER: manifest_valid=True  invoked=True  envelope_valid=True  skill_exit=0
+RESULT: status=ok   confidence=n/a   duration=214 ms
+
+RESULT PAYLOAD:
+  {"root":"C:\\Users\\just_\\LifeOrchestrator-Refresh\\core-docs","depth":1,"entry_count":12,
+   "dir_count":1,"file_count":12,"match_count":0,"truncated":false}
+
+ARTIFACTS (2):
+  - C:\Users\just_\...\runtime\artifacts\<id>\tree.md  (markdown, 1840 bytes)
+  - C:\Users\just_\...\runtime\artifacts\<id>\index.json  (json, 5120 bytes)
+
+--- RAW PANE ---
+The full lifeorch.skill.invocation_report/0.1 JSON (manifest_valid, invoked,
+exit_code, envelope_valid, envelope{...}, stderr_tail).
