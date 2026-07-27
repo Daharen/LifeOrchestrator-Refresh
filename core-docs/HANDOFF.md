@@ -89,7 +89,7 @@ The Verification Console's packet/result is its human-I/O.
 **Alternate units (if the lock layer is not wanted yet):** (a) a **Verification Console dogfood** -- Claude
 writes a real packet for a just-built unit and Nicholas runs it, to validate the audit loop end-to-end and
 surface UX gaps; (b) a **narrowing pass** on the model modules (pin them to specialized, machine-checkable
-slices so more model-module work clears the verify-cost bar).
+slices so more model-module work clears the verify-cost bar). (c) a **manual frontier bridge** (`frontier.bridge`, D-0052) -- a LOCAL context-packager: it assembles repo files + a Claude-written prompt into a copy-paste pack the user carries to his OWN ChatGPT Pro session, then brings the answer back into a file Claude reads. OUTBOUND local packaging ONLY -- it NEVER submits to / scrapes / drives ChatGPT or any external AI UI (the D-0051/D-0052 boundary; that would be the prohibited automated access). A high-value human-couriered escalation lane, NOT a bulk pipe (for volume frontier offload without a human courier, the paid API is the only clean path).
 
 **Deferred substrate follow-ons (do when they earn it):** Governor Phase 2 (warm/persistent llama-server --
 removes per-call cold loads + the orphan risk); 9B arg-gen hardening (unblocks `-Profile max`); Governor Phase 3.
