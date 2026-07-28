@@ -22,6 +22,12 @@ $script:VerificationWidgetRoot = $PSScriptRoot
 $script:PacketSchema = 'lifeorch.verification.packet/0.1'
 $script:ResultSchema = 'lifeorch.verification.result/0.1'
 
+# Process names reaped by the run-teardown orphan sweep. Governor Phase 2 (model.gateway #7) leaves a
+# DETACHED llama-server that the child-tree kill misses; 'python' covers a detached model-worker. Both are
+# gated by a before/after PID-set diff + a scope check (below), so a legitimately-resident warm server owned
+# by ANOTHER run/holder is never killed.
+$script:OrphanSweepNames = @('llama-server', 'python')
+
 # ============================================================================
 #  small helpers (shared shape with ModuleLauncher.psm1)
 # ============================================================================
@@ -316,6 +322,152 @@ function Resolve-ItemSkillDir {
 }
 
 # ============================================================================
+#  run-teardown orphan sweep (reap a DETACHED llama-server the child-tree kill misses)
+# ============================================================================
+# Governor Phase 2 (model.gateway #7) launches the warm/persistent llama-server DETACHED via
+# Win32_Process.Create, parenting it OUTSIDE this run's process tree, so it SURVIVES Process.Kill($true).
+# The sweep reaps -- BY NAME -- only a server THIS run started and the tree-kill missed: the set difference
+# between a snapshot taken at run start (Start-SkillProcess) and the processes alive at teardown. A PID that
+# was alive BEFORE the run (a resident warm server owned by another run/holder) is never in the candidate
+# set, so it is never killed. For names other than llama-server (e.g. a python model-worker) an additional
+# command-line scope check is required before killing, so an unrelated same-named process that merely
+# started during the run window is left alone. On the cloud gate (no llama-server) both sets are empty and
+# the sweep is a no-op.
+
+function Get-NamedProcessMap {
+    # A plain array of { id, name } for every live process whose name matches one of $Names.
+    [CmdletBinding()]
+    param([string[]]$Names)
+    $out = New-Object System.Collections.Generic.List[object]
+    foreach ($n in @($Names)) {
+        if ([string]::IsNullOrWhiteSpace($n)) { continue }
+        foreach ($p in @(Get-Process -Name $n -ErrorAction SilentlyContinue)) {
+            try { $out.Add([pscustomobject]@{ id = [int]$p.Id; name = [string]$n }) } catch { }
+        }
+    }
+    return $out.ToArray()
+}
+
+function Get-NamedProcessIdSet {
+    # Snapshot of currently-live PIDs for $Names as a hashtable (pid -> $true) for O(1) membership tests.
+    [CmdletBinding()]
+    param([string[]]$Names)
+    $set = @{}
+    foreach ($p in @(Get-NamedProcessMap -Names $Names)) { $set[[int]$p.id] = $true }
+    return $set
+}
+
+function Get-ProcessCommandLine {
+    # Best-effort command line for a pid (Windows CIM / Linux /proc); '' when unreadable.
+    [CmdletBinding()]
+    param([int]$ProcId)
+    if ($ProcId -le 0) { return '' }
+    try {
+        if ($IsWindows) {
+            $ci = Get-CimInstance Win32_Process -Filter "ProcessId=$ProcId" -ErrorAction SilentlyContinue
+            if ($null -ne $ci) { return [string]$ci.CommandLine }
+        }
+        else {
+            $cl = "/proc/$ProcId/cmdline"
+            if (Test-Path -LiteralPath $cl) { return (([System.IO.File]::ReadAllText($cl)) -replace "`0", ' ') }
+        }
+    }
+    catch { }
+    return ''
+}
+
+function Test-OrphanInScope {
+    # Is a NEW-since-run-start process OURS to reap? llama-server is a dedicated model-server binary, so any
+    # instance that appeared during our (GPU-leased) run is ours. Any OTHER name must prove ownership via a
+    # command-line match against a run-scope marker (the repo root / this run's module dir); if it cannot,
+    # we refuse to kill it -- an unrelated same-named process is never touched.
+    [CmdletBinding()]
+    param([int]$ProcId, [string]$Name, [string[]]$ScopeMarkers)
+    if ([string]$Name -like 'llama-server*') { return $true }
+    $markers = @($ScopeMarkers | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    if ($markers.Count -eq 0) { return $false }
+    $cmd = Get-ProcessCommandLine -ProcId $ProcId
+    if ([string]::IsNullOrWhiteSpace($cmd)) { return $false }
+    $lc = $cmd.ToLowerInvariant()
+    foreach ($mk in $markers) { if ($lc.Contains(([string]$mk).ToLowerInvariant())) { return $true } }
+    return $false
+}
+
+function Stop-ProcessHard {
+    # Kill a pid and CONFIRM it is gone (Process.Kill can return before the OS reaps it). Bounded.
+    [CmdletBinding()]
+    param([int]$ProcId, [int]$ConfirmMs = 2000)
+    if ($ProcId -le 0) { return $true }
+    try { $p = Get-Process -Id $ProcId -ErrorAction SilentlyContinue; if ($null -ne $p) { $p.Kill($true) } } catch { }
+    if ($IsWindows) { try { & taskkill.exe /PID $ProcId /T /F 2>$null | Out-Null } catch { } }
+    $deadline = [datetime]::UtcNow.AddMilliseconds([Math]::Max(200, $ConfirmMs))
+    while ([datetime]::UtcNow -lt $deadline) {
+        $still = $null; try { $still = Get-Process -Id $ProcId -ErrorAction SilentlyContinue } catch { $still = $null }
+        if ($null -eq $still) { return $true }
+        try { Stop-Process -Id $ProcId -Force -ErrorAction SilentlyContinue } catch { }
+        Start-Sleep -Milliseconds 100
+    }
+    $final = $null; try { $final = Get-Process -Id $ProcId -ErrorAction SilentlyContinue } catch { $final = $null }
+    return ($null -eq $final)
+}
+
+function Invoke-OrphanSweep {
+    <#
+        Reap orphaned model processes THIS run started that a child-tree kill missed, WITHOUT touching a
+        process that was already alive before the run (a foreign/resident warm server owned by another
+        holder). $BeforeSet is the run-start snapshot (hashtable pid->$true from Get-NamedProcessIdSet).
+        Returns a report: { ran, names, before_count, after_count, candidate_pids, reaped_pids,
+        skipped_pids, remaining_pids, all_clear }. Deterministic + safe on the cloud gate (empty sets -> no-op).
+    #>
+    [CmdletBinding()]
+    param(
+        $BeforeSet,
+        [string[]]$Names = $script:OrphanSweepNames,
+        [string[]]$ScopeMarkers = @(),
+        [int]$SettleMs = 250
+    )
+    $names2 = @($Names | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    $report = [ordered]@{
+        ran = $false; names = $names2; before_count = 0; after_count = 0
+        candidate_pids = @(); reaped_pids = @(); skipped_pids = @(); remaining_pids = @(); all_clear = $true
+    }
+    if ($names2.Count -eq 0) { return $report }
+    $report.ran = $true
+    if ($SettleMs -gt 0) { Start-Sleep -Milliseconds $SettleMs }   # let tree-killed children die + a detached server settle
+    $before = @{}
+    if ($BeforeSet -is [System.Collections.IDictionary]) { foreach ($k in $BeforeSet.Keys) { $before[[int]$k] = $true } }
+    $report.before_count = $before.Count
+    $nowMap = Get-NamedProcessMap -Names $names2
+    $report.after_count = @($nowMap).Count
+    $cands = @($nowMap | Where-Object { -not $before.ContainsKey([int]$_.id) })
+    $report.candidate_pids = @($cands | ForEach-Object { [int]$_.id })
+    $reaped = New-Object System.Collections.Generic.List[int]
+    $skipped = New-Object System.Collections.Generic.List[int]
+    $remaining = New-Object System.Collections.Generic.List[int]
+    foreach ($c in $cands) {
+        $pidN = [int]$c.id
+        if (-not (Test-OrphanInScope -ProcId $pidN -Name ([string]$c.name) -ScopeMarkers $ScopeMarkers)) { $skipped.Add($pidN); continue }
+        if (Stop-ProcessHard -ProcId $pidN) { $reaped.Add($pidN) } else { $remaining.Add($pidN) }
+    }
+    $report.reaped_pids = $reaped.ToArray()
+    $report.skipped_pids = $skipped.ToArray()
+    $report.remaining_pids = $remaining.ToArray()
+    $report.all_clear = ($remaining.Count -eq 0)
+    return $report
+}
+
+function Invoke-RunOrphanSweep {
+    # Convenience: run Invoke-OrphanSweep from the snapshot + scope captured on a run Handle (Start-SkillProcess).
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Handle, [int]$SettleMs = 250)
+    $names = Get-Prop $Handle 'OrphanNames' $script:OrphanSweepNames
+    if ($null -eq $names) { $names = $script:OrphanSweepNames }
+    $before = Get-Prop $Handle 'OrphanBefore'
+    $scope = @(Get-Prop $Handle 'OrphanScope')
+    return (Invoke-OrphanSweep -BeforeSet $before -Names $names -ScopeMarkers $scope -SettleMs $SettleMs)
+}
+
+# ============================================================================
 #  run a run_module item through the Module 1 wrapper
 # ============================================================================
 
@@ -371,6 +523,14 @@ function Start-SkillProcess {
     $wd = if ($WorkingDir) { $WorkingDir } else { $paths.RepoRoot }
     if (Test-Path -LiteralPath $wd) { $psi.WorkingDirectory = $wd }
 
+    # Snapshot the model-process PIDs alive BEFORE this run so teardown reaps ONLY what this run adds
+    # (Governor Phase 2's detached warm llama-server escapes the child-tree kill) and never a
+    # resident/foreign server. Scope marker = repo root + this run's module dir, so a non-llama worker
+    # must prove (by command line) that it is ours before it can be killed.
+    $orphanNames = $script:OrphanSweepNames
+    $orphanBefore = Get-NamedProcessIdSet -Names $orphanNames
+    $orphanScope = @($paths.RepoRoot, $skillDirAbs)
+
     $proc = [System.Diagnostics.Process]::new()
     $proc.StartInfo = $psi
     [void]$proc.Start()
@@ -396,14 +556,20 @@ function Start-SkillProcess {
         Paths        = $paths
         StartedUtc   = $startedUtc
         SkillDir     = $skillDirAbs
+        OrphanBefore = $orphanBefore
+        OrphanNames  = $orphanNames
+        OrphanScope  = $orphanScope
     }
 }
 
 function Stop-SkillProcess {
+    # Tear a run down: kill the child tree (Process.Kill) AND run the name-based orphan sweep, so a DETACHED
+    # warm llama-server (parented outside the tree) is not left resident. Returns the sweep report (or $null).
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Handle)
-    if ($null -eq $Handle) { return }
+    if ($null -eq $Handle) { return $null }
     try { if (-not $Handle.Process.HasExited) { $Handle.Process.Kill($true) } } catch { }
+    return (Invoke-RunOrphanSweep -Handle $Handle)
 }
 
 function Complete-SkillRun {
@@ -477,6 +643,11 @@ function Complete-SkillRun {
 
     $elapsedMs = [int]([datetime]::UtcNow - $Handle.StartedUtc).TotalMilliseconds
 
+    # Run-teardown orphan sweep: the wrapper process has exited, but a warm/persistent llama-server that
+    # model.gateway launched DETACHED (Win32_Process.Create) is NOT a child and so outlives it. Reap any
+    # such server THIS run started (before/after PID-set diff), leaving foreign/resident servers untouched.
+    $orphanSweep = Invoke-RunOrphanSweep -Handle $Handle
+
     return [pscustomobject]@{
         ok               = $ok
         report           = $report
@@ -498,6 +669,7 @@ function Complete-SkillRun {
         elapsed_ms       = $elapsedMs
         skill_dir        = $Handle.SkillDir
         artifact_root    = $Handle.ArtifactRoot
+        orphan_sweep     = $orphanSweep
     }
 }
 
@@ -715,5 +887,7 @@ Export-ModuleMember -Function `
     Test-HasProp, Get-Prop, Limit-Text, ConvertTo-CompactJson, ConvertFrom-EnvelopeJson, `
     Resolve-VerificationPaths, Import-VerificationPacket, ConvertTo-NormalizedChecklist, `
     Format-PacketSummary, Format-ItemListLine, Format-ItemDetail, Resolve-ItemSkillDir, `
+    Get-NamedProcessMap, Get-NamedProcessIdSet, Get-ProcessCommandLine, Test-OrphanInScope, `
+    Stop-ProcessHard, Invoke-OrphanSweep, Invoke-RunOrphanSweep, `
     Start-SkillProcess, Stop-SkillProcess, Complete-SkillRun, Invoke-SkillRun, Format-SkillResult, `
     New-RunSummary, New-VerificationResultItem, Get-VerificationSummary, New-VerificationResult, Save-VerificationResult

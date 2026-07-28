@@ -43,7 +43,9 @@ Write-Host "=== Verification Console tests (Live=$Live, IsWindows=$IsWindows) ==
 foreach ($fn in 'Resolve-VerificationPaths', 'Import-VerificationPacket', 'ConvertTo-NormalizedChecklist',
     'Format-PacketSummary', 'Format-ItemListLine', 'Format-ItemDetail', 'Resolve-ItemSkillDir',
     'Start-SkillProcess', 'Stop-SkillProcess', 'Complete-SkillRun', 'Invoke-SkillRun', 'Format-SkillResult',
-    'New-RunSummary', 'New-VerificationResultItem', 'Get-VerificationSummary', 'New-VerificationResult', 'Save-VerificationResult') {
+    'New-RunSummary', 'New-VerificationResultItem', 'Get-VerificationSummary', 'New-VerificationResult', 'Save-VerificationResult',
+    'Get-NamedProcessMap', 'Get-NamedProcessIdSet', 'Get-ProcessCommandLine', 'Test-OrphanInScope',
+    'Stop-ProcessHard', 'Invoke-OrphanSweep', 'Invoke-RunOrphanSweep') {
     Ok "function exists: $fn" ([bool](Get-Command $fn -ErrorAction SilentlyContinue))
 }
 
@@ -143,6 +145,36 @@ Ok "resolve skill_dir: relative joins repo root" ((Resolve-ItemSkillDir -Item $f
 $absItem = [pscustomobject]@{ skill_dir = (Join-Path ([System.IO.Path]::GetTempPath()) 'abs-x') }
 Ok "resolve skill_dir: absolute passes through" ((Resolve-ItemSkillDir -Item $absItem -RepoRoot 'C:\repo') -eq $absItem.skill_dir)
 
+# 8b. run-teardown orphan sweep (deterministic; no real llama-server needed) -----------------------------
+#    Proves the safety contract of the name-based sweep WITHOUT a GPU: (a) empty names -> no-op; (b) the
+#    scope guard (llama-server always ours; any other name needs a command-line marker); (c) a PID alive
+#    BEFORE the run (this test's own pwsh) is NEVER a candidate; (d) a NEW, in-scope process IS reaped and
+#    confirmed dead, while the pre-existing one is untouched. (d) launches a disposable child tagged with a
+#    unique marker and scopes the sweep to that marker, so ONLY that child can ever match.
+function PidAlive([int]$procId) { if ($procId -le 0) { return $false } try { $null = Get-Process -Id $procId -ErrorAction Stop; return $true } catch { return $false } }
+
+$noop = Invoke-OrphanSweep -BeforeSet @{} -Names @() -SettleMs 0
+Ok "sweep: empty names -> ran=false + all_clear" ((-not [bool]$noop.ran) -and [bool]$noop.all_clear)
+Ok "sweep scope: llama-server always in scope" (Test-OrphanInScope -ProcId 999999 -Name 'llama-server' -ScopeMarkers @())
+Ok "sweep scope: other name w/o markers refused" (-not (Test-OrphanInScope -ProcId 999999 -Name 'python' -ScopeMarkers @()))
+Ok "sweep scope: other name w/ non-matching marker refused" (-not (Test-OrphanInScope -ProcId $PID -Name 'python' -ScopeMarkers @('no-such-marker-xyz')))
+
+$selfSet = Get-NamedProcessIdSet -Names @('pwsh', 'pwsh-preview')
+Ok "sweep snapshot: captures this pwsh pid" ($selfSet.ContainsKey($PID))
+$sweepSelf = Invoke-OrphanSweep -BeforeSet $selfSet -Names @('pwsh', 'pwsh-preview') -ScopeMarkers @($widgetRoot) -SettleMs 0
+Ok "sweep: pre-existing pwsh (self) is not a candidate + not reaped" ((@($sweepSelf.candidate_pids) -notcontains $PID) -and (@($sweepSelf.reaped_pids) -notcontains $PID) -and (PidAlive $PID))
+
+$mk = 'orphansweep_' + [guid]::NewGuid().ToString('N')
+$before = Get-NamedProcessIdSet -Names @('pwsh', 'pwsh-preview')
+$child = Start-Process -FilePath $PwshPath -ArgumentList @('-NoProfile', '-Command', "Start-Sleep -Seconds 45; '$mk' | Out-Null") -PassThru
+Start-Sleep -Milliseconds 800
+Ok "sweep: disposable child launched" (PidAlive $child.Id)
+$sweep = Invoke-OrphanSweep -BeforeSet $before -Names @('pwsh', 'pwsh-preview') -ScopeMarkers @($mk) -SettleMs 200
+Ok "sweep: NEW in-scope child reaped + all_clear" ((@($sweep.reaped_pids) -contains $child.Id) -and [bool]$sweep.all_clear) ("reaped=[$($sweep.reaped_pids -join ',')] cands=[$($sweep.candidate_pids -join ',')]")
+Ok "sweep: reaped child confirmed dead" (-not (PidAlive $child.Id))
+Ok "sweep: pre-existing self pwsh still alive (never touched)" (PidAlive $PID)
+if (PidAlive $child.Id) { try { Stop-Process -Id $child.Id -Force -ErrorAction SilentlyContinue } catch { } }
+
 # ----- run a run_module item via the mock (temp fixture module dir) -----
 $fixRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("vc-fixture-" + [guid]::NewGuid().ToString('N'))
 $modDir = Join-Path $fixRoot '02-fs-observer'
@@ -221,11 +253,78 @@ if ($Live -and $IsWindows) {
     Start-Sleep -Seconds 2
     $after = @(Get-Process -Name 'llama-server' -ErrorAction SilentlyContinue).Count
     Ok "real run: no orphaned llama-server" ($after -le $before) ("before=$before after=$after")
+
+    # --- REAL model.gateway (tier tiny, WARM) through the Console run path: Governor Phase 2 spawns the
+    #     server DETACHED (Win32_Process.Create) so it ESCAPES the child-tree kill; the run-teardown orphan
+    #     sweep must reap it -> 0 orphaned llama-server after teardown. This is the GPU worker's core check.
+    #     The gpu lease is held by THIS holder; model.gateway (via LIFEORCH_INSTANCE) re-attaches it
+    #     (already_held -> owned=false), so it never releases the lease out from under us. ---
+    $mgDir = Join-Path $paths.RepoRoot (Join-Path 'modules' '07-model-gateway')
+    $reslease = Join-Path $paths.RepoRoot (Join-Path 'modules' (Join-Path '29-resource-lease' 'Invoke-ResLease.ps1'))
+    $mgReg = Join-Path $mgDir 'models.json'
+    $engineOk = $false; $modelOk = $false; $tinyId = ''
+    if ((Test-Path $mgDir) -and (Test-Path $mgReg) -and (Test-Path $reslease)) {
+        try {
+            $regObj = Get-Content -LiteralPath $mgReg -Raw | ConvertFrom-Json
+            $eng = [string]$regObj.engines.'llama-server'
+            $tinyId = [string]$regObj.tiers.llm.tiny
+            $tinyModel = @($regObj.models | Where-Object { $_.model_id -eq $tinyId }) | Select-Object -First 1
+            $engineOk = ($eng -and (Test-Path -LiteralPath $eng))
+            $modelOk = ($null -ne $tinyModel -and (Test-Path -LiteralPath ([string]$tinyModel.path)))
+        }
+        catch { }
+    }
+    if ($engineOk -and $modelOk) {
+        $holder = if (-not [string]::IsNullOrWhiteSpace($env:LIFEORCH_INSTANCE)) { $env:LIFEORCH_INSTANCE } else { 'vc-live-teardown' }
+        $prevInstance = $env:LIFEORCH_INSTANCE
+        $env:LIFEORCH_INSTANCE = $holder
+        $mgBefore = @(); $mgAfter = @(); $leaseId = $null; $acqOwned = $false
+        try {
+            $acqRaw = & $PwshPath -NoProfile -File $reslease -Action acquire -Resource 'gpu' -Holder $holder -TtlSeconds 1800 -WaitSeconds 900 2>$null | Out-String
+            $acq = $null; try { $acq = $acqRaw | ConvertFrom-Json } catch { }
+            $acqResult = if ($null -ne $acq) { Get-Prop $acq 'result' $acq } else { $null }
+            $gotLease = ($null -ne $acqResult -and [bool](Get-Prop $acqResult 'acquired' $false))
+            if ($gotLease) { $leaseId = [string](Get-Prop $acqResult 'lease_id'); $acqOwned = (-not [bool](Get-Prop $acqResult 'already_held' $false)) }
+            Ok "live orphan: gpu lease acquired (holder=$holder)" $gotLease ("acq=" + $acqRaw.Trim())
+
+            $mgInputs = '{"tier":"tiny","prompt":"ping","max_tokens":8,"temperature":0.1,"warm":true}'
+            $mgResolved = Resolve-ItemSkillDir -Item ([pscustomobject]@{ skill_dir = 'modules/07-model-gateway' }) -RepoRoot $paths.RepoRoot
+            $mgBefore = @(Get-Process -Name 'llama-server' -ErrorAction SilentlyContinue | ForEach-Object { [int]$_.Id })
+            $mgRun = Invoke-SkillRun -SkillDir $mgResolved -InputsJson $mgInputs -InvokeSkillPath $realWrap -PwshPath $PwshPath -WorkingDir $paths.RepoRoot
+            Ok "live orphan: model.gateway tiny ran ok (tier=$tinyId)" ([bool]$mgRun.ok) ("status=$($mgRun.skill_status) wrap_exit=$($mgRun.wrapper_exit) err=" + [string](Get-Prop $mgRun.error 'message'))
+            $sweep = Get-Prop $mgRun 'orphan_sweep'
+            Ok "live orphan: teardown sweep reaped the detached warm llama-server" ($null -ne $sweep -and [bool]$sweep.ran -and @($sweep.reaped_pids).Count -ge 1 -and [bool]$sweep.all_clear) ("sweep=" + (ConvertTo-CompactJson $sweep))
+            Start-Sleep -Seconds 2
+            $mgAfter = @(Get-Process -Name 'llama-server' -ErrorAction SilentlyContinue | ForEach-Object { [int]$_.Id })
+            $newRemaining = @($mgAfter | Where-Object { $mgBefore -notcontains $_ })
+            Ok "live orphan: 0 orphaned llama-server after teardown" (@($newRemaining).Count -eq 0) ("before=[$($mgBefore -join ',')] after=[$($mgAfter -join ',')] new_remaining=[$($newRemaining -join ',')]")
+        }
+        finally {
+            # belt-and-suspenders: reap anything NEW we somehow left, tidy a now-dead warm registry, release + restore
+            try { foreach ($rid in @($mgAfter | Where-Object { $mgBefore -notcontains $_ })) { Stop-Process -Id $rid -Force -ErrorAction SilentlyContinue } } catch { }
+            $warmReg = Join-Path $mgDir (Join-Path 'runtime' 'warm-server.json')
+            try {
+                if (Test-Path -LiteralPath $warmReg) {
+                    $wr = Get-Content -LiteralPath $warmReg -Raw | ConvertFrom-Json
+                    $wrPid = if ($null -ne $wr -and $wr.PSObject.Properties['pid']) { [int]$wr.pid } else { -1 }
+                    $wrAlive = $false; if ($wrPid -gt 0) { try { $null = Get-Process -Id $wrPid -ErrorAction Stop; $wrAlive = $true } catch { } }
+                    if (-not $wrAlive) { Remove-Item -LiteralPath $warmReg -Force -ErrorAction SilentlyContinue }  # our reaped server; never remove a LIVE resident
+                }
+            }
+            catch { }
+            if ($leaseId -and $acqOwned) { & $PwshPath -NoProfile -File $reslease -Action release -Resource 'gpu' -LeaseId $leaseId 2>$null | Out-Null }
+            if ($null -eq $prevInstance) { Remove-Item Env:\LIFEORCH_INSTANCE -ErrorAction SilentlyContinue } else { $env:LIFEORCH_INSTANCE = $prevInstance }
+        }
+    }
+    else {
+        Skip "live orphan (model.gateway tiny warm)" "engine/model not present (engineOk=$engineOk modelOk=$modelOk tiny=$tinyId)"
+    }
 }
 else {
     Skip "WinForms form self-test" "requires -Live on Windows"
     Skip "real fs.observer run" "requires -Live on Windows"
     Skip "no-orphan check" "requires -Live on Windows"
+    Skip "live orphan (model.gateway tiny warm)" "requires -Live on Windows"
 }
 
 Write-Host ""
