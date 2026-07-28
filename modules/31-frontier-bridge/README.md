@@ -41,13 +41,22 @@ Outputs, in `runtime/artifacts/<invocation_id>/`:
   delimiters, and a `## HOW TO RETURN THE ANSWER` footer.
 - `manifest.json` — `lifeorch.frontier.pack_manifest/0.1`: exactly what was included/skipped
   (path, bytes, sha256, encoding).
-- `<out_name>.answer.md` — the **return file**: a stub with a dashed separator; the user pastes the
-  model's answer below it.
+- `<out_name>.answer.md` — the **return file** (return-capture convention): a stub carrying the
+  `pack_id` and two answer-marker lines
+  (`<<<FRONTIER-BRIDGE-ANSWER-BEGIN pack=<id>>>>` … `<<<FRONTIER-BRIDGE-ANSWER-END pack=<id>>>>`).
+  The user pastes the external model's answer **between** the two markers. Markers (rather than a bare
+  separator) make extraction robust even when the answer itself contains dashes/rules, and the embedded
+  `pack_id` lets `read-return` confirm the answer belongs to the pack it expects.
 
 ### `read-return`
-Read the pasted answer back. Input: `return_file` *(required)* — the file the user pasted into. The
-result carries `{captured, content, sha256, char_count}`. If the file still holds only the stub,
-`captured` is `false` and `status` is `partial`.
+Read **and validate** the pasted answer. Inputs: `return_file` *(required)* and `expect_pack_id`
+*(optional — the `invocation_id`/`pack_id` this return file should belong to)*. It extracts the answer
+between the two markers (falling back to the legacy dashed-separator format, then to a raw read), and
+returns `{format, pack_id, expected_pack_id, pack_id_match, captured, valid, char_count, issues, content, sha256}`.
+`valid` is true only when the answer was captured via a recognised structure and (if `expect_pack_id`
+was given) the id matched; otherwise `status` is `partial` and `issues[]` explains why
+(`answer_markers_missing`, `answer_empty`, `pack_id_mismatch`, `answer_looks_like_pack_or_markers`,
+`end_marker_missing`). Purely local string work — still no network.
 
 ## Contract
 
@@ -74,8 +83,10 @@ See `examples/` for full invocations and a representative result envelope.
 pwsh -File tests\Test-FrontierBridge.ps1 -PwshPath pwsh [-WrapperPath ..\01-skill-bootstrap\Invoke-Skill.ps1]
 ```
 
-63 checks (pure file I/O, no mock): pack/glob/folder/include/exclude/recurse, `too_large` /
+83 checks (pure file I/O, no mock): pack/glob/folder/include/exclude/recurse, `too_large` /
 `total_cap` / `binary` skips, no-match → `partial`, prompt-only, missing-input errors, `read-return`
-capture + empty + not-found, `-InputsJson` equivalence + named-override, determinism, envelope-schema
-completeness, the **no-network** static assertion, and manifest self-check. With `-WrapperPath` it also
-runs through the Module 1 wrapper (the live box gate supplies it).
+capture + empty + not-found, the **return-capture validator** (answer-markers extraction, `pack_id`
+match/mismatch, raw-fallback flagging, legacy dashed-separator backward-compatibility, pasted-pack
+detection, stub + manifest structure), `-InputsJson` equivalence + named-override, determinism,
+envelope-schema completeness, the **no-network** static assertion, and manifest self-check. With
+`-WrapperPath` it also runs through the Module 1 wrapper (the live box gate supplies it).

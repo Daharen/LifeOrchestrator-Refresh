@@ -7,9 +7,11 @@
     Given a Claude-written prompt + a set of local files (explicit paths / globs, or a folder),
     this skill emits ONE copy-paste "pack": the prompt/instructions, the specific question, every
     included file's content concatenated with clear invocation-tagged delimiters, and a manifest of
-    exactly what was included. It also declares a return-capture convention: the USER pastes the
-    external model's answer into a local return file, and a second action (`read-return`) reads that
-    file back for Claude.
+    exactly what was included. It also declares a robust return-capture convention: the return file
+    carries the pack_id + two ANSWER marker lines, the USER pastes the external model's answer BETWEEN
+    the markers, and a second action (`read-return`) parses + VALIDATES that file back for Claude
+    (marker extraction, optional pack_id match, and issue reporting; legacy dashed-separator files still
+    parse).
 
     HARD BOUNDARY (DECISION_LOG D-0051 / D-0052): this is OUTBOUND LOCAL PACKAGING ONLY. It NEVER
     submits to, scrapes, or drives ChatGPT or any external AI UI or service. It performs local file
@@ -39,6 +41,7 @@ param(
     [string]$Title,                      # human title for the pack
     [string]$OutName,                    # base name for the pack file
     [string]$ReturnFile,                 # read-return: the file the user pasted the answer into
+    [string]$ExpectPackId,               # read-return: optional pack_id to validate the return file belongs to
     [string]$ArtifactRoot,               # relocate the artifact root (contract 3.1)
     [string]$InputsJson,                 # generic input passing (contract 3.1)
     [string]$WrapperPath                 # (test aid only; unused at runtime)
@@ -163,6 +166,41 @@ function New-FileArtifact {
     }
 }
 
+# Parse a frontier.bridge return file into { format, pack_id, answer, markers_found, end_found }.
+#   format: 'answer-markers' (current) | 'legacy-separator' (old dashed stub) | 'raw' (no recognised structure).
+# The answer is the text BETWEEN the two ANSWER marker lines; falls back to the old 80-dash convention,
+# then to a raw read (leading HTML-comment / blank lines dropped). Pure string work -- no network.
+function ConvertFrom-ReturnFile {
+    param([string]$Text)
+    if ($null -eq $Text) { $Text = '' }
+    $packId = $null
+    $pm = [regex]::Match($Text, '(?im)^\s*<!--\s*pack_id:\s*(\S+)\s*-->')
+    if ($pm.Success) { $packId = $pm.Groups[1].Value }
+
+    $bm = [regex]::Match($Text, '(?im)^<<<FRONTIER-BRIDGE-ANSWER-BEGIN\b.*$')
+    if ($bm.Success) {
+        $afterBegin = $Text.Substring($bm.Index + $bm.Length)
+        $em = [regex]::Match($afterBegin, '(?im)^<<<FRONTIER-BRIDGE-ANSWER-END\b.*$')
+        $answer = if ($em.Success) { $afterBegin.Substring(0, $em.Index) } else { $afterBegin }
+        return @{ format = 'answer-markers'; pack_id = $packId; answer = $answer; markers_found = $true; end_found = $em.Success }
+    }
+
+    $sep = ('-' * 80)
+    $idx = $Text.IndexOf($sep)
+    if ($idx -ge 0) {
+        return @{ format = 'legacy-separator'; pack_id = $packId; answer = $Text.Substring($idx + $sep.Length); markers_found = $false; end_found = $false }
+    }
+
+    $keep = New-Object 'System.Collections.Generic.List[string]'
+    $started = $false
+    foreach ($ln in ($Text -split "`r?`n")) {
+        if (-not $started -and ($ln.TrimStart().StartsWith('<!--') -or [string]::IsNullOrWhiteSpace($ln))) { continue }
+        $started = $true
+        $keep.Add($ln)
+    }
+    return @{ format = 'raw'; pack_id = $packId; answer = ($keep -join "`n"); markers_found = $false; end_found = $false }
+}
+
 # ---------------------------------------------------------------------------------------------------
 # Envelope construction / emission
 # ---------------------------------------------------------------------------------------------------
@@ -170,6 +208,8 @@ function New-FileArtifact {
 $Script:SkillId         = 'frontier.bridge'
 $Script:SkillVersion    = '0.1.0'
 $Script:ContractVersion = '0.2'
+$Script:AnswerBeginPrefix = '<<<FRONTIER-BRIDGE-ANSWER-BEGIN'
+$Script:AnswerEndPrefix   = '<<<FRONTIER-BRIDGE-ANSWER-END'
 
 function New-Envelope {
     param(
@@ -392,12 +432,18 @@ try {
                 $returnFile = Join-Path $artifactDir ([System.IO.Path]::GetFileName($returnFile))
             }
         }
-        $sep = ('-' * 80)
+        $answerBegin = "$($Script:AnswerBeginPrefix) pack=$shortId>>>"
+        $answerEnd   = "$($Script:AnswerEndPrefix) pack=$shortId>>>"
         $stub = @(
             '<!-- FRONTIER-BRIDGE RETURN FILE -->',
-            '<!-- Paste the frontier model''s FULL answer BELOW the dashed line, then have Claude run: -->',
-            "<!--   Invoke-FrontierBridge.ps1 -Action read-return -ReturnFile `"$returnFile`" -->",
-            $sep,
+            "<!-- pack_id: $invocationId -->",
+            "<!-- short_id: $shortId -->",
+            '<!-- Paste the external model''s FULL answer BETWEEN the two ANSWER marker lines below. -->',
+            '<!-- Keep the two marker lines and the pack_id line intact; do not paste the pack itself back. -->',
+            "<!--   Then have Claude run:  Invoke-FrontierBridge.ps1 -Action read-return -ReturnFile `"$returnFile`" -->",
+            $answerBegin,
+            '',
+            $answerEnd,
             ''
         ) -join "`n"
         Write-Utf8NoBom -Path $returnFile -Text $stub
@@ -433,8 +479,11 @@ try {
         [void]$head.AppendLine("## FILE CONTENTS")
         $packText = $head.ToString() + $sb.ToString()
         $packText += "`n`n## HOW TO RETURN THE ANSWER`n"
-        $packText += "Paste the model's full answer into this local file:`n  $returnFile`n"
-        $packText += "Then have Claude read it back with:`n  Invoke-FrontierBridge.ps1 -Action read-return -ReturnFile `"$returnFile`"`n"
+        $packText += "1. Paste this ENTIRE pack into your OWN external model session (e.g. your ChatGPT).`n"
+        $packText += "2. Copy the model's FULL answer.`n"
+        $packText += "3. Paste it into this local return file, BETWEEN the two ANSWER marker lines:`n     $returnFile`n"
+        $packText += "     (markers:  $answerBegin  ...  $answerEnd )`n"
+        $packText += "4. Have Claude read + validate it:`n     Invoke-FrontierBridge.ps1 -Action read-return -ReturnFile `"$returnFile`"`n"
 
         $packPath = Join-Path $artifactDir "$rOutName.md"
         Write-Utf8NoBom -Path $packPath -Text $packText
@@ -446,6 +495,8 @@ try {
             title         = $rTitle
             generated_utc = $startedUtc
             boundary      = 'outbound-local-only; no network contacted; the human is the sole courier (D-0052)'
+            pack_id       = $invocationId
+            return_capture = [ordered]@{ file = [System.IO.Path]::GetFileName($returnFile); format = 'answer-markers'; begin = $answerBegin; end = $answerEnd }
             prompt_chars  = $rPrompt.Length
             question      = $rQuestion
             file_count    = $included.Count
@@ -505,30 +556,51 @@ try {
             Write-EnvelopeAndExit -Envelope $envx -ArtifactDir $artifactDir
         }
 
+        $rExpect = Resolve-Input -Bound $bound -Ij $ij -Param 'ExpectPackId' -Key 'expect_pack_id' -Default $null
+        if ([string]::IsNullOrWhiteSpace($rExpect)) { $rExpect = $null }
+
         $bytes    = [System.IO.File]::ReadAllBytes($rReturnFile)
         $decoded  = ConvertFrom-FileBytes -Bytes $bytes
-        $raw      = $decoded.text
-        $sep      = ('-' * 80)
-        $answer   = $raw
-        $idx      = $raw.IndexOf($sep)
-        if ($idx -ge 0) { $answer = $raw.Substring($idx + $sep.Length) }
-        # strip any residual placeholder comment lines
-        $answerTrim = $answer.Trim()
-        $captured = ($answerTrim.Length -gt 0)
-        if (-not $captured) { $warnings.Add('return file has no answer content below the separator yet.') }
+        $parsed   = ConvertFrom-ReturnFile -Text $decoded.text
+        $answerTrim = ([string]$parsed.answer).Trim()
+        $captured   = ($answerTrim.Length -gt 0)
+
+        # ----- validate the returned file -----
+        $issues = New-Object 'System.Collections.Generic.List[string]'
+        if (-not $parsed.markers_found -and $parsed.format -ne 'legacy-separator') { $issues.Add('answer_markers_missing') }
+        if ($parsed.markers_found -and -not $parsed.end_found) { $issues.Add('end_marker_missing') }
+        if (-not $captured) { $issues.Add('answer_empty') }
+        if ($captured -and (($answerTrim -match 'FRONTIER-BRIDGE PACK') -or ($answerTrim -match 'FBRIDGE::') -or ($answerTrim -match 'FRONTIER-BRIDGE-ANSWER-BEGIN'))) {
+            $issues.Add('answer_looks_like_pack_or_markers')
+        }
+        $packIdMatch = $null
+        if ($null -ne $rExpect) {
+            $packIdMatch = ($parsed.pack_id -eq $rExpect)
+            if (-not $packIdMatch) { $issues.Add('pack_id_mismatch') }
+        }
+        foreach ($iss in $issues) { $warnings.Add("return-validate: $iss") }
+
+        # valid = content captured via a recognised structure and (if an id was expected) the id matched.
+        $valid = $captured -and ($parsed.markers_found -or ($parsed.format -eq 'legacy-separator')) -and ($packIdMatch -ne $false)
 
         $digest = ConvertTo-Sha256HexOfString "read-return:$((Resolve-Path -LiteralPath $rReturnFile).ProviderPath)"
         $result = [ordered]@{
-            action      = 'read-return'
-            return_file = (Resolve-Path -LiteralPath $rReturnFile).ProviderPath
-            bytes       = $bytes.Length
-            sha256      = (ConvertTo-Sha256Hex -Bytes $bytes)
-            encoding    = $decoded.encoding
-            captured    = $captured
-            char_count  = $answerTrim.Length
-            content     = $answerTrim
+            action           = 'read-return'
+            return_file      = (Resolve-Path -LiteralPath $rReturnFile).ProviderPath
+            bytes            = $bytes.Length
+            sha256           = (ConvertTo-Sha256Hex -Bytes $bytes)
+            encoding         = $decoded.encoding
+            format           = $parsed.format
+            pack_id          = $parsed.pack_id
+            expected_pack_id = $rExpect
+            pack_id_match    = $packIdMatch
+            captured         = $captured
+            valid            = $valid
+            char_count       = $answerTrim.Length
+            issues           = $issues.ToArray()
+            content          = $answerTrim
         }
-        $status = if ($captured) { 'ok' } else { 'partial' }
+        $status = if ($valid) { 'ok' } else { 'partial' }
         $env2 = New-Envelope -Status $status -InvocationId $invocationId -StartedUtc $startedUtc -InputsDigest $digest -Result $result -Artifacts @() -Warnings $warnings.ToArray() -ErrorObj $null -DurationMs $sw.ElapsedMilliseconds
         Write-EnvelopeAndExit -Envelope $env2 -ArtifactDir $artifactDir
     }

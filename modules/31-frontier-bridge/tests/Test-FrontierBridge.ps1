@@ -156,17 +156,24 @@ Check 'T9 code missing_input'      ($null -ne $r.envelope -and $r.envelope.error
 
 # ================= READ-RETURN scenarios =================
 
-# Build a pack to obtain a return file, then populate it.
+# Build a pack to obtain a return file, then populate it BETWEEN the answer markers.
 $r = Run-Skill @('-Action','pack','-Prompt','P','-Folder',$proj,'-ArtifactRoot',(Join-Path $root 'ar10'))
 $rf = $r.envelope.result.return_file
+$packId10 = $r.envelope.invocation_id
 $existing = Get-Content -Raw -LiteralPath $rf
-[System.IO.File]::WriteAllText($rf, ($existing + "`nThis is the model answer line.`nSecond line."))
+$populated = $existing -replace '(?m)^(<<<FRONTIER-BRIDGE-ANSWER-END.*)$', "This is the model answer line.`nSecond line.`n`$1"
+[System.IO.File]::WriteAllText($rf, $populated)
 $r = Run-Skill @('-Action','read-return','-ReturnFile',$rf,'-ArtifactRoot',(Join-Path $root 'ar10b'))
-Check 'T10 read-return ok'      ($null -ne $r.envelope -and $r.envelope.status -eq 'ok')
-Check 'T10 captured true'       ($null -ne $r.envelope -and $r.envelope.result.captured -eq $true)
-Check 'T10 content present'     ($null -ne $r.envelope -and ($r.envelope.result.content -match 'model answer line'))
-Check 'T10 no stub in content'  ($null -ne $r.envelope -and -not ($r.envelope.result.content -match 'RETURN FILE'))
-Check 'T10 sha present'         ($null -ne $r.envelope -and $r.envelope.result.sha256.Length -eq 64)
+Check 'T10 read-return ok'         ($null -ne $r.envelope -and $r.envelope.status -eq 'ok')
+Check 'T10 captured true'          ($null -ne $r.envelope -and $r.envelope.result.captured -eq $true)
+Check 'T10 valid true'             ($null -ne $r.envelope -and $r.envelope.result.valid -eq $true)
+Check 'T10 format answer-markers'  ($null -ne $r.envelope -and $r.envelope.result.format -eq 'answer-markers')
+Check 'T10 pack_id parsed'         ($null -ne $r.envelope -and $r.envelope.result.pack_id -eq $packId10)
+Check 'T10 content present'        ($null -ne $r.envelope -and ($r.envelope.result.content -match 'model answer line'))
+Check 'T10 no stub in content'     ($null -ne $r.envelope -and -not ($r.envelope.result.content -match 'RETURN FILE'))
+Check 'T10 no markers in content'  ($null -ne $r.envelope -and -not ($r.envelope.result.content -match 'ANSWER-BEGIN'))
+Check 'T10 no issues'              ($null -ne $r.envelope -and @($r.envelope.result.issues).Count -eq 0)
+Check 'T10 sha present'            ($null -ne $r.envelope -and $r.envelope.result.sha256.Length -eq 64)
 
 # T11 -- empty return (stub only) -> partial, captured false
 $r = Run-Skill @('-Action','pack','-Prompt','P','-Folder',$proj,'-ArtifactRoot',(Join-Path $root 'ar11'))
@@ -180,6 +187,55 @@ $r = Run-Skill @('-Action','read-return','-ArtifactRoot',(Join-Path $root 'ar12'
 Check 'T12 missing return_file' ($null -ne $r.envelope -and $r.envelope.error.code -eq 'missing_input')
 $r = Run-Skill @('-Action','read-return','-ReturnFile',(Join-Path $root 'does-not-exist.md'),'-ArtifactRoot',(Join-Path $root 'ar12b'))
 Check 'T12 not_found'           ($null -ne $r.envelope -and $r.envelope.error.code -eq 'not_found')
+
+# ================= READ-RETURN validator (return-capture hardening) =================
+
+# T19 -- expect_pack_id: match validates, mismatch is flagged + invalid
+$r = Run-Skill @('-Action','pack','-Prompt','P','-Folder',$proj,'-ArtifactRoot',(Join-Path $root 'ar19'))
+$rf19 = $r.envelope.result.return_file
+$pid19 = $r.envelope.invocation_id
+$txt19 = (Get-Content -Raw -LiteralPath $rf19) -replace '(?m)^(<<<FRONTIER-BRIDGE-ANSWER-END.*)$', "Answer body here.`n`$1"
+[System.IO.File]::WriteAllText($rf19, $txt19)
+$r = Run-Skill @('-Action','read-return','-ReturnFile',$rf19,'-ExpectPackId',$pid19,'-ArtifactRoot',(Join-Path $root 'ar19a'))
+Check 'T19 expect match -> ok+valid'  ($null -ne $r.envelope -and $r.envelope.status -eq 'ok' -and $r.envelope.result.valid -eq $true -and $r.envelope.result.pack_id_match -eq $true)
+$r = Run-Skill @('-Action','read-return','-ReturnFile',$rf19,'-ExpectPackId','not-the-pack','-ArtifactRoot',(Join-Path $root 'ar19b'))
+Check 'T19 expect mismatch -> partial' ($null -ne $r.envelope -and $r.envelope.status -eq 'partial' -and $r.envelope.result.valid -eq $false -and $r.envelope.result.pack_id_match -eq $false)
+Check 'T19 mismatch issue recorded'    ($null -ne $r.envelope -and (($r.envelope.result.issues -join ',') -match 'pack_id_mismatch'))
+
+# T20 -- markers removed (whole file replaced) -> raw format, flagged, still returns content (partial)
+$rawRf = Join-Path $root 'raw-return.md'
+[System.IO.File]::WriteAllText($rawRf, "Just the answer, no markers at all.`nmore text")
+$r = Run-Skill @('-Action','read-return','-ReturnFile',$rawRf,'-ArtifactRoot',(Join-Path $root 'ar20'))
+Check 'T20 raw format'          ($null -ne $r.envelope -and $r.envelope.result.format -eq 'raw')
+Check 'T20 raw captured'        ($null -ne $r.envelope -and $r.envelope.result.captured -eq $true)
+Check 'T20 raw flagged partial' ($null -ne $r.envelope -and $r.envelope.status -eq 'partial' -and (($r.envelope.result.issues -join ',') -match 'answer_markers_missing'))
+
+# T21 -- legacy dashed-separator return file still parses (backward compatibility)
+$legRf = Join-Path $root 'legacy-return.md'
+[System.IO.File]::WriteAllText($legRf, ("<!-- FRONTIER-BRIDGE RETURN FILE -->`n" + ('-' * 80) + "`nLegacy answer content."))
+$r = Run-Skill @('-Action','read-return','-ReturnFile',$legRf,'-ArtifactRoot',(Join-Path $root 'ar21'))
+Check 'T21 legacy format'   ($null -ne $r.envelope -and $r.envelope.result.format -eq 'legacy-separator')
+Check 'T21 legacy captured' ($null -ne $r.envelope -and $r.envelope.result.captured -eq $true -and ($r.envelope.result.content -match 'Legacy answer'))
+Check 'T21 legacy ok+valid' ($null -ne $r.envelope -and $r.envelope.status -eq 'ok' -and $r.envelope.result.valid -eq $true)
+
+# T22 -- pasted the pack back by mistake -> flagged
+$r = Run-Skill @('-Action','pack','-Prompt','P','-Folder',$proj,'-ArtifactRoot',(Join-Path $root 'ar22'))
+$rf22 = $r.envelope.result.return_file
+$packText22 = Get-Content -Raw -LiteralPath $r.envelope.result.pack_path
+$txt22 = (Get-Content -Raw -LiteralPath $rf22) -replace '(?m)^(<<<FRONTIER-BRIDGE-ANSWER-END.*)$', ($packText22 + "`n`$1")
+[System.IO.File]::WriteAllText($rf22, $txt22)
+$r = Run-Skill @('-Action','read-return','-ReturnFile',$rf22,'-ArtifactRoot',(Join-Path $root 'ar22b'))
+Check 'T22 pasted-pack flagged' ($null -ne $r.envelope -and (($r.envelope.result.issues -join ',') -match 'answer_looks_like_pack_or_markers'))
+
+# T23 -- new pack stub carries pack_id + markers; manifest records the return-capture contract
+$r = Run-Skill @('-Action','pack','-Prompt','P','-Folder',$proj,'-ArtifactRoot',(Join-Path $root 'ar23'))
+$stub23 = Get-Content -Raw -LiteralPath $r.envelope.result.return_file
+Check 'T23 stub has pack_id' ($stub23 -match ('pack_id: ' + [regex]::Escape($r.envelope.invocation_id)))
+Check 'T23 stub has begin'   ($stub23 -match 'FRONTIER-BRIDGE-ANSWER-BEGIN')
+Check 'T23 stub has end'     ($stub23 -match 'FRONTIER-BRIDGE-ANSWER-END')
+$man23 = Get-Content -Raw -LiteralPath $r.envelope.result.manifest_path | ConvertFrom-Json
+Check 'T23 manifest pack_id'         ($man23.pack_id -eq $r.envelope.invocation_id)
+Check 'T23 manifest return_capture'  ($man23.return_capture.format -eq 'answer-markers')
 
 # ================= contract / boundary =================
 

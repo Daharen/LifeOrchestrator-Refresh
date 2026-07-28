@@ -24,11 +24,12 @@
     {"name": "max_total_bytes", "type": "int", "required": false, "default": 20000000, "description": "Stop including files once the pack would exceed this."},
     {"name": "title", "type": "string", "required": false, "description": "Human title for the pack."},
     {"name": "out_name", "type": "string", "required": false, "description": "Base name for the pack file."},
-    {"name": "return_file", "type": "string", "required": false, "description": "pack: override the return-file location. read-return: the file the user pasted the answer into (required for read-return)."}
+    {"name": "return_file", "type": "string", "required": false, "description": "pack: override the return-file location. read-return: the file the user pasted the answer into (required for read-return)."},
+    {"name": "expect_pack_id", "type": "string", "required": false, "description": "read-return: optional pack_id (the pack's invocation_id) to validate that the return file belongs to the expected pack."}
   ],
   "outputs": {
     "result_shape": "object",
-    "description": "pack: {pack_path, manifest_path, return_file, file_count, total_bytes, skipped_count, boundary, instructions_for_user}. read-return: {return_file, bytes, sha256, encoding, captured, char_count, content}."
+    "description": "pack: {pack_path, manifest_path, return_file, file_count, total_bytes, skipped_count, boundary, instructions_for_user}. read-return: {return_file, bytes, sha256, encoding, format, pack_id, expected_pack_id, pack_id_match, captured, valid, char_count, issues, content}."
   },
   "requirements": {
     "executables": ["pwsh>=7.4"],
