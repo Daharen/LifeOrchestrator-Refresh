@@ -1,0 +1,214 @@
+#requires -Version 7.0
+<#
+  Off-machine gate for the Governor Phase 3 Stage-1 auto-ramp controller (agent.local -AutoRamp).
+  MOCK mode (default): a scripted mock gateway + a mock tool (REAL filesystem side effects) + the REAL
+  res.lease running against a temp lease dir. Proves: epoch monotonicity, hard + soft triggers, frozen
+  success-contract gating, residency-key mismatch -> evict/reload, idempotency/duplicate-refusal, and the
+  completed_unverified / no-contract path. The GPU/warm-server end-to-end is proven by the -Live gate.
+#>
+[CmdletBinding()]
+param(
+    [string]$PwshPath = 'C:\Users\just_\.dotnet\tools\pwsh.exe',
+    [string]$TempRoot
+)
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+if (-not (Test-Path -LiteralPath $PwshPath)) { $PwshPath = (Get-Process -Id $PID).Path; if ([string]::IsNullOrWhiteSpace($PwshPath) -or $PwshPath -notmatch 'pwsh') { $PwshPath = 'pwsh' } }
+
+$here       = $PSScriptRoot
+$controller = (Resolve-Path -LiteralPath (Join-Path $here '..\Invoke-AutoRamp.ps1')).Path
+$mockGw     = (Resolve-Path -LiteralPath (Join-Path $here 'mock-gateway.ps1')).Path
+$mockTool   = (Resolve-Path -LiteralPath (Join-Path $here 'mock-tool.ps1')).Path
+$reslease   = (Resolve-Path -LiteralPath (Join-Path $here '..\..\29-resource-lease\Invoke-ResLease.ps1')).Path
+$models     = (Resolve-Path -LiteralPath (Join-Path $here '..\..\07-model-gateway\models.json')).Path
+if ([string]::IsNullOrWhiteSpace($TempRoot)) { $TempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("autoramp-test-" + [Guid]::NewGuid().ToString('N').Substring(0,8)) }
+New-Item -ItemType Directory -Path $TempRoot -Force | Out-Null
+$leaseDir = Join-Path $TempRoot 'leases'; New-Item -ItemType Directory -Path $leaseDir -Force | Out-Null
+
+# mock tools registry (doc.io -> the mock tool)
+$toolsFile = Join-Path $TempRoot 'mock-tools.json'
+@{ tools = @(
+    @{ tool='doc.io'; skill_id='doc.io'; entrypoint=$mockTool; description='write a text file'; args_hint='op,path,content'; args_example=@{op='write';path='x.txt';content='hi'}; required=@('op','path'); side_effecting=$true }
+) } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $toolsFile -Encoding utf8
+
+$script:pass = 0; $script:fail = 0; $script:scn = 0
+function Assert($cond, $name) { if ($cond) { $script:pass++; Write-Host "  [PASS] $name" } else { $script:fail++; Write-Host "  [FAIL] $name" -ForegroundColor Red } }
+function Section($n) { $script:scn++; Write-Host ""; Write-Host "=== Scenario ${script:scn}: $n ===" }
+
+function Run-AutoRamp {
+    param([string]$Name, [string]$Scratch, [string]$Goal, $Contract, $Plan, [hashtable]$Inputs, [string[]]$ExtraArgs, $WarmSeed)
+    $planFile = Join-Path $TempRoot "plan-$Name.json"
+    ($Plan | ConvertTo-Json -Depth 12) | Set-Content -LiteralPath $planFile -Encoding utf8
+    $stateFile = Join-Path $TempRoot "state-$Name.txt"; if (Test-Path $stateFile) { Remove-Item $stateFile -Force }
+    $argStateFile = Join-Path $TempRoot "argstate-$Name.txt"; if (Test-Path $argStateFile) { Remove-Item $argStateFile -Force }
+    $warmReg = Join-Path $TempRoot "warm-$Name.json"; if (Test-Path $warmReg) { Remove-Item $warmReg -Force }
+    if ($null -ne $WarmSeed) { ($WarmSeed | ConvertTo-Json -Depth 8) | Set-Content -LiteralPath $warmReg -Encoding utf8 }
+    $env:AR_MOCK_PLAN = $planFile; $env:AR_MOCK_STATE = $stateFile; $env:AR_MOCK_ARGSTATE = $argStateFile
+    $inp = [ordered]@{ goal=$Goal; working_dir=$Scratch; gpu_lease='auto'; gpu_lease_holder=("ar-"+$Name); gpu_lease_ttl_s=120; max_total_steps=12 }
+    if ($null -ne $Contract) { $inp.success_contract = $Contract }
+    if ($null -ne $Inputs) { foreach ($k in $Inputs.Keys) { $inp[$k] = $Inputs[$k] } }
+    $arts = Join-Path $TempRoot "arts-$Name"
+    $a = @('-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',$controller,
+        '-InputsJson',($inp | ConvertTo-Json -Depth 20 -Compress),
+        '-GatewayPath',$mockGw,'-ToolsPath',$toolsFile,'-ResLeasePath',$reslease,'-LeaseDir',$leaseDir,
+        '-WarmRegistryPath',$warmReg,'-Registry',$models,'-PwshPath',$PwshPath,'-ArtifactRoot',$arts)
+    if ($null -ne $ExtraArgs) { $a += $ExtraArgs }
+    $errf = New-TemporaryFile
+    $out = & $PwshPath @a 2> $errf.FullName
+    $errtxt = Get-Content -LiteralPath $errf.FullName -Raw -ErrorAction SilentlyContinue; Remove-Item $errf.FullName -Force -ErrorAction SilentlyContinue
+    $txt = ($out | Out-String).Trim()
+    $env = $null; try { $env = $txt | ConvertFrom-Json } catch { }
+    if ($null -eq $env) { Write-Host "  <no envelope> raw: $(if($txt.Length -gt 300){$txt.Substring(0,300)}else{$txt})"; Write-Host "  stderr: $(if($errtxt){$errtxt.Substring(0,[Math]::Min(400,$errtxt.Length))})" }
+    return @{ env=$env; result=$(if ($null -ne $env) { $env.result } else { $null }); warmReg=$warmReg }
+}
+function Epochs($r) { return @($r.result.governor_trace | ForEach-Object { $_.epoch }) }
+function IsMonotonic($r) {
+    $rank = @{ 'M0'=0; 'M1'=1; 'S0'=2 }
+    $seq = @(Epochs $r | ForEach-Object { $rank[$_] })
+    for ($i=1; $i -lt $seq.Count; $i++) { if ($seq[$i] -lt $seq[$i-1]) { return $false } }
+    return $true
+}
+function NewScratch($n) { $s = Join-Path $TempRoot "sc-$n"; New-Item -ItemType Directory -Path $s -Force | Out-Null; return (Resolve-Path -LiteralPath $s).Path }
+
+# ---------------------------------------------------------------------------------------------------
+Section 'floor-solvable -> verified_success at M0, no escalation'
+$sc = NewScratch 's1'; $f = Join-Path $sc 'ok.txt'
+$c = @{ schema='lifeorch.goal_verification/0.1'; predicates=@(@{predicate='file_exists';path=$f}, @{predicate='artifact_nonempty';path=$f}) }
+$plan = @{ decisions=@(@{text='doc.io';finish_reason='stop'}); args=@{ 'doc.io'=@{op='write';path=$f;content='VERIFIED'} } }
+$r = Run-AutoRamp 's1' $sc 'Write VERIFIED to ok.txt' $c $plan $null $null $null
+Assert ($null -ne $r.result) 's1 produced an envelope'
+Assert ($r.result.final_status -eq 'verified_success') "s1 final_status=verified_success (got $($r.result.final_status))"
+Assert ($r.result.accepted_epoch -eq 'M0') "s1 accepted_epoch=M0 (got $($r.result.accepted_epoch))"
+Assert ([int]$r.result.model_swaps -eq 0) "s1 model_swaps=0 (got $($r.result.model_swaps))"
+Assert ((Epochs $r) -notcontains 'S0') 's1 never reached S0 (no needless escalation)'
+Assert (Test-Path -LiteralPath $f) 's1 the real file was written by the tool'
+Assert ([bool]$r.result.gpu_lease.acquired -and [bool]$r.result.gpu_lease.released) 's1 gpu lease acquired + released (real res.lease)'
+
+# ---------------------------------------------------------------------------------------------------
+Section 'HARD empty decision at M0 -> immediate S0 (skip M1)'
+$sc = NewScratch 's2'; $f = Join-Path $sc 't.txt'
+$c = @{ schema='lifeorch.goal_verification/0.1'; predicates=@(@{predicate='file_exists';path=$f}) }
+$plan = @{ decisions=@(@{text='';finish_reason='length'}, @{text='doc.io';finish_reason='stop'}); args=@{ 'doc.io'=@{op='write';path=$f;content='x'} } }
+$r = Run-AutoRamp 's2' $sc 'make t.txt' $c $plan $null $null $null
+Assert ($r.result.final_status -eq 'verified_success') "s2 verified_success (got $($r.result.final_status))"
+Assert ($r.result.accepted_epoch -eq 'S0') "s2 accepted_epoch=S0 (got $($r.result.accepted_epoch))"
+Assert ([int]$r.result.model_swaps -eq 1) "s2 model_swaps=1 (got $($r.result.model_swaps))"
+Assert ((Epochs $r) -notcontains 'M1') 's2 skipped M1 on a HARD trigger'
+Assert ($r.result.governor_trace[0].hard_trigger -eq 'empty_decision') "s2 step1 hard_trigger=empty_decision (got $($r.result.governor_trace[0].hard_trigger))"
+Assert ($r.result.governor_trace[0].escalated_to -eq 'S0') 's2 step1 escalated_to=S0'
+Assert (IsMonotonic $r) 's2 epochs monotonic'
+
+# ---------------------------------------------------------------------------------------------------
+Section 'SOFT strikes at M0 -> M1 (expanded mid) -> success'
+$sc = NewScratch 's3'; $f = Join-Path $sc 'm.txt'
+$c = @{ schema='lifeorch.goal_verification/0.1'; predicates=@(@{predicate='file_exists';path=$f}) }
+# step1 M0: decide doc.io, arg-call 0 = bad json (soft arg_parse + soft no-progress -> >=2 -> escalate M1)
+# step2 M1: decide doc.io, arg-call 1 = good -> writes m.txt -> contract passes at M1
+$plan = @{ decisions=@(@{text='doc.io'}, @{text='doc.io'}); bad_arg_calls=@(0); args=@{ 'doc.io'=@{op='write';path=$f;content='y'} } }
+$r = Run-AutoRamp 's3' $sc 'make m.txt' $c $plan $null $null $null
+Assert ($r.result.final_status -eq 'verified_success') "s3 verified_success (got $($r.result.final_status))"
+Assert ($r.result.accepted_epoch -eq 'M1') "s3 accepted_epoch=M1 (got $($r.result.accepted_epoch))"
+Assert ([int]$r.result.model_swaps -eq 0) "s3 model_swaps=0 (M1 is same 3B, no reload) (got $($r.result.model_swaps))"
+Assert ($r.result.governor_trace[0].escalated_to -eq 'M1') 's3 step1 escalated_to=M1 (soft path uses M1 first)'
+Assert ((Epochs $r) -contains 'M1' -and (Epochs $r) -notcontains 'S0') 's3 reached M1, not S0'
+Assert (IsMonotonic $r) 's3 epochs monotonic'
+
+# ---------------------------------------------------------------------------------------------------
+Section 'SOFT M0 -> M1 -> S0 (M1 also fails) -> success, one model swap'
+$sc = NewScratch 's4'; $f = Join-Path $sc 's.txt'
+$c = @{ schema='lifeorch.goal_verification/0.1'; predicates=@(@{predicate='file_exists';path=$f}) }
+$plan = @{ decisions=@(@{text='doc.io'}, @{text='doc.io'}, @{text='doc.io'}); bad_arg_calls=@(0,1); args=@{ 'doc.io'=@{op='write';path=$f;content='z'} } }
+$r = Run-AutoRamp 's4' $sc 'make s.txt' $c $plan $null $null $null
+Assert ($r.result.final_status -eq 'verified_success') "s4 verified_success (got $($r.result.final_status))"
+Assert ($r.result.accepted_epoch -eq 'S0') "s4 accepted_epoch=S0 (got $($r.result.accepted_epoch))"
+Assert ([int]$r.result.model_swaps -eq 1) "s4 model_swaps=1 (got $($r.result.model_swaps))"
+Assert (((Epochs $r) -contains 'M0') -and ((Epochs $r) -contains 'M1') -and ((Epochs $r) -contains 'S0')) 's4 visited M0,M1,S0'
+Assert (IsMonotonic $r) 's4 epochs monotonic (never de-escalate)'
+
+# ---------------------------------------------------------------------------------------------------
+Section 'frozen-contract gating: finish is NOT honored on the model say-so'
+$sc = NewScratch 's5'; $f = Join-Path $sc 'g.txt'
+$c = @{ schema='lifeorch.goal_verification/0.1'; predicates=@(@{predicate='file_exists';path=$f}) }
+$plan = @{ decisions=@(@{text='finish'}, @{text='doc.io'}); args=@{ 'doc.io'=@{op='write';path=$f;content='q'} } }
+$r = Run-AutoRamp 's5' $sc 'make g.txt' $c $plan $null $null $null
+Assert ($r.result.governor_trace[0].decision -eq 'finish') 's5 step1 model chose finish'
+Assert ($r.result.governor_trace[0].contract_passed -eq $false) 's5 step1 contract did NOT pass'
+Assert ($r.result.governor_trace[0].hard_trigger -eq 'finish_but_contract_failed') "s5 step1 hard=finish_but_contract_failed (got $($r.result.governor_trace[0].hard_trigger))"
+Assert ($r.result.final_status -eq 'verified_success' -and $r.result.accepted_epoch -eq 'S0') 's5 verified only after the contract really passed at S0'
+Assert (Test-Path -LiteralPath $f) 's5 the file exists only after S0 actually did the work'
+
+# ---------------------------------------------------------------------------------------------------
+Section 'residency-key mismatch -> evict + reload (HARD trigger)'
+$sc = NewScratch 's6'; $f = Join-Path $sc 'r.txt'
+$c = @{ schema='lifeorch.goal_verification/0.1'; predicates=@(@{predicate='file_exists';path=$f}) }
+$seed = @{ schema='lifeorch.model_gateway.warm/0.1'; pid=999999; model_id='llm.strong.qwen3p5-9b'; ngl=99; ctx=8192; engine_path='F:\eng\llama.cpp-b10092\bin\llama-server.exe'; host='127.0.0.1'; port=8140 }
+$plan = @{ decisions=@(@{text='doc.io'}, @{text='doc.io'}); args=@{ 'doc.io'=@{op='write';path=$f;content='r'} } }
+$r = Run-AutoRamp 's6' $sc 'make r.txt' $c $plan $null $null $seed
+$t0 = $r.result.governor_trace[0]
+Assert ($t0.residency_match -eq $false) 's6 step1 residency_match=false (wrong resident detected)'
+Assert ($t0.residency_evicted -eq $true) 's6 step1 wrong resident was EVICTED'
+Assert ($t0.residency_mismatch_reason -like '*model_id*') "s6 mismatch reason includes model_id (got $($t0.residency_mismatch_reason))"
+Assert ($t0.hard_trigger -like 'resident_model_mismatch*') "s6 hard=resident_model_mismatch (got $($t0.hard_trigger))"
+Assert ($t0.escalated_to -eq 'S0') 's6 residency mismatch escalated to S0 (per the frozen HARD-trigger list)'
+Assert ($r.result.final_status -eq 'verified_success') 's6 recovered to verified_success at S0'
+
+# ---------------------------------------------------------------------------------------------------
+Section 'idempotency / duplicate-side-effect refusal + resume-from-state across epochs'
+$sc = NewScratch 's7'; $fa = Join-Path $sc 'a.txt'; $fb = Join-Path $sc 'b.txt'
+$c = @{ schema='lifeorch.goal_verification/0.1'; predicates=@(@{predicate='file_exists';path=$fa}, @{predicate='file_exists';path=$fb}) }
+# step1 M0: write a.txt ; step2 M0: SAME write a.txt (dup, no state change -> HARD) -> S0 ; step3 S0: write b.txt
+$plan = @{ decisions=@(@{text='doc.io'}, @{text='doc.io'}, @{text='doc.io'});
+           args_seq=@(@{op='write';path=$fa;content='A'}, @{op='write';path=$fa;content='A'}, @{op='write';path=$fb;content='B'}) }
+$r = Run-AutoRamp 's7' $sc 'make a.txt and b.txt' $c $plan $null $null $null
+$dupStep = @($r.result.governor_trace | Where-Object { $_.skipped_repeat -eq $true })
+Assert (@($dupStep).Count -ge 1) 's7 a duplicate (tool,args) was refused (skipped_repeat)'
+Assert ($dupStep[0].tool_invoked -eq $false) 's7 the duplicate mutation was NOT re-invoked (idempotent)'
+Assert ($dupStep[0].hard_trigger -eq 'repeat_identical_action_no_state_change') "s7 dup+no-change is a HARD trigger (got $($dupStep[0].hard_trigger))"
+Assert ($r.result.final_status -eq 'verified_success' -and $r.result.accepted_epoch -eq 'S0') 's7 completed at S0 by resuming (a.txt kept, b.txt added)'
+Assert ((Test-Path $fa) -and (Test-Path $fb)) 's7 both files exist (a from M0, b from S0 -- state resumed, not restarted)'
+
+# ---------------------------------------------------------------------------------------------------
+Section 'no contract -> completed_unverified (never claims verified_success)'
+$sc = NewScratch 's8'
+$plan = @{ decisions=@(@{text='finish'}) }
+$r = Run-AutoRamp 's8' $sc 'do something un-verifiable' $null $plan $null $null $null
+Assert ($r.result.final_status -eq 'completed_unverified') "s8 final_status=completed_unverified (got $($r.result.final_status))"
+Assert ($r.result.verified_success -eq $false) 's8 verified_success=false with no contract'
+
+# ---------------------------------------------------------------------------------------------------
+Section 'un-checkable contract (unknown predicate) -> human_verification_required'
+$sc = NewScratch 's9'
+$c = @{ schema='lifeorch.goal_verification/0.1'; predicates=@(@{predicate='vibes_are_good';path='x'}) }
+$plan = @{ decisions=@(@{text='finish'}) }
+$r = Run-AutoRamp 's9' $sc 'do a fuzzy thing' $c $plan $null $null $null
+Assert ($r.result.final_status -eq 'human_verification_required') "s9 final_status=human_verification_required (got $($r.result.final_status))"
+Assert ($r.result.contract.checkable -eq $false) 's9 contract marked un-checkable'
+
+# ---------------------------------------------------------------------------------------------------
+Section 'whole-task gpu lease renewal fires (renew ~30s -> here every step)'
+$sc = NewScratch 's10'; $f = Join-Path $sc 'L.txt'
+$c = @{ schema='lifeorch.goal_verification/0.1'; predicates=@(@{predicate='file_exists';path=$f}) }
+# force two tool steps before success so at least one renew is due (renew_s=0 -> every step)
+$plan = @{ decisions=@(@{text='doc.io'}, @{text='doc.io'}); bad_arg_calls=@(0); args=@{ 'doc.io'=@{op='write';path=$f;content='L'} } }
+$r = Run-AutoRamp 's10' $sc 'make L.txt' $c $plan @{ gpu_lease_renew_s = 0 } $null $null
+Assert ([int]$r.result.gpu_lease.renew_count -ge 1) "s10 gpu lease renewed >=1 (got $($r.result.gpu_lease.renew_count))"
+Assert ([bool]$r.result.gpu_lease.released) 's10 gpu lease released'
+
+# ---------------------------------------------------------------------------------------------------
+Section 'governor trace artifact is written + machine-checkable'
+$sc = NewScratch 's11'; $f = Join-Path $sc 'tr.txt'
+$c = @{ schema='lifeorch.goal_verification/0.1'; predicates=@(@{predicate='file_exists';path=$f}) }
+$plan = @{ decisions=@(@{text='doc.io'}); args=@{ 'doc.io'=@{op='write';path=$f;content='t'} } }
+$r = Run-AutoRamp 's11' $sc 'make tr.txt' $c $plan $null $null $null
+Assert (-not [string]::IsNullOrWhiteSpace($r.result.governor_trace_path)) 's11 governor_trace_path present'
+Assert (Test-Path -LiteralPath $r.result.governor_trace_path) 's11 governor-trace.json exists on disk'
+$traceOk = $false; try { $tj = (Get-Content -LiteralPath $r.result.governor_trace_path -Raw) | ConvertFrom-Json; $traceOk = ($tj.schema -eq 'lifeorch.governor_trace/0.1' -and @($tj.steps).Count -ge 1) } catch {}
+Assert $traceOk 's11 governor-trace.json parses with schema + steps'
+
+# ---------------------------------------------------------------------------------------------------
+Write-Host ""
+Write-Host "================= AUTORAMP OFF-MACHINE GATE ================="
+Write-Host ("Scenarios: {0}   PASS: {1}   FAIL: {2}" -f $script:scn, $script:pass, $script:fail)
+Write-Host "============================================================"
+try { Remove-Item -LiteralPath $TempRoot -Recurse -Force -ErrorAction SilentlyContinue } catch {}
+if ($script:fail -gt 0) { exit 1 } else { exit 0 }

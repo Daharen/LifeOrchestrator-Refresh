@@ -52,6 +52,7 @@ param(
     [string[]]$DecisionTiers = @('mid'),
     [string]$GenTier = 'mid',
     [string]$Profile,
+    [switch]$AutoRamp,   # Governor Phase 3 opt-in: delegate to Invoke-AutoRamp.ps1 (OFF by default; existing behavior unchanged)
     [double]$FrontierThreshold = 0.5,
     [int]$MaxObservationChars = 600,
     [int]$MaxTranscriptChars = 4000,
@@ -275,6 +276,7 @@ try {
             if ((Has $p 'decision_tiers')        -and -not $bound.ContainsKey('DecisionTiers'))       { $DecisionTiers = @($p.decision_tiers | ForEach-Object { [string]$_ }) }
             if ((Has $p 'gen_tier')              -and -not $bound.ContainsKey('GenTier'))             { $GenTier = [string]$p.gen_tier }
             if ((Has $p 'profile')               -and -not $bound.ContainsKey('Profile'))             { $Profile = [string]$p.profile }
+            if ((Has $p 'autoramp')              -and -not $bound.ContainsKey('AutoRamp'))            { if ([bool]$p.autoramp) { $AutoRamp = [switch]$true } }
             if ((Has $p 'frontier_threshold')    -and -not $bound.ContainsKey('FrontierThreshold'))   { $FrontierThreshold = [double]$p.frontier_threshold }
             if ((Has $p 'max_observation_chars') -and -not $bound.ContainsKey('MaxObservationChars')) { $MaxObservationChars = [int]$p.max_observation_chars }
             if ((Has $p 'max_transcript_chars')  -and -not $bound.ContainsKey('MaxTranscriptChars'))  { $MaxTranscriptChars = [int]$p.max_transcript_chars }
@@ -297,6 +299,29 @@ try {
     }
     if ($bound.ContainsKey('Tools') -and -not [string]::IsNullOrWhiteSpace($Tools)) {
         try { $toolsInline = $Tools | ConvertFrom-Json } catch { throw [PSCustomObject]@{ code='invalid_tools_json'; message='-Tools is not valid JSON'; retryable=$false } }
+    }
+
+    # ===== Governor Phase 3 opt-in: -AutoRamp delegates to the auto-ramp controller (Invoke-AutoRamp.ps1) =====
+    # ADDITIVE + OFF BY DEFAULT. When -AutoRamp is not set, nothing below runs and the shipped floor loop is
+    # byte-for-byte unchanged. When set, forward the same inputs to the controller and relay its envelope.
+    if ($AutoRamp) {
+        $arPath = Join-Path $PSScriptRoot 'Invoke-AutoRamp.ps1'
+        if (-not (Test-Path -LiteralPath $arPath -PathType Leaf)) { throw [PSCustomObject]@{ code='autoramp_not_found'; message="Invoke-AutoRamp.ps1 not found next to agent.local"; retryable=$false } }
+        $fwd = @('-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',$arPath)
+        if (-not [string]::IsNullOrWhiteSpace($InputsJson)) { $fwd += @('-InputsJson',$InputsJson) }
+        if ($bound.ContainsKey('Goal'))            { $fwd += @('-Goal',$Goal) }
+        if ($bound.ContainsKey('WorkingDir'))      { $fwd += @('-WorkingDir',$WorkingDir) }
+        if ($bound.ContainsKey('GatewayPath'))     { $fwd += @('-GatewayPath',$GatewayPath) }
+        if ($bound.ContainsKey('Registry'))        { $fwd += @('-Registry',$Registry) }
+        if ($bound.ContainsKey('ReviewQueuePath')) { $fwd += @('-ReviewQueuePath',$ReviewQueuePath) }
+        if ($bound.ContainsKey('ToolsPath'))       { $fwd += @('-ToolsPath',$ToolsPath) }
+        if ($bound.ContainsKey('Seed'))            { $fwd += @('-Seed',"$Seed") }
+        if ($bound.ContainsKey('Temperature'))     { $fwd += @('-Temperature',"$Temperature") }
+        $fwd += @('-ArtifactRoot',$ArtifactRoot,'-PwshPath',$PwshPath)
+        if (-not [string]::IsNullOrWhiteSpace($InvocationId)) { $fwd += @('-InvocationId',$InvocationId) }
+        $arOut = & $PwshPath @fwd
+        [Console]::Out.WriteLine((($arOut | Out-String).TrimEnd()))
+        exit 0
     }
 
     # ---- resource PROFILE (governor rungs): a named preset for {decision_tiers, gen_tier, max_steps, max_tokens}.
