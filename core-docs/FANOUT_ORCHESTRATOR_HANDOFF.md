@@ -2,13 +2,14 @@
 
 **You are the fan-out orchestrator** -- the ONE Claude instance that drives `orchestrate.fanout` (#30) to run N parallel worker Cowork sessions building Life Orchestrator on Nicholas's one Windows box (DESKTOP-PF5FFMF). Read `START_HERE.md` + `HANDOFF.md` first (project state), then `modules/30-orchestrate-fanout/FANOUT_PROTOCOL.md` (the module's operating manual). THIS doc is the practical operator guide + the current frontier + the hard-won gotchas. You NEVER drive another AI session -- workers are human-dispatched (the D-0051 boundary); you emit prompts and Nicholas pastes each into a fresh session.
 
-## Where things stand (D-0057, 2026-07-28)
+## Where things stand (D-0058, 2026-07-28)
 Four fan-out iterations have run end-to-end:
 - **Iter 1 (fo-1-20ed8a0b):** res.lease `gpu`->model.gateway #7 (0c6d5c9), `git`->dev.ship (5530418), + frontier.bridge #31 built (f52f21d).
 - **Iter 2 (fo-2-b991c65f):** res.lease `doc:<path>`->doc.io #20 (d2a7352 -- consumer trio COMPLETE) + Module 30 prompt-template fix (581f854). (Worker E, a warm-server probe, FAILED and WEDGED the executor -- see the incident.)
 - **Iter 3 (fo-3-cf4965fb):** single-worker executor+watchdog HARDENING (e5b93ab).
 - **Iter 4 (fo-4-31706096):** Governor Phase 2 DONE (detached warm server, f8c961a; warm reuse ~1ms vs ~1200ms cold), Verification Console audit loop validated end-to-end (174360d), frontier.bridge return-capture hardened + a real Phase 3 escalation pack (b17a945).
 res.lease consumer trio complete; executor+watchdog hardened + restarted-live; Governor Phase 2 done; the audit loop is exercised + gated.
+- **Iter 5 (fo-5-c76df95a):** widgets/03 Console teardown orphan-sweep (033fd6f, TD -- a scope-guarded before/after PID-set diff reaps the DETACHED warm llama-server Process.Kill misses; cloud 101/101 + live 112/112) + orchestrate.fanout #30 handoff packet-input validation (2afd5de, MK -- input_warning on a contract mismatch; plan/report/status + plan.json unchanged; live 71/71). Governor Phase 3 frontier second opinion couriered back (frontier.bridge return 0af2f2d9) + folded into claude/ADAPTIVE_RESOURCE_GOVERNOR.md. **Next = iteration 6 = BUILD the Governor Phase 3 Stage-1 slice.**
 
 ## The loop (each iteration)
 1. **Scope units.** 1..N units that can run in parallel. Per worker: `gpu` (any model/render run)? `docs` -> leave `[]` (see the doc rule); `needs_git` (default true); `skill_id`+`skill_dir`+`inputs` if the output is a runnable module (-> a run_module verification item).
@@ -39,9 +40,9 @@ Every orchestrator AND worker session needs exactly ONE grant to operate: **conn
 - **Watchdog** is session-scoped/non-persistent (D-0013). (Re)start ops/start-watchdog.bat for unattended runs; it now catches a wedged-but-heartbeating executor.
 
 ## Current frontier / candidate next units (iteration 5+)
-- **Governor Phase 3 (auto-ramp)** -- the controller that ramps floor->ceiling on failure; Phase 2 (warm server) is DONE, and worker I produced a ready escalation pack (modules/31-frontier-bridge/runtime/artifacts/d9df215c-01f2-4bcb-843f-4b05f67ad7b1/governor-phase3-escalation.md) for a frontier second opinion.
-- **Module 30 packet-input fix** (H #1): normalize/validate run_module example inputs against the skill contract.
-- **Verification Console teardown fix** (H #2): port the orphan-name sweep into widgets/03 run-teardown (Process.Kill($true) misses a detached llama-server) + a -Live no-orphan assertion.
+- **Governor Phase 3 (auto-ramp) -- NOW THE RECOMMENDED NEXT UNIT (iteration 6).** The frontier second opinion is IN (Nicholas couriered worker I's pack d9df215c to ChatGPT Pro; the answer is at modules/31-frontier-bridge/runtime/artifacts/0af2f2d9-82cc-4841-87f8-eadf241d15be/frontier-pack-0af2f2d9.answer.md). It REFINES the design to a MONOTONIC, MODEL-AFFINE EPOCH controller (M0 3B floor -> M1 expanded-mid no-reload retry -> S0 9B strong DIRECT decisions -> optional X0 one-shot 27B), closed by a pre-frozen deterministic success contract (lifeorch.goal_verification/0.1), a WHOLE-TASK gpu lease (renew ~30s), and an EXACT resident-model manifest; the Stage-1 slice + failure-mode bounds are captured in claude/ADAPTIVE_RESOURCE_GOVERNOR.md. Build it as ONE GPU worker (+ a small live mid-vs-strong decision calibration first).
+- **Module 30 packet-input fix** (H #1) -- DONE (iter 5, MK, 2afd5de): the handoff packet validates run_module inputs against each skill.json op contract and annotates a mismatch with input_warning (surfaces, never rewrites); live 71/71.
+- **Verification Console teardown fix** (H #2) -- DONE (iter 5, TD, 033fd6f): widgets/03 run-teardown reaps the detached warm llama-server via a scope-guarded before/after PID-set diff + a -Live 0-orphan assertion; cloud 101/101 + live 112/112.
 - **Residual human Console pass** (H #3): run a model.gateway (GPU) item in the live Console GUI.
 - Apply the warm-server pattern to the other model modules; wire res.lease consumers into more callers; a model-module narrowing pass.
 
