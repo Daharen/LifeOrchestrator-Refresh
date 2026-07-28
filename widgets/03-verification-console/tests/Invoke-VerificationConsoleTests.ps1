@@ -95,6 +95,37 @@ $ib = @($inv.items) | Where-Object { $_.id -eq 'b' } | Select-Object -First 1
 Ok "packet invalid item a: run_module missing skill_dir -> valid=false" ($null -ne $ia -and -not $ia.valid -and $ia.error -match 'skill_dir')
 Ok "packet invalid item b: unknown kind -> valid=false" ($null -ne $ib -and -not $ib.valid -and $ib.error -match 'kind')
 
+# 5b. REAL orchestrate.fanout packet shape (dogfood regression, H-verif-console): the first live audit-loop
+#     exercise ran the ACTUAL fo-1 packet, not just the hand-authored fixture. Pin that shape so a future
+#     orchestrator/Console drift (object inputs_json, expected text, a human_action item, the packet_id
+#     pattern) is caught in the cloud gate -- import + normalize + render only (no module run, so stable).
+$realPacket = Join-Path $here (Join-Path 'fixtures' 'real-packet-fo-1.json')
+Ok "real packet: fixture exists" (Test-Path $realPacket)
+$rp = Import-VerificationPacket -Path $realPacket
+Ok "real packet: ok + 3 items" ([bool]$rp.ok -and $rp.item_count -eq 3) ("ok=$($rp.ok) count=$($rp.item_count) err=$($rp.error)")
+Ok "real packet: packet_id + schema" ($rp.packet_id -eq 'vp-fo-1-20ed8a0b-i1' -and $rp.schema -eq 'lifeorch.verification.packet/0.1')
+$rA = @($rp.items) | Where-Object { $_.id -eq 'A-gpu-lease' } | Select-Object -First 1
+$rB = @($rp.items) | Where-Object { $_.id -eq 'B-git-lease' } | Select-Object -First 1
+$rC = @($rp.items) | Where-Object { $_.id -eq 'C-frontier-bridge' } | Select-Object -First 1
+Ok "real packet: A run_module + object inputs_json -> compact string" ($null -ne $rA -and $rA.kind -eq 'run_module' -and $rA.valid -and ($rA.inputs_json -is [string]) -and $rA.inputs_json -match '"tier"')
+Ok "real packet: B human_action + action_text" ($null -ne $rB -and $rB.kind -eq 'human_action' -and $rB.valid -and [bool]$rB.action_text)
+Ok "real packet: C run_module + object inputs_json normalized" ($null -ne $rC -and $rC.kind -eq 'run_module' -and $rC.valid -and ($rC.inputs_json -is [string]) -and $rC.inputs_json -match '"files"')
+Ok "real packet: every item carries expected text" (@($rp.items | Where-Object { [bool]$_.expected }).Count -eq 3)
+# rendering the real shape must not throw and must show the essentials
+$rSum = Format-PacketSummary -Packet $rp
+Ok "real packet: summary renders title" ($rSum -match 'fo-1')
+$rADet = Format-ItemDetail -Item $rA
+Ok "real packet: A detail shows MODULE + INPUTS + EXPECTED" ($rADet -match 'MODULE' -and $rADet -match 'INPUTS' -and $rADet -match 'EXPECTED')
+Ok "real packet: B detail shows ACTION" ((Format-ItemDetail -Item $rB) -match 'ACTION')
+# assemble + re-read a result from the real packet (mixed verdicts, one skipped GPU item)
+$rrItems = @(
+    (New-VerificationResultItem -Item $rA -Run $null -Checks $rA.checklist -Overall 'skipped' -Notes 'GPU item deferred'),
+    (New-VerificationResultItem -Item $rB -Run $null -Checks $rB.checklist -Overall 'pass' -Notes ''),
+    (New-VerificationResultItem -Item $rC -Run $null -Checks $rC.checklist -Overall 'partial' -Notes 'packet input stale')
+)
+$rrResult = New-VerificationResult -Packet $rp -Items $rrItems -VerifiedBy 'gate'
+Ok "real packet: result summary counts (1 pass/1 partial/1 skipped)" ($rrResult.summary.total -eq 3 -and $rrResult.summary.pass -eq 1 -and $rrResult.summary.partial -eq 1 -and $rrResult.summary.skipped -eq 1)
+
 # 6. checklist normalization directly
 $nl = ConvertTo-NormalizedChecklist @('first', ([pscustomobject]@{ id = 'x'; text = 'second' }))
 Ok "checklist: string -> {id,text}" (@($nl).Count -eq 2 -and $nl[0].text -eq 'first' -and $nl[0].id -eq 'c1' -and $nl[1].id -eq 'x')

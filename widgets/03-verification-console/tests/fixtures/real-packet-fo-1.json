@@ -1,0 +1,56 @@
+{
+  "schema": "lifeorch.verification.packet/0.1",
+  "packet_id": "vp-fo-1-20ed8a0b-i1",
+  "title": "Fan-out fo-1-20ed8a0b iteration 1 -- verify worker outputs",
+  "created_by": "claude",
+  "created_at_utc": "2026-07-27T23:31:53.6380631Z",
+  "report_back": "on_all",
+  "intro": "Run each run_module item locally through Invoke-Skill.ps1, work the checklist + overall verdict, and export the result.",
+  "items": [
+    {
+      "id": "A-gpu-lease",
+      "kind": "run_module",
+      "title": "Verify worker A-gpu-lease (model.gateway)",
+      "skill_id": "model.gateway",
+      "skill_dir": "modules/07-model-gateway",
+      "inputs_json": {
+        "tier": "tiny",
+        "prompt": "Say hello in one short sentence."
+      },
+      "expected": "model.gateway (#7): wired res.lease gpu lease around llama-server (acquire before start; release by lease_id after teardown; graceful off|auto|wait|require, log+proceed if contended/absent). Shipped via dev.ship commit 0c6d5c9; Module 7 tests 42/42 (also corrected a pre-existing stale wired-LLM assertion 4->5, the D-0044 9b tier); standalone live gen confirmed lease held across the run and released after.",
+      "checklist": [
+        "status == ok",
+        "the worker output matches its scoped unit"
+      ]
+    },
+    {
+      "id": "B-git-lease",
+      "kind": "human_action",
+      "title": "Verify worker B-git-lease",
+      "action_text": "Review what worker B-git-lease produced for: Wire the res.lease 'git' lease into dev.ship (modules/00-bootstrap-executor/Invoke-DevShip.ps1): acquire the 'git' resource before 'git add'/'git commit' and release (by lease_id) after -- additive to the existing index-clean guard so concurrent commits serialize; graceful fallback if res.lease is absent (behaviour unchanged). Update/extend the dev.ship tests. Edit ONLY modules/00-bootstrap-executor/. Ship via dev.ship (it will use its own new git lease -- a recursive dogfood). Do NOT edit shared core-docs -- report results.. Reported state: done.",
+      "expected": "Wired res.lease git lease into dev.ship: acquire around index-check+add+commit, release by lease_id; additive to the index-clean guard, graceful fallback when res.lease absent/disabled/contended. Shipped via dev.ship recursive-dogfood at commit 5530418; tests 39/39 cloud + live.",
+      "checklist": [
+        "the worker completed its scoped unit",
+        "no shared-doc or cross-worker collision"
+      ]
+    },
+    {
+      "id": "C-frontier-bridge",
+      "kind": "run_module",
+      "title": "Verify worker C-frontier-bridge (frontier.bridge)",
+      "skill_id": "frontier.bridge",
+      "skill_dir": "modules/31-frontier-bridge",
+      "inputs_json": {
+        "task": "demo: summarize these files for an external review",
+        "files": [
+          "README.md"
+        ]
+      },
+      "expected": "Module 31 frontier.bridge shipped (commit f52f21d): local-only, no-network context packager (pack + read-return); gated 65/65 (sha+AST+63 direct+2 Module1-wrapper); committed via dev.ship under res.lease git.",
+      "checklist": [
+        "status == ok",
+        "the worker output matches its scoped unit"
+      ]
+    }
+  ]
+}
