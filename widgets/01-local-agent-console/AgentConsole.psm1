@@ -129,16 +129,15 @@ function Resolve-AgentConsolePaths {
 function Build-AgentLocalInputs {
     <#
       Build the -InputsJson payload for the agent.local child, in the EXACT key order the console
-      has always used. D-0061: agent.local's -AutoRamp is now DEFAULT-ON, so the console is the
-      AUTHORITATIVE source of the toggle -- it ALWAYS appends an explicit `autoramp` flag LAST
-      (true when the toggle is on, false when off). A false value is the EXACT opt-out that
-      reproduces the strict floor; success_contract_path is appended only when the toggle is on.
-      Pure: no filesystem / no process; unit-testable.
+      has always used. The Governor Phase 3 opt-in (-AutoRamp / -SuccessContractPath) is the ONLY
+      addition and is appended LAST and ONLY when the toggle is on -- so with -AutoRamp OFF the
+      returned JSON (and therefore the child's argv) is byte-for-byte identical to what the console
+      shipped before this option existed. Pure: no filesystem / no process; unit-testable.
 
-      autoramp is promoted to the -AutoRamp switch by Invoke-AgentLocal.ps1 (the same mechanism
-      the console already uses for -Route via route:true); autoramp:false opts out to the floor.
-      success_contract_path is forwarded verbatim inside -InputsJson to Invoke-AutoRamp.ps1 (the
-      shipped controller reads it and freezes the contract by hash). The widget reimplements none of that.
+      autoramp:true is promoted to the -AutoRamp switch by Invoke-AgentLocal.ps1 (the same mechanism
+      the console already uses for -Route via route:true), and success_contract_path is forwarded
+      verbatim inside -InputsJson to Invoke-AutoRamp.ps1 (the shipped controller reads it and freezes
+      the contract by hash). The widget reimplements none of that.
     #>
     [CmdletBinding()]
     param(
@@ -157,12 +156,11 @@ function Build-AgentLocalInputs {
     if ($WorkingDir) { $inputs['working_dir'] = $WorkingDir }
     if ($DecisionTiers -and $DecisionTiers.Count -gt 0) { $inputs['decision_tiers'] = @($DecisionTiers) }
     if ($GenTier) { $inputs['gen_tier'] = $GenTier }
-    # ---- Governor Phase 3 (D-0061: DEFAULT-ON in agent.local). The console is AUTHORITATIVE and ALWAYS emits
-    #      an explicit autoramp flag, appended LAST: true = ramp (M0->M1->S0), false = OPT OUT to the strict floor.
-    #      Because agent.local now defaults autoramp ON, an UNCHECKED toggle MUST pass autoramp:false to reproduce
-    #      the pre-D-0060 strict floor. success_contract_path is added only when the toggle is ON. ----
-    $inputs['autoramp'] = [bool]$AutoRamp
-    if ($AutoRamp -and -not [string]::IsNullOrWhiteSpace($SuccessContractPath)) { $inputs['success_contract_path'] = $SuccessContractPath }
+    # ---- Governor Phase 3 opt-in (caller-side ONLY; appended LAST so the OFF payload is unchanged) ----
+    if ($AutoRamp) {
+        $inputs['autoramp'] = $true
+        if (-not [string]::IsNullOrWhiteSpace($SuccessContractPath)) { $inputs['success_contract_path'] = $SuccessContractPath }
+    }
     return ($inputs | ConvertTo-Json -Compress -Depth 6)
 }
 

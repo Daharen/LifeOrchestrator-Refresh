@@ -148,14 +148,12 @@ Ok "function exists: Format-GovernorTrace" ([bool](Get-Command Format-GovernorTr
 
 $offA = Build-AgentLocalInputs -Goal 'make a file' -MaxSteps 10 -DryRun:$false -Route -WorkingDir 'C:\repo' -GenTier 'mid'
 $offB = Build-AgentLocalInputs -Goal 'make a file' -MaxSteps 10 -DryRun:$false -Route -WorkingDir 'C:\repo' -GenTier 'mid' -AutoRamp:$false -SuccessContractPath 'C:\ignored.json'
-# D-0061: agent.local -AutoRamp is now DEFAULT-ON, so the console is AUTHORITATIVE and an OFF toggle emits an
-# EXPLICIT autoramp:false opt-out (appended LAST). (Was: OFF omitted the key entirely and relied on the child default.)
-Ok "inputs OFF: explicit autoramp:false opt-out present" ($offA -match '"autoramp":false')
+Ok "inputs OFF: no autoramp key" (-not ($offA -match 'autoramp'))
 Ok "inputs OFF: no success_contract key" (-not ($offA -match 'success_contract'))
 Ok "inputs OFF: identical whether or not a contract arg is passed" ($offA -eq $offB)
-# OFF payload = the pre-AutoRamp base keys + the explicit autoramp:false opt-out appended last
-$today = ([ordered]@{ goal = 'make a file'; max_steps = 10; dry_run = $false; route = $true; working_dir = 'C:\repo'; gen_tier = 'mid'; autoramp = $false } | ConvertTo-Json -Compress -Depth 6)
-Ok "inputs OFF: base keys + explicit autoramp:false opt-out" ($offA -eq $today) ("got=$offA")
+# the exact payload the console shipped BEFORE this option existed -- must match byte-for-byte
+$today = ([ordered]@{ goal = 'make a file'; max_steps = 10; dry_run = $false; route = $true; working_dir = 'C:\repo'; gen_tier = 'mid' } | ConvertTo-Json -Compress -Depth 6)
+Ok "inputs OFF: byte-identical to the pre-AutoRamp payload" ($offA -eq $today) ("got=$offA")
 
 $onNoC = Build-AgentLocalInputs -Goal 'make a file' -MaxSteps 10 -Route -AutoRamp
 Ok "inputs ON: autoramp:true present" ($onNoC -match '"autoramp":true')
@@ -202,14 +200,6 @@ $showSrc = Get-Content (Join-Path $widgetRoot 'Show-AgentConsole.ps1') -Raw
 Ok "UI: Show-AgentConsole has an Auto-ramp control" ($showSrc -match 'Auto-ramp')
 Ok "UI: Show-AgentConsole passes -AutoRamp through" ($showSrc -match '-AutoRamp:')
 Ok "UI: Show-AgentConsole surfaces a success-contract field" (($showSrc -match 'contractBox') -and ($showSrc -match 'SuccessContractPath'))
-# D-0061: the Auto-ramp toggle now DEFAULTS checked, and unchecking passes the opt-out through.
-Ok "UI: Auto-ramp toggle DEFAULTS checked (D-0061 default-on)" ($showSrc -match '\$autoRampBox\.Checked\s*=\s*\$true')
-Ok "UI: SelfTest asserts the default-checked toggle" ($showSrc -match 'SELFTEST_DEFAULT_CHECKED_OK')
-
-# 12h.1 opt-out passthrough: an UNCHECKED run (no -AutoRamp) sends autoramp:false; the child stays on the strict floor.
-Ok "opt-out: Build-AgentLocalInputs emits autoramp:false when the toggle is off" ((Build-AgentLocalInputs -Goal 'make a file' -MaxSteps 4) -match '"autoramp":false')
-$optOut = Invoke-AgentLocalRun -Goal 'make a file' -AgentLocalPath $mockPath -PwshPath $PwshPath -DryRun:$false -MaxSteps 4
-Ok "opt-out (toggle off): child ran the strict floor (no governor trace)" ($null -ne $optOut.result -and $null -eq (Get-Prop $optOut.result 'final_status') -and (Get-Prop $optOut.result 'status') -eq 'completed')
 
 # 13. launch.bat shape
 $launch = Join-Path $widgetRoot 'launch.bat'
