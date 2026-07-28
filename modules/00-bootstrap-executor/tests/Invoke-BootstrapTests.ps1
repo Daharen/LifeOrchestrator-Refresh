@@ -44,7 +44,8 @@ function New-RuntimeRoot {
 function Start-Executor {
     param(
         [Parameter(Mandatory)] [string]$Root,
-        [int]$MaxConcurrentTasks = 4
+        [int]$MaxConcurrentTasks = 4,
+        [int]$StuckFinalizeMaxAttempts = 0   # 0 = leave the executor default
     )
     $hostLog = Join-Path $Root "executor.host.log"
     $args = @(
@@ -55,6 +56,8 @@ function Start-Executor {
         "-MaxConcurrentTasks", "$MaxConcurrentTasks",
         "-PwshPath", $PwshPath
     )
+    if ($StuckFinalizeMaxAttempts -gt 0) { $args += @("-StuckFinalizeMaxAttempts", "$StuckFinalizeMaxAttempts") }
+    # The fault seam (env LOEXEC_FINALIZE_FAULT), if the caller set it, is inherited by the child here.
     $proc = Start-Process -FilePath $PwshPath -ArgumentList $args -PassThru `
         -RedirectStandardOutput $hostLog -RedirectStandardError "$hostLog.err"
     return $proc
@@ -384,6 +387,93 @@ Invoke-Test "12 completed task files are preserved" {
         Assert-True (Test-Path -LiteralPath (Join-Path $r.Dir "task.ps1")) "task.ps1 was not preserved."
         Assert-True (Test-Path -LiteralPath (Join-Path $r.Dir "task.json")) "task.json was not preserved."
         Assert-True (Test-Path -LiteralPath (Join-Path $r.Dir "result.json")) "result.json missing."
+    }
+    finally { Stop-Executor -Process $proc -Root $root }
+}
+
+# ---------------------------------------------------------------------------
+# 13. Get-DescendantPids finds a spawned child (reap unit; D-0055 fix 1)
+# ---------------------------------------------------------------------------
+Invoke-Test "13 Get-DescendantPids finds a spawned child" {
+    $pw = $PwshPath                 # save first: dot-sourcing the executor re-declares $PwshPath (its own param)
+    . $startScript -DefineOnly      # reach the pure reap helpers without starting an executor
+    $child = Start-Process -FilePath $pw -ArgumentList @('-NoProfile','-Command','Start-Sleep 30') -PassThru
+    try {
+        Start-Sleep -Milliseconds 800
+        $desc = @(Get-DescendantPids -RootPid $PID)
+        Assert-True ($desc -contains $child.Id) "child $($child.Id) was not found among descendants of $PID."
+    }
+    finally {
+        try { & taskkill.exe /PID $child.Id /T /F 2>&1 | Out-Null } catch { }
+        try { if (-not $child.HasExited) { $child.Kill($true) } } catch { }
+    }
+}
+
+# ---------------------------------------------------------------------------
+# 14. on timeout the whole tree (incl. a detached child) is reaped before finalize (fix 1)
+# ---------------------------------------------------------------------------
+Invoke-Test "14 timeout reaps the whole tree (detached child stops)" {
+    $root = New-RuntimeRoot "t14"
+    $beat = Join-Path $root "childbeat.txt"
+    # Child heartbeats to a file every 150ms (base64 -EncodedCommand avoids all nested quoting). We assert the
+    # file STOPS growing after the reap -- immune to PID reuse (unlike a bare Get-Process -Id check).
+    $beatEsc = $beat.Replace("'", "''")
+    $inner = 'while ($true) { Add-Content -LiteralPath ''' + $beatEsc + ''' -Value ''tick''; Start-Sleep -Milliseconds 150 }'
+    $b64 = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($inner))
+    $pwshEsc = $PwshPath.Replace("'", "''")
+    $scriptText = '$c = Start-Process -FilePath ''' + $pwshEsc + ''' -ArgumentList @(''-NoProfile'',''-EncodedCommand'',''' + $b64 + ''') -PassThru; Start-Sleep -Seconds 120'
+    $proc = Start-Executor -Root $root
+    try {
+        Submit-Task -Root $root -TaskId "instruction-000014" -ScriptText $scriptText -TimeoutSeconds 3 | Out-Null
+        $r = Wait-TaskResult -Root $root -TaskId "instruction-000014" -TimeoutSeconds 30
+        Assert-True ($null -ne $r) "No result produced."
+        Assert-True ($r.Result.status -eq "timed_out") "status was $($r.Result.status)."
+        Assert-True (Test-Path -LiteralPath $beat) "child never started (no heartbeat file)."
+        Start-Sleep -Milliseconds 600
+        $len1 = (Get-Item -LiteralPath $beat -ErrorAction SilentlyContinue).Length
+        Start-Sleep -Seconds 2
+        $len2 = (Get-Item -LiteralPath $beat -ErrorAction SilentlyContinue).Length
+        Assert-True ($len1 -eq $len2) "detached child kept running after the timeout reap (heartbeat grew $len1 -> $len2 bytes)."
+    }
+    finally { Stop-Executor -Process $proc -Root $root }
+}
+
+# ---------------------------------------------------------------------------
+# 15. a blocked finalize does NOT wedge the queue, and the executor reports degraded (fix 2 + fix 3)
+# ---------------------------------------------------------------------------
+Invoke-Test "15 blocked finalize does not wedge the queue (degraded set)" {
+    $root = New-RuntimeRoot "t15"
+    $env:LOEXEC_FINALIZE_FAULT = "wedge:999999"   # fail the finalize move forever for tasks named *wedge*
+    try { $proc = Start-Executor -Root $root -StuckFinalizeMaxAttempts 3 } finally { $env:LOEXEC_FINALIZE_FAULT = $null }
+    try {
+        Submit-Task -Root $root -TaskId "wedge-000015" -ScriptText 'Write-Output "boom"' | Out-Null
+        Submit-Task -Root $root -TaskId "normal-000015" -ScriptText 'Write-Output "fine"' | Out-Null
+        $rn = Wait-TaskResult -Root $root -TaskId "normal-000015" -TimeoutSeconds 30
+        Assert-True ($null -ne $rn -and $rn.Result.status -eq "completed") "the normal task did not complete despite a stuck finalize (WEDGE)."
+        Assert-True (Test-Path -LiteralPath (Join-Path (Join-Path $root "running") "wedge-000015")) "the blocked task should remain in running/."
+        $degraded = $false
+        $deadline = (Get-Date).AddSeconds(15)
+        while ((Get-Date) -lt $deadline) {
+            try { $hb = Get-Content -LiteralPath (Join-Path $root "control/heartbeat.json") -Raw | ConvertFrom-Json; if ($hb.degraded) { $degraded = $true; break } } catch { }
+            Start-Sleep -Milliseconds 300
+        }
+        Assert-True $degraded "heartbeat never reported degraded while a finalize was blocked."
+    }
+    finally { Stop-Executor -Process $proc -Root $root }
+}
+
+# ---------------------------------------------------------------------------
+# 16. a blocked finalize recovers when the block clears (fix 2)
+# ---------------------------------------------------------------------------
+Invoke-Test "16 blocked finalize recovers when the block clears" {
+    $root = New-RuntimeRoot "t16"
+    $env:LOEXEC_FINALIZE_FAULT = "recover:3"   # fail the move 3 times then allow it (handle released)
+    try { $proc = Start-Executor -Root $root -StuckFinalizeMaxAttempts 10 } finally { $env:LOEXEC_FINALIZE_FAULT = $null }
+    try {
+        Submit-Task -Root $root -TaskId "recover-000016" -ScriptText 'Write-Output "ok"' | Out-Null
+        $r = Wait-TaskResult -Root $root -TaskId "recover-000016" -TimeoutSeconds 30
+        Assert-True ($null -ne $r) "task never finalized (deferred finalize did not recover)."
+        Assert-True ($r.Result.status -eq "completed") "status was $($r.Result.status)."
     }
     finally { Stop-Executor -Process $proc -Root $root }
 }

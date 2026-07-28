@@ -31,6 +31,8 @@ param(
     [int]$HeartbeatStaleSeconds = 45,
     [int]$MaxRestarts = 5,
     [int]$RestartWindowSeconds = 300,
+    [int]$PollErrorThreshold = 5,          # poll-error streak (from heartbeat) that counts as a wedge
+    [int]$WedgeGraceSeconds = 60,          # a running task past timeout + this grace counts as a wedge
     [string]$PwshPath = 'C:\Users\just_\.dotnet\tools\pwsh.exe',
     [switch]$VisibleExecutor,
     [switch]$DefineOnly
@@ -56,7 +58,10 @@ function Test-ExecutorAlive {
 
 function Get-ExecutorState {
     <# Reads the control dir and returns a flat state object for Get-WatchdogDecision. #>
-    param([Parameter(Mandatory)][string]$Root)
+    param(
+        [Parameter(Mandatory)][string]$Root,
+        [int]$WedgeGraceSeconds = 60   # a running task counts as wedged only past timeout + this grace
+    )
     $control  = Join-Path $Root 'control'
     $lockPath = Join-Path $control 'executor.lock'
     $hbPath   = Join-Path $control 'heartbeat.json'
@@ -68,12 +73,18 @@ function Get-ExecutorState {
     # process cannot refresh the file, so its mtime stops advancing). pid/instance are read from
     # the JSON separately, so a transient read failure never blanks the age.
     $hbAge = $null; $hbPid = $null; $hbInstance = $null
+    $hbDegraded = $false; $hbPollStreak = 0; $hbStuckCount = 0
     if (Test-Path -LiteralPath $hbPath) {
         try { $hbAge = ((Get-UtcNow) - (Get-Item -LiteralPath $hbPath).LastWriteTimeUtc).TotalSeconds } catch { }
         try {
             $hb = Get-Content -LiteralPath $hbPath -Raw | ConvertFrom-Json
             $hbPid = [int]$hb.pid
             $hbInstance = [string]$hb.instance_id
+            # health fields are additive: older heartbeats without them read as benign defaults.
+            $props = $hb.PSObject.Properties
+            if ($props['degraded'])             { $hbDegraded  = [bool]$hb.degraded }
+            if ($props['poll_error_streak'])    { $hbPollStreak = [int]$hb.poll_error_streak }
+            if ($props['stuck_finalize_count']) { $hbStuckCount = [int]$hb.stuck_finalize_count }
         }
         catch { }
     }
@@ -88,6 +99,36 @@ function Get-ExecutorState {
         catch { }
     }
 
+    # Independent wedge check: a running/<task>/state.json whose (started_at + timeout + grace) is in the
+    # past means the executor should have finalized it and did not -- a wedge even if the heartbeat is fresh.
+    # This does not rely on the executor self-reporting, so it catches a wedge the heartbeat health missed.
+    $wedgedRunning = $false; $wedgedTask = $null
+    $runningDir = Join-Path $Root 'running'
+    if (Test-Path -LiteralPath $runningDir) {
+        foreach ($d in @(Get-ChildItem -LiteralPath $runningDir -Directory -ErrorAction SilentlyContinue)) {
+            $statePath = Join-Path $d.FullName 'state.json'
+            if (-not (Test-Path -LiteralPath $statePath)) { continue }
+            try {
+                $stObj = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json
+                $to = [int]$stObj.timeout_seconds
+                if ($to -le 0) { continue }   # a no-timeout task can run forever; never "wedged"
+                # TZ-robust: ConvertFrom-Json auto-parses an ISO-8601 'Z' string into a [datetime]
+                # (Kind=Utc, original UTC components) -- so re-stringifying and re-parsing would let the
+                # machine's LOCAL offset leak in (a no-op only where local==UTC). Read the value directly.
+                $sv = $stObj.started_at_utc
+                if ($sv -is [datetime]) {
+                    $startedUtc = if ($sv.Kind -eq [System.DateTimeKind]::Local) { $sv.ToUniversalTime() }
+                                  else { [DateTime]::SpecifyKind($sv, [System.DateTimeKind]::Utc) }
+                } else {
+                    $startedUtc = ([DateTimeOffset]::Parse([string]$sv, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::AssumeUniversal)).UtcDateTime
+                }
+                $ageSec = ((Get-UtcNow) - $startedUtc).TotalSeconds
+                if ($ageSec -ge ($to + $WedgeGraceSeconds)) { $wedgedRunning = $true; $wedgedTask = $d.Name; break }
+            }
+            catch { }
+        }
+    }
+
     return [pscustomobject]@{
         alive                 = $alive
         heartbeat_age_seconds = $hbAge
@@ -95,17 +136,26 @@ function Get-ExecutorState {
         heartbeat_instance    = $hbInstance
         last_exit_reason      = $leReason
         last_exit_at          = $leAt
+        degraded              = $hbDegraded
+        poll_error_streak     = $hbPollStreak
+        stuck_finalize_count  = $hbStuckCount
+        wedged_running        = $wedgedRunning
+        wedged_running_task   = $wedgedTask
     }
 }
 
 function Get-WatchdogDecision {
     <#
       PURE decision function (no I/O) -> one of: none | kill_restart | restart | stand_down | backoff.
-        none         : executor healthy (alive + fresh heartbeat)
-        kill_restart : alive but heartbeat stale => hung
+        none         : executor healthy (alive + fresh heartbeat + not wedged)
+        kill_restart : alive but hung (stale heartbeat) OR WEDGED -- alive + fresh heartbeat but not making
+                       progress: self-reported degraded, a poll-error streak past threshold, or a running
+                       task stuck past its timeout+grace and never finalized (the D-0055 blind spot, fix 3)
         stand_down   : down after an authorized stop (reason stop_requested|signal)
         restart      : down after a crash (fatal_error), a hard-kill (no marker), or never started
         backoff      : a restart is warranted but the crash-loop cap was hit
+      The wedge params all default to benign values, so callers that pass only the original arguments get
+      the original behaviour unchanged.
     #>
     param(
         [bool]$Alive,
@@ -113,10 +163,17 @@ function Get-WatchdogDecision {
         [int]$HeartbeatStaleSeconds,
         [string]$LastExitReason,       # $null/'' when there is no last-exit marker
         [int]$RestartsInWindow,
-        [int]$MaxRestarts
+        [int]$MaxRestarts,
+        [bool]$Degraded = $false,      # executor self-reported degraded in heartbeat.json
+        [int]$PollErrorStreak = 0,     # consecutive poll-loop errors reported in heartbeat.json
+        [int]$PollErrorThreshold = 5,
+        [bool]$WedgedRunning = $false  # a running task is past its timeout+grace and not finalized
     )
     if ($Alive) {
         if ($null -ne $HeartbeatAgeSeconds -and [double]$HeartbeatAgeSeconds -ge $HeartbeatStaleSeconds) {
+            return 'kill_restart'
+        }
+        if ($Degraded -or $WedgedRunning -or ($PollErrorThreshold -gt 0 -and $PollErrorStreak -ge $PollErrorThreshold)) {
             return 'kill_restart'
         }
         return 'none'
@@ -130,15 +187,24 @@ function Get-WatchdogDecision {
 
 function Start-ExecutorProcess {
     param([Parameter(Mandatory)][string]$ExecutorScript, [Parameter(Mandatory)][string]$PwshPath, [Parameter(Mandatory)][string]$Root, [bool]$Visible = $false)
-    $startArgs = @('-NoLogo','-NoProfile','-ExecutionPolicy','Bypass','-File',$ExecutorScript,'-Root',$Root)
-    $style = if ($Visible) { 'Minimized' } else { 'Hidden' }
-    return Start-Process -FilePath $PwshPath -ArgumentList $startArgs -WindowStyle $style -PassThru
+    # Propagate our pwsh to the executor so a restarted executor runs tasks with the same interpreter.
+    $startArgs = @('-NoLogo','-NoProfile','-ExecutionPolicy','Bypass','-File',$ExecutorScript,'-Root',$Root,'-PwshPath',$PwshPath)
+    if ($IsWindows) {
+        $style = if ($Visible) { 'Minimized' } else { 'Hidden' }
+        return Start-Process -FilePath $PwshPath -ArgumentList $startArgs -WindowStyle $style -PassThru
+    }
+    return Start-Process -FilePath $PwshPath -ArgumentList $startArgs -PassThru
 }
 
 function Stop-ExecutorProcess {
     param([int]$ExecutorPid)
     if ($null -ne $ExecutorPid -and $ExecutorPid -gt 0) {
-        try { & taskkill.exe /PID $ExecutorPid /T /F 2>&1 | Out-Null } catch { }
+        if ($IsWindows) {
+            try { & taskkill.exe /PID $ExecutorPid /T /F 2>&1 | Out-Null } catch { }
+        }
+        else {
+            try { $p = Get-Process -Id $ExecutorPid -ErrorAction SilentlyContinue; if ($null -ne $p) { $p.Kill($true) } } catch { }
+        }
     }
 }
 
@@ -191,7 +257,7 @@ try {
             break
         }
 
-        $state = Get-ExecutorState -Root $Root
+        $state = Get-ExecutorState -Root $Root -WedgeGraceSeconds $WedgeGraceSeconds
 
         # Slide the restart window.
         $cutoff = (Get-UtcNow).AddSeconds(-$RestartWindowSeconds)
@@ -199,7 +265,9 @@ try {
 
         $decision = Get-WatchdogDecision -Alive $state.alive `
             -HeartbeatAgeSeconds $state.heartbeat_age_seconds -HeartbeatStaleSeconds $HeartbeatStaleSeconds `
-            -LastExitReason $state.last_exit_reason -RestartsInWindow $restarts.Count -MaxRestarts $MaxRestarts
+            -LastExitReason $state.last_exit_reason -RestartsInWindow $restarts.Count -MaxRestarts $MaxRestarts `
+            -Degraded $state.degraded -PollErrorStreak $state.poll_error_streak -PollErrorThreshold $PollErrorThreshold `
+            -WedgedRunning $state.wedged_running
 
         switch ($decision) {
             'none' { }
@@ -209,7 +277,13 @@ try {
                 break
             }
             'kill_restart' {
-                Write-WatchdogLog "Executor HUNG (heartbeat age $([int]$state.heartbeat_age_seconds)s >= ${HeartbeatStaleSeconds}s). Killing pid $($state.heartbeat_pid) and restarting." 'WARN'
+                $why =
+                    if ($null -ne $state.heartbeat_age_seconds -and [double]$state.heartbeat_age_seconds -ge $HeartbeatStaleSeconds) { "HUNG (heartbeat age $([int]$state.heartbeat_age_seconds)s >= ${HeartbeatStaleSeconds}s)" }
+                    elseif ($state.degraded) { "WEDGED (executor self-reported degraded; stuck_finalize=$($state.stuck_finalize_count) poll_errors=$($state.poll_error_streak))" }
+                    elseif ($state.wedged_running) { "WEDGED (task '$($state.wedged_running_task)' past its timeout in running/ and never finalized)" }
+                    elseif ($state.poll_error_streak -ge $PollErrorThreshold) { "WEDGED (poll error streak $($state.poll_error_streak) >= $PollErrorThreshold)" }
+                    else { "unhealthy" }
+                Write-WatchdogLog "Executor $why. Killing pid $($state.heartbeat_pid) and restarting." 'WARN'
                 Stop-ExecutorProcess -ExecutorPid $state.heartbeat_pid
                 Start-Sleep -Seconds 2
                 $p = Start-ExecutorProcess -ExecutorScript $ExecutorScript -PwshPath $PwshPath -Root $Root -Visible $VisibleExecutor.IsPresent

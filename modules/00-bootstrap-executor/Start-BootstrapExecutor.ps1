@@ -21,7 +21,12 @@ param(
     [int]$ProcessPollMilliseconds,
     [int]$MaxConcurrentTasks,
     [int]$DefaultTimeoutSeconds,
-    [string]$PwshPath
+    [string]$PwshPath,
+    # --- D-0055 wedge hardening (all optional; config-backed) ---
+    [string[]]$ReapProcessNames,        # process names to sweep on timeout/cancel (default: llama-server)
+    [int]$StuckFinalizeMaxAttempts,     # finalize retries before flagging the executor degraded
+    [int]$PollErrorThreshold,           # consecutive poll-loop errors before flagging degraded
+    [switch]$DefineOnly                 # (tests) define functions + return; no runtime dirs, lock, or loop
 )
 
 Set-StrictMode -Version Latest
@@ -111,6 +116,141 @@ function Stop-ProcessTree {
 }
 
 # ----------------------------------------------------------------------------
+# Process-tree reaping incl. detached / orphaned children (D-0055 hardening)
+# ----------------------------------------------------------------------------
+
+function Stop-ProcessHard {
+    # Forcefully kill a SINGLE process by pid. .NET Process.Kill($true) does not reliably kill a
+    # (grand)child tree on Linux, so we SIGKILL each pid directly: taskkill /F on Windows, kill -9 elsewhere.
+    param([int]$ProcessId)
+    if ($ProcessId -le 0) { return }
+    try {
+        if ($IsWindows) { & taskkill.exe /PID $ProcessId /F 2>&1 | Out-Null }
+        else { & kill -9 $ProcessId 2>$null }
+    }
+    catch { }
+}
+
+function Get-ProcParentMap {
+    # @{ pid = ppid } for all processes. Cross-platform: Win32_Process on Windows, `ps` elsewhere.
+    $map = @{}
+    try {
+        if ($IsWindows) {
+            foreach ($p in (Get-CimInstance -ClassName Win32_Process -ErrorAction Stop)) {
+                $map[[int]$p.ProcessId] = [int]$p.ParentProcessId
+            }
+        }
+        else {
+            $lines = & ps -eo pid=,ppid= 2>$null
+            foreach ($ln in @($lines)) {
+                $t = ([string]$ln).Trim() -split '\s+'
+                if ($t.Count -ge 2) {
+                    $pidv = 0; $ppidv = 0
+                    if ([int]::TryParse($t[0], [ref]$pidv) -and [int]::TryParse($t[1], [ref]$ppidv)) { $map[$pidv] = $ppidv }
+                }
+            }
+        }
+    }
+    catch { }
+    return $map
+}
+
+function Get-DescendantPids {
+    # All transitive descendants of $RootPid, from a pid->ppid map (captured BEFORE a kill).
+    param([Parameter(Mandatory)][int]$RootPid, [hashtable]$ParentMap)
+    if ($null -eq $ParentMap) { $ParentMap = Get-ProcParentMap }
+    $children = @{}
+    foreach ($kv in $ParentMap.GetEnumerator()) {
+        $pp = [int]$kv.Value
+        if (-not $children.ContainsKey($pp)) { $children[$pp] = New-Object System.Collections.Generic.List[int] }
+        [void]$children[$pp].Add([int]$kv.Key)
+    }
+    $result = New-Object System.Collections.Generic.List[int]
+    $seen = @{}
+    $stack = New-Object System.Collections.Generic.Stack[int]
+    $stack.Push($RootPid)
+    while ($stack.Count -gt 0) {
+        $cur = $stack.Pop()
+        if ($children.ContainsKey($cur)) {
+            foreach ($c in $children[$cur]) {
+                if (-not $seen.ContainsKey($c)) { $seen[$c] = $true; [void]$result.Add($c); $stack.Push($c) }
+            }
+        }
+    }
+    return $result.ToArray()
+}
+
+function Test-ProcessAlive {
+    param([int]$ProcessId)
+    if ($ProcessId -le 0) { return $false }
+    try { return ($null -ne (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue)) } catch { return $false }
+}
+
+function Invoke-OrphanNameSweep {
+    # Kill processes named in $ReapNames whose parent is NOT alive -- a detached llama-server whose
+    # spawning task/intermediate already exited. Returns the count killed. Attribution-safe: a
+    # name-matched process with a LIVE parent (another task's server) is left alone. Skipped if the
+    # process map could not be built (never over-kill on a snapshot failure).
+    param([string[]]$ReapNames, [hashtable]$ParentMap)
+    if ($null -eq $ReapNames -or @($ReapNames).Count -eq 0) { return 0 }
+    if ($null -eq $ParentMap) { $ParentMap = Get-ProcParentMap }
+    if ($ParentMap.Count -eq 0) { return 0 }
+    $killed = 0
+    foreach ($name in $ReapNames) {
+        if ([string]::IsNullOrWhiteSpace($name)) { continue }
+        foreach ($p in @(Get-Process -Name $name -ErrorAction SilentlyContinue)) {
+            $ppid = if ($ParentMap.ContainsKey([int]$p.Id)) { [int]$ParentMap[[int]$p.Id] } else { 0 }
+            $parentAlive = ($ppid -gt 0 -and (Test-ProcessAlive -ProcessId $ppid))
+            if (-not $parentAlive) { Stop-ProcessHard -ProcessId $p.Id; $killed++ }
+        }
+    }
+    return $killed
+}
+
+function Stop-TaskTreeAndReap {
+    # Kill a task's whole tree AND any detached child that escaped it (a breakaway, or a child whose
+    # intermediate parent already exited), plus a name-based orphan sweep of $ReapNames. This runs
+    # BEFORE the finalize move so a detached llama-server can no longer lock a file in running/.
+    # Returns the number of EXTRA processes reaped beyond the direct tree kill.
+    param([Parameter(Mandatory)][int]$ProcessId, [string[]]$ReapNames)
+    $map = Get-ProcParentMap
+    $descendants = @(Get-DescendantPids -RootPid $ProcessId -ParentMap $map)   # capture BEFORE any kill
+    # Kill descendants FIRST -- while their parent links are still intact and each is a clean child -- with a
+    # reliable per-PID SIGKILL. Doing this before the root avoids the reparent race AND .NET's unreliable
+    # entire-tree kill on Linux (which leaves a pwsh/llama-server grandchild alive).
+    $extra = 0
+    foreach ($d in $descendants) {
+        if (Test-ProcessAlive -ProcessId $d) { Stop-ProcessHard -ProcessId $d; $extra++ }
+    }
+    Stop-ProcessTree -ProcessId $ProcessId    # kill the root's tree (best effort, Windows taskkill /T is thorough)
+    Stop-ProcessHard  -ProcessId $ProcessId   # ...and ensure the root itself is gone
+    $extra += (Invoke-OrphanNameSweep -ReapNames $ReapNames)
+    return $extra
+}
+
+$script:faultCounts = @{}
+function Test-InjectedFinalizeFault {
+    # TEST-ONLY seam. OFF unless $env:LOEXEC_FINALIZE_FAULT="<taskSubstr>:<failCount>" is set. Makes the
+    # finalize move throw <failCount> times for a task whose name contains <taskSubstr>, to exercise the
+    # resilient-finalize / degraded path deterministically (a locked file cannot be forced cross-platform).
+    param([Parameter(Mandatory)][string]$TaskName)
+    $spec = $env:LOEXEC_FINALIZE_FAULT
+    if ([string]::IsNullOrWhiteSpace($spec)) { return $false }
+    $parts = $spec.Split(':')
+    if ($parts.Count -lt 2) { return $false }
+    $substr = $parts[0]
+    if ([string]::IsNullOrWhiteSpace($substr) -or -not $TaskName.Contains($substr)) { return $false }
+    $max = 0; [void][int]::TryParse($parts[1], [ref]$max)
+    if ($max -le 0) { return $false }
+    $used = if ($script:faultCounts.ContainsKey($TaskName)) { [int]$script:faultCounts[$TaskName] } else { 0 }
+    if ($used -ge $max) { return $false }
+    $script:faultCounts[$TaskName] = $used + 1
+    return $true
+}
+
+if ($DefineOnly) { return }   # tests dot-source this file to reach the pure reap/fault helpers above
+
+# ----------------------------------------------------------------------------
 # Runtime directories
 # ----------------------------------------------------------------------------
 
@@ -163,6 +303,18 @@ if (-not $PSBoundParameters.ContainsKey("DefaultTimeoutSeconds")) {
 if (-not $PSBoundParameters.ContainsKey("PwshPath")) {
     $PwshPath = [string](Get-OptionalProperty $config "pwsh_path" "pwsh.exe")
 }
+if (-not $PSBoundParameters.ContainsKey("ReapProcessNames")) {
+    $cfgReap = Get-OptionalProperty $config "reap_process_names" @("llama-server")
+    $ReapProcessNames = @($cfgReap | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+}
+if (-not $PSBoundParameters.ContainsKey("StuckFinalizeMaxAttempts")) {
+    $StuckFinalizeMaxAttempts = [int](Get-OptionalProperty $config "stuck_finalize_max_attempts" 5)
+}
+if (-not $PSBoundParameters.ContainsKey("PollErrorThreshold")) {
+    $PollErrorThreshold = [int](Get-OptionalProperty $config "poll_error_threshold" 5)
+}
+if ($StuckFinalizeMaxAttempts -lt 1) { $StuckFinalizeMaxAttempts = 1 }
+if ($PollErrorThreshold -lt 1) { $PollErrorThreshold = 1 }
 
 if ($QueuePollSeconds -lt 1) { throw "QueuePollSeconds must be at least 1." }
 if ($ProcessPollMilliseconds -lt 100) { throw "ProcessPollMilliseconds must be at least 100." }
@@ -269,6 +421,9 @@ function Move-FinalizedTask {
     )
 
     $taskName = Split-Path -Leaf $RunningDirectory
+    if (Test-InjectedFinalizeFault -TaskName $taskName) {
+        throw [System.IO.IOException]::new("injected finalize fault (test) for '$taskName'")
+    }
     $destinationRoot = if ($FinalStatus -eq "completed") { $directories["completed"] } else { $directories["failed"] }
     $destination = Join-Path $destinationRoot $taskName
     if (Test-Path -LiteralPath $destination) {
@@ -278,17 +433,15 @@ function Move-FinalizedTask {
     return $destination
 }
 
-function Write-FinalResult {
+function Write-TaskResultJson {
     param(
         [Parameter(Mandatory)] $Entry,
         [Parameter(Mandatory)] [string]$Status,
         $ExitCode,
         [string]$FailureReason
     )
-
     $finishedAt = Get-UtcNow
     $durationMs = [int][Math]::Round(($finishedAt - $Entry.StartedAt).TotalMilliseconds)
-
     $result = [ordered]@{
         task_id              = $Entry.TaskId
         status               = $Status
@@ -301,16 +454,74 @@ function Write-FinalResult {
         executor_instance_id = $executorInstanceId
         failure_reason       = $FailureReason
     }
-
     try {
         Write-JsonAtomic -Path (Join-Path $Entry.RunningDirectory "result.json") -Value $result
     }
     catch {
         Write-ExecutorLog "Failed writing result.json for '$($Entry.TaskId)': $($_.Exception.Message)" "ERROR"
     }
+}
 
-    $destination = Move-FinalizedTask -RunningDirectory $Entry.RunningDirectory -FinalStatus $Status
-    Write-ExecutorLog "Task '$($Entry.TaskId)' finalized as '$Status' -> '$destination'."
+function Invoke-TaskFinalize {
+    # Resilient finalize used by the poll loop: write result.json, then attempt the running->completed/failed
+    # move ISOLATED in try/catch. Returns $true on success; $false if the move is blocked (a locked file), so
+    # the caller can DEFER it (Add-StuckFinalize) and keep serving the queue instead of wedging (D-0055 fix 2).
+    param(
+        [Parameter(Mandatory)] $Entry,
+        [Parameter(Mandatory)] [string]$Status,
+        $ExitCode,
+        [string]$FailureReason
+    )
+    Write-TaskResultJson -Entry $Entry -Status $Status -ExitCode $ExitCode -FailureReason $FailureReason
+    try {
+        $destination = Move-FinalizedTask -RunningDirectory $Entry.RunningDirectory -FinalStatus $Status
+        Write-ExecutorLog "Task '$($Entry.TaskId)' finalized as '$Status' -> '$destination'."
+        return $true
+    }
+    catch [System.IO.IOException], [System.UnauthorizedAccessException] {
+        Write-ExecutorLog "Finalize move for '$($Entry.TaskId)' is blocked (a file in running/ is still locked): $($_.Exception.Message)" "WARN"
+        return $false
+    }
+    catch {
+        Write-ExecutorLog "Finalize move for '$($Entry.TaskId)' failed unexpectedly: $($_.Exception.Message)" "ERROR"
+        return $false
+    }
+}
+
+function Write-FinalResult {
+    # Best-effort finalize for callers that cannot defer (restart recovery, invalid task, shutdown). Writes
+    # result.json and attempts the move; a blocked move is logged (the dir stays in running/ and the next
+    # restart's recovery finalizes it as abandoned_after_restart) but NEVER throws into the caller.
+    param(
+        [Parameter(Mandatory)] $Entry,
+        [Parameter(Mandatory)] [string]$Status,
+        $ExitCode,
+        [string]$FailureReason
+    )
+    Write-TaskResultJson -Entry $Entry -Status $Status -ExitCode $ExitCode -FailureReason $FailureReason
+    try {
+        $destination = Move-FinalizedTask -RunningDirectory $Entry.RunningDirectory -FinalStatus $Status
+        Write-ExecutorLog "Task '$($Entry.TaskId)' finalized as '$Status' -> '$destination'."
+    }
+    catch {
+        Write-ExecutorLog "Finalize move for '$($Entry.TaskId)' blocked; left in running/ for restart recovery: $($_.Exception.Message)" "WARN"
+    }
+}
+
+# Tasks whose finalize move was blocked -> retried each loop without wedging the pending-claim path.
+$script:stuckFinalize = @{}   # taskId -> { Entry, Status, ExitCode, Reason, Attempts, FirstFailedAtUtc }
+$script:pollErrorStreak = 0
+
+function Add-StuckFinalize {
+    param([Parameter(Mandatory)] $Entry, [Parameter(Mandatory)] [string]$Status, $ExitCode, [string]$Reason)
+    # First deferral: sweep any orphaned reap-name process (e.g. a detached llama-server) that may be
+    # holding the handle, then record for bounded retry.
+    [void](Invoke-OrphanNameSweep -ReapNames $ReapProcessNames)
+    $script:stuckFinalize[$Entry.TaskId] = [pscustomobject]@{
+        Entry = $Entry; Status = $Status; ExitCode = $ExitCode; Reason = $Reason
+        Attempts = 1; FirstFailedAtUtc = (Get-UtcNow)
+    }
+    Write-ExecutorLog "Task '$($Entry.TaskId)' finalize deferred (blocked); will retry without stalling the queue." "WARN"
 }
 
 function Complete-InvalidTask {
@@ -463,7 +674,9 @@ function Stop-AllActiveTasks {
         try {
             $entry.Process.Refresh()
             if (-not $entry.Process.HasExited) {
-                Stop-ProcessTree -ProcessId $entry.Process.Id
+                # Reap the whole tree incl. a detached llama-server so shutdown does not leave an orphan
+                # holding a handle in running/ (same D-0055 hazard as the timeout path).
+                [void](Stop-TaskTreeAndReap -ProcessId $entry.Process.Id -ReapNames $ReapProcessNames)
             }
         }
         catch { }
@@ -500,32 +713,55 @@ try {
             break
         }
 
-        # Refresh the heartbeat (throttled) so a supervisor can detect a hang.
+        # Refresh the heartbeat (throttled). The added health fields let a supervisor detect a WEDGE -- a
+        # fresh heartbeat that is nonetheless not finalizing / not making progress (the D-0055 blind spot,
+        # fix 3) -- not just a stale-heartbeat hang.
         $heartbeatNow = Get-UtcNow
         if (($heartbeatNow - $script:lastHeartbeat).TotalMilliseconds -ge 2000) {
+            $stuckCount = $script:stuckFinalize.Count
+            $oldestStuckAge = 0.0
+            $anyPastMax = $false
+            foreach ($sv in $script:stuckFinalize.Values) {
+                $age = ($heartbeatNow - $sv.FirstFailedAtUtc).TotalSeconds
+                if ($age -gt $oldestStuckAge) { $oldestStuckAge = $age }
+                if ($sv.Attempts -ge $StuckFinalizeMaxAttempts) { $anyPastMax = $true }
+            }
+            $degraded = $anyPastMax -or ($script:pollErrorStreak -ge $PollErrorThreshold)
+            $degradedReason =
+                if (-not $degraded) { $null }
+                elseif ($anyPastMax) { "finalize blocked for $stuckCount task(s) past $StuckFinalizeMaxAttempts attempts" }
+                else { "poll error streak $($script:pollErrorStreak) >= $PollErrorThreshold" }
             try {
                 Write-JsonAtomic -Path $heartbeatPath -Value ([ordered]@{
-                    instance_id  = $executorInstanceId
-                    pid          = $PID
-                    at_utc       = (Format-Utc $heartbeatNow)
-                    active_tasks = $script:activeTasks.Count
+                    instance_id                       = $executorInstanceId
+                    pid                               = $PID
+                    at_utc                            = (Format-Utc $heartbeatNow)
+                    active_tasks                      = $script:activeTasks.Count
+                    stuck_finalize_count              = $stuckCount
+                    oldest_stuck_finalize_age_seconds = [int][Math]::Round($oldestStuckAge)
+                    poll_error_streak                 = $script:pollErrorStreak
+                    degraded                          = $degraded
+                    degraded_reason                   = $degradedReason
                 })
             }
             catch { }
             $script:lastHeartbeat = $heartbeatNow
         }
 
-        # 1) Poll active tasks for exit / timeout.
+        # 1) Poll active tasks for exit / timeout. Each finalize is ISOLATED: a blocked move on ONE task is
+        #    DEFERRED (Add-StuckFinalize) instead of throwing and starving the pending-claim step (fix 2).
         foreach ($taskId in @($script:activeTasks.Keys)) {
             $entry = $script:activeTasks[$taskId]
-            $entry.Process.Refresh()
+            try { $entry.Process.Refresh() } catch { }
 
             if ($entry.Process.HasExited) {
                 $exitCode = $entry.Process.ExitCode
                 $status = if ($exitCode -eq 0) { "completed" } else { "failed" }
                 $reason = if ($exitCode -eq 0) { $null } else { "Script exited with code $exitCode." }
-                Write-FinalResult -Entry $entry -Status $status -ExitCode $exitCode -FailureReason $reason
                 $script:activeTasks.Remove($taskId)
+                if (-not (Invoke-TaskFinalize -Entry $entry -Status $status -ExitCode $exitCode -FailureReason $reason)) {
+                    Add-StuckFinalize -Entry $entry -Status $status -ExitCode $exitCode -Reason $reason
+                }
                 $nextQueueScan = Get-UtcNow
                 continue
             }
@@ -533,12 +769,31 @@ try {
             if ($entry.TimeoutSeconds -gt 0) {
                 $elapsed = (Get-UtcNow) - $entry.StartedAt
                 if ($elapsed.TotalSeconds -ge $entry.TimeoutSeconds) {
-                    Write-ExecutorLog "Task '$taskId' exceeded timeout of $($entry.TimeoutSeconds)s; terminating." "WARN"
-                    Stop-ProcessTree -ProcessId $entry.Process.Id
-                    Write-FinalResult -Entry $entry -Status "timed_out" -ExitCode $null `
-                        -FailureReason "Task exceeded its timeout of $($entry.TimeoutSeconds) seconds."
+                    Write-ExecutorLog "Task '$taskId' exceeded timeout of $($entry.TimeoutSeconds)s; reaping process tree + orphans, then finalizing." "WARN"
+                    # fix 1: reap the WHOLE tree incl. a detached llama-server BEFORE the finalize move.
+                    $reaped = Stop-TaskTreeAndReap -ProcessId $entry.Process.Id -ReapNames $ReapProcessNames
+                    if ($reaped -gt 0) { Write-ExecutorLog "Reaped $reaped extra/orphaned process(es) for timed-out task '$taskId'." "WARN" }
                     $script:activeTasks.Remove($taskId)
+                    $toReason = "Task exceeded its timeout of $($entry.TimeoutSeconds) seconds."
+                    if (-not (Invoke-TaskFinalize -Entry $entry -Status "timed_out" -ExitCode $null -FailureReason $toReason)) {
+                        Add-StuckFinalize -Entry $entry -Status "timed_out" -ExitCode $null -Reason $toReason
+                    }
                     $nextQueueScan = Get-UtcNow
+                }
+            }
+        }
+
+        # 1b) Retry any DEFERRED (blocked) finalizes -- each isolated. This must NOT block the claim step below.
+        foreach ($stuckId in @($script:stuckFinalize.Keys)) {
+            $sv = $script:stuckFinalize[$stuckId]
+            if (Invoke-TaskFinalize -Entry $sv.Entry -Status $sv.Status -ExitCode $sv.ExitCode -FailureReason $sv.Reason) {
+                $script:stuckFinalize.Remove($stuckId)
+                Write-ExecutorLog "Deferred finalize for '$stuckId' recovered after $($sv.Attempts) attempt(s)."
+            }
+            else {
+                $sv.Attempts++
+                if ($sv.Attempts -eq $StuckFinalizeMaxAttempts) {
+                    Write-ExecutorLog "Task '$stuckId' finalize still blocked after $($sv.Attempts) attempts; executor now reports DEGRADED so the watchdog can recover it." "ERROR"
                 }
             }
         }
@@ -553,11 +808,16 @@ try {
             }
             $nextQueueScan = (Get-UtcNow).AddSeconds($QueuePollSeconds)
         }
+
+        # A full clean iteration reached the claim step -> reset the poll-error streak (health signal).
+        $script:pollErrorStreak = 0
       }
       catch [System.IO.IOException], [System.UnauthorizedAccessException] {
-          # Belt-and-suspenders for the 2026-07-24 crash class: a transient sharing violation that
-          # slipped past the per-operation retry does not kill the executor - log it and keep polling.
-          Write-ExecutorLog "Transient IO error in poll loop; continuing: $($_.Exception.Message)" "WARN"
+          # Belt-and-suspenders for the 2026-07-24 crash class: a transient sharing violation that slipped
+          # past the per-operation retry does not kill the executor - log it, COUNT it toward the degraded
+          # health signal (so a persistent poll error surfaces to the watchdog), and keep polling.
+          $script:pollErrorStreak++
+          Write-ExecutorLog "Transient IO error in poll loop (streak $($script:pollErrorStreak)); continuing: $($_.Exception.Message)" "WARN"
       }
 
         Start-Sleep -Milliseconds $ProcessPollMilliseconds

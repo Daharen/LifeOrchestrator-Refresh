@@ -3,5 +3,8 @@
   "process_poll_milliseconds": 1000,
   "max_concurrent_tasks": 4,
   "default_timeout_seconds": 900,
-  "pwsh_path": "pwsh.exe"
+  "pwsh_path": "pwsh.exe",
+  "reap_process_names": ["llama-server"],
+  "stuck_finalize_max_attempts": 5,
+  "poll_error_threshold": 5
 }
