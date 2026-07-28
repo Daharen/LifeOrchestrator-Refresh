@@ -52,7 +52,8 @@ param(
     [string[]]$DecisionTiers = @('mid'),
     [string]$GenTier = 'mid',
     [string]$Profile,
-    [switch]$AutoRamp,   # Governor Phase 3 opt-in: delegate to Invoke-AutoRamp.ps1 (OFF by default; existing behavior unchanged)
+    [switch]$AutoRamp = $true,   # Governor Phase 3: DEFAULT-ON (D-0061). Delegates to Invoke-AutoRamp.ps1. Opt out with -AutoRamp:$false or -NoAutoRamp; a contract-less run fast-paths at M0 identically to the strict floor (0 escalation, D-0046 terminator close).
+    [switch]$NoAutoRamp,         # explicit opt-out alias -- forces the pre-D-0060 STRICT FLOOR path even though AutoRamp is on by default.
     [double]$FrontierThreshold = 0.5,
     [int]$MaxObservationChars = 600,
     [int]$MaxTranscriptChars = 4000,
@@ -276,7 +277,8 @@ try {
             if ((Has $p 'decision_tiers')        -and -not $bound.ContainsKey('DecisionTiers'))       { $DecisionTiers = @($p.decision_tiers | ForEach-Object { [string]$_ }) }
             if ((Has $p 'gen_tier')              -and -not $bound.ContainsKey('GenTier'))             { $GenTier = [string]$p.gen_tier }
             if ((Has $p 'profile')               -and -not $bound.ContainsKey('Profile'))             { $Profile = [string]$p.profile }
-            if ((Has $p 'autoramp')              -and -not $bound.ContainsKey('AutoRamp'))            { if ([bool]$p.autoramp) { $AutoRamp = [switch]$true } }
+            if ((Has $p 'autoramp')              -and -not $bound.ContainsKey('AutoRamp'))            { $AutoRamp = [switch][bool]$p.autoramp }
+            if ((Has $p 'no_autoramp')           -and -not $bound.ContainsKey('NoAutoRamp'))          { if ([bool]$p.no_autoramp) { $NoAutoRamp = [switch]$true } }
             if ((Has $p 'frontier_threshold')    -and -not $bound.ContainsKey('FrontierThreshold'))   { $FrontierThreshold = [double]$p.frontier_threshold }
             if ((Has $p 'max_observation_chars') -and -not $bound.ContainsKey('MaxObservationChars')) { $MaxObservationChars = [int]$p.max_observation_chars }
             if ((Has $p 'max_transcript_chars')  -and -not $bound.ContainsKey('MaxTranscriptChars'))  { $MaxTranscriptChars = [int]$p.max_transcript_chars }
@@ -301,10 +303,15 @@ try {
         try { $toolsInline = $Tools | ConvertFrom-Json } catch { throw [PSCustomObject]@{ code='invalid_tools_json'; message='-Tools is not valid JSON'; retryable=$false } }
     }
 
-    # ===== Governor Phase 3 opt-in: -AutoRamp delegates to the auto-ramp controller (Invoke-AutoRamp.ps1) =====
-    # ADDITIVE + OFF BY DEFAULT. When -AutoRamp is not set, nothing below runs and the shipped floor loop is
-    # byte-for-byte unchanged. When set, forward the same inputs to the controller and relay its envelope.
-    if ($AutoRamp) {
+    # ===== Governor Phase 3: -AutoRamp is now DEFAULT-ON (D-0061) -- delegate to the auto-ramp controller =====
+    # (Invoke-AutoRamp.ps1). DEFAULT-ON with an EXACT opt-out: -AutoRamp:$false / -NoAutoRamp / InputsJson
+    # autoramp:false reproduces the pre-D-0060 STRICT FLOOR path below byte-for-byte (no ramp, no controller).
+    # A -DryRun is a floor-only plan preview (the controller has no dry-run), so it NEVER delegates.
+    # Simple-goal cost is unchanged: with NO success_contract the controller fast-paths at epoch M0 via the
+    # D-0046 deterministic terminator (0 escalation, 0 model swaps, returns `completed` -- never
+    # completed_unverified). A supplied success_contract is what arms the M0->M1->S0 ramp on failure.
+    $useAutoRamp = ([bool]$AutoRamp) -and (-not [bool]$NoAutoRamp) -and (-not [bool]$DryRun)
+    if ($useAutoRamp) {
         $arPath = Join-Path $PSScriptRoot 'Invoke-AutoRamp.ps1'
         if (-not (Test-Path -LiteralPath $arPath -PathType Leaf)) { throw [PSCustomObject]@{ code='autoramp_not_found'; message="Invoke-AutoRamp.ps1 not found next to agent.local"; retryable=$false } }
         $fwd = @('-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',$arPath)

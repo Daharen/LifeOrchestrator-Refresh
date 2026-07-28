@@ -33,8 +33,10 @@
   lifeorch.goal_verification/0.1), frozen by hash BEFORE execution. A tier is "good enough" ONLY when the SAME
   frozen contract passes -- never the model's own say-so. Predicate vocabulary: file_exists,
   sha256_equals_source, json_schema_valid, command_exit_zero, artifact_exists, artifact_nonempty,
-  state_version_changed, value_equals, all_required_tool_postconditions_passed. With no contract the run
-  returns completed_unverified; with an un-checkable contract it returns human_verification_required.
+  state_version_changed, value_equals, all_required_tool_postconditions_passed. With NO contract the run
+  fast-paths at epoch M0 via the D-0046 deterministic terminator (0 escalation) and returns `completed` once
+  the terminator is satisfied -- NEVER completed_unverified when it is (D-0061; ramp only on a HARD trigger).
+  With an un-checkable contract it returns human_verification_required.
 
   WARM-SERVER COMPOSITION: consumes the model.gateway (#7) resident warm server. Ensure-ResidentModel matches
   the WHOLE residency config key (model_id + model_sha256 + engine_build + gpu_layers + context + no_think +
@@ -529,6 +531,26 @@ try {
     $succeededToolSet = New-Object 'System.Collections.Generic.HashSet[string]'
     $lastFailedChecks = @()
 
+    # ===== D-0046 deterministic terminator (the CONTRACT-LESS closing signal, D-0061) =====
+    # When NO success contract is supplied the controller must NOT return completed_unverified for a run the
+    # terminator already satisfies -- it fast-paths at M0 exactly like agent.local's strict floor. Mirroring the
+    # floor's heuristic mode: if the goal implies PRODUCING/PLACING an output, a `finish` is BLOCKED until >=1
+    # side-effecting tool has succeeded (force the first unsatisfied one); once satisfied -- or the goal implies
+    # no output -- `finish` closes the run as `completed`. When a contract IS supplied the contract remains the
+    # sole closing signal (the terminator is inert), so the shipped opt-in ramp behavior is unchanged.
+    function Test-GoalImpliesOutput([string]$goal) {
+        if ([string]::IsNullOrWhiteSpace($goal)) { return $false }
+        if ($goal -imatch '\b(creat|make|makes|making|made|generat|writ|wrote|sav|saves|saving|plac|placing|put|puts|add|adds|adding|build|builds|building|built|produc|download|render|draw|draws|drawing|export|copy|copies|copying|mov|renam|delet|append|convert|compos|screenshot|capture)\w*') { return $true }
+        if ($goal -imatch '\b(image|picture|photo|file|files|document|report|folder|song|music|audio|wallpaper|desktop|downloads)\b') { return $true }
+        return $false
+    }
+    $goalImpliesOutput = Test-GoalImpliesOutput $Goal
+    $termSideEffectingDefs = @($usableTools | Where-Object { $_.side_effecting })
+    $termEnforce = (-not $contractSupplied)   # the terminator is the closing signal ONLY for contract-less runs
+    $termMode = if (-not $termEnforce) { 'contract' } elseif ($goalImpliesOutput -and @($termSideEffectingDefs).Count -gt 0) { 'heuristic' } else { 'none' }
+    $finishBlockedCount = 0
+    Write-Diag "terminator: enforce=$termEnforce mode=$termMode goal_implies_output=$goalImpliesOutput side_effecting=[$(@($termSideEffectingDefs | ForEach-Object { $_.tool }) -join ',')]"
+
     function Build-DecisionContext {
         $sb = [System.Text.StringBuilder]::new()
         [void]$sb.AppendLine("GOAL: $Goal")
@@ -658,7 +680,8 @@ try {
                         contract_evaluated=$false; contract_passed=$null; contract_failed=@()
                         residency_match=$null; residency_mismatch_reason=$null; residency_evicted=$null
                         hard_trigger='x0_deadline_exceeded'; soft_strikes_this_step=0; soft_strikes_window=0; escalated_to=$null; model_swaps=$modelSwaps
-                        x0_deadline_abort=$true; x0_deadline_remaining_ms=0 }))
+                        x0_deadline_abort=$true; x0_deadline_remaining_ms=0
+                        terminator_finish_blocked=$null; terminator_forced_tool=$null; terminator_satisfied=$null }))
                     Write-Diag "X0 deadline exceeded before a verified pass -> $finalStatus (clean abort, no hang)"
                     break
                 }
@@ -674,7 +697,8 @@ try {
                 contract_evaluated=$false; contract_passed=$null; contract_failed=@()
                 residency_match=[bool]$residency.match; residency_mismatch_reason=$residency.mismatch_reason; residency_evicted=[bool]$residency.evicted
                 hard_trigger=$null; soft_strikes_this_step=0; soft_strikes_window=0; escalated_to=$null; model_swaps=$modelSwaps
-                x0_deadline_abort=$null; x0_deadline_remaining_ms=$null }
+                x0_deadline_abort=$null; x0_deadline_remaining_ms=$null
+                terminator_finish_blocked=$null; terminator_forced_tool=$null; terminator_satisfied=$null }
             if ($stateEpoch -eq 'X0' -and $null -ne $x0DeadlineUtc) { $rec.x0_deadline_remaining_ms = [int][Math]::Max(0, ($x0DeadlineUtc - [DateTime]::UtcNow).TotalMilliseconds) }
 
             $hard = $false; $hardReason = $null; $soft = 0; $softReasons = New-Object System.Collections.Generic.List[string]
@@ -734,14 +758,30 @@ try {
 
             $progressed = $false
             if (-not $hard -and -not $softFaultFired -and $pd.in_set) {
+                # ----- D-0046 terminator pre-gate (CONTRACT-LESS only): BLOCK a premature finish -----
+                # If the goal implies an output and a required side-effecting tool has not yet succeeded, force
+                # the first unsatisfied one this step instead of honoring `finish` (mirrors agent.local's floor).
+                if ($chosen -eq 'finish' -and -not $contractSupplied -and $termMode -eq 'heuristic') {
+                    $unsatTerm = @($termSideEffectingDefs | Where-Object { -not $succeededToolSet.Contains($_.tool) })
+                    if (@($unsatTerm).Count -gt 0) {
+                        $chosen = [string]$unsatTerm[0].tool
+                        $finishBlockedCount++
+                        $rec.terminator_finish_blocked = $true; $rec.terminator_forced_tool = $chosen
+                        Write-Diag "terminator: finish BLOCKED at step $stepNo (unsatisfied=[$(@($unsatTerm | ForEach-Object { $_.tool }) -join ',')]); forcing '$chosen'"
+                    }
+                }
                 if ($chosen -eq 'finish') {
                     $v = Test-SuccessContract
                     $rec.contract_evaluated = $v.evaluated; $rec.contract_passed = $v.passed
                     $rec.contract_failed = @($v.checks | Where-Object { -not $_.passed } | ForEach-Object { "$($_.predicate):$($_.evidence)" })
                     $lastVerification = $v
                     if (-not $contractSupplied) {
-                        # no machine-checkable contract -> we cannot claim verified success
-                        $finalStatus = 'completed_unverified'; $acceptedEpoch = $stateEpoch; $trace.Add([pscustomobject]$rec); break
+                        # D-0046 terminator satisfied (goal implies no output, or every required side-effecting
+                        # tool succeeded) -> close as `completed` via the deterministic terminator. NEVER
+                        # completed_unverified when the terminator is satisfied (D-0061).
+                        $finalStatus = 'completed'; $acceptedEpoch = $stateEpoch
+                        $rec.terminator_finish_blocked = $false; $rec.terminator_satisfied = $true
+                        $trace.Add([pscustomobject]$rec); break
                     } elseif (-not $contractCheckable) {
                         $finalStatus = 'human_verification_required'; $acceptedEpoch = $stateEpoch; $trace.Add([pscustomobject]$rec); break
                     } elseif ($v.passed) {
@@ -830,10 +870,14 @@ try {
             if ($softReasons.Count -gt 0) { $rec.soft_reasons = $softReasons.ToArray() }
 
             # ---- ESCALATION (monotonic; never de-escalate) ----
+            # Contract-less runs ramp ONLY on a HARD trigger; soft-strike / budget escalation requires a supplied
+            # success contract (D-0061). Without a machine-checkable contract the deterministic terminator closes
+            # the run rather than burning extra resource on soft signals -- this keeps a simple contract-less goal
+            # at M0 with 0 escalation / 0 model swaps (the "no cost change for simple goals" invariant).
             $escalate = $false; $escReason = $null
             if ($hard) { $escalate = $true; $escReason = "hard:$hardReason" }
-            elseif ($softSum -ge 2) { $escalate = $true; $escReason = "soft>=2:$([string]::Join(',', $softReasons.ToArray()))" }
-            elseif ($stepsInEpoch -ge [int]$epochCfg.max_steps -and -not $progressed) { $escalate = $true; $escReason = 'epoch_budget_exhausted_no_progress' }
+            elseif ($contractSupplied -and $softSum -ge 2) { $escalate = $true; $escReason = "soft>=2:$([string]::Join(',', $softReasons.ToArray()))" }
+            elseif ($contractSupplied -and $stepsInEpoch -ge [int]$epochCfg.max_steps -and -not $progressed) { $escalate = $true; $escReason = 'epoch_budget_exhausted_no_progress' }
 
             if ($escalate) {
                 if ($hard -and ($stateEpoch -eq 'M0' -or $stateEpoch -eq 'M1')) {
@@ -880,7 +924,12 @@ try {
 
         if ($null -eq $finalStatus) {
             if ([DateTime]::UtcNow -ge $deadline) { $finalStatus='time_budget_exhausted' }
-            elseif (-not $contractSupplied) { $finalStatus='completed_unverified' }
+            elseif (-not $contractSupplied) {
+                # D-0046 terminator as the contract-less closing signal (D-0061): completed if every required
+                # side-effecting tool succeeded (or the goal implies no output), else completed_unverified.
+                $unsatFinal = @($termSideEffectingDefs | Where-Object { -not $succeededToolSet.Contains($_.tool) })
+                $finalStatus = if ($termMode -ne 'heuristic' -or @($unsatFinal).Count -eq 0) { 'completed' } else { 'completed_unverified' }
+            }
             elseif (-not $contractCheckable) { $finalStatus='human_verification_required' }
             else { $finalStatus='local_ceiling_reached' }
         }
@@ -897,6 +946,7 @@ try {
             autoramp=$true; final_status=$finalStatus; verified_success=$verifiedSuccess
             accepted_epoch=$acceptedEpoch; model_swaps=$modelSwaps; step_count=$stepNo; max_total_steps=$MaxTotalSteps
             contract=[ordered]@{ supplied=$contractSupplied; checkable=$contractCheckable; hash=$contractHash; predicate_count=@($contractPredicates).Count; last=$lastVerification }
+            terminator=[ordered]@{ enabled=[bool]$termEnforce; mode=$termMode; goal_implies_output=[bool]$goalImpliesOutput; required_side_effecting=@($termSideEffectingDefs | ForEach-Object { $_.tool }); finish_blocked_count=[int]$finishBlockedCount }
             epochs_visited=@($trace.ToArray() | ForEach-Object { $_.epoch } | Select-Object -Unique)
             gpu_lease=$leaseState
             completed_tools=@($succeededToolSet)
