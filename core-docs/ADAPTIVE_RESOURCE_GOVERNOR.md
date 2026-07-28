@@ -1,6 +1,6 @@
 # ADAPTIVE RESOURCE GOVERNOR — design (agent.local #21 · logic.escalator #19 · model.gateway #7 · route.tools #27)
 
-**Status:** Phase 1 shipped (D-0043); Phases 2–3 designed, not yet built.
+**Status:** Phase 1 shipped (D-0043); Phases 2–3 designed, and **Phase 2 (the warm/persistent model server) is now SHIPPED (D-0057)** -- model.gateway #7 detached warm server (commit f8c961a); Phase 3 (auto-ramp) not yet built.
 **Owner doc:** this file is the durable design; per-decision history lives in `DECISION_LOG.md`.
 
 ## 1. The problem (the user's critique, stated plainly)
@@ -98,7 +98,7 @@ is a generation/verification/routing rung, not an escalator decision-classifier 
 works), and/or the escalator must be fixed to prefer a lower tier's valid answer over a higher tier's
 empty one — both are Phase 3 controller concerns, not a static profile.
 
-### Phase 2 — warm / persistent model server (designed)
+### Phase 2 — warm / persistent model server (SHIPPED, D-0057 -- f8c961a)
 The whole reason escalating to the 27B "costs too much" is that `model.gateway` (#7) starts a
 **transient** `llama-server` per call and evicts on model change — a ~60–90 s cold load every time
 the tier switches. Phase 2 keeps a **resident** server: reuse it across calls, evict + load only
@@ -137,7 +137,7 @@ S14 profile-rung suite), route.tools **33/33** (incl. the rewritten S10 strong-s
   default (48 s, fully-GPU-resident 3B); `max` becomes practical once Phase 2 lands.
 
 ## 6. Open items / revisit-if
-- Phase 2 warm server and Phase 3 auto-ramp controller are the next two units.
+- Phase 2 warm server SHIPPED (D-0057, model.gateway #7 DETACHED warm server via Win32_Process.Create, commit f8c961a; warm reuse load_ms ~1 vs ~1200 cold, per-call gpu lease keeps <=1 server on the GPU, 0 orphans). Phase 3 auto-ramp controller is the next unit -- a ready escalation pack exists (fo-4 worker I: modules/31-frontier-bridge/runtime/artifacts/d9df215c.../governor-phase3-escalation.md).
 - A deterministic **goal-satisfied / repeat-action** terminator (the D-0032 #1 follow-on) would
   further harden termination independent of tier.
 - Calibrated decision confidence (today's 0.55 is a heuristic) would give the ramp a better
