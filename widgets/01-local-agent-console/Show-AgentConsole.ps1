@@ -91,7 +91,7 @@ function New-AgentConsoleForm {
     $dryRunBox.Text = 'Dry run (plan only - no tool is invoked)'
     $dryRunBox.Location = [System.Drawing.Point]::new(680, 98)
     $dryRunBox.AutoSize = $true
-    $dryRunBox.Checked = $true
+    $dryRunBox.Checked = $false
     $dryRunBox.Anchor = 'Top,Right'
 
     $planBtn = [System.Windows.Forms.Button]::new()
