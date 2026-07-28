@@ -214,6 +214,7 @@ if ($Live -and $IsWindows) {
     # auto-ramp toggle + contract field, builds on the real Windows box).
     $sta = & $PwshPath -NoProfile -STA -File (Join-Path $widgetRoot 'Show-AgentConsole.ps1') -SelfTest 2>&1
     Ok "WinForms form builds (SelfTest)" (($sta -join "`n") -match 'SELFTEST_FORM_OK') (($sta -join ' | '))
+    Ok "auto-ramp toggle handler fires without error (SelfTest)" (($sta -join "`n") -match 'SELFTEST_TOGGLE_OK') (($sta -join ' | '))
 
     if ($NoGpu) {
         # CPU-only live gate: drive the REAL console core on Windows against the MOCK agent.local

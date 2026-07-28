@@ -121,12 +121,14 @@ function New-AgentConsoleForm {
     $browseBtn.Enabled = $false
 
     # contract path only matters with auto-ramp on -- gate the fields to make that clear.
+    # NOTE: .GetNewClosure() binds these local control vars into the handler; WinForms fires it
+    # outside this function's scope, so bare locals would resolve to $null and $null.Enabled=... throws.
     $autoRampBox.Add_CheckedChanged({
             $on = [bool]$autoRampBox.Checked
             $lblContract.Enabled = $on
             $contractBox.Enabled = $on
             $browseBtn.Enabled = $on
-        })
+        }.GetNewClosure())
     $browseBtn.Add_Click({
             try {
                 $dlg = [System.Windows.Forms.OpenFileDialog]::new()
@@ -135,7 +137,7 @@ function New-AgentConsoleForm {
                 if ($dlg.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $contractBox.Text = $dlg.FileName }
             }
             catch { }
-        })
+        }.GetNewClosure())
 
     $planBtn = [System.Windows.Forms.Button]::new()
     $planBtn.Text = 'Plan'
@@ -384,8 +386,20 @@ function Stop-ConsoleRun {
 # ----- entry -----
 $form = New-AgentConsoleForm
 if ($SelfTest) {
-    $form.Dispose()
     Write-Output 'SELFTEST_FORM_OK'
+    # Exercise the auto-ramp toggle handler under STA: setting Checked fires CheckedChanged,
+    # which sets .Enabled on the contract fields. A scope bug there (bare local control vars
+    # resolving to $null) throws right here -- this is the regression guard for it.
+    try {
+        $st = $script:ConsoleState
+        $st.autoRampBox.Checked = $true
+        if ($st.contractBox.Enabled) {
+            $st.autoRampBox.Checked = $false
+            if (-not $st.contractBox.Enabled) { Write-Output 'SELFTEST_TOGGLE_OK' }
+        }
+    }
+    catch { Write-Output ('SELFTEST_TOGGLE_FAIL: ' + $_.Exception.Message) }
+    $form.Dispose()
     return
 }
 [System.Windows.Forms.Application]::EnableVisualStyles()
