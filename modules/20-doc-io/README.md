@@ -45,6 +45,15 @@ Wrapped (Module 1) or as an `exec.bootstrap` task package: `..\01-skill-bootstra
 - **Optimistic concurrency.** Pass `expect_sha256` (the sha256 you last read) on `write`/`edit`/`append`; if the
   file changed since, the op fails with `precondition_failed` instead of clobbering the newer content. This is
   what makes a local model's read → reason → edit loop safe.
+- **Pessimistic serialization (opt-in doc lease, res.lease #29).** Pass `-Lease` (or `lease:true`) on
+  `write`/`edit`/`append` to acquire the `doc:<relpath>` lease around the whole read-modify-write, so several
+  instances editing the *same* file serialize instead of racing. The resource name is auto-derived from the
+  target (repo-relative when under the repo, else the absolute path; `-LeaseResource` overrides). Held by
+  another and not free within `lease_wait_s` (default 120) → `doc_lease_unavailable` (retryable); **additive and
+  graceful** — off by default, and when `res.lease` is absent/unresolvable it logs a warning and proceeds with
+  behaviour unchanged. Released right after the atomic write (and on any emit). The outcome is reported under
+  `result.lease{enabled,resource,available,acquired,owned,already_held,lease_id,held_by,released}`. This
+  completes the res.lease consumer trio (`gpu`→model.gateway #7, `git`→dev.ship, `doc:<path>`→doc.io).
 - **Recoverable pre-image.** Every mutating op copies the prior content into the invocation's artifact dir as
   `before.<ext>` (and the new content as `after.<ext>`), so a bad edit is always recoverable. Skipped with a
   warning for files larger than ~8 MB, or with `-NoPreimage`.
@@ -84,8 +93,9 @@ envelope goes to stdout and to `result.json`; diagnostics to `stderr.txt`.
 **`parallel_safe:false`** — `doc.io` is the first general-purpose external-file **mutator** (it writes arbitrary
 caller-chosen paths, unlike the artifact-only writers `audio.ingest`/`image.util`), so two concurrent
 invocations *could* target the same file. The conservative MVP declares `false` (the router serializes it) even
-though reads and distinct-file writes are independent; atomic writes + `expect_sha256` are in place so a future
-read-only / per-file-lock `parallel_safe:true` mode is a clean follow-on. See DECISION_LOG D-0031.
+though reads and distinct-file writes are independent; atomic writes + `expect_sha256` + the opt-in `-Lease`
+per-file `doc:<path>` lock (Safety model above) are in place so a future `parallel_safe:true` mode is a clean
+follow-on. See DECISION_LOG D-0031.
 
 ## Non-goals (see WORK_ORDER.md)
 

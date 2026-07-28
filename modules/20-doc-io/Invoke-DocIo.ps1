@@ -42,7 +42,16 @@ param(
     [string]$ExpectSha256,
     [switch]$NoPreimage,
     [string]$ArtifactRoot,
-    [string]$InputsJson
+    [string]$InputsJson,
+    # --- doc:<path> lease wiring (res.lease #29); opt-in, serializes concurrent editors ---
+    [switch]$Lease,                  # opt-in: acquire res.lease doc:<relpath> around write/edit/append
+    [int]$LeaseWaitSeconds = 120,    # blocking wait budget for the doc lease
+    [int]$LeaseTtlSeconds = 300,     # lease TTL (doc ops are quick; renew not needed)
+    [string]$LeaseHolder,            # default $env:LIFEORCH_INSTANCE else doc.io:<pid>
+    [string]$LeaseResource,          # override the auto doc:<relpath> resource name
+    [string]$LeaseDir,               # shared lease dir passthrough (all coordinators must agree)
+    [string]$ResLeasePath,           # override path to Invoke-ResLease.ps1 (default: auto-resolve)
+    [string]$PwshPath                # pwsh used to spawn res.lease (default: resolve via PATH)
 )
 
 Set-StrictMode -Version Latest
@@ -240,12 +249,91 @@ function Get-ArtExt([string]$targetPath) {
 $PreimageMaxBytes = 8000000  # skip the pre-image copy for files larger than ~8 MB
 
 # ---------------------------------------------------------------------------
+# res.lease (#29) integration: opt-in doc:<path> lease to serialize concurrent editors of the same
+# target. CPU-only. Graceful (warn + proceed) when res.lease is absent/errors; released on every emit.
+# ---------------------------------------------------------------------------
+$script:DocLease = $null
+
+function Get-PwshExe([string]$override) {
+    if (-not [string]::IsNullOrWhiteSpace($override)) { return $override }
+    if (-not [string]::IsNullOrWhiteSpace($env:LIFEORCH_PWSH)) { return $env:LIFEORCH_PWSH }
+    try { $c = Get-Command pwsh -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1; if ($null -ne $c -and $c.Source) { return $c.Source } } catch { }
+    try { $mm = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName; if ($mm -match '(?i)pwsh') { return $mm } } catch { }
+    return 'pwsh'
+}
+function Resolve-RepoRootDoc([string]$start) {
+    try {
+        $d = Get-Item -LiteralPath $start
+        for ($i = 0; $i -lt 8 -and $null -ne $d; $i++) {
+            if (Test-Path -LiteralPath (Join-Path $d.FullName 'core-docs')) { return $d.FullName }
+            $d = $d.Parent
+        }
+    } catch { }
+    return $null
+}
+function Resolve-ResLeaseScript([string]$override) {
+    if (-not [string]::IsNullOrWhiteSpace($override)) {
+        if (Test-Path -LiteralPath $override -PathType Leaf) { return (Resolve-Path -LiteralPath $override).Path }
+        return $null
+    }
+    $root = Resolve-RepoRootDoc $PSScriptRoot
+    if ($null -ne $root) {
+        $cand = Join-Path $root 'modules/29-resource-lease/Invoke-ResLease.ps1'
+        if (Test-Path -LiteralPath $cand -PathType Leaf) { return (Resolve-Path -LiteralPath $cand).Path }
+    }
+    $sib = Join-Path (Split-Path -Parent $PSScriptRoot) '29-resource-lease/Invoke-ResLease.ps1'
+    if (Test-Path -LiteralPath $sib -PathType Leaf) { return (Resolve-Path -LiteralPath $sib).Path }
+    return $null
+}
+# Run a res.lease action as a SEPARATE pwsh process (its `exit 0` must NOT terminate doc.io); return the
+# parsed .result object, or $null on any failure (caller treats $null as "lease unavailable" -> proceed).
+function Invoke-DocLeaseAction([string]$LeaseAction, [string]$Resource, [string]$Holder, [int]$Ttl, [double]$Wait, [string]$LeaseIdArg, [string]$LeaseDirArg, [string]$RlPath, [string]$PwshExe) {
+    if ([string]::IsNullOrWhiteSpace($RlPath) -or [string]::IsNullOrWhiteSpace($PwshExe)) { return $null }
+    $a = @('-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File', $RlPath,
+           '-Action', $LeaseAction, '-Resource', $Resource, '-Holder', $Holder)
+    if ($LeaseAction -eq 'acquire') { $a += @('-TtlSeconds', "$Ttl", '-WaitSeconds', "$Wait") }
+    if (-not [string]::IsNullOrWhiteSpace($LeaseIdArg))  { $a += @('-LeaseId', $LeaseIdArg) }
+    if (-not [string]::IsNullOrWhiteSpace($LeaseDirArg)) { $a += @('-LeaseDir', $LeaseDirArg) }
+    $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+    try {
+        $out = & $PwshExe @a 2>$null
+        $txt = ([string]($out | Out-String)).Trim()
+        if ([string]::IsNullOrWhiteSpace($txt)) { return $null }
+        $envObj = $txt | ConvertFrom-Json
+        if ($null -ne $envObj -and ($envObj.PSObject.Properties.Name -contains 'result') -and $null -ne $envObj.result) { return $envObj.result }
+        return $null
+    } catch { Add-Diag "res.lease $LeaseAction invocation error: $($_.Exception.Message)"; return $null }
+    finally { $ErrorActionPreference = $prev }
+}
+# Public projection of the doc-lease state for the result envelope (omits internal path fields).
+function Project-DocLease() {
+    if ($null -eq $script:DocLease) { return $null }
+    $d = $script:DocLease
+    return [ordered]@{
+        enabled = $d.enabled; resource = $d.resource; holder = $d.holder
+        available = $d.available; acquired = $d.acquired; owned = $d.owned
+        already_held = $d.already_held; lease_id = $d.lease_id; held_by = $d.held_by; released = $d.released
+    }
+}
+# Release a freshly-acquired doc lease (idempotent; a same-holder re-attach is left for the outer owner).
+function Release-DocLease() {
+    if ($null -eq $script:DocLease) { return }
+    $d = $script:DocLease
+    if (-not $d.owned) { return }
+    if ($d.released -eq $true) { return }
+    $rel = Invoke-DocLeaseAction 'release' $d.resource $d.holder 0 0 $d.lease_id $d.lease_dir $d.rl_path $d.pwsh
+    if ($null -ne $rel -and [bool]$rel.released) { $d.released = $true; Add-Diag "doc lease released $($d.resource)" }
+    else { $d.released = $false; Add-Diag "doc lease release unconfirmed $($d.resource)" }
+}
+
+# ---------------------------------------------------------------------------
 # Envelope emission
 # ---------------------------------------------------------------------------
 $script:Warnings = @()
 function Add-Warning([string]$w) { $script:Warnings = @($script:Warnings + $w); Add-Diag "WARN: $w" }
 
 function Write-Envelope($status, $result, $errorObj, [string[]]$artifactPaths, [string]$inputsDigest) {
+    Release-DocLease   # backstop: release a held doc lease on every emit (success or error), idempotent
     $finishedAt = [DateTime]::UtcNow
     $artifacts = @()
     foreach ($ap in $artifactPaths) {
@@ -453,6 +541,70 @@ if ($script:OpName -eq 'read') {
     exit 0
 }
 
+# ---------------------------------------------------------------------------
+# doc lease acquire (op is write|edit|append here -- read already returned). Opt-in via -Lease/lease:true.
+# Held around the whole read-modify-write below; released after the atomic write / on any emit (Write-Envelope).
+# ---------------------------------------------------------------------------
+$leaseEnabled = Resolve-Bool 'Lease' 'lease' $false
+if ($leaseEnabled) {
+    $leaseWaitS    = Resolve-Int 'LeaseWaitSeconds' 'lease_wait_s' 120
+    $leaseTtlS     = Resolve-Int 'LeaseTtlSeconds'  'lease_ttl_s'  300
+    $leaseHolderIn = Resolve-Str 'LeaseHolder'   'lease_holder'   ''
+    $leaseResIn    = Resolve-Str 'LeaseResource' 'lease_resource' ''
+    $leaseDirIn    = Resolve-Str 'LeaseDir'      'lease_dir'      ''
+    $resLeaseIn    = Resolve-Str 'ResLeasePath'  'res_lease_path' ''
+    $pwshIn        = Resolve-Str 'PwshPath'      'pwsh_path'      ''
+
+    $holder = if (-not [string]::IsNullOrWhiteSpace($leaseHolderIn)) { $leaseHolderIn }
+              elseif (-not [string]::IsNullOrWhiteSpace($env:LIFEORCH_INSTANCE)) { $env:LIFEORCH_INSTANCE }
+              else { "doc.io:$PID" }
+
+    if (-not [string]::IsNullOrWhiteSpace($leaseResIn)) {
+        $resource = $leaseResIn
+    } else {
+        # doc:<repo-relpath> when the target is under the repo (readable, matches the res.lease convention);
+        # else doc:<abspath>. Forward slashes so all coordinators derive the SAME name for the same file.
+        $key = $script:AbsPath -replace '\\', '/'
+        $repoRoot = Resolve-RepoRootDoc $PSScriptRoot
+        if ($null -ne $repoRoot) {
+            $rootN = ([System.IO.Path]::GetFullPath($repoRoot) -replace '\\', '/').TrimEnd('/')
+            if ($key.Length -gt ($rootN.Length + 1) -and $key.ToLowerInvariant().StartsWith($rootN.ToLowerInvariant() + '/')) {
+                $key = $key.Substring($rootN.Length + 1)
+            }
+        }
+        $resource = 'doc:' + $key
+    }
+
+    $rlPath  = Resolve-ResLeaseScript $resLeaseIn
+    $pwshExe = Get-PwshExe $pwshIn
+    $script:DocLease = [ordered]@{
+        enabled = $true; resource = $resource; holder = $holder; mode = 'wait'
+        available = $null; acquired = $false; owned = $false; already_held = $false
+        lease_id = $null; held_by = $null; released = $null
+        lease_dir = $leaseDirIn; rl_path = $rlPath; pwsh = $pwshExe
+    }
+    if ($null -eq $rlPath) {
+        $script:DocLease.available = $false
+        Add-Warning "doc lease: res.lease not found; proceeding without serialization (graceful fallback)"
+    } else {
+        $script:DocLease.available = $true
+        $acq = Invoke-DocLeaseAction 'acquire' $resource $holder $leaseTtlS $leaseWaitS '' $leaseDirIn $rlPath $pwshExe
+        if ($null -eq $acq) {
+            $script:DocLease.available = $false
+            Add-Warning "doc lease: res.lease invocation failed; proceeding without serialization (graceful fallback)"
+        } elseif ([bool]$acq.acquired) {
+            $script:DocLease.acquired     = $true
+            $script:DocLease.lease_id     = [string]$acq.lease_id
+            $script:DocLease.already_held = [bool]$acq.already_held
+            $script:DocLease.owned        = (-not [bool]$acq.already_held)   # release only what we freshly created
+            Add-Diag "doc lease acquired resource=$resource lease_id=$($script:DocLease.lease_id) already_held=$($script:DocLease.already_held)"
+        } else {
+            $script:DocLease.held_by = [string]$acq.held_by
+            Fail 'doc_lease_unavailable' "doc lease '$resource' is held by '$($acq.held_by)'; not acquired within ${leaseWaitS}s." ([ordered]@{ op = $script:OpName; path = $script:AbsPath; lease = (Project-DocLease) }) $true
+        }
+    }
+}
+
 # ===========================================================================
 # OP: write
 # ===========================================================================
@@ -489,6 +641,7 @@ if ($script:OpName -eq 'write') {
     if ($fileExists) { $pre = Write-Preimage $preBytes $ext }
     Write-AtomicBytes $script:AbsPath $newBytes
     $afterPath = Write-Afterimage $newBytes $ext
+    Release-DocLease   # release the doc lease immediately after the atomic write
 
     $result = [ordered]@{
         op                = 'write'
@@ -502,6 +655,7 @@ if ($script:OpName -eq 'write') {
         file              = (Build-FileState $newBytes $writeEncInfo $newText)
         preimage          = [ordered]@{ written = [bool]$pre.written; path = $pre.path; reason = $pre.reason }
     }
+    if ($null -ne $script:DocLease) { $result.lease = (Project-DocLease) }
     $docJson = Join-Path $artDir 'doc.json'
     [System.IO.File]::WriteAllText($docJson, ($result | ConvertTo-Json -Depth 20), ([System.Text.UTF8Encoding]::new($false)))
     $docMd = Join-Path $artDir 'doc.md'
@@ -564,6 +718,7 @@ if ($script:OpName -eq 'edit') {
     $pre = Write-Preimage $cur.bytes $ext
     Write-AtomicBytes $script:AbsPath $newBytes
     $afterPath = Write-Afterimage $newBytes $ext
+    Release-DocLease   # release the doc lease immediately after the atomic write
 
     $result = [ordered]@{
         op                = 'edit'
@@ -577,6 +732,7 @@ if ($script:OpName -eq 'edit') {
         file              = (Build-FileState $newBytes $cur.enc $newText)
         preimage          = [ordered]@{ written = [bool]$pre.written; path = $pre.path; reason = $pre.reason }
     }
+    if ($null -ne $script:DocLease) { $result.lease = (Project-DocLease) }
     $docJson = Join-Path $artDir 'doc.json'
     [System.IO.File]::WriteAllText($docJson, ($result | ConvertTo-Json -Depth 20), ([System.Text.UTF8Encoding]::new($false)))
     $docMd = Join-Path $artDir 'doc.md'
@@ -652,6 +808,7 @@ if ($script:OpName -eq 'append') {
     if ($fileExists) { $pre = Write-Preimage $existingBytes $ext }
     Write-AtomicBytes $script:AbsPath $newBytes
     $afterPath = Write-Afterimage $newBytes $ext
+    Release-DocLease   # release the doc lease immediately after the atomic write
 
     $newFullText = if ((Test-IsBinary $newBytes $encInfo)) { '' } else { ConvertFrom-Bytes $newBytes $encInfo }
     $result = [ordered]@{
@@ -666,6 +823,7 @@ if ($script:OpName -eq 'append') {
         file              = (Build-FileState $newBytes $encInfo $newFullText)
         preimage          = [ordered]@{ written = [bool]$pre.written; path = $pre.path; reason = $pre.reason }
     }
+    if ($null -ne $script:DocLease) { $result.lease = (Project-DocLease) }
     $docJson = Join-Path $artDir 'doc.json'
     [System.IO.File]::WriteAllText($docJson, ($result | ConvertTo-Json -Depth 20), ([System.Text.UTF8Encoding]::new($false)))
     $docMd = Join-Path $artDir 'doc.md'

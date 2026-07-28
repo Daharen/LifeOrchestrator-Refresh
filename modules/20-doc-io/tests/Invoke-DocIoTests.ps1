@@ -358,6 +358,66 @@ T "envelope has invocation_id" (-not [string]::IsNullOrWhiteSpace($e.invocation_
 T "envelope artifact sha256 matches file" (@($e.artifacts).Count -ge 1 -and $e.artifacts[0].sha256 -eq (Get-DiskSha $e.artifacts[0].path))
 
 # ---------------------------------------------------------------------------
+# DOC LEASE (res.lease #29) -- opt-in serialization of concurrent editors
+# ---------------------------------------------------------------------------
+$reslease = Join-Path (Split-Path (Split-Path $SkillPath -Parent) -Parent) (Join-Path '29-resource-lease' 'Invoke-ResLease.ps1')
+T "res.lease present (for lease tests)" (Test-Path -LiteralPath $reslease)
+if (Test-Path -LiteralPath $reslease) {
+    $ld = Join-Path $work '_leases'
+    function Invoke-Rl([string[]]$a) {
+        $o = & $PwshExe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $reslease @a 2>$null
+        $t = ($o | Out-String).Trim(); if ([string]::IsNullOrWhiteSpace($t)) { return $null }
+        try { return ($t | ConvertFrom-Json).result } catch { return $null }
+    }
+
+    # (a) write with lease ON (free) -> auto-derived resource, acquired+owned+released, free afterward
+    $pL = Join-Path $work 'leased.md'
+    $r = Invoke-Doc @{ op='write'; path=$pL; content='hello lease'; lease=$true; lease_dir=$ld; res_lease_path=$reslease; pwsh_path=$PwshExe }
+    T "lease(a) write ok" ($r.env.status -eq 'ok' -and (Test-Path -LiteralPath $pL))
+    T "lease(a) lease field present" ([bool]($r.env.result.PSObject.Properties.Name -contains 'lease'))
+    T "lease(a) enabled+available" ($r.env.result.lease.enabled -eq $true -and $r.env.result.lease.available -eq $true)
+    T "lease(a) acquired+owned" ($r.env.result.lease.acquired -eq $true -and $r.env.result.lease.owned -eq $true)
+    T "lease(a) has lease_id" (-not [string]::IsNullOrWhiteSpace([string]$r.env.result.lease.lease_id))
+    T "lease(a) released after write" ($r.env.result.lease.released -eq $true)
+    T "lease(a) resource doc:*" ("$($r.env.result.lease.resource)" -like 'doc:*')
+    $stA = Invoke-Rl @('-Action','status','-Resource', "$($r.env.result.lease.resource)", '-LeaseDir', $ld)
+    T "lease(a) free after run" ($null -ne $stA -and $stA.held -eq $false)
+
+    # (b) contended -> other holder holds it; doc.io waits (short) then fails; file untouched; then succeeds after release
+    $pC = Join-Path $work 'contended.md'
+    [System.IO.File]::WriteAllText($pC, "seed`n", ([System.Text.UTF8Encoding]::new($false)))
+    $res = 'doc:' + ($pC -replace '\\','/')
+    $pre = Invoke-Rl @('-Action','acquire','-Resource',$res,'-Holder','other','-TtlSeconds','60','-LeaseDir',$ld)
+    T "lease(b) pre-acquired by other" ($null -ne $pre -and $pre.acquired -eq $true)
+    $r = Invoke-Doc @{ op='append'; path=$pC; content='x'; lease=$true; lease_wait_s=1; lease_dir=$ld; res_lease_path=$reslease; pwsh_path=$PwshExe; lease_resource=$res }
+    T "lease(b) doc_lease_unavailable" ($r.env.status -eq 'error' -and $r.env.error.code -eq 'doc_lease_unavailable')
+    T "lease(b) reports held_by" ($r.env.result.lease.held_by -eq 'other')
+    T "lease(b) file untouched on contention" ((Get-Content -LiteralPath $pC -Raw) -eq "seed`n")
+    Invoke-Rl @('-Action','release','-Resource',$res,'-Holder','other','-LeaseDir',$ld) | Out-Null
+    $r = Invoke-Doc @{ op='append'; path=$pC; content='x'; lease=$true; lease_wait_s=5; lease_dir=$ld; res_lease_path=$reslease; pwsh_path=$PwshExe; lease_resource=$res }
+    T "lease(b) acquires after other releases" ($r.env.status -eq 'ok' -and $r.env.result.lease.acquired -eq $true -and $r.env.result.lease.released -eq $true)
+
+    # (c) res.lease ABSENT -> graceful proceed (available=false); the write still happens
+    $pA = Join-Path $work 'absent-lease.md'
+    $r = Invoke-Doc @{ op='write'; path=$pA; content='no lease tool'; lease=$true; res_lease_path=(Join-Path $work 'no-such-reslease.ps1'); lease_dir=$ld }
+    T "lease(c) graceful when res.lease absent" ($r.env.status -eq 'ok' -and $r.env.result.lease.available -eq $false -and $r.env.result.lease.acquired -eq $false -and (Test-Path -LiteralPath $pA))
+
+    # (d) lease OFF (default) -> no lease field, behaviour unchanged
+    $pO = Join-Path $work 'nolease.md'
+    $r = Invoke-Doc @{ op='write'; path=$pO; content='plain' }
+    T "lease(d) off: no lease field" (-not [bool]($r.env.result.PSObject.Properties.Name -contains 'lease'))
+    T "lease(d) off: write ok" ($r.env.status -eq 'ok' -and (Test-Path -LiteralPath $pO))
+
+    # (e) edit under lease serializes + releases + applies the change
+    $pE2 = Join-Path $work 'edit-lease.md'
+    [System.IO.File]::WriteAllText($pE2, "aaa bbb ccc", ([System.Text.UTF8Encoding]::new($false)))
+    $r = Invoke-Doc @{ op='edit'; path=$pE2; old_string='bbb'; new_string='BBB'; lease=$true; lease_dir=$ld; res_lease_path=$reslease; pwsh_path=$PwshExe }
+    T "lease(e) edit under lease ok+released" ($r.env.status -eq 'ok' -and $r.env.result.lease.released -eq $true -and (Get-Content -LiteralPath $pE2 -Raw) -ceq 'aaa BBB ccc')
+} else {
+    Write-Host "  SKIP  res.lease not present -- doc-lease tests skipped"
+}
+
+# ---------------------------------------------------------------------------
 # ATOMIC: no leftover temp files anywhere under work
 # ---------------------------------------------------------------------------
 $tmps = @(Get-ChildItem -LiteralPath $work -Recurse -Force -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -like '.docio-*.tmp' })
