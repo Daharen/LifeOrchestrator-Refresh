@@ -57,6 +57,7 @@ param(
     [string]$LeaseDir,
     [string]$ResLeasePath,
     [string]$PwshPath,
+    [string]$RepoRoot,
     [switch]$NoPreflight,
     [int]$LeaseTtlSeconds = 1800,
     [double]$LeaseWaitSeconds = 900,
@@ -270,6 +271,99 @@ function Resolve-PlanDir([string]$plansDir, [string]$planId) {
     return $pd
 }
 
+# ---- handoff packet-input contract validation (handoff packet path ONLY) ----
+# Resolve a target skill's op contract from its skill.json: declared input names, the
+# unconditionally-required names, the default op (the input named 'action'), and any
+# op-conditional required names parsed deterministically from input descriptions
+# ("required for action=<op>"). Best-effort + side-effect-free: if the manifest cannot be
+# read or parsed, returns found=$false and the caller passes the item's inputs through
+# UNCHANGED with no warning -- we never block or rewrite against a contract we cannot see.
+function Get-SkillContract([string]$repoRoot, [string]$skillDir) {
+    $out = [ordered]@{ found = $false; path = $null; declared = @(); required = @(); default_op = $null; inputs = @() }
+    if ([string]::IsNullOrWhiteSpace($skillDir)) { return $out }
+    $cand = $skillDir
+    if (-not [System.IO.Path]::IsPathRooted($cand)) {
+        if ([string]::IsNullOrWhiteSpace($repoRoot)) { return $out }
+        $cand = Join-Path $repoRoot $skillDir
+    }
+    $mf = Join-Path $cand 'skill.json'
+    $out.path = $mf
+    if (-not (Test-Path -LiteralPath $mf -PathType Leaf)) { return $out }
+    $m = $null
+    try { $m = Get-Content -LiteralPath $mf -Raw | ConvertFrom-Json } catch { return $out }
+    if ($null -eq $m -or -not (Has $m 'inputs')) { return $out }
+    $declared = New-Object System.Collections.Generic.List[string]
+    $required = New-Object System.Collections.Generic.List[string]
+    $inList = New-Object System.Collections.Generic.List[object]
+    $defaultOp = $null
+    foreach ($inp in @($m.inputs)) {
+        $nm = [string](Prop $inp 'name' '')
+        if ([string]::IsNullOrWhiteSpace($nm)) { continue }
+        $declared.Add($nm)
+        $req = [bool](Prop $inp 'required' $false)
+        if ($req) { $required.Add($nm) }
+        if ($nm -eq 'action') { $defaultOp = [string](Prop $inp 'default' '') }
+        $inList.Add([ordered]@{ name = $nm; required = $req; description = [string](Prop $inp 'description' '') })
+    }
+    $out.found = $true
+    $out.declared = $declared.ToArray()
+    $out.required = $required.ToArray()
+    $out.default_op = $(if ([string]::IsNullOrWhiteSpace($defaultOp)) { $null } else { $defaultOp })
+    $out.inputs = $inList.ToArray()
+    return $out
+}
+# enumerate the top-level keys of an inputs value (PSCustomObject from JSON, or a dictionary).
+function Get-InputKeys($inputs) {
+    $keys = New-Object System.Collections.Generic.List[string]
+    if ($null -eq $inputs) { return $keys }
+    if ($inputs -is [System.Collections.IDictionary]) {
+        foreach ($k in $inputs.Keys) { $keys.Add([string]$k) }
+    } elseif ($null -ne $inputs.PSObject) {
+        foreach ($pn in $inputs.PSObject.Properties.Name) { $keys.Add([string]$pn) }
+    }
+    return $keys
+}
+# Deterministically compare an item's inputs to the resolved op contract.
+# Returns @{ op = <string|null>; warning = <string|null> }. warning is non-null ONLY on a
+# machine-checkable mismatch (unknown keys not declared by the skill; required inputs absent,
+# including op-conditional 'required for action=<op>'). Inputs are never mutated.
+function Get-InputContractWarning($contract, $inputs, [string]$skillId) {
+    $res = [ordered]@{ op = $null; warning = $null }
+    if ($null -eq $contract -or -not $contract.found) { return $res }
+    $keys = @(Get-InputKeys $inputs)
+    $declared = @($contract.declared)
+    # resolve the op: an explicit inputs.action wins, else the manifest's default action.
+    $op = $null
+    if ($keys -contains 'action') {
+        if ($inputs -is [System.Collections.IDictionary]) { $op = [string]$inputs['action'] }
+        elseif (Has $inputs 'action') { $op = [string]$inputs.action }
+    } elseif ($null -ne $contract.default_op) { $op = [string]$contract.default_op }
+    $res.op = $op
+    $issues = New-Object System.Collections.Generic.List[string]
+    # 1. keys the target skill does not declare at all
+    $unknown = New-Object System.Collections.Generic.List[string]
+    foreach ($k in $keys) { if ($declared -notcontains $k) { $unknown.Add($k) } }
+    if ($unknown.Count -gt 0) { $issues.Add("input key(s) not declared by " + $skillId + ": " + ($unknown -join ', ')) }
+    # 2. required inputs (unconditional, plus op-conditional from descriptions) that are absent
+    $missing = New-Object System.Collections.Generic.List[string]
+    foreach ($rq in @($contract.required)) { if (($keys -notcontains $rq) -and ($missing -notcontains $rq)) { $missing.Add($rq) } }
+    if (-not [string]::IsNullOrWhiteSpace($op)) {
+        foreach ($inp in @($contract.inputs)) {
+            $nm = [string]$inp.name
+            $desc = [string]$inp.description
+            if ($desc -match 'required[^.]*action\s*=?\s*''?([A-Za-z0-9._-]+)''?') {
+                $needOp = [string]$matches[1]
+                if (($needOp -eq $op) -and ($keys -notcontains $nm) -and ($missing -notcontains $nm)) { $missing.Add($nm) }
+            }
+        }
+    }
+    if ($missing.Count -gt 0) { $issues.Add("missing required input(s)" + $(if ($op) { " for op '" + $op + "'" } else { "" }) + ": " + ($missing -join ', ')) }
+    if ($issues.Count -gt 0) {
+        $res.warning = "packet input does not match the '" + $skillId + "' op contract -- " + ($issues -join '; ') + ". Inputs are passed through unchanged; reconcile them against " + $skillId + "'s skill.json before running."
+    }
+    return $res
+}
+
 $status = 'ok'; $errorObj = $null; $result = $null; $inputsDigest = $null
 $artifacts = @()
 $warnings = New-Object System.Collections.Generic.List[string]
@@ -296,6 +390,7 @@ try {
         if ((Has $p 'lease_dir')       -and -not $bound.ContainsKey('LeaseDir'))        { $LeaseDir = [string]$p.lease_dir }
         if ((Has $p 'res_lease_path')  -and -not $bound.ContainsKey('ResLeasePath'))    { $ResLeasePath = [string]$p.res_lease_path }
         if ((Has $p 'pwsh_path')       -and -not $bound.ContainsKey('PwshPath'))        { $PwshPath = [string]$p.pwsh_path }
+        if ((Has $p 'repo_root')       -and -not $bound.ContainsKey('RepoRoot'))        { $RepoRoot = [string]$p.repo_root }
         if ((Has $p 'lease_ttl_seconds') -and -not $bound.ContainsKey('LeaseTtlSeconds')) { $LeaseTtlSeconds = [int]$p.lease_ttl_seconds }
         if ((Has $p 'lease_wait_seconds') -and -not $bound.ContainsKey('LeaseWaitSeconds')) { $LeaseWaitSeconds = [double]$p.lease_wait_seconds }
     }
@@ -317,6 +412,10 @@ try {
     }
     New-Item -ItemType Directory -Path $PlansDir -Force | Out-Null
     $PlansDir = (Resolve-Path -LiteralPath $PlansDir).Path
+
+    # repo root -- used ONLY by the handoff packet path to resolve each target skill's op contract
+    # (skill_dir is relative to it). Default: two levels above this module (modules/<NN>-.. -> repo root).
+    if ([string]::IsNullOrWhiteSpace($RepoRoot)) { $RepoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot) }
 
     # ---- worker specs (WorkersJson wins over InputsJson.workers) ----
     $workerSpecs = @()
@@ -513,11 +612,22 @@ try {
                 $skillDir = [string](Prop $w 'skill_dir' '')
                 $expected = $(if ($sum) { $sum } else { "worker " + $wid + " reported " + $st })
                 if (-not [string]::IsNullOrWhiteSpace($skillId) -and -not [string]::IsNullOrWhiteSpace($skillDir)) {
+                    $inputsObj = (Prop $w 'inputs' ([ordered]@{}))
+                    # validate the example inputs against the target skill's op contract (deterministic;
+                    # passes through cleanly if the contract cannot be resolved). Never rewrites inputs.
+                    $contract = Get-SkillContract $RepoRoot $skillDir
+                    $val = Get-InputContractWarning $contract $inputsObj $skillId
                     $it = [ordered]@{
                         id = $wid; kind = 'run_module'; title = "Verify worker " + $wid + " (" + $skillId + ")"
-                        skill_id = $skillId; skill_dir = $skillDir; inputs_json = (Prop $w 'inputs' ([ordered]@{}))
+                        skill_id = $skillId; skill_dir = $skillDir; inputs_json = $inputsObj
                         expected = $expected
                         checklist = @('status == ok', 'the worker output matches its scoped unit')
+                    }
+                    if (-not [string]::IsNullOrWhiteSpace($val.warning)) {
+                        # surface the mismatch to the human auditor -- do NOT silently rewrite semantics
+                        $it['input_warning'] = $val.warning
+                        $it['checklist'] = @('RECONCILE input_warning: verify/repair inputs_json against the skill.json contract before running', 'status == ok', 'the worker output matches its scoped unit')
+                        $warnings.Add("worker $wid packet input: $($val.warning)")
                     }
                 } else {
                     $it = [ordered]@{

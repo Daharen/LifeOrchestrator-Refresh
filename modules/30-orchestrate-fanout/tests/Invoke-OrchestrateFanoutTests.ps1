@@ -231,6 +231,84 @@ $r = Run-Fan @{ action = 'plan'; title = 'S13b'; no_preflight = $true; workers =
 $cin3 = Get-Content -LiteralPath (Res $r).check_in_prompt_path -Raw
 Ok (-not ($cin3 -match 'GPU clamp below')) 'S13b no dangling GPU reference with no gpu workers'
 
+# --- S14: handoff packet-input contract validation (the D-0057 stale-packet-input defect) ---
+# Build a temp fixture repo with two skill.json op contracts, then handoff with -RepoRoot at it.
+Write-Output "S14 packet-input contract validation:"
+$fixRepo = Join-Path $work 'fixrepo'
+$fvDir = Join-Path $fixRepo 'modules/fix-valid'
+$fbDir = Join-Path $fixRepo 'modules/fix-bridge'
+New-Item -ItemType Directory -Path $fvDir -Force | Out-Null
+New-Item -ItemType Directory -Path $fbDir -Force | Out-Null
+$fvManifest = [ordered]@{
+    schema = 'lifeorch.skill.manifest/0.1'; skill_id = 'fix.valid'; name = 'Fixture Valid'; version = '0.1.0'
+    contract_version = '0.2'; purpose = 'fixture'; determinism = 'deterministic'
+    inputs = @(
+        [ordered]@{ name = 'path'; type = 'string'; required = $true; description = 'Root to inspect.' },
+        [ordered]@{ name = 'depth'; type = 'int'; required = $false; description = 'Depth.' }
+    )
+}
+Set-Content -LiteralPath (Join-Path $fvDir 'skill.json') -Value ($fvManifest | ConvertTo-Json -Depth 8) -Encoding ascii
+$fbManifest = [ordered]@{
+    schema = 'lifeorch.skill.manifest/0.1'; skill_id = 'fix.bridge'; name = 'Fixture Bridge'; version = '0.1.0'
+    contract_version = '0.2'; purpose = 'fixture'; determinism = 'deterministic'
+    inputs = @(
+        [ordered]@{ name = 'action'; type = 'string'; required = $false; default = 'pack'; description = 'pack | read-return.' },
+        [ordered]@{ name = 'prompt'; type = 'string'; required = $false; description = 'Instructions (required for action=pack).' },
+        [ordered]@{ name = 'question'; type = 'string'; required = $false; description = 'The question.' },
+        [ordered]@{ name = 'paths'; type = 'string[]'; required = $false; description = 'File paths/globs.' }
+    )
+}
+Set-Content -LiteralPath (Join-Path $fbDir 'skill.json') -Value ($fbManifest | ConvertTo-Json -Depth 8) -Encoding ascii
+
+$r = Run-Fan @{ action = 'plan'; iteration = 7; no_preflight = $true; workers = @(
+        @{ id = 'v1'; unit = 'valid inputs'; skill_id = 'fix.valid'; skill_dir = 'modules/fix-valid'; inputs = @{ path = '.'; depth = 1 } },
+        @{ id = 'm1'; unit = 'stale inputs'; skill_id = 'fix.bridge'; skill_dir = 'modules/fix-bridge'; inputs = @{ task = 'do a thing'; files = @('README.md') } },
+        @{ id = 'n1'; unit = 'a hand check with no module' }
+    ) } $null
+$planPI = (Res $r).plan_id
+$null = Run-Fan @{ action = 'report'; plan_id = $planPI; worker_id = 'v1'; state = 'done'; summary = 'ok' } $null
+$null = Run-Fan @{ action = 'report'; plan_id = $planPI; worker_id = 'm1'; state = 'done'; summary = 'ok' } $null
+$null = Run-Fan @{ action = 'report'; plan_id = $planPI; worker_id = 'n1'; state = 'done'; summary = 'ok' } $null
+$r = Run-Fan @{ action = 'handoff'; plan_id = $planPI } @('-RepoRoot', $fixRepo)
+$res = Res $r
+$pkt = $null; try { $pkt = Get-Content -LiteralPath $res.verification_packet_path -Raw | ConvertFrom-Json } catch { }
+Ok ($null -ne $pkt -and @($pkt.items).Count -eq 3) 'S14 packet has 3 items'
+$vItem = @($pkt.items | Where-Object { $_.id -eq 'v1' })[0]
+Ok ($null -ne $vItem -and $vItem.kind -eq 'run_module') 'S14 valid worker -> run_module item'
+Ok ($null -ne $vItem -and -not (Has $vItem 'input_warning')) 'S14 valid inputs pass through with NO input_warning'
+$mItem = @($pkt.items | Where-Object { $_.id -eq 'm1' })[0]
+Ok ($null -ne $mItem -and $mItem.kind -eq 'run_module') 'S14 mismatch worker -> run_module item'
+Ok ($null -ne $mItem -and (Has $mItem 'input_warning')) 'S14 contract mismatch yields an input_warning'
+Ok ($null -ne $mItem -and $mItem.input_warning -match 'task' -and $mItem.input_warning -match 'files') 'S14 input_warning names the undeclared keys (task, files)'
+Ok ($null -ne $mItem -and $mItem.input_warning -match 'prompt') 'S14 input_warning names the op-required missing input (prompt for action=pack)'
+Ok ($null -ne $mItem -and (@($mItem.inputs_json.PSObject.Properties.Name) -contains 'task')) 'S14 mismatch inputs are passed through UNCHANGED (not rewritten)'
+Ok ($null -ne $mItem -and @($mItem.checklist)[0] -match 'RECONCILE input_warning') 'S14 mismatch item checklist leads with the reconcile step'
+$nItem = @($pkt.items | Where-Object { $_.id -eq 'n1' })[0]
+Ok ($null -ne $nItem -and $nItem.kind -eq 'human_action') 'S14 no-skill_id worker still yields a human_action item'
+Ok ($null -ne $nItem -and -not (Has $nItem 'input_warning')) 'S14 human_action item has no input_warning'
+Ok ($null -ne $r.env -and (@($r.env.warnings) | Where-Object { $_ -match 'm1' -and $_ -match 'packet input' }).Count -ge 1) 'S14 handoff envelope warns about the m1 packet-input mismatch'
+
+# S14b: a contract that cannot be resolved -> pass the item through unchanged (no spurious warning)
+$r = Run-Fan @{ action = 'plan'; iteration = 7; no_preflight = $true; workers = @(
+        @{ id = 'u1'; unit = 'unresolved contract'; skill_id = 'no.such'; skill_dir = 'modules/does-not-exist'; inputs = @{ anything = 1 } }
+    ) } $null
+$planU = (Res $r).plan_id
+$null = Run-Fan @{ action = 'report'; plan_id = $planU; worker_id = 'u1'; state = 'done'; summary = 'ok' } $null
+$r = Run-Fan @{ action = 'handoff'; plan_id = $planU } @('-RepoRoot', $fixRepo)
+$pktU = $null; try { $pktU = Get-Content -LiteralPath (Res $r).verification_packet_path -Raw | ConvertFrom-Json } catch { }
+$uItem = @($pktU.items | Where-Object { $_.id -eq 'u1' })[0]
+Ok ($null -ne $uItem -and $uItem.kind -eq 'run_module' -and -not (Has $uItem 'input_warning')) 'S14b unresolvable contract -> item passes through with no input_warning'
+
+# S14c: plan/report/status + plan.json format are UNCHANGED (the live-orchestrator safety invariant)
+$r = Run-Fan @{ action = 'plan'; iteration = 7; no_preflight = $true; workers = @(
+        @{ id = 'z1'; unit = 'z'; skill_id = 'fix.valid'; skill_dir = 'modules/fix-valid'; inputs = @{ path = '.' } }
+    ) } $null
+$resZ = Res $r
+$planZjson = $null; try { $planZjson = Get-Content -LiteralPath (Join-Path $resZ.plan_dir 'plan.json') -Raw | ConvertFrom-Json } catch { }
+Ok ($null -ne $planZjson -and $planZjson.schema -eq 'lifeorch.fanout.plan/0.1') 'S14c plan.json schema unchanged'
+$z1 = @($planZjson.workers | Where-Object { $_.id -eq 'z1' })[0]
+Ok ($null -ne $z1 -and -not (Has $z1 'input_warning')) 'S14c plan.json worker record has no packet-only fields (unchanged shape)'
+
 try { Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue } catch { }
 Write-Output ""
 Write-Output ("==== RESULT pass=$pass fail=$fail ====")
