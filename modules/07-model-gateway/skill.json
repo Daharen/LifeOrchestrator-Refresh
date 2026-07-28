@@ -9,7 +9,7 @@
   "invocation": {
     "method": "pwsh-file",
     "entrypoint": "Invoke-ModelGateway.ps1",
-    "args_spec": "Named params: -Model <model_id> | -Tier <tiny|weak|mid|strong>; -Prompt <s> [-System <s>]; sampling -MaxTokens -Temperature -TopP -TopK -Seed [-Stop <s[]>]; -Registry <models.json> -Port <int> -GpuLayers <int> -Context <int> -LoadTimeoutSec <int> -ReviewQueuePath <path>. GPU lease (res.lease #29): -GpuLease <off|auto|wait|require> -GpuLeaseWaitSeconds <int> -GpuLeaseTtlSeconds <int> -GpuLeaseHolder <id> -LeaseDir <dir> -ResLeasePath <path> -PwshPath <path>. OR -InputsJson '<json {model,tier,prompt,system,messages,max_tokens,temperature,top_p,top_k,seed,stop,registry,port,gpu_layers,context,load_timeout_s,review_queue_path,gpu_lease,gpu_lease_wait_s,gpu_lease_ttl_s,gpu_lease_holder,lease_dir,res_lease_path,pwsh_path}>'. Optional -ArtifactRoot, -InvocationId."
+    "args_spec": "Named params: -Model <model_id> | -Tier <tiny|weak|mid|strong>; -Prompt <s> [-System <s>]; sampling -MaxTokens -Temperature -TopP -TopK -Seed [-Stop <s[]>]; -Registry <models.json> -Port <int> -GpuLayers <int> -Context <int> -LoadTimeoutSec <int> -ReviewQueuePath <path>. GPU lease (res.lease #29): -GpuLease <off|auto|wait|require> -GpuLeaseWaitSeconds <int> -GpuLeaseTtlSeconds <int> -GpuLeaseHolder <id> -LeaseDir <dir> -ResLeasePath <path> -PwshPath <path>. Governor Phase 2 warm server: -Warm (keep a resident llama-server across calls, detached so it outlives the launching task) -EvictWarm (clean stop) -WarmRegistryPath <path>. OR -InputsJson '<json {model,tier,prompt,system,messages,max_tokens,temperature,top_p,top_k,seed,stop,registry,port,gpu_layers,context,load_timeout_s,review_queue_path,gpu_lease,gpu_lease_wait_s,gpu_lease_ttl_s,gpu_lease_holder,lease_dir,res_lease_path,pwsh_path,warm,evict_warm,warm_registry_path}>'. Optional -ArtifactRoot, -InvocationId."
   },
   "inputs": [
     { "name": "model", "type": "string", "required": false, "description": "Explicit registry model_id (e.g. llm.weak.qwen2p5-1p5b). Highest precedence." },
@@ -34,11 +34,14 @@
     { "name": "gpu_lease_holder", "type": "string", "required": false, "description": "Stable holder id; default $env:LIFEORCH_INSTANCE else model.gateway:<pid>." },
     { "name": "lease_dir", "type": "string", "required": false, "description": "Shared lease dir passthrough to res.lease (all coordinating processes must resolve the same dir)." },
     { "name": "res_lease_path", "type": "string", "required": false, "description": "Override path to Invoke-ResLease.ps1 (default: auto-resolve via repo root / sibling module)." },
-    { "name": "pwsh_path", "type": "string", "required": false, "description": "pwsh used to spawn res.lease as a child process (default: resolve via PATH)." }
+    { "name": "pwsh_path", "type": "string", "required": false, "description": "pwsh used to spawn res.lease as a child process (default: resolve via PATH)." },
+    { "name": "warm", "type": "bool", "required": false, "default": false, "description": "Governor Phase 2: keep the llama-server RESIDENT across separate gateway invocations (registry runtime/warm-server.json). Reuse when the model is unchanged; evict+reload on a model change. On Windows the server is launched detached via Win32_Process.Create so it OUTLIVES the launching task/Job (a Start-Process child dies on task completion); the call returns immediately, never blocking on the server. PID-tracked + killable (never orphaned). The gpu lease stays per-call. Default off = classic per-call spawn/kill." },
+    { "name": "evict_warm", "type": "bool", "required": false, "default": false, "description": "Tear down the resident warm server and return immediately (action=evict_warm, no model load, no generation) -- the clean explicit stop; leaves 0 orphaned llama-server." },
+    { "name": "warm_registry_path", "type": "string", "required": false, "description": "Override the resident-server registry path (default: runtime/warm-server.json)." }
   ],
   "outputs": {
     "result_shape": "object",
-    "description": "{ model, engine, mode, selected_from, request{messages,sampling}, output{role,text}, generation{finish_reason,prompt_tokens,completion_tokens,total_tokens,timings}, server{port,health_ms,gpu_layers,context,gpu_lease{mode,requested,available,acquired,owned,already_held,lease_id,holder,held_by,released}} }"
+    "description": "{ model, engine, mode, selected_from, request{messages,sampling}, output{role,text}, generation{finish_reason,prompt_tokens,completion_tokens,total_tokens,timings}, server{port,health_ms,gpu_layers,context,gpu_lease{mode,requested,available,acquired,owned,already_held,lease_id,holder,held_by,released},warm{enabled,reused,started_new,evicted,load_ms,registry_path}} }. A -EvictWarm call returns { action:'evict_warm', warm{registry_path,had_resident,was_alive,identity_ok,evicted,resident_pid} } instead."
   },
   "requirements": {
     "executables": ["pwsh>=7.4", "llama-server (llama.cpp CUDA b8661)"],

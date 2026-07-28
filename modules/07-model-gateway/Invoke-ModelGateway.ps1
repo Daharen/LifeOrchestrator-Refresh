@@ -9,6 +9,14 @@
   every discovered local model (LLM/STT/TTS/embedding), but only wired LLMs execute in this MVP — a
   non-wired or non-LLM model returns a structured `model_not_wired` error.
 
+  Governor Phase 2 -- WARM/persistent server (opt-in via -Warm): the llama-server is kept RESIDENT across
+  separate gateway invocations (recorded in runtime/warm-server.json). A later -Warm call REUSES the resident
+  server when the model (+ ngl/ctx) is unchanged (no reload -> health_ms ~0), and EVICTS+reloads it on a model
+  change. The gpu lease stays PER-CALL (acquired/released each invocation, NOT held across the resident life);
+  because every GPU user takes the lease first and then reuses-or-evicts the single resident, at most one
+  llama-server is ever on the GPU. Default is OFF -> the classic per-call spawn/kill is byte-for-byte unchanged.
+  -EvictWarm tears down the resident server and returns (no generation) for clean teardown / no orphans.
+
   This is the first stochastic/mixed skill: it populates `model_provenance[]` (id/version/params/tokens/
   timings/finish_reason/runtime) and `confidence` (a documented generation-completeness heuristic, NOT a
   semantic-correctness score). Emits one lifeorch.skill.result/0.1 envelope on stdout; diagnostics to
@@ -46,7 +54,11 @@ param(
     [string]$GpuLeaseHolder,             # stable holder id; default $env:LIFEORCH_INSTANCE else model.gateway:<pid>
     [string]$LeaseDir,                   # shared lease dir passthrough (default: res.lease resolves it)
     [string]$ResLeasePath,               # override path to Invoke-ResLease.ps1 (default: auto-resolve)
-    [string]$PwshPath                    # pwsh used to spawn res.lease (default: resolve via PATH)
+    [string]$PwshPath,                   # pwsh used to spawn res.lease (default: resolve via PATH)
+    # --- Governor Phase 2: warm/persistent llama-server ---
+    [switch]$Warm,                       # keep the llama-server resident across calls; reuse when model unchanged
+    [switch]$EvictWarm,                  # tear down the resident warm server and return (no generation)
+    [string]$WarmRegistryPath            # override the resident-server registry (default: runtime/warm-server.json)
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -132,6 +144,81 @@ function Invoke-GpuLeaseAction {
     } finally { $ErrorActionPreference = $prev }
 }
 
+# ---- warm/persistent server (Governor Phase 2): a single cross-invocation resident llama-server ----
+# The registry (runtime/warm-server.json) records the one resident server so a LATER, separate gateway
+# invocation can reuse it (same model) or evict+reload it (model change). The gpu lease stays PER-CALL;
+# a resident server holds VRAM between calls, and any GPU user acquires the gpu lease first and then
+# reuses-or-evicts the single resident -> at most one llama-server is ever on the GPU (no orphans).
+function Get-WarmRegistryPath {
+    param([string]$Override)
+    if (-not [string]::IsNullOrWhiteSpace($Override)) { return $Override }
+    return (Join-Path $PSScriptRoot 'runtime/warm-server.json')
+}
+function Read-WarmServer {
+    param([string]$Path)
+    if ([string]::IsNullOrWhiteSpace($Path) -or -not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
+    try { return (Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json) } catch { return $null }
+}
+function Write-WarmServer {
+    param([string]$Path, $Obj)
+    try {
+        $dir = Split-Path -Parent $Path
+        if (-not [string]::IsNullOrWhiteSpace($dir) -and -not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        $tmp = "$Path.tmp-$([Guid]::NewGuid().ToString('N').Substring(0,8))"
+        [System.IO.File]::WriteAllText($tmp, ($Obj | ConvertTo-Json -Depth 8), $utf8)
+        [System.IO.File]::Move($tmp, $Path, $true)
+        return $true
+    } catch { return $false }
+}
+function Clear-WarmServer {
+    param([string]$Path)
+    try { if (-not [string]::IsNullOrWhiteSpace($Path) -and (Test-Path -LiteralPath $Path -PathType Leaf)) { Remove-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue } } catch { }
+}
+# Liveness + identity of a recorded resident: PID alive AND (start-ticks match when readable).
+function Get-WarmServerLiveness {
+    param($Reg)
+    $res = [ordered]@{ alive = $false; identity_ok = $false }
+    if ($null -eq $Reg -or -not (Has $Reg 'pid')) { return $res }
+    $procId = [int]$Reg.pid
+    $proc = $null
+    try { $proc = Get-Process -Id $procId -ErrorAction Stop } catch { return $res }
+    $res.alive = $true
+    try {
+        $wantTicks = if (Has $Reg 'start_ticks') { [long]$Reg.start_ticks } else { 0 }
+        if ($wantTicks -gt 0) {
+            # Tolerance (2s): Process.StartTime is imprecise on Linux (~ms jitter between the launch handle and
+            # a later Get-Process read); a REUSED pid would differ by seconds+, so this still rejects impostors.
+            $res.identity_ok = ([Math]::Abs($proc.StartTime.Ticks - $wantTicks) -lt [TimeSpan]::FromSeconds(2).Ticks)
+        }
+        else { $res.identity_ok = $true }
+    } catch { $res.identity_ok = $false }   # StartTime unreadable -> cannot claim identity
+    return $res
+}
+function Test-ServerHealthy {
+    param([string]$ServerHost, [int]$ServerPort, [int]$TimeoutSec = 2)
+    if ($ServerPort -le 0) { return $false }
+    try { $h = Invoke-WebRequest -Uri "http://$($ServerHost):$ServerPort/health" -UseBasicParsing -TimeoutSec $TimeoutSec; return ($h.StatusCode -eq 200) } catch { return $false }
+}
+# Kill a resident server ONLY when it is positively identified (never kill a foreign/reused PID).
+function Stop-ResidentServer {
+    param($Reg, $Liveness)
+    if ($null -eq $Reg -or -not (Has $Reg 'pid')) { return $true }
+    if (-not $Liveness.alive) { return $true }         # already gone
+    if (-not $Liveness.identity_ok) { return $false }  # alive but unidentified -> refuse to kill
+    $procId = [int]$Reg.pid
+    try { & taskkill /PID $procId /T /F 2>$null | Out-Null } catch { }
+    try { $pp = Get-Process -Id $procId -ErrorAction SilentlyContinue; if ($null -ne $pp) { $pp.Kill($true) } } catch { }
+    # CONFIRM the process is gone before returning: Process.Kill can return before the OS reaps the pid
+    # (esp. on Linux), and Stop-Process -Force is a sturdier fallback. Bounded to ~3s.
+    for ($i = 0; $i -lt 30; $i++) {
+        $still = $null; try { $still = Get-Process -Id $procId -ErrorAction SilentlyContinue } catch { $still = $null }
+        if ($null -eq $still) { return $true }
+        try { Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue } catch { }
+        Start-Sleep -Milliseconds 100
+    }
+    return $false
+}
+
 $status = 'ok'; $errorObj = $null; $result = $null; $inputsDigest = $null
 $confidence = $null; $modelProvenance = @()
 $artifacts = @()
@@ -172,9 +259,36 @@ try {
             if (Has $p 'lease_dir')        { $LeaseDir = [string]$p.lease_dir }
             if (Has $p 'res_lease_path')    { $ResLeasePath = [string]$p.res_lease_path }
             if (Has $p 'pwsh_path')        { $PwshPath = [string]$p.pwsh_path }
+            if (Has $p 'warm')             { $Warm = [bool]$p.warm }
+            if (Has $p 'evict_warm')       { $EvictWarm = [bool]$p.evict_warm }
+            if (Has $p 'warm_registry_path') { $WarmRegistryPath = [string]$p.warm_registry_path }
         }
     }
     New-Item -ItemType Directory -Path $invDir -Force | Out-Null
+
+    # ---- warm-server registry path + evict-mode flag (Governor Phase 2) ----
+    $warmRegPath = Get-WarmRegistryPath $WarmRegistryPath
+    $doEvictWarm = [bool]$EvictWarm
+
+    if ($doEvictWarm) {
+        # ---- EVICT shortcut: tear down the resident warm server and return (no model load, no generation) ----
+        $evResident = Read-WarmServer $warmRegPath
+        $evAlive = $false; $evIdentity = $false; $evEvicted = $false
+        if ($null -ne $evResident) {
+            $evl = Get-WarmServerLiveness $evResident
+            $evAlive = [bool]$evl.alive; $evIdentity = [bool]$evl.identity_ok
+            if (Stop-ResidentServer $evResident $evl) { $evEvicted = $true }
+            else { $warnings.Add('evict_warm: resident alive but unidentified; not killed (possible external process)') }
+            Clear-WarmServer $warmRegPath
+        }
+        $status = 'ok'
+        $result = [ordered]@{
+            action = 'evict_warm'
+            warm   = [ordered]@{ registry_path = $warmRegPath; had_resident = ($null -ne $evResident); was_alive = $evAlive; identity_ok = $evIdentity; evicted = $evEvicted; resident_pid = $(if ($null -ne $evResident -and (Has $evResident 'pid')) { [int]$evResident.pid } else { $null }) }
+        }
+        Write-Diag "evict_warm: had_resident=$($null -ne $evResident) alive=$evAlive evicted=$evEvicted"
+    }
+    else {
 
     # ---- load registry ----
     if ([string]::IsNullOrWhiteSpace($Registry)) { $Registry = Join-Path $PSScriptRoot 'models.json' }
@@ -273,7 +387,7 @@ try {
     }
     $srvLog = Join-Path $invDir 'server.out.log'; $srvErr = Join-Path $invDir 'server.err.log'
     $srvArgs = @('-m', $modelPath, '-ngl', "$ngl", '-c', "$ctx", '--host', '127.0.0.1', '--port', "$usePort", '--no-warmup')
-    $sp = $null; $healthOk = $false; $healthMs = $null; $loadStart = $null
+    $sp = $null; $serverPid = 0; $healthOk = $false; $healthMs = $null; $loadStart = $null
     $resp = $null
     try {
         # -- acquire the gpu lease (graceful fallback: log + proceed if res.lease is absent; wait|proceed|require per the switch) --
@@ -312,19 +426,91 @@ try {
             }
         }
 
-        # ---- start server, health-wait, complete, stop ----
-        Write-Diag "starting llama-server pid? port=$usePort model=$($m.model_id) ngl=$ngl ctx=$ctx"
+        # ---- start OR reuse the server (warm-aware), health-wait, complete, teardown ----
+        $warmOn = [bool]$Warm
+        $warmReused = $false; $warmStartedNew = $false; $warmEvicted = $false
+        $resident = Read-WarmServer $warmRegPath
+        if ($null -ne $resident) {
+            $rl = Get-WarmServerLiveness $resident
+            $residentPort = if (Has $resident 'port') { [int]$resident.port } else { 0 }
+            $sameModel = $false
+            if ((Has $resident 'model_id') -and ([string]$resident.model_id -eq [string]$m.model_id) -and (Has $resident 'ngl') -and ([int]$resident.ngl -eq $ngl) -and (Has $resident 'ctx') -and ([int]$resident.ctx -eq $ctx)) { $sameModel = $true }
+            $healthy = $rl.alive -and (Test-ServerHealthy '127.0.0.1' $residentPort)
+            if ($warmOn -and $healthy -and $sameModel) {
+                $usePort = $residentPort; $warmReused = $true
+                Write-Diag "warm hit: reusing resident llama-server pid=$($resident.pid) port=$usePort model=$($m.model_id)"
+            } else {
+                # different model / unhealthy / non-warm call -> evict so at most one server is ever on the GPU
+                if ($rl.alive) {
+                    if (Stop-ResidentServer $resident $rl) { $warmEvicted = $true; Write-Diag "evicted resident server pid=$($resident.pid) (sameModel=$sameModel healthy=$healthy warm=$warmOn)" }
+                    else { $warnings.Add("resident server pid=$($resident.pid) alive but unidentified; not killed (possible external process)"); Write-Diag 'resident unidentified; not killed' }
+                }
+                Clear-WarmServer $warmRegPath
+                $resident = $null
+            }
+        }
+
+        Write-Diag "server: reuse=$warmReused warm=$warmOn port=$usePort model=$($m.model_id) ngl=$ngl ctx=$ctx"
         $loadStart = [System.Diagnostics.Stopwatch]::StartNew()
         try {
-            $sp = Start-Process -FilePath $enginePath -ArgumentList $srvArgs -RedirectStandardOutput $srvLog -RedirectStandardError $srvErr -PassThru -WindowStyle Hidden
-            $deadline = (Get-Date).AddSeconds($LoadTimeoutSec)
-            while ((Get-Date) -lt $deadline) {
-                if ($sp.HasExited) { throw [PSCustomObject]@{ code = 'server_start_failed'; message = "llama-server exited during load (code $($sp.ExitCode)); see server.err.log"; retryable = $true } }
-                try { $h = Invoke-WebRequest -Uri "http://127.0.0.1:$usePort/health" -UseBasicParsing -TimeoutSec 2; if ($h.StatusCode -eq 200) { $healthOk = $true; break } } catch { }
-                Start-Sleep -Milliseconds 500
+            if (-not $warmReused) {
+                # start a fresh server. Cross-platform launch; a .ps1 engine_path is run under pwsh (mock/test seam).
+                if ($enginePath -match '\.ps1$') {
+                    $spFile = (Get-PwshExe)
+                    $spArgs = @('-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', $enginePath) + $srvArgs
+                } else {
+                    $spFile = $enginePath; $spArgs = $srvArgs
+                }
+                # Launch the server. A WARM server on Windows MUST escape the executor task's Job object, or
+                # the resident is killed when the launching task completes (verified: the pid died before the
+                # next task, so warmth never survived across separate gateway invocations). A Start-Process
+                # child stays in the caller's Job; Win32_Process.Create parents the server to WmiPrvSE (OUTSIDE
+                # the Job) so it OUTLIVES the job -- while staying PID-tracked and killable by -EvictWarm / the
+                # model-change evict / the executor's orphan-name sweep. Non-warm and the off-machine/Linux path
+                # keep the redirected Start-Process: their server is killed before the call returns (or has no
+                # Job-kill), so nothing leaks. (CIM Win32_Process is Windows-only, hence the $IsWindows guard.)
+                $useWmiLaunch = ($warmOn -and $IsWindows)
+                if ($useWmiLaunch) {
+                    $cmdLine = ((@($spFile) + $spArgs) | ForEach-Object { $s = "$_"; if ($s -match '[\s"]') { '"' + ($s -replace '"', '\"') + '"' } else { $s } }) -join ' '
+                    $wmi = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $cmdLine }
+                    $wrc = if ($null -ne $wmi) { [int]$wmi.ReturnValue } else { -1 }
+                    $wpid = if ($null -ne $wmi -and $null -ne $wmi.ProcessId) { [int]$wmi.ProcessId } else { 0 }
+                    if ($wrc -ne 0 -or $wpid -le 0) { throw [PSCustomObject]@{ code = 'server_start_failed'; message = "Win32_Process.Create failed (rc=$wrc pid=$wpid)"; retryable = $true } }
+                    $serverPid = $wpid
+                } else {
+                    $spSplat = @{ FilePath = $spFile; ArgumentList = $spArgs; PassThru = $true; RedirectStandardOutput = $srvLog; RedirectStandardError = $srvErr }
+                    if ($IsWindows) { $spSplat['WindowStyle'] = 'Hidden' }
+                    $sp = Start-Process @spSplat
+                    $serverPid = [int]$sp.Id
+                }
+                $warmStartedNew = $true
+                # start-ticks (identity): re-read the pid -- WMI returns no process handle, and Start-Process
+                # StartTime is re-readable too; a REUSED pid would differ by seconds, so this still rejects impostors.
+                $startTicks = 0
+                try { $startTicks = [long]((Get-Process -Id $serverPid -ErrorAction Stop).StartTime.Ticks) } catch { try { if ($null -ne $sp) { $startTicks = [long]$sp.StartTime.Ticks } } catch { } }
+                if ($warmOn) {
+                    # record the resident registry IMMEDIATELY (before the health wait) so a mid-load crash
+                    # leaves a tracked pid that the next call can identify and clean up.
+                    [void](Write-WarmServer $warmRegPath ([ordered]@{
+                        schema = 'lifeorch.model_gateway.warm/0.1'; pid = $serverPid; start_ticks = $startTicks
+                        host = '127.0.0.1'; port = $usePort; model_id = $m.model_id; model_path = $modelPath
+                        engine_path = $enginePath; ngl = $ngl; ctx = $ctx
+                        started_at_utc = ([DateTime]::UtcNow).ToString('o'); holder = $glHolder
+                    }))
+                }
+                $deadline = (Get-Date).AddSeconds($LoadTimeoutSec)
+                while ((Get-Date) -lt $deadline) {
+                    $procGone = if ($null -ne $sp) { $sp.HasExited } else { ($null -eq (Get-Process -Id $serverPid -ErrorAction SilentlyContinue)) }
+                    if ($procGone) { throw [PSCustomObject]@{ code = 'server_start_failed'; message = 'llama-server exited during load; see server logs'; retryable = $true } }
+                    if (Test-ServerHealthy '127.0.0.1' $usePort) { $healthOk = $true; break }
+                    Start-Sleep -Milliseconds 500
+                }
+                $loadStart.Stop(); $healthMs = [int]$loadStart.Elapsed.TotalMilliseconds
+                if (-not $healthOk) { throw [PSCustomObject]@{ code = 'health_timeout'; message = "llama-server did not become healthy within $LoadTimeoutSec s"; retryable = $true } }
+            } else {
+                # warm reuse: no model load; health already confirmed above
+                $loadStart.Stop(); $healthOk = $true; $healthMs = [int]$loadStart.Elapsed.TotalMilliseconds
             }
-            $loadStart.Stop(); $healthMs = [int]$loadStart.Elapsed.TotalMilliseconds
-            if (-not $healthOk) { throw [PSCustomObject]@{ code = 'health_timeout'; message = "llama-server did not become healthy within $LoadTimeoutSec s"; retryable = $true } }
 
             $bodyObj = [ordered]@{ model = $m.model_id; messages = $msgArr; max_tokens = $MaxTokens; temperature = $Temperature; top_p = $TopP; top_k = $TopK; seed = $Seed }
             if ($stopArr.Count -gt 0) { $bodyObj.stop = $stopArr }
@@ -338,9 +524,16 @@ try {
             $genSw.Stop()
         }
         finally {
-            if ($null -ne $sp) {
-                try { & taskkill /PID $sp.Id /T /F 2>$null | Out-Null } catch { }
-                try { if (-not $sp.HasExited) { $sp.Kill($true) } } catch { }
+            # teardown: WARM leaves the server resident (registry persists) so the NEXT call reuses it;
+            # NON-WARM kills the per-call server (unchanged). A freshly-started warm server that FAILED
+            # to load is torn down + de-registered so no dead resident is left behind.
+            $killServer = $false
+            if (-not $warmOn) { $killServer = ($serverPid -gt 0) }
+            elseif ($warmStartedNew -and -not $healthOk) { $killServer = ($serverPid -gt 0); Clear-WarmServer $warmRegPath }
+            if ($killServer -and $serverPid -gt 0) {
+                # kill by PID (works for both the $sp Start-Process and the detached WMI launch)
+                try { & taskkill /PID $serverPid /T /F 2>$null | Out-Null } catch { }
+                try { $pp = Get-Process -Id $serverPid -ErrorAction SilentlyContinue; if ($null -ne $pp) { $pp.Kill($true) } } catch { }
             }
         }
     }
@@ -396,7 +589,8 @@ try {
         request = [ordered]@{ messages = $msgArr; max_tokens = $MaxTokens; temperature = $Temperature; top_p = $TopP; top_k = $TopK; seed = $Seed; stop = $stopArr }
         output = [ordered]@{ role = 'assistant'; text = $content }
         generation = [ordered]@{ finish_reason = $finish; prompt_tokens = $ptok; completion_tokens = $ctok; total_tokens = $ttok; timings = $timings }
-        server = [ordered]@{ port = $usePort; health_ms = $healthMs; gpu_layers = $ngl; context = $ctx; gpu_lease = $leaseState }
+        server = [ordered]@{ port = $usePort; health_ms = $healthMs; gpu_layers = $ngl; context = $ctx; gpu_lease = $leaseState
+            warm = [ordered]@{ enabled = $warmOn; reused = $warmReused; started_new = $warmStartedNew; evicted = $warmEvicted; load_ms = $healthMs; registry_path = $warmRegPath } }
     }
 
     $modelProvenance = @(
@@ -416,6 +610,7 @@ try {
         }
     )
     Write-Diag "ok model=$($m.model_id) finish=$finish ctok=$ctok conf=$confidence"
+    }  # end else (non-evict generation path)
 }
 catch {
     $ex = $_.TargetObject
@@ -437,7 +632,7 @@ catch {
 try {
     if (-not (Test-Path -LiteralPath $invDir)) { New-Item -ItemType Directory -Path $invDir -Force | Out-Null }
     $artList = New-Object System.Collections.Generic.List[object]
-    if ($null -ne $result) {
+    if ($null -ne $result -and ($result -is [System.Collections.IDictionary]) -and $result.Contains('output')) {
         $outPath = Join-Path $invDir 'output.txt'
         [System.IO.File]::WriteAllText($outPath, [string]$result.output.text, $utf8)
         $artList.Add([pscustomobject]@{ p = $outPath; k = 'text' })

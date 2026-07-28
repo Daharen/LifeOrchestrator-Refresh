@@ -79,11 +79,48 @@ Lease outcome is reported under `result.server.gpu_lease`. Knobs: `-GpuLeaseTtlS
 (default `$env:LIFEORCH_INSTANCE` else `model.gateway:<pid>`), `-LeaseDir`, `-ResLeasePath`, `-PwshPath`
 (all also settable via `-InputsJson`).
 
+## Warm / persistent server (Governor Phase 2)
+
+By default the gateway starts a **transient** `llama-server` per call and stops it on exit — a fresh cold
+load (~1 s for the 0.5B, ~60–90 s for the 9B/27B) every time. **`-Warm`** instead keeps the server
+**resident across separate gateway invocations**, recorded in `runtime/warm-server.json` (pid, start-ticks
+identity, port, model, ngl/ctx). A later `-Warm` call for the **same** model **reuses** the resident with
+no reload (measured **~1 ms warm vs a ~1.1 s cold load** on the 0.5B; the saving scales with model size). A
+`-Warm` call for a **different** model — or an unhealthy/foreign resident — **evicts** the old server and
+loads the new one, so **at most one** `llama-server` is ever on the GPU.
+
+**Detached launch (why it outlives the job).** On Windows a warm server is launched with
+`Win32_Process.Create` (WMI), which parents it to `WmiPrvSE` — **outside** the launching task's Job object
+— so it **survives the task that started it** and is reusable by the next, independent invocation. A plain
+`Start-Process` child stays in the caller's Job and is killed when that task completes (verified: the
+resident died before the next task could reuse it), so warmth would never survive under the executor. The
+launching task **returns immediately** after the load + first completion — it never blocks holding the
+server (the D-0055/D-0056 executor-wedge lesson). The server stays **PID-tracked and killable**:
+`-EvictWarm`, a model-change evict, and the executor's orphan-name sweep all reap it, so a warm server is
+**never left orphaned**. (The off-machine/Linux gate keeps the redirected `Start-Process`; CIM
+`Win32_Process` is Windows-only.)
+
+**`-EvictWarm`** tears down the resident server and returns immediately (`action=evict_warm`, no
+generation) — the clean explicit stop.
+
+**Interaction with the `gpu` lease (the coherent rule).** The `gpu` lease stays **per-call**, *not* held
+for the resident's lifetime: **every** gateway call (cold, warm-reuse, or evict) acquires the `gpu` lease
+first and only then reuses-or-evicts the single registry-tracked resident. Because whoever holds the lease
+is the only one touching the GPU, and they always reconcile with the one resident, **concurrent model runs
+stay serialized and at most one server is ever resident** — even though the lease is free *between* calls
+while the warm server keeps its VRAM. A warm reuse re-attaches to a caller-held lease via `-GpuLeaseHolder`
+(same-holder) rather than contending.
+
+`-Warm` / `-EvictWarm` / `-WarmRegistryPath` are also settable via `-InputsJson` (`warm`, `evict_warm`,
+`warm_registry_path`). Default is **off** → the classic per-call spawn/kill is byte-for-byte unchanged.
+
 ## Result shape
 
 `result = { model, engine, mode, selected_from, request{messages,sampling}, output{role,text},
 generation{finish_reason, prompt_tokens, completion_tokens, total_tokens, timings},
-server{port, health_ms, gpu_layers, context, gpu_lease{mode, acquired, owned, lease_id, held_by, released}} }`
+server{port, health_ms, gpu_layers, context, gpu_lease{mode, acquired, owned, lease_id, held_by, released},
+warm{enabled, reused, started_new, evicted, load_ms, registry_path}} }` (a `-EvictWarm` call instead returns
+`result = { action:"evict_warm", warm{registry_path, had_resident, was_alive, identity_ok, evicted, resident_pid} }`).
 
 Artifacts (under `runtime/artifacts/<invocation_id>/`): `output.txt` (raw completion), `exchange.json`
 (request + response), `result.json` (the envelope), `stderr.txt`, plus `server.out.log`/`server.err.log`.
@@ -98,8 +135,9 @@ Artifacts (under `runtime/artifacts/<invocation_id>/`): `output.txt` (raw comple
 
 ## Limits (MVP)
 
-Synchronous only (no streaming); `parallel_safe:false` (a per-call server binds a port + most of VRAM); one
-server per call (no warm worker yet — D-0002); LLM text only; no routing/auto-selection (Module 24). The 27B
+Synchronous only (no streaming); `parallel_safe:false` (a per-call server binds a port + most of VRAM);
+per-call spawn/kill by default, or a single resident server with **`-Warm`** (Governor Phase 2, above); LLM
+text only; no routing/auto-selection (Module 24). The 27B
 uses **partial** GPU offload (11 GB VRAM) — `gpu_layers` is a conservative starting value; tune it.
 
 See `WORK_ORDER.md` for full scope and `TOOL_MODEL_REGISTRY.md` for the model inventory.
