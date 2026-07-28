@@ -36,7 +36,7 @@ function Assert($cond, $name) { if ($cond) { $script:pass++; Write-Host "  [PASS
 function Section($n) { $script:scn++; Write-Host ""; Write-Host "=== Scenario ${script:scn}: $n ===" }
 
 function Run-AutoRamp {
-    param([string]$Name, [string]$Scratch, [string]$Goal, $Contract, $Plan, [hashtable]$Inputs, [string[]]$ExtraArgs, $WarmSeed)
+    param([string]$Name, [string]$Scratch, [string]$Goal, $Contract, $Plan, [hashtable]$Inputs, [string[]]$ExtraArgs, $WarmSeed, [string]$ToolsFileOverride)
     $planFile = Join-Path $TempRoot "plan-$Name.json"
     ($Plan | ConvertTo-Json -Depth 12) | Set-Content -LiteralPath $planFile -Encoding utf8
     $stateFile = Join-Path $TempRoot "state-$Name.txt"; if (Test-Path $stateFile) { Remove-Item $stateFile -Force }
@@ -48,9 +48,10 @@ function Run-AutoRamp {
     if ($null -ne $Contract) { $inp.success_contract = $Contract }
     if ($null -ne $Inputs) { foreach ($k in $Inputs.Keys) { $inp[$k] = $Inputs[$k] } }
     $arts = Join-Path $TempRoot "arts-$Name"
+    $tf = if (-not [string]::IsNullOrWhiteSpace($ToolsFileOverride)) { $ToolsFileOverride } else { $toolsFile }
     $a = @('-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',$controller,
         '-InputsJson',($inp | ConvertTo-Json -Depth 20 -Compress),
-        '-GatewayPath',$mockGw,'-ToolsPath',$toolsFile,'-ResLeasePath',$reslease,'-LeaseDir',$leaseDir,
+        '-GatewayPath',$mockGw,'-ToolsPath',$tf,'-ResLeasePath',$reslease,'-LeaseDir',$leaseDir,
         '-WarmRegistryPath',$warmReg,'-Registry',$models,'-PwshPath',$PwshPath,'-ArtifactRoot',$arts)
     if ($null -ne $ExtraArgs) { $a += $ExtraArgs }
     $errf = New-TemporaryFile
@@ -168,12 +169,107 @@ Assert ($r.result.final_status -eq 'verified_success' -and $r.result.accepted_ep
 Assert ((Test-Path $fa) -and (Test-Path $fb)) 's7 both files exist (a from M0, b from S0 -- state resumed, not restarted)'
 
 # ---------------------------------------------------------------------------------------------------
-Section 'no contract -> completed_unverified (never claims verified_success)'
+# CHANGED (D-0061): a contract-less finish on a goal that implies NO output is now closed by the D-0046
+# terminator as `completed` (not completed_unverified) -- the terminator is satisfied (nothing to produce).
+Section 'no contract + no implied output -> completed via the terminator (NOT completed_unverified)'
 $sc = NewScratch 's8'
 $plan = @{ decisions=@(@{text='finish'}) }
 $r = Run-AutoRamp 's8' $sc 'do something un-verifiable' $null $plan $null $null $null
-Assert ($r.result.final_status -eq 'completed_unverified') "s8 final_status=completed_unverified (got $($r.result.final_status))"
+Assert ($r.result.final_status -eq 'completed') "s8 final_status=completed via terminator (got $($r.result.final_status))"
+Assert ($r.result.final_status -ne 'completed_unverified') 's8 does NOT return completed_unverified when the terminator is satisfied'
 Assert ($r.result.verified_success -eq $false) 's8 verified_success=false with no contract'
+Assert ($r.result.accepted_epoch -eq 'M0') 's8 resolved at M0'
+Assert ([int]$r.result.model_swaps -eq 0) 's8 no escalation (0 model swaps)'
+
+# ---------------------------------------------------------------------------------------------------
+# NEW (D-0061): the CRITICAL INVARIANT -- a contract-less SIMPLE goal that implies an output fast-paths at
+# M0 with 0 escalation / 0 model swaps and returns `completed` (via the terminator), same cost as the floor.
+Section 'no contract + implied output + tool succeeds -> completed at M0 via the D-0046 terminator (fast-path)'
+$sc = NewScratch 's17'; $f = Join-Path $sc 'ok17.txt'
+$plan = @{ decisions=@(@{text='doc.io'}, @{text='finish'}); args=@{ 'doc.io'=@{op='write';path=$f;content='M0'} } }
+$r = Run-AutoRamp 's17' $sc 'make ok17.txt' $null $plan $null $null $null
+Assert ($r.result.final_status -eq 'completed') "s17 completed (got $($r.result.final_status))"
+Assert ($r.result.final_status -ne 'completed_unverified') 's17 NOT completed_unverified (terminator satisfied)'
+Assert ($r.result.accepted_epoch -eq 'M0') "s17 accepted_epoch=M0 (got $($r.result.accepted_epoch))"
+Assert ([int]$r.result.model_swaps -eq 0) "s17 model_swaps=0 -- no escalation for a simple goal (got $($r.result.model_swaps))"
+Assert (((Epochs $r) -notcontains 'S0') -and ((Epochs $r) -notcontains 'M1')) 's17 stayed at M0 (no ramp)'
+Assert (Test-Path -LiteralPath $f) 's17 the tool actually ran at M0 (file written)'
+Assert ($r.result.terminator.enabled -eq $true -and $r.result.terminator.mode -eq 'heuristic') 's17 terminator enabled (heuristic, contract-less)'
+Assert ([int]$r.result.terminator.finish_blocked_count -eq 0) 's17 finish NOT spuriously blocked (tool ran before finish)'
+
+# ---------------------------------------------------------------------------------------------------
+# NEW (D-0061): the D-0046 terminator BLOCKS a premature finish (goal implies output, no tool has succeeded)
+# and forces the side-effecting tool, then completes at M0 -- never re-running a done action, no ramp.
+Section 'no contract: terminator BLOCKS a premature finish + forces the side-effecting tool, then completes at M0'
+$sc = NewScratch 's18'; $f = Join-Path $sc 'blk18.txt'
+$plan = @{ decisions=@(@{text='finish'}, @{text='finish'}); args=@{ 'doc.io'=@{op='write';path=$f;content='B'} } }
+$r = Run-AutoRamp 's18' $sc 'make blk18.txt' $null $plan $null $null $null
+Assert ($r.result.final_status -eq 'completed') "s18 completed (got $($r.result.final_status))"
+Assert ($r.result.accepted_epoch -eq 'M0') 's18 completed at M0 (no ramp)'
+Assert ([int]$r.result.model_swaps -eq 0) 's18 no escalation'
+Assert ([int]$r.result.terminator.finish_blocked_count -ge 1) "s18 the premature finish was blocked >=1 (got $($r.result.terminator.finish_blocked_count))"
+$blk = @($r.result.governor_trace | Where-Object { $_.terminator_finish_blocked -eq $true })
+Assert (@($blk).Count -ge 1) 's18 a governor step recorded terminator_finish_blocked'
+Assert ($blk[0].terminator_forced_tool -eq 'doc.io' -and $blk[0].tool_invoked -eq $true) 's18 step1 forced doc.io despite the finish decision'
+Assert (Test-Path -LiteralPath $f) 's18 the forced side-effecting tool actually ran'
+
+# ---------------------------------------------------------------------------------------------------
+# NEW (D-0061): contract-less runs ramp ONLY on a HARD trigger -- SOFT strikes (bad arg-gen + no-progress)
+# do NOT escalate without a contract; the run recovers + completes at M0 (proves "no cost change" holds).
+Section 'no contract: SOFT strikes do NOT ramp (contract-less ramps only on a HARD trigger); completes at M0'
+$sc = NewScratch 's19'; $f = Join-Path $sc 'soft19.txt'
+$plan = @{ decisions=@(@{text='doc.io'}, @{text='doc.io'}, @{text='finish'}); bad_arg_calls=@(0); args=@{ 'doc.io'=@{op='write';path=$f;content='S'} } }
+$r = Run-AutoRamp 's19' $sc 'make soft19.txt' $null $plan $null $null $null
+Assert ($r.result.final_status -eq 'completed') "s19 completed (got $($r.result.final_status))"
+Assert (((Epochs $r) -notcontains 'M1') -and ((Epochs $r) -notcontains 'S0')) 's19 NO ramp on soft strikes without a contract (stayed M0)'
+Assert ([int]$r.result.model_swaps -eq 0) 's19 zero model swaps'
+Assert (Test-Path -LiteralPath $f) 's19 recovered on the good arg-gen and wrote the file at M0'
+
+# ---------------------------------------------------------------------------------------------------
+# NEW (D-0061): THE REGRESSION GUARD the single-side-effecting-tool mock could NOT provide (this is exactly why
+# iter-8 shipped broken). With a registry that has MULTIPLE side-effecting tools (doc.io NEEDED + fs.manage
+# EXTRA), a contract-less finish AFTER the needed tool succeeded must be HONORED at M0 -- NOT redirected to
+# force the unrelated fs.manage. The reverted attempt blocked while ANY side-effecting tool was unsatisfied, so
+# it forced fs.manage here and looped to max_steps+error on the real registry; the fix blocks only while NONE
+# has succeeded, so this resolves in exactly 2 steps with fs.manage never touched.
+Section 'no contract + MULTI side-effecting tools: finish honored after the needed tool (fs.manage NOT forced)'
+$multiTools = Join-Path $TempRoot 'mock-tools-multi.json'
+@{ tools = @(
+    @{ tool='doc.io'; skill_id='doc.io'; entrypoint=$mockTool; description='write a text file'; args_hint='op,path,content'; args_example=@{op='write';path='x.txt';content='hi'}; required=@('op','path'); side_effecting=$true },
+    @{ tool='fs.manage'; skill_id='fs.manage'; entrypoint=$mockTool; description='copy/move files'; args_hint='op,source,dest'; args_example=@{op='copy';source='a';dest='b'}; required=@('op'); side_effecting=$true }
+) } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $multiTools -Encoding utf8
+$sc = NewScratch 's20'; $f = Join-Path $sc 'multi20.txt'
+$plan = @{ decisions=@(@{text='doc.io'}, @{text='finish'}); args=@{ 'doc.io'=@{op='write';path=$f;content='M'} } }
+$r = Run-AutoRamp 's20' $sc 'make multi20.txt' $null $plan $null $null $null $multiTools
+Assert ($r.result.final_status -eq 'completed') "s20 completed (got $($r.result.final_status))"
+Assert ($r.result.accepted_epoch -eq 'M0') "s20 accepted_epoch=M0 (got $($r.result.accepted_epoch))"
+Assert ([int]$r.result.model_swaps -eq 0) "s20 model_swaps=0 (got $($r.result.model_swaps))"
+Assert ([int]$r.result.terminator.finish_blocked_count -eq 0) "s20 finish NOT redirected (finish_blocked_count=0; the iter-8 bug forced fs.manage here) (got $($r.result.terminator.finish_blocked_count))"
+Assert ([int]$r.result.step_count -eq 2) "s20 exactly 2 steps: doc.io + finish (got $($r.result.step_count))"
+Assert ((@($r.result.completed_tools) -contains 'doc.io') -and (@($r.result.completed_tools) -notcontains 'fs.manage')) 's20 only doc.io ran; fs.manage was NEVER forced'
+$fsRows = @($r.result.governor_trace | Where-Object { $_.decision -eq 'fs.manage' -or $_.terminator_forced_tool -eq 'fs.manage' })
+Assert (@($fsRows).Count -eq 0) 's20 no governor step ever selected/forced fs.manage'
+Assert (Test-Path -LiteralPath $f) 's20 the real file was written at M0'
+
+# ---------------------------------------------------------------------------------------------------
+# NEW (D-0061): robustness to a model that UNDER-USES `finish` (D-0032 -- the real failure mode, not caught by
+# the mock's scripted finish). Contract-less, the model keeps re-choosing the already-succeeded action. The
+# duplicate-side-effect guard, once the terminator is satisfied, is the DETERMINISTIC close (mirror the strict
+# floor) -> completed at M0, 0 swaps, tool run once (NOT a hard escalation, NOT a max_steps loop).
+Section 'no contract: model never emits finish (repeats) -> terminator closes at M0 (0 swaps, tool run once)'
+$sc = NewScratch 's21'; $f = Join-Path $sc 'rep21.txt'
+$plan = @{ decisions=@(@{text='doc.io'}, @{text='doc.io'}, @{text='doc.io'}); args=@{ 'doc.io'=@{op='write';path=$f;content='R'} } }
+$r = Run-AutoRamp 's21' $sc 'make rep21.txt' $null $plan $null $null $null
+Assert ($r.result.final_status -eq 'completed') "s21 completed (got $($r.result.final_status))"
+Assert ($r.result.accepted_epoch -eq 'M0') 's21 completed at M0'
+Assert ([int]$r.result.model_swaps -eq 0) "s21 zero model swaps despite the model never emitting finish (got $($r.result.model_swaps))"
+Assert (((Epochs $r) -notcontains 'M1') -and ((Epochs $r) -notcontains 'S0')) 's21 no ramp (the repeat is the terminator close, NOT a hard escalation)'
+$dup = @($r.result.governor_trace | Where-Object { $_.skipped_repeat -eq $true })
+Assert (@($dup).Count -ge 1) 's21 the repeat was caught (skipped_repeat)'
+Assert ($dup[0].terminator_satisfied -eq $true) 's21 the repeat closed the run via the terminator (terminator_satisfied)'
+Assert ($dup[0].hard_trigger -ne 'repeat_identical_action_no_state_change') 's21 the contract-less repeat did NOT hard-escalate'
+Assert (Test-Path -LiteralPath $f) 's21 the file was written once at M0'
+Assert ([int]$r.result.step_count -eq 2) "s21 exactly 2 steps: write + repeat-close (got $($r.result.step_count))"
 
 # ---------------------------------------------------------------------------------------------------
 Section 'un-checkable contract (unknown predicate) -> human_verification_required'

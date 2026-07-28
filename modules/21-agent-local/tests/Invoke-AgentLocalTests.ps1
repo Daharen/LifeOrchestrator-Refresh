@@ -36,9 +36,12 @@ function Ok([bool]$c, [string]$name) { if ($c) { $script:pass++; Write-Output " 
 function Has($o,[string]$n){ return ($null -ne $o -and $null -ne $o.PSObject -and ($o.PSObject.Properties.Name -contains $n)) }
 
 function Run-Agent([string]$goal, [string[]]$extra) {
+    # D-0061: -AutoRamp is now DEFAULT-ON. These floor scenarios (S1-S18) exercise the STRICT FLOOR = the
+    # explicit opt-out (-AutoRamp:$false), which reproduces the pre-D-0060 path byte-for-byte. The default
+    # (controller) path is proven separately in S19/S20/S21 with the auto-ramp mock wiring.
     $callArgs = @('-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',$AgentPath,
         '-Goal',$goal,'-WorkingDir',$work,'-EscalatorPath',$MockPath,'-GatewayPath',$MockPath,
-        '-ToolsPath',$toolsPath,'-PwshPath',$PwshExe,'-ArtifactRoot',$artRoot)
+        '-ToolsPath',$toolsPath,'-PwshPath',$PwshExe,'-ArtifactRoot',$artRoot,'-AutoRamp:$false')
     if ($null -ne $extra) { $callArgs += $extra }
     $errF = Join-Path $work ("err-" + [Guid]::NewGuid().ToString('N') + ".txt")
     $out = & $PwshExe @callArgs 2> $errF
@@ -129,7 +132,7 @@ Ok ($null -ne $res -and $res.status -eq 'stopped' -and $res.needs_frontier -eq $
 
 # --- S9: missing goal error path ---
 $errF = Join-Path $work 'err-nogoal.txt'
-$out = & $PwshExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $AgentPath -InputsJson '{"working_dir":"x"}' -EscalatorPath $MockPath -GatewayPath $MockPath -ToolsPath $toolsPath -PwshPath $PwshExe -ArtifactRoot $artRoot 2> $errF
+$out = & $PwshExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $AgentPath -InputsJson '{"working_dir":"x"}' -EscalatorPath $MockPath -GatewayPath $MockPath -ToolsPath $toolsPath -PwshPath $PwshExe -ArtifactRoot $artRoot -AutoRamp:$false 2> $errF
 $eng = $null; try { $eng = ($out | Out-String).Trim() | ConvertFrom-Json } catch { }
 Write-Output "S9 missing-goal:"
 Ok ($null -ne $eng -and $eng.status -eq 'error' -and $eng.error.code -eq 'missing_parameter') 'S9 missing goal -> error envelope'
@@ -137,7 +140,7 @@ Ok ($null -ne $eng -and $eng.status -eq 'error' -and $eng.error.code -eq 'missin
 # --- S10: through the Module 1 wrapper ---
 if (-not [string]::IsNullOrWhiteSpace($WrapperPath) -and (Test-Path -LiteralPath $WrapperPath)) {
     $skillDir = Split-Path -Parent $AgentPath
-    $ij = [ordered]@{ goal='FINISH_AFTER_ONE: wrapper path'; working_dir=$work; escalator_path=$MockPath; gateway_path=$MockPath; tools_path=$toolsPath; pwsh_path=$PwshExe } | ConvertTo-Json -Compress
+    $ij = [ordered]@{ goal='FINISH_AFTER_ONE: wrapper path'; working_dir=$work; escalator_path=$MockPath; gateway_path=$MockPath; tools_path=$toolsPath; pwsh_path=$PwshExe; autoramp=$false } | ConvertTo-Json -Compress
     $wout = & $PwshExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $WrapperPath -SkillDir $skillDir -InputsJson $ij -PwshPath $PwshExe 2> (Join-Path $work 'err-wrap.txt')
     $wcode = $LASTEXITCODE
     $rep = $null; try { $rep = ($wout | Out-String).Trim() | ConvertFrom-Json } catch { }
@@ -201,7 +204,7 @@ $res = if ($null -ne $r.env) { $r.env.result } else { $null }
 Ok ($null -ne $res -and $res.profile -eq 'max' -and $res.max_steps -eq 3 -and $res.gen_tier -eq 'strong' -and (@($res.decision_tiers) -join ',') -eq 'mid') 'S14 explicit -MaxSteps wins over the profile rung'
 # invalid profile -> error envelope (fail closed)
 $errF = Join-Path $work 'err-badprofile.txt'
-$out = & $PwshExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $AgentPath -Goal 'x' -WorkingDir $work -Profile 'bogus' -EscalatorPath $MockPath -GatewayPath $MockPath -ToolsPath $toolsPath -PwshPath $PwshExe -ArtifactRoot $artRoot 2> $errF
+$out = & $PwshExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $AgentPath -Goal 'x' -WorkingDir $work -Profile 'bogus' -EscalatorPath $MockPath -GatewayPath $MockPath -ToolsPath $toolsPath -PwshPath $PwshExe -ArtifactRoot $artRoot -AutoRamp:$false 2> $errF
 $eng = $null; try { $eng = ($out | Out-String).Trim() | ConvertFrom-Json } catch { }
 Ok ($null -ne $eng -and $eng.status -eq 'error' -and $eng.error.code -eq 'invalid_profile') 'S14 invalid profile -> error envelope'
 
@@ -255,6 +258,66 @@ Ok ($null -ne $res -and $res.terminator.mode -eq 'heuristic') 'S18 heuristic mod
 Ok ($null -ne $res -and @($res.steps)[0].decision.chosen_tool -eq 'doc.io' -and @($res.steps)[0].tool.invoked -eq $true) 'S18 step1 forced a side-effecting tool (doc.io)'
 Ok ($null -ne $res -and $res.terminator.finish_blocked_count -ge 1) 'S18 heuristic blocked the premature finish at least once'
 Ok ($null -ne $res -and @($res.steps)[1].decision.chosen_tool -eq 'finish') 'S18 step2 finish accepted after one side-effecting success'
+
+# ===================================================================================================
+# D-0061: -AutoRamp is now DEFAULT-ON. S19-S21 prove the ENTRY-POINT flip using the auto-ramp controller's
+# own mocks (mock-gateway + mock-tool, same tests dir). A default (no-flag) run must DELEGATE to the
+# controller and, contract-less, fast-path at M0 (0 escalation, `completed`, not completed_unverified).
+$testsDir = Split-Path -Parent $MockPath
+$mockGw   = Join-Path $testsDir 'mock-gateway.ps1'
+$mockTool = Join-Path $testsDir 'mock-tool.ps1'
+$arTools  = Join-Path $work 'ar-tools.json'
+@{ tools = @(@{ tool='doc.io'; skill_id='doc.io'; entrypoint=$mockTool; description='write a text file'; args_hint='op,path,content'; args_example=@{op='write';path='x.txt';content='hi'}; required=@('op','path'); side_effecting=$true }) } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $arTools -Encoding utf8
+
+function Run-DefaultController([string]$name, [string]$goal, $plan) {
+    $planFile = Join-Path $work "arplan-$name.json"; ($plan | ConvertTo-Json -Depth 12) | Set-Content -LiteralPath $planFile -Encoding utf8
+    $env:AR_MOCK_PLAN = $planFile
+    $env:AR_MOCK_STATE = Join-Path $work "arstate-$name.txt"
+    $env:AR_MOCK_ARGSTATE = Join-Path $work "arargstate-$name.txt"
+    foreach ($p in @($env:AR_MOCK_STATE, $env:AR_MOCK_ARGSTATE)) { if (Test-Path -LiteralPath $p) { Remove-Item -LiteralPath $p -Force } }
+    $ij = [ordered]@{ goal=$goal; working_dir=$work; gpu_lease='off'; max_total_steps=6 } | ConvertTo-Json -Compress
+    $errF = Join-Path $work "err-$name.txt"
+    $out = & $PwshExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $AgentPath -InputsJson $ij -GatewayPath $mockGw -ToolsPath $arTools -PwshPath $PwshExe -ArtifactRoot (Join-Path $artRoot $name) 2> $errF
+    $env = $null; try { $env = ($out | Out-String).Trim() | ConvertFrom-Json } catch { }
+    Remove-Item Env:\AR_MOCK_PLAN, Env:\AR_MOCK_STATE, Env:\AR_MOCK_ARGSTATE -ErrorAction SilentlyContinue
+    return @{ env=$env; result=$(if ($null -ne $env) { $env.result } else { $null }); err=(Get-Content -LiteralPath $errF -Raw -ErrorAction SilentlyContinue) }
+}
+
+# --- S19: default (no flag) delegates to the -AutoRamp controller; contract-less simple goal fast-paths at M0 ---
+$s19f = Join-Path $work 's19.txt'
+$r19 = Run-DefaultController 's19' 'make s19.txt (default autoramp)' @{ decisions=@(@{text='doc.io'}, @{text='finish'}); args=@{ 'doc.io'=@{op='write';path=$s19f;content='M0'} } }
+$e19 = $r19.env; $res19 = $r19.result
+Write-Output "S19 default-delegates-to-controller:"
+Ok ($null -ne $e19 -and $e19.skill_id -eq 'agent.local.autoramp') 'S19 default (no flag) delegated to the -AutoRamp controller'
+Ok ($null -ne $res19 -and $res19.autoramp -eq $true) 'S19 result.autoramp true'
+Ok ($null -ne $res19 -and $res19.final_status -eq 'completed') 'S19 contract-less simple goal -> completed (terminator close)'
+Ok ($null -ne $res19 -and $res19.final_status -ne 'completed_unverified') 'S19 NOT completed_unverified'
+Ok ($null -ne $res19 -and $res19.accepted_epoch -eq 'M0') 'S19 resolved at epoch M0'
+Ok ($null -ne $res19 -and [int]$res19.model_swaps -eq 0) 'S19 zero model swaps (no ramp)'
+Ok ($null -ne $res19 -and (@($res19.epochs_visited) -notcontains 'S0') -and (@($res19.epochs_visited) -notcontains 'M1')) 'S19 never escalated past M0'
+Ok (Test-Path -LiteralPath $s19f) 'S19 the tool actually ran (file written) at M0'
+
+# --- S20: the contract-less default fast-path is behaviorally equal to an -AutoRamp:$false (strict floor) run ---
+# (the two loops emit structurally different envelopes by design -- controller governor-trace vs floor steps --
+#  so equality is asserted on the substantive OUTCOME: both complete, same tool succeeded, 0 escalation / same cost.)
+$rFloor = Run-Agent 'FINISH_AFTER_ONE: make a file' $null
+$resFloor = if ($null -ne $rFloor.env) { $rFloor.env.result } else { $null }
+Write-Output "S20 default(controller) == opt-out(floor) for a simple goal (behavioral equality):"
+Ok ($null -ne $rFloor.env -and $rFloor.env.skill_id -eq 'agent.local') 'S20 opt-out (-AutoRamp:$false) is the STRICT FLOOR (skill_id agent.local)'
+Ok ($null -ne $resFloor -and $resFloor.status -eq 'completed') 'S20 opt-out completes'
+Ok ($null -ne $resFloor -and (@($resFloor.outcome.succeeded_tools) -contains 'doc.io')) 'S20 opt-out succeeded doc.io'
+Ok ($null -ne $res19 -and $res19.final_status -eq 'completed' -and [int]$res19.model_swaps -eq 0 -and (@($res19.completed_tools) -contains 'doc.io')) 'S20 default(controller) completed the same tool at M0 with 0 escalation (same cost)'
+
+# --- S21: opt-out variants (-NoAutoRamp, InputsJson autoramp:false) both route to the strict floor ---
+Write-Output "S21 opt-out variants -> strict floor:"
+$s21a = & $PwshExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $AgentPath -Goal 'FINISH_AFTER_ONE: make a file' -WorkingDir $work -EscalatorPath $MockPath -GatewayPath $MockPath -ToolsPath $toolsPath -PwshPath $PwshExe -ArtifactRoot $artRoot -NoAutoRamp 2> (Join-Path $work 'err-s21a.txt')
+$e21a = $null; try { $e21a = ($s21a | Out-String).Trim() | ConvertFrom-Json } catch { }
+Ok ($null -ne $e21a -and $e21a.skill_id -eq 'agent.local' -and $e21a.result.status -eq 'completed') 'S21 -NoAutoRamp -> strict floor (skill_id agent.local, completed)'
+$ij21 = [ordered]@{ goal='FINISH_AFTER_ONE: make a file'; working_dir=$work; escalator_path=$MockPath; gateway_path=$MockPath; tools_path=$toolsPath; pwsh_path=$PwshExe; autoramp=$false } | ConvertTo-Json -Compress
+$s21b = & $PwshExe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $AgentPath -InputsJson $ij21 -PwshPath $PwshExe -ArtifactRoot $artRoot 2> (Join-Path $work 'err-s21b.txt')
+$e21b = $null; try { $e21b = ($s21b | Out-String).Trim() | ConvertFrom-Json } catch { }
+Ok ($null -ne $e21b -and $e21b.skill_id -eq 'agent.local' -and $e21b.result.status -eq 'completed') 'S21 InputsJson autoramp:false -> strict floor'
+Ok ($null -ne $e21b -and $null -ne $e21b.result -and $null -ne $e21b.result.terminator) 'S21 floor envelope shape (result.terminator present, not the controller governor trace)'
 
 # cleanup
 try { Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue } catch { }

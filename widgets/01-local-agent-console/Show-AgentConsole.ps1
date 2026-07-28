@@ -99,26 +99,26 @@ function New-AgentConsoleForm {
     $autoRampBox.Text = 'Auto-ramp (Governor Phase 3)'
     $autoRampBox.Location = [System.Drawing.Point]::new(12, 128)
     $autoRampBox.AutoSize = $true
-    $autoRampBox.Checked = $false
+    $autoRampBox.Checked = $true   # D-0061: Auto-ramp (Governor Phase 3) is DEFAULT-ON. Uncheck to opt out to the strict floor.
 
     $lblContract = [System.Windows.Forms.Label]::new()
     $lblContract.Text = 'Success contract (.json):'
     $lblContract.Location = [System.Drawing.Point]::new(250, 130)
     $lblContract.AutoSize = $true
-    $lblContract.Enabled = $false
+    $lblContract.Enabled = $true   # matches the default-checked toggle (kept in sync by the CheckedChanged handler)
 
     $contractBox = [System.Windows.Forms.TextBox]::new()
     $contractBox.Location = [System.Drawing.Point]::new(410, 127)
     $contractBox.Size = [System.Drawing.Size]::new(548, 22)
     $contractBox.Anchor = 'Top,Left,Right'
-    $contractBox.Enabled = $false
+    $contractBox.Enabled = $true
 
     $browseBtn = [System.Windows.Forms.Button]::new()
     $browseBtn.Text = '...'
     $browseBtn.Location = [System.Drawing.Point]::new(962, 126)
     $browseBtn.Size = [System.Drawing.Size]::new(30, 24)
     $browseBtn.Anchor = 'Top,Right'
-    $browseBtn.Enabled = $false
+    $browseBtn.Enabled = $true
 
     # contract path only matters with auto-ramp on -- gate the fields to make that clear.
     # NOTE: .GetNewClosure() binds these local control vars into the handler; WinForms fires it
@@ -387,16 +387,20 @@ function Stop-ConsoleRun {
 $form = New-AgentConsoleForm
 if ($SelfTest) {
     Write-Output 'SELFTEST_FORM_OK'
-    # Exercise the auto-ramp toggle handler under STA: setting Checked fires CheckedChanged,
+    # Exercise the auto-ramp toggle handler under STA: changing Checked fires CheckedChanged,
     # which sets .Enabled on the contract fields. A scope bug there (bare local control vars
     # resolving to $null) throws right here -- this is the regression guard for it.
+    # D-0061: the toggle now DEFAULTS checked, so drive it OFF then ON so a change actually fires
+    # in both directions regardless of the shipped default.
     try {
         $st = $script:ConsoleState
+        # confirm the shipped default is checked (Auto-ramp is default-on)
+        if ([bool]$st.autoRampBox.Checked) { Write-Output 'SELFTEST_DEFAULT_CHECKED_OK' }
+        $st.autoRampBox.Checked = $false
+        $offOk = (-not [bool]$st.contractBox.Enabled)
         $st.autoRampBox.Checked = $true
-        if ($st.contractBox.Enabled) {
-            $st.autoRampBox.Checked = $false
-            if (-not $st.contractBox.Enabled) { Write-Output 'SELFTEST_TOGGLE_OK' }
-        }
+        $onOk = [bool]$st.contractBox.Enabled
+        if ($offOk -and $onOk) { Write-Output 'SELFTEST_TOGGLE_OK' }
     }
     catch { Write-Output ('SELFTEST_TOGGLE_FAIL: ' + $_.Exception.Message) }
     $form.Dispose()
