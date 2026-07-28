@@ -208,6 +208,29 @@ Write-Output "S12 non-producer:"
 $rq = @(Get-ChildItem -LiteralPath $work -Recurse -File -Filter 'review_queue.jsonl' -ErrorAction SilentlyContinue)
 Ok ($rq.Count -eq 0) 'S12 no review_queue.jsonl written (orchestrator/non-producer)'
 
+# --- S13: prompt-template fixes (D-0055 findings) ---
+Write-Output "S13 prompt-template text:"
+$r = Run-Fan @{ action = 'plan'; title = 'S13'; max_parallel = 2; no_preflight = $true; workers = @(
+        @{ id = 'gX'; unit = 'gpu unit X'; gpu = $true; docs = @('DX.md') },
+        @{ id = 'gY'; unit = 'gpu unit Y'; gpu = $true }
+    ) } $null
+$res = Res $r
+$bel = [char]7
+$gX = @($res.workers | Where-Object { $_.id -eq 'gX' })[0]
+$gXp = Get-Content -LiteralPath $gX.prompt_path -Raw
+Ok ($gXp -match 'Acquire returns a lease_id') 'S13 worker prompt renders "Acquire returns a lease_id" (leading A restored)'
+Ok ($gXp.IndexOf($bel) -lt 0) 'S13 worker prompt has no BEL control char (backtick-escape glitch gone)'
+$cin2 = Get-Content -LiteralPath $res.check_in_prompt_path -Raw
+Ok (-not ($cin2 -match 'GPU clamp below')) 'S13 check-in has no dangling "GPU clamp below" reference'
+Ok ($cin2 -match 'only ONE of \{') 'S13 check-in still renders the specific GPU serialization note (>1 gpu worker)'
+# S13b: no dangling GPU reference when there is no gpu serialization
+$r = Run-Fan @{ action = 'plan'; title = 'S13b'; no_preflight = $true; workers = @(
+        @{ id = 'c1'; unit = 'cpu one' },
+        @{ id = 'c2'; unit = 'cpu two' }
+    ) } $null
+$cin3 = Get-Content -LiteralPath (Res $r).check_in_prompt_path -Raw
+Ok (-not ($cin3 -match 'GPU clamp below')) 'S13b no dangling GPU reference with no gpu workers'
+
 try { Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue } catch { }
 Write-Output ""
 Write-Output ("==== RESULT pass=$pass fail=$fail ====")

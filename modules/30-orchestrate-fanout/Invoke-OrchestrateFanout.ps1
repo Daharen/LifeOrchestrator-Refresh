@@ -184,7 +184,7 @@ function Build-WorkerPrompt([string]$planId, [int]$iter, $w, [string[]]$leases, 
         $L.Add('```')
         foreach ($a in $acq) { $L.Add($a) }
         $L.Add('```')
-        $L.Add("`acquire` returns a `lease_id`; keep each one. Renew before its TTL if the work runs long.")
+        $L.Add("Acquire returns a lease_id; keep each one. Renew before its TTL if the work runs long.")
         $L.Add("Release in REVERSE order when the guarded work is done, or immediately if you block/abort:")
         $L.Add('```')
         foreach ($r in $rel) { $L.Add($r) }
@@ -228,7 +228,7 @@ function Build-CheckInPrompt([string]$planId, [int]$iter, [string]$title, [strin
         $L.Add("2. When ALL workers have reported done/failed, run:  -Action status -PlanId " + $planId)
         $L.Add("   then:  -Action handoff -PlanId " + $planId + "  and verify the emitted packet in the Verification Console.")
     }
-    $L.Add("3. Start the queued workers as slots free up (respect the GPU clamp below).")
+    $L.Add("3. Start the queued workers as slots free up.")
     if ($conflicts.gpu_serialized.Count -gt 0) {
         $L.Add("")
         $L.Add("GPU note: only ONE of {" + ($conflicts.gpu_serialized -join ", ") + "} may run at a time (single GPU lease).")
