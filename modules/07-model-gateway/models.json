@@ -1,7 +1,7 @@
 {
   "schema": "lifeorch.model_registry/0.1",
   "_comment": "Declarative model registry for model.gateway. The gateway resolves a requested model (by -Model id, -Tier alias, or the default) against `models`, and runs it if `wired` and its type/engine are supported (MVP: type=llm via engine=llama-server). Non-wired / non-LLM entries are DECLARED so later modules can wire them without rediscovering the machine. Paths point at portable per-owning-module copies under LifeOrchestrator-Refresh_Large_Data\\<NN>-<module>\\ (relocated out of the staging area into owning-module homes 2026-07-25; shared llama.cpp engine under _engines\\). To swap which model a tier uses, change `tiers`/`defaults` below — no code change.",
-  "updated_utc": "2026-07-25T00:00:00.0000000Z",
+  "updated_utc": "2026-07-28T00:00:00.0000000Z",
   "host": "DESKTOP-PF5FFMF",
   "engine_build": "llama.cpp b8661 (b7ad48ebd), CUDA, MSVC",
   "engines": {
@@ -48,6 +48,18 @@
     {
       "model_id": "llm.strong.qwen3p5-9b",
       "type": "llm", "wired": true,
+      "name": "Qwen3.5-9B", "family": "qwen3.5", "format": "gguf", "quant": "Q5_K_M",
+      "version": "Qwen_Qwen3.5-9B-Q5_K_M",
+      "no_think": true,
+      "path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\07-model-gateway\\llm\\Qwen3.5-9B-Q5_K_M\\Qwen_Qwen3.5-9B-Q5_K_M.gguf",
+      "engine": "llama-server",
+      "engine_path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\_engines\\llama.cpp-b10092\\bin\\llama-server.exe",
+      "context": 8192, "gpu_layers": 99,
+      "params": { "params_b": 9, "size_bytes": 7111487520, "sha256": "a686d88ec1e6881f9bf161526826cd6d6874b7f0e80e0f79acf6144a132c5d7e" },
+      "notes": "Strong tier upgraded to Qwen3.5-9B Q5_K_M 2026-07-28 (plan fo-9-d4139304, worker Q5-stage) per the couriered frontier model-selection report: SAME Qwen3.5-9B (bartowski GGUF), quant Q4_K_M -> Q5_K_M (~7.11 GB) for better fidelity WITH real KV headroom on the 11 GB RTX 2080 Ti (ngl 99, fully resident). engine_path stays llama.cpp b10092 (hybrid attention-SSM arch b8661 cannot load); no_think true; context 8192 kept IDENTICAL to the prior Q4 so the orchestrator S0 6/6 calibration is apples-to-apples (Q5 KV headroom permits 16K later). Prior Q4_K_M retained as llm.strong.qwen3p5-9b-q4 (wired:false) for rollback. STAGED + repointed but PENDING the orchestrator live S0 6/6 calibration + a strong-tier smoke gen. The 27B (llm.strong.qwen3p5-27b) remains retained but impractical GPU-bound on 11 GB."
+    },    {
+      "model_id": "llm.strong.qwen3p5-9b-q4",
+      "type": "llm", "wired": false,
       "name": "Qwen3.5-9B", "family": "qwen3.5", "format": "gguf", "quant": "Q4_K_M",
       "version": "Qwen_Qwen3.5-9B-Q4_K_M",
       "no_think": true,
@@ -56,7 +68,7 @@
       "engine_path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\_engines\\llama.cpp-b10092\\bin\\llama-server.exe",
       "context": 8192, "gpu_layers": 99,
       "params": { "params_b": 9, "size_bytes": 6169341984, "sha256": "d784ce9eda1a5a7b51e8f705a9e6310844bf4f173654d115823c775fdea56d43" },
-      "notes": "Strong tier (D-0044): a fully-GPU-resident replacement for the partial-offload 27B. Qwen3.5-9B Q4_K_M (bartowski) is a hybrid attention-SSM arch that the box default engine b8661 cannot load (missing ssm_conv1d), so THIS entry pins engine_path to a side-by-side llama.cpp b10092 (CUDA 12.4, self-contained cudart/cublas) staged 2026-07-26; every other tier stays on b8661. Loads fully on the RTX 2080 Ti at ~6.9 GB VRAM (ngl 99, ~4.3 GB headroom) -> GPU-bound ~68 tok/s vs the 27B ~2 tok/s partial offload. Reasoning OFF by default for the 9B (think=False via default llama-server flags); clean JSON/gen verified live (m32-engup-001). Used for GENERATION (governor max gen_tier + review.processor adjudication); decisions stay at the mid floor (D-0043). The 27B entry is retained (reachable via -Model llm.strong.qwen3p5-27b) but is no longer the strong tier."
+      "notes": "Demoted 2026-07-28 (Q5_K_M strong upgrade, worker Q5-stage / plan fo-9-d4139304). Prior Q4_K_M strong tier, RETAINED (wired:false so the gateway wired-LLM count stays 5) for rollback: revert by copying this entry path/quant/version/params back into llm.strong.qwen3p5-9b (re-wire this entry to pin -Model it directly). Same engine b10092, ngl 99, ctx 8192, no_think."
     },    {
       "model_id": "llm.weak.qwen2p5-0p5b",
       "type": "llm", "wired": true,
