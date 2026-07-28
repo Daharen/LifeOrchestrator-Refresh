@@ -124,6 +124,46 @@ function Resolve-AgentConsolePaths {
     }
 }
 
+# ---------- input payload builder (pure; unit-testable) ----------
+
+function Build-AgentLocalInputs {
+    <#
+      Build the -InputsJson payload for the agent.local child, in the EXACT key order the console
+      has always used. The Governor Phase 3 opt-in (-AutoRamp / -SuccessContractPath) is the ONLY
+      addition and is appended LAST and ONLY when the toggle is on -- so with -AutoRamp OFF the
+      returned JSON (and therefore the child's argv) is byte-for-byte identical to what the console
+      shipped before this option existed. Pure: no filesystem / no process; unit-testable.
+
+      autoramp:true is promoted to the -AutoRamp switch by Invoke-AgentLocal.ps1 (the same mechanism
+      the console already uses for -Route via route:true), and success_contract_path is forwarded
+      verbatim inside -InputsJson to Invoke-AutoRamp.ps1 (the shipped controller reads it and freezes
+      the contract by hash). The widget reimplements none of that.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Goal,
+        [int]$MaxSteps = 4,
+        [switch]$DryRun,
+        [switch]$Route,
+        [string]$WorkingDir,
+        [string[]]$DecisionTiers,
+        [string]$GenTier,
+        [switch]$AutoRamp,
+        [string]$SuccessContractPath
+    )
+    $inputs = [ordered]@{ goal = $Goal; max_steps = $MaxSteps; dry_run = [bool]$DryRun }
+    if ($Route) { $inputs['route'] = $true }
+    if ($WorkingDir) { $inputs['working_dir'] = $WorkingDir }
+    if ($DecisionTiers -and $DecisionTiers.Count -gt 0) { $inputs['decision_tiers'] = @($DecisionTiers) }
+    if ($GenTier) { $inputs['gen_tier'] = $GenTier }
+    # ---- Governor Phase 3 opt-in (caller-side ONLY; appended LAST so the OFF payload is unchanged) ----
+    if ($AutoRamp) {
+        $inputs['autoramp'] = $true
+        if (-not [string]::IsNullOrWhiteSpace($SuccessContractPath)) { $inputs['success_contract_path'] = $SuccessContractPath }
+    }
+    return ($inputs | ConvertTo-Json -Compress -Depth 6)
+}
+
 # ---------- spawn / complete / run ----------
 
 function Start-AgentLocalProcess {
@@ -141,7 +181,9 @@ function Start-AgentLocalProcess {
         [string]$ArtifactRoot,
         [string]$InvocationId,
         [hashtable]$Sync,
-        [string]$WidgetRoot
+        [string]$WidgetRoot,
+        [switch]$AutoRamp,
+        [string]$SuccessContractPath
     )
     $paths = Resolve-AgentConsolePaths -AgentLocalPath $AgentLocalPath -PwshPath $PwshPath -WidgetRoot $WidgetRoot
     # Resolve the entrypoint to an ABSOLUTE path: the child runs with WorkingDirectory=RepoRoot,
@@ -160,12 +202,19 @@ function Start-AgentLocalProcess {
     }
     New-Item -ItemType Directory -Path $ArtifactRoot -Force -ErrorAction SilentlyContinue | Out-Null
 
-    $inputs = [ordered]@{ goal = $Goal; max_steps = $MaxSteps; dry_run = [bool]$DryRun }
-    if ($Route) { $inputs['route'] = $true }
-    if ($WorkingDir) { $inputs['working_dir'] = $WorkingDir }
-    if ($DecisionTiers -and $DecisionTiers.Count -gt 0) { $inputs['decision_tiers'] = @($DecisionTiers) }
-    if ($GenTier) { $inputs['gen_tier'] = $GenTier }
-    $inputsJson = ($inputs | ConvertTo-Json -Compress -Depth 6)
+    # Governor Phase 3 opt-in: resolve + validate the caller-supplied success-contract file (only when -AutoRamp).
+    $contractPathResolved = $null
+    if ($AutoRamp -and -not [string]::IsNullOrWhiteSpace($SuccessContractPath)) {
+        if (-not (Test-Path -LiteralPath $SuccessContractPath -PathType Leaf)) {
+            throw "success contract file not found: $SuccessContractPath"
+        }
+        $contractPathResolved = (Resolve-Path -LiteralPath $SuccessContractPath).Path
+    }
+    # Build the child -InputsJson. With -AutoRamp OFF this is byte-for-byte identical to what the console
+    # has always sent (autoramp / success_contract_path are appended ONLY when the toggle is on).
+    $inputsJson = Build-AgentLocalInputs -Goal $Goal -MaxSteps $MaxSteps -DryRun:$DryRun -Route:$Route `
+        -WorkingDir $WorkingDir -DecisionTiers $DecisionTiers -GenTier $GenTier `
+        -AutoRamp:$AutoRamp -SuccessContractPath $contractPathResolved
 
     $stdoutPath = Join-Path $ArtifactRoot 'agent.stdout.txt'
     $stderrPath = Join-Path $ArtifactRoot 'agent.stderr.txt'
@@ -208,6 +257,8 @@ function Start-AgentLocalProcess {
         Paths        = $paths
         StartedUtc   = $startedUtc
         Goal         = $Goal
+        AutoRamp     = [bool]$AutoRamp
+        SuccessContractPath = $contractPathResolved
     }
 }
 
@@ -295,11 +346,13 @@ function Invoke-AgentLocalRun {
         [string]$AgentLocalPath,
         [string]$PwshPath,
         [string]$ArtifactRoot,
-        [string]$WidgetRoot
+        [string]$WidgetRoot,
+        [switch]$AutoRamp,
+        [string]$SuccessContractPath
     )
     $h = Start-AgentLocalProcess -Goal $Goal -WorkingDir $WorkingDir -MaxSteps $MaxSteps -DryRun:$DryRun -Route:$Route `
         -DecisionTiers $DecisionTiers -GenTier $GenTier -AgentLocalPath $AgentLocalPath -PwshPath $PwshPath `
-        -ArtifactRoot $ArtifactRoot -WidgetRoot $WidgetRoot
+        -ArtifactRoot $ArtifactRoot -WidgetRoot $WidgetRoot -AutoRamp:$AutoRamp -SuccessContractPath $SuccessContractPath
     try { $h.Process.WaitForExit() } catch { }
     return Complete-AgentLocalRun -Handle $h
 }
@@ -456,6 +509,100 @@ function Format-RoutePlan {
 
 # ---------- render ----------
 
+function Format-GovernorTrace {
+    <#
+      Render the auto-ramp (Governor Phase 3) governor trace carried by an agent.local -AutoRamp
+      result envelope (result.governor_trace + the auto-ramp summary fields). Read-only + tolerant:
+      every field is looked up defensively so a partial trace still renders. Lines mirror the existing
+      transcript style (newline-delimited, long fields truncated via Limit-Text) so they read the same
+      in the word-wrapped Console panels.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Result)
+    $sb = [System.Text.StringBuilder]::new()
+    function _addg([string]$line = '') { [void]$sb.AppendLine($line) }
+
+    $trace = @(Get-Prop $Result 'governor_trace')
+    $verified = Get-Prop $Result 'verified_success'
+    $acceptedEpoch = Get-Prop $Result 'accepted_epoch'
+    $epochs = @(Get-Prop $Result 'epochs_visited')
+
+    _addg '--- GOVERNOR TRACE (auto-ramp / Governor Phase 3) ---'
+    _addg ('  final_status: ' + [string](Get-Prop $Result 'final_status' 'n/a') +
+           '   verified: ' + $(if ($null -eq $verified) { 'n/a' } else { [string]$verified }) +
+           '   accepted_epoch: ' + $(if ($null -eq $acceptedEpoch) { 'none' } else { [string]$acceptedEpoch }) +
+           '   model_swaps: ' + [string](Get-Prop $Result 'model_swaps' 0))
+    if ($epochs.Count -gt 0) { _addg ('  epochs_visited: [' + ($epochs -join ' -> ') + ']') }
+
+    $contract = Get-Prop $Result 'contract'
+    if ($contract) {
+        $last = Get-Prop $contract 'last'
+        $passed = if ($last) { Get-Prop $last 'passed' } else { $null }
+        $hash = [string](Get-Prop $contract 'hash' '')
+        $hashShort = if ($hash.Length -gt 26) { $hash.Substring(0, 26) + '...' } else { $hash }
+        _addg ('  contract: supplied=' + [string](Get-Prop $contract 'supplied' $false) +
+               '  checkable=' + [string](Get-Prop $contract 'checkable' $false) +
+               '  last_passed=' + $(if ($null -eq $passed) { 'n/a' } else { [string]$passed }) +
+               $(if ($hashShort) { '  ' + $hashShort } else { '' }))
+    }
+
+    if ($trace.Count -eq 0) { _addg '  (no governor steps recorded)'; return $sb.ToString() }
+
+    foreach ($gs in $trace) {
+        _addg ''
+        $line = '  [gov step ' + [string](Get-Prop $gs 'step' '?') +
+                '] epoch ' + [string](Get-Prop $gs 'epoch' '?') +
+                '  model ' + [string](Get-Prop $gs 'model' '?') +
+                '  decide -> ' + [string](Get-Prop $gs 'decision' '?')
+        $meta = @()
+        $dc = Get-Prop $gs 'decision_conf'
+        if ($null -ne $dc) { $meta += ('conf ' + [string]$dc) }
+        $inset = Get-Prop $gs 'decision_in_set'
+        if ($null -ne $inset) { $meta += ('in_set=' + [string]$inset) }
+        $fr = Get-Prop $gs 'decision_finish_reason'
+        if ($fr) { $meta += ('finish=' + [string]$fr) }
+        if (Get-Prop $gs 'decision_empty' $false) { $meta += 'EMPTY' }
+        if ($meta.Count -gt 0) { $line += '  (' + ($meta -join ', ') + ')' }
+        _addg $line
+
+        if (Get-Prop $gs 'tool_invoked' $false) {
+            _addg ('           tool: invoked  status=' + [string](Get-Prop $gs 'tool_status' '?') +
+                   $(if (Get-Prop $gs 'skipped_repeat' $false) { '  (skipped_repeat)' } else { '' }))
+        }
+        elseif (Get-Prop $gs 'skipped_repeat' $false) {
+            _addg '           tool: skipped_repeat (duplicate side-effect guard)'
+        }
+
+        if (Get-Prop $gs 'contract_evaluated' $false) {
+            $cp = Get-Prop $gs 'contract_passed'
+            $cf = @(Get-Prop $gs 'contract_failed')
+            $cl = '           contract: evaluated  passed=' + $(if ($null -eq $cp) { 'n/a' } else { [string]$cp })
+            if ($cf.Count -gt 0) { $cl += '  failed=[' + (Limit-Text (($cf -join ', ')) 300) + ']' }
+            _addg $cl
+        }
+
+        if (((Get-Prop $gs 'residency_match' $true) -eq $false) -or (Get-Prop $gs 'residency_evicted' $false)) {
+            $rr = Get-Prop $gs 'residency_mismatch_reason'
+            _addg ('           residency: match=' + [string](Get-Prop $gs 'residency_match' $true) +
+                   '  evicted=' + [string](Get-Prop $gs 'residency_evicted' $false) +
+                   $(if ($rr) { '  (' + [string]$rr + ')' } else { '' }))
+        }
+
+        $trip = @()
+        $hard = Get-Prop $gs 'hard_trigger'
+        if ($hard) { $trip += ('HARD=' + [string]$hard) }
+        $softThis = Get-Prop $gs 'soft_strikes_this_step'
+        $softWin = Get-Prop $gs 'soft_strikes_window'
+        if (($null -ne $softThis) -or ($null -ne $softWin)) { $trip += ('soft_strikes=' + [string]$softThis + '/win' + [string]$softWin) }
+        $sr = @(Get-Prop $gs 'soft_reasons')
+        if ($sr.Count -gt 0) { $trip += ('reasons=[' + (Limit-Text ($sr -join ', ') 200) + ']') }
+        $escal = Get-Prop $gs 'escalated_to'
+        if ($escal) { $trip += ('-> escalated_to ' + [string]$escal) }
+        if ($trip.Count -gt 0) { _addg ('           trigger: ' + ($trip -join '  ')) }
+    }
+    return $sb.ToString()
+}
+
 function Format-AgentTranscript {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Run)
@@ -478,6 +625,10 @@ function Format-AgentTranscript {
     $res = Get-Prop $Run 'result'
     $goal = if ($res) { [string](Get-Prop $res 'goal' (Get-Prop $Run 'goal')) } else { [string](Get-Prop $Run 'goal') }
 
+    # auto-ramp (Governor Phase 3) is detected from the envelope the console already parses -- no extra file read.
+    $govTrace = if ($res) { Get-Prop $res 'governor_trace' } else { $null }
+    $isAutoRamp = ($null -ne $res) -and (($null -ne $govTrace) -or ((Get-Prop $res 'autoramp' $false) -eq $true) -or ($null -ne (Get-Prop $res 'final_status')))
+
     _add ('GOAL: ' + $goal)
     _add ('STATUS: ' + [string](Get-Prop $envObj 'status' 'unknown') + '   (agent: ' + [string](Get-Prop $res 'status' 'n/a') + ')')
     $needsFrontier = Get-Prop $res 'needs_frontier' $false
@@ -490,6 +641,12 @@ function Format-AgentTranscript {
     $conf = Get-Prop $envObj 'confidence'
     _add ('CONFIDENCE: ' + $(if ($null -eq $conf) { 'n/a' } else { [string]$conf }) +
           '   DURATION: ' + [string](Get-Prop $envObj 'duration_ms' (Get-Prop $Run 'elapsed_ms')) + ' ms')
+    if ($isAutoRamp) {
+        _add ('AUTO-RAMP: final_status=' + [string](Get-Prop $res 'final_status' 'n/a') +
+              '   verified=' + [string](Get-Prop $res 'verified_success' $false) +
+              '   accepted_epoch=' + $(if ($null -eq (Get-Prop $res 'accepted_epoch')) { 'none' } else { [string](Get-Prop $res 'accepted_epoch') }) +
+              '   model_swaps=' + [string](Get-Prop $res 'model_swaps' 0))
+    }
     if (Get-Prop $res 'route_enabled' $false) {
         $planned = @(Get-Prop $res 'planned_tools')
         $rt = Get-Prop $res 'route'
@@ -551,6 +708,10 @@ function Format-AgentTranscript {
     }
     _add ''
 
+    if ($isAutoRamp) {
+        _add (Format-GovernorTrace -Result $res)
+    }
+
     $cost = Get-Prop $res 'cost'
     if ($cost) {
         _add '--- COST ---'
@@ -572,7 +733,7 @@ function Format-AgentTranscript {
 }
 
 Export-ModuleMember -Function `
-    Resolve-AgentConsolePaths, Start-AgentLocalProcess, Stop-AgentLocalProcess, `
-    Complete-AgentLocalRun, Invoke-AgentLocalRun, Format-AgentTranscript, `
+    Resolve-AgentConsolePaths, Build-AgentLocalInputs, Start-AgentLocalProcess, Stop-AgentLocalProcess, `
+    Complete-AgentLocalRun, Invoke-AgentLocalRun, Format-AgentTranscript, Format-GovernorTrace, `
     Start-RouteToolsProcess, Complete-RouteToolsRun, Invoke-RouteToolsRun, Format-RoutePlan, `
     ConvertFrom-EnvelopeJson, Get-Prop, Test-HasProp

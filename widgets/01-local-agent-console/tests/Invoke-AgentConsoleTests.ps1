@@ -13,6 +13,9 @@
 [CmdletBinding()]
 param(
     [switch]$Live,
+    [switch]$NoGpu,   # CPU-only live gate: run the WinForms SelfTest + the mock-driven console path, but SKIP the
+    # real route.tools / real agent.local dry-run (both load a local model = GPU). Use when a
+    # concurrent GPU worker holds the gpu lease; the real-model live pass is the orchestrator's item.
     [string]$PwshPath,
     [string]$AgentLocalPath,
     [string]$RouteToolsPath
@@ -139,6 +142,65 @@ $rtt = Format-AgentTranscript -Run $routed
 Ok "routed transcript shows ROUTED" ($rtt -match 'ROUTED')
 Ok "routed transcript shows TOOLS RAN" ($rtt -match 'TOOLS RAN')
 
+# 12d. Build-AgentLocalInputs: byte-identical when auto-ramp OFF; autoramp + contract only when ON
+Ok "function exists: Build-AgentLocalInputs" ([bool](Get-Command Build-AgentLocalInputs -ErrorAction SilentlyContinue))
+Ok "function exists: Format-GovernorTrace" ([bool](Get-Command Format-GovernorTrace -ErrorAction SilentlyContinue))
+
+$offA = Build-AgentLocalInputs -Goal 'make a file' -MaxSteps 10 -DryRun:$false -Route -WorkingDir 'C:\repo' -GenTier 'mid'
+$offB = Build-AgentLocalInputs -Goal 'make a file' -MaxSteps 10 -DryRun:$false -Route -WorkingDir 'C:\repo' -GenTier 'mid' -AutoRamp:$false -SuccessContractPath 'C:\ignored.json'
+Ok "inputs OFF: no autoramp key" (-not ($offA -match 'autoramp'))
+Ok "inputs OFF: no success_contract key" (-not ($offA -match 'success_contract'))
+Ok "inputs OFF: identical whether or not a contract arg is passed" ($offA -eq $offB)
+# the exact payload the console shipped BEFORE this option existed -- must match byte-for-byte
+$today = ([ordered]@{ goal = 'make a file'; max_steps = 10; dry_run = $false; route = $true; working_dir = 'C:\repo'; gen_tier = 'mid' } | ConvertTo-Json -Compress -Depth 6)
+Ok "inputs OFF: byte-identical to the pre-AutoRamp payload" ($offA -eq $today) ("got=$offA")
+
+$onNoC = Build-AgentLocalInputs -Goal 'make a file' -MaxSteps 10 -Route -AutoRamp
+Ok "inputs ON: autoramp:true present" ($onNoC -match '"autoramp":true')
+Ok "inputs ON (no contract): no success_contract key" (-not ($onNoC -match 'success_contract'))
+
+$onC = Build-AgentLocalInputs -Goal 'make a file' -MaxSteps 10 -DryRun:$false -Route -WorkingDir 'C:\repo' -GenTier 'mid' -AutoRamp -SuccessContractPath 'C:\c\contract.json'
+Ok "inputs ON: success_contract_path present" ($onC -match 'success_contract_path')
+Ok "inputs ON: autoramp appended AFTER the base keys" ($onC.IndexOf('gen_tier') -lt $onC.IndexOf('autoramp') -and $onC.IndexOf('autoramp') -lt $onC.IndexOf('success_contract_path'))
+
+# 12e. AutoRamp run through the mock: envelope carries a governor trace; the transcript renders it
+$ar = Invoke-AgentLocalRun -Goal 'RAMP create ramp_done.txt' -AgentLocalPath $mockPath -PwshPath $PwshPath -AutoRamp -MaxSteps 10
+Ok "autoramp: envelope parsed" ($null -ne $ar.envelope -and (Get-Prop $ar.envelope 'skill_id') -eq 'agent.local') ("status=$($ar.status) exit=$($ar.exit_code) parse=$($ar.parse_error)")
+$arRes = $ar.result
+Ok "autoramp: result.autoramp true (passed through)" ((Get-Prop $arRes 'autoramp') -eq $true)
+$gt = @(Get-Prop $arRes 'governor_trace')
+Ok "autoramp: governor_trace has 3 steps (M0->M1->S0)" ($gt.Count -eq 3)
+Ok "autoramp: final_status local_ceiling_reached" ((Get-Prop $arRes 'final_status') -eq 'local_ceiling_reached')
+$art = Format-AgentTranscript -Run $ar
+foreach ($needle in 'AUTO-RAMP', 'GOVERNOR TRACE', 'epoch M0', 'epoch S0', 'escalated_to', 'contract', 'residency', 'model_swaps') {
+    Ok "autoramp transcript contains '$needle'" ($art -match [regex]::Escape($needle))
+}
+
+# 12f. AutoRamp with a real contract FILE: the console resolves + passes the path through
+$tmpContract = Join-Path ([IO.Path]::GetTempPath()) ("console-contract-" + [guid]::NewGuid().ToString('N') + ".json")
+'{"schema":"lifeorch.goal_verification/0.1","predicates":[{"predicate":"file_exists","path":"ramp_ok.txt"}]}' | Set-Content -LiteralPath $tmpContract -Encoding utf8
+try {
+    $arv = Invoke-AgentLocalRun -Goal 'VERIFIED write ramp_ok.txt' -AgentLocalPath $mockPath -PwshPath $PwshPath -AutoRamp -SuccessContractPath $tmpContract -MaxSteps 8
+    $arvRes = $arv.result
+    Ok "autoramp contract: verified_success" ((Get-Prop $arvRes 'final_status') -eq 'verified_success')
+    Ok "autoramp contract: contract.supplied true" ((Get-Prop (Get-Prop $arvRes 'contract') 'supplied') -eq $true)
+    Ok "autoramp contract: mock received the resolved contract path" ((Get-Prop $arvRes 'success_contract_path') -eq (Resolve-Path -LiteralPath $tmpContract).Path)
+    Ok "autoramp contract transcript shows verified_success" ((Format-AgentTranscript -Run $arv) -match 'verified_success')
+}
+finally { Remove-Item -LiteralPath $tmpContract -ErrorAction SilentlyContinue }
+
+# 12g. missing contract file -> friendly error at spawn (surfaced to the UI, no silent pass-through)
+$threwC = $false; $msgC = ''
+try { [void](Start-AgentLocalProcess -Goal 'x' -AgentLocalPath $mockPath -PwshPath $PwshPath -AutoRamp -SuccessContractPath (Join-Path ([IO.Path]::GetTempPath()) 'definitely-not-here-xyz.json')) }
+catch { $threwC = $true; $msgC = $_.Exception.Message }
+Ok "autoramp: missing contract file throws a clear error" ($threwC -and $msgC -match 'success contract file not found') ("msg=$msgC")
+
+# 12h. the STA shell surfaces the auto-ramp controls + passes them through (thin-shell contract)
+$showSrc = Get-Content (Join-Path $widgetRoot 'Show-AgentConsole.ps1') -Raw
+Ok "UI: Show-AgentConsole has an Auto-ramp control" ($showSrc -match 'Auto-ramp')
+Ok "UI: Show-AgentConsole passes -AutoRamp through" ($showSrc -match '-AutoRamp:')
+Ok "UI: Show-AgentConsole surfaces a success-contract field" (($showSrc -match 'contractBox') -and ($showSrc -match 'SuccessContractPath'))
+
 # 13. launch.bat shape
 $launch = Join-Path $widgetRoot 'launch.bat'
 $lc = if (Test-Path $launch) { Get-Content $launch -Raw } else { '' }
@@ -148,22 +210,43 @@ Ok "launch.bat runs Show-AgentConsole.ps1" ($lc -match 'Show-AgentConsole\.ps1')
 
 # ----- live / Windows-only -----
 if ($Live -and $IsWindows) {
+    # WinForms self-test is CPU-only -- always run it under -Live (proves the UI, incl. the new
+    # auto-ramp toggle + contract field, builds on the real Windows box).
     $sta = & $PwshPath -NoProfile -STA -File (Join-Path $widgetRoot 'Show-AgentConsole.ps1') -SelfTest 2>&1
     Ok "WinForms form builds (SelfTest)" (($sta -join "`n") -match 'SELFTEST_FORM_OK') (($sta -join ' | '))
 
-    $realRoute = if ($RouteToolsPath) { $RouteToolsPath } else { $paths.RouteToolsPath }
-    $rplan = Invoke-RouteToolsRun -Goal 'make an image of a dog' -RouteToolsPath $realRoute -PwshPath $PwshPath
-    Ok "real route.tools: envelope skill_id" ((Get-Prop $rplan.envelope 'skill_id') -eq 'route.tools') ("status=$($rplan.status) exit=$($rplan.exit_code)")
-    Ok "real route.tools: renders a plan" ((Format-RoutePlan -Run $rplan).Length -gt 0)
+    if ($NoGpu) {
+        # CPU-only live gate: drive the REAL console core on Windows against the MOCK agent.local
+        # (spawn -> parse -> render, incl. the auto-ramp governor trace) -- no real model, no GPU.
+        # The real route.tools / real agent.local dry-run DO load a local model (GPU) and are skipped
+        # here to avoid contending with a concurrent GPU worker; they are covered by the orchestrator's live pass.
+        $before = @(Get-Process -Name 'llama-server' -ErrorAction SilentlyContinue).Count
+        $mlDry = Invoke-AgentLocalRun -Goal 'list the files' -AgentLocalPath $mockPath -PwshPath $PwshPath -DryRun -MaxSteps 2
+        Ok "cpu-live: mock agent dry-run driven+parsed" ((Get-Prop $mlDry.result 'dry_run') -eq $true) ("status=$($mlDry.status) exit=$($mlDry.exit_code)")
+        Ok "cpu-live: transcript renders" ((Format-AgentTranscript -Run $mlDry).Length -gt 0)
+        $mlAr = Invoke-AgentLocalRun -Goal 'RAMP create ramp_done.txt' -AgentLocalPath $mockPath -PwshPath $PwshPath -AutoRamp -MaxSteps 6
+        Ok "cpu-live: mock auto-ramp renders governor trace" ((Format-AgentTranscript -Run $mlAr) -match 'GOVERNOR TRACE')
+        Start-Sleep -Seconds 1
+        $after = @(Get-Process -Name 'llama-server' -ErrorAction SilentlyContinue).Count
+        Ok "cpu-live: no orphaned llama-server (no model launched)" ($after -le $before) ("before=$before after=$after")
+        Skip "real route.tools (GPU)" "NoGpu: deferred to the orchestrator live pass (GPU held by a concurrent worker)"
+        Skip "real agent.local dry-run (GPU)" "NoGpu: deferred to the orchestrator live pass"
+    }
+    else {
+        $realRoute = if ($RouteToolsPath) { $RouteToolsPath } else { $paths.RouteToolsPath }
+        $rplan = Invoke-RouteToolsRun -Goal 'make an image of a dog' -RouteToolsPath $realRoute -PwshPath $PwshPath
+        Ok "real route.tools: envelope skill_id" ((Get-Prop $rplan.envelope 'skill_id') -eq 'route.tools') ("status=$($rplan.status) exit=$($rplan.exit_code)")
+        Ok "real route.tools: renders a plan" ((Format-RoutePlan -Run $rplan).Length -gt 0)
 
-    $realAgent = if ($AgentLocalPath) { $AgentLocalPath } else { $paths.AgentLocalPath }
-    $before = @(Get-Process -Name 'llama-server' -ErrorAction SilentlyContinue).Count
-    $real = Invoke-AgentLocalRun -Goal 'list the markdown files in the core-docs folder' -AgentLocalPath $realAgent -PwshPath $PwshPath -DryRun -MaxSteps 1 -DecisionTiers @('tiny') -GenTier 'tiny' -WorkingDir $paths.RepoRoot
-    Ok "real agent.local: envelope skill_id" ((Get-Prop $real.envelope 'skill_id') -eq 'agent.local') ("status=$($real.status) exit=$($real.exit_code) parse=$($real.parse_error)")
-    Ok "real agent.local: renders a transcript" ((Format-AgentTranscript -Run $real).Length -gt 0)
-    Start-Sleep -Seconds 2
-    $after = @(Get-Process -Name 'llama-server' -ErrorAction SilentlyContinue).Count
-    Ok "real agent.local: no orphaned llama-server" ($after -le $before) ("before=$before after=$after")
+        $realAgent = if ($AgentLocalPath) { $AgentLocalPath } else { $paths.AgentLocalPath }
+        $before = @(Get-Process -Name 'llama-server' -ErrorAction SilentlyContinue).Count
+        $real = Invoke-AgentLocalRun -Goal 'list the markdown files in the core-docs folder' -AgentLocalPath $realAgent -PwshPath $PwshPath -DryRun -MaxSteps 1 -DecisionTiers @('tiny') -GenTier 'tiny' -WorkingDir $paths.RepoRoot
+        Ok "real agent.local: envelope skill_id" ((Get-Prop $real.envelope 'skill_id') -eq 'agent.local') ("status=$($real.status) exit=$($real.exit_code) parse=$($real.parse_error)")
+        Ok "real agent.local: renders a transcript" ((Format-AgentTranscript -Run $real).Length -gt 0)
+        Start-Sleep -Seconds 2
+        $after = @(Get-Process -Name 'llama-server' -ErrorAction SilentlyContinue).Count
+        Ok "real agent.local: no orphaned llama-server" ($after -le $before) ("before=$before after=$after")
+    }
 }
 else {
     Skip "WinForms form self-test" "requires -Live on Windows"

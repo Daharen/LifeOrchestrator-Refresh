@@ -39,14 +39,14 @@ function New-AgentConsoleForm {
 
     $form = [System.Windows.Forms.Form]::new()
     $form.Text = 'Local Agent Console - Life Orchestrator'
-    $form.Size = [System.Drawing.Size]::new(1020, 780)
-    $form.MinimumSize = [System.Drawing.Size]::new(760, 560)
+    $form.Size = [System.Drawing.Size]::new(1020, 820)
+    $form.MinimumSize = [System.Drawing.Size]::new(760, 600)
     $form.StartPosition = 'CenterScreen'
 
     # ----- top panel: goal + options -----
     $top = [System.Windows.Forms.Panel]::new()
     $top.Dock = 'Top'
-    $top.Height = 156
+    $top.Height = 196
 
     $lblGoal = [System.Windows.Forms.Label]::new()
     $lblGoal.Text = 'Goal (what should the local agent do?):'
@@ -94,29 +94,74 @@ function New-AgentConsoleForm {
     $dryRunBox.Checked = $false
     $dryRunBox.Anchor = 'Top,Right'
 
+    # ----- auto-ramp (Governor Phase 3) opt-in row -----
+    $autoRampBox = [System.Windows.Forms.CheckBox]::new()
+    $autoRampBox.Text = 'Auto-ramp (Governor Phase 3)'
+    $autoRampBox.Location = [System.Drawing.Point]::new(12, 128)
+    $autoRampBox.AutoSize = $true
+    $autoRampBox.Checked = $false
+
+    $lblContract = [System.Windows.Forms.Label]::new()
+    $lblContract.Text = 'Success contract (.json):'
+    $lblContract.Location = [System.Drawing.Point]::new(250, 130)
+    $lblContract.AutoSize = $true
+    $lblContract.Enabled = $false
+
+    $contractBox = [System.Windows.Forms.TextBox]::new()
+    $contractBox.Location = [System.Drawing.Point]::new(410, 127)
+    $contractBox.Size = [System.Drawing.Size]::new(548, 22)
+    $contractBox.Anchor = 'Top,Left,Right'
+    $contractBox.Enabled = $false
+
+    $browseBtn = [System.Windows.Forms.Button]::new()
+    $browseBtn.Text = '...'
+    $browseBtn.Location = [System.Drawing.Point]::new(962, 126)
+    $browseBtn.Size = [System.Drawing.Size]::new(30, 24)
+    $browseBtn.Anchor = 'Top,Right'
+    $browseBtn.Enabled = $false
+
+    # contract path only matters with auto-ramp on -- gate the fields to make that clear.
+    $autoRampBox.Add_CheckedChanged({
+            $on = [bool]$autoRampBox.Checked
+            $lblContract.Enabled = $on
+            $contractBox.Enabled = $on
+            $browseBtn.Enabled = $on
+        })
+    $browseBtn.Add_Click({
+            try {
+                $dlg = [System.Windows.Forms.OpenFileDialog]::new()
+                $dlg.Filter = 'Success contract (*.json)|*.json|All files (*.*)|*.*'
+                $dlg.Title = 'Select a pre-frozen lifeorch.goal_verification/0.1 contract file'
+                if ($dlg.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $contractBox.Text = $dlg.FileName }
+            }
+            catch { }
+        })
+
     $planBtn = [System.Windows.Forms.Button]::new()
     $planBtn.Text = 'Plan'
-    $planBtn.Location = [System.Drawing.Point]::new(12, 124)
+    $planBtn.Location = [System.Drawing.Point]::new(12, 162)
     $planBtn.Size = [System.Drawing.Size]::new(90, 26)
 
     $runBtn = [System.Windows.Forms.Button]::new()
     $runBtn.Text = 'Run'
-    $runBtn.Location = [System.Drawing.Point]::new(108, 124)
+    $runBtn.Location = [System.Drawing.Point]::new(108, 162)
     $runBtn.Size = [System.Drawing.Size]::new(90, 26)
 
     $cancelBtn = [System.Windows.Forms.Button]::new()
     $cancelBtn.Text = 'Cancel'
-    $cancelBtn.Location = [System.Drawing.Point]::new(204, 124)
+    $cancelBtn.Location = [System.Drawing.Point]::new(204, 162)
     $cancelBtn.Size = [System.Drawing.Size]::new(90, 26)
     $cancelBtn.Enabled = $false
 
     $lblHint = [System.Windows.Forms.Label]::new()
-    $lblHint.Text = 'Plan = route.tools only (which tools this goal needs).  Run = route + execute.'
-    $lblHint.Location = [System.Drawing.Point]::new(304, 130)
+    $lblHint.Text = 'Plan = route.tools only.  Run = route + execute.  Auto-ramp: ramp M0->M1->S0 until the success contract verifies.'
+    $lblHint.Location = [System.Drawing.Point]::new(304, 168)
     $lblHint.AutoSize = $true
     $lblHint.ForeColor = [System.Drawing.Color]::DimGray
 
-    $top.Controls.AddRange(@($lblGoal, $goalBox, $lblWd, $wdBox, $lblSteps, $stepsBox, $dryRunBox, $planBtn, $runBtn, $cancelBtn, $lblHint))
+    $top.Controls.AddRange(@($lblGoal, $goalBox, $lblWd, $wdBox, $lblSteps, $stepsBox, $dryRunBox,
+            $autoRampBox, $lblContract, $contractBox, $browseBtn,
+            $planBtn, $runBtn, $cancelBtn, $lblHint))
 
     # ----- center: split transcript / raw -----
     $split = [System.Windows.Forms.SplitContainer]::new()
@@ -172,6 +217,8 @@ function New-AgentConsoleForm {
     $script:ConsoleState.wdBox         = $wdBox
     $script:ConsoleState.stepsBox      = $stepsBox
     $script:ConsoleState.dryRunBox     = $dryRunBox
+    $script:ConsoleState.autoRampBox   = $autoRampBox
+    $script:ConsoleState.contractBox   = $contractBox
     $script:ConsoleState.planBtn       = $planBtn
     $script:ConsoleState.runBtn        = $runBtn
     $script:ConsoleState.cancelBtn     = $cancelBtn
@@ -241,13 +288,21 @@ function Start-ConsoleRun {
         [void][System.Windows.Forms.MessageBox]::Show('Please enter a goal first.', 'Local Agent Console')
         return
     }
-    Set-ConsoleText $st.transcriptBox "Running agent.local (route + execute) ...`r`n(goal submitted - loading the local models can take a minute or two)"
+    $autoRamp = [bool]$st.autoRampBox.Checked
+    $contractPath = $st.contractBox.Text.Trim()
+    $runMsg = if ($autoRamp) {
+        "Running agent.local -AutoRamp (Governor Phase 3: route + ramp M0->M1->S0) ...`r`n(goal submitted - loading + ramping the local models can take a minute or more)"
+    }
+    else {
+        "Running agent.local (route + execute) ...`r`n(goal submitted - loading the local models can take a minute or two)"
+    }
+    Set-ConsoleText $st.transcriptBox $runMsg
     $st.rawBox.Text = ''
     $st.mode = 'run'
     $st.planBtn.Enabled = $false
     $st.runBtn.Enabled = $false
     $st.cancelBtn.Enabled = $true
-    $st.stateLabel.Text = 'State: Running'
+    $st.stateLabel.Text = if ($autoRamp) { 'State: Running (auto-ramp)' } else { 'State: Running' }
     $st.costLabel.Text = 'Cost: -'
     $st.startedUtc = [datetime]::UtcNow
     $sync = [hashtable]::Synchronized(@{})
@@ -260,7 +315,9 @@ function Start-ConsoleRun {
             -Route `
             -Sync $sync `
             -AgentLocalPath $st.agentLocalPath `
-            -PwshPath $st.pwshPath
+            -PwshPath $st.pwshPath `
+            -AutoRamp:$autoRamp `
+            -SuccessContractPath $contractPath
         $st.handle = $h
         $st.timer.Start()
     }
@@ -295,11 +352,16 @@ function Update-ConsoleRun {
         Set-ConsoleText $st.transcriptBox (Format-AgentTranscript -Run $run)
         if ($run.envelope) { Set-ConsoleText $st.rawBox ($run.envelope | ConvertTo-Json -Depth 12) }
         else { Set-ConsoleText $st.rawBox ("RAW STDOUT:`r`n" + $run.raw_stdout + "`r`n`r`nSTDERR (tail):`r`n" + $run.stderr_tail) }
-        $cost = if ($run.result) { Get-Prop $run.result 'cost' } else { $null }
+        $rr = if ($run.result) { $run.result } else { $null }
+        $finalStatus = if ($rr) { Get-Prop $rr 'final_status' } else { $null }
+        $cost = if ($rr) { Get-Prop $rr 'cost' } else { $null }
         if ($cost) {
             $st.costLabel.Text = ('Cost: ' + [string](Get-Prop $cost 'total_gateway_calls' '?') + ' gateway calls, ' + [string](Get-Prop $cost 'total_tokens' '?') + ' tokens')
         }
-        $st.stateLabel.Text = if ($run.ok) { 'State: Done' } else { 'State: Finished (' + $run.status + ')' }
+        elseif ($finalStatus) {
+            $st.costLabel.Text = ('Auto-ramp: ' + [string]$finalStatus + ' (' + [string](Get-Prop $rr 'model_swaps' 0) + ' swap(s))')
+        }
+        $st.stateLabel.Text = if ($finalStatus) { 'State: ' + [string]$finalStatus } elseif ($run.ok) { 'State: Done' } else { 'State: Finished (' + $run.status + ')' }
     }
     $st.planBtn.Enabled = $true
     $st.runBtn.Enabled = $true
