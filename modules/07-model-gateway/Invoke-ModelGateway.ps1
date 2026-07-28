@@ -17,6 +17,13 @@
   llama-server is ever on the GPU. Default is OFF -> the classic per-call spawn/kill is byte-for-byte unchanged.
   -EvictWarm tears down the resident server and returns (no generation) for clean teardown / no orphans.
 
+  Governor Phase 3 Stage-2 -- OPT-IN per-token logprobs (-Logprobs / {"logprobs":true}): the chat request adds
+  OpenAI-style logprobs+top_logprobs and the result surfaces result.generation.logprobs {available, top_k,
+  token_count, first_token_entropy, mean_entropy, decision_token_entropy} (top-k-approximate Shannon entropy in
+  nats). Default OFF -> the request body + the result are byte-for-byte unchanged. The STEP-1 live probe
+  confirmed clean logprobs on BOTH engine builds (b8661 + b10092); consumed by agent.local -AutoRamp
+  -LogprobConfidence as one more soft-strike signal.
+
   This is the first stochastic/mixed skill: it populates `model_provenance[]` (id/version/params/tokens/
   timings/finish_reason/runtime) and `confidence` (a documented generation-completeness heuristic, NOT a
   semantic-correctness score). Emits one lifeorch.skill.result/0.1 envelope on stdout; diagnostics to
@@ -58,7 +65,10 @@ param(
     # --- Governor Phase 2: warm/persistent llama-server ---
     [switch]$Warm,                       # keep the llama-server resident across calls; reuse when model unchanged
     [switch]$EvictWarm,                  # tear down the resident warm server and return (no generation)
-    [string]$WarmRegistryPath            # override the resident-server registry (default: runtime/warm-server.json)
+    [string]$WarmRegistryPath,           # override the resident-server registry (default: runtime/warm-server.json)
+    # --- Governor Phase 3 Stage-2: opt-in per-token logprobs (OFF by default -> request/response byte-identical) ---
+    [switch]$Logprobs,                   # request OpenAI-style logprobs/top_logprobs and return decision-token entropy
+    [int]$TopLogprobs = 5                # top-k candidates per token (llama-server clamps to its own cap)
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -77,6 +87,19 @@ function Has([object]$o, [string]$n) { return ($null -ne $o -and $o.PSObject -an
 function Get-Sha256Hex([byte[]]$b) {
     $s = [System.Security.Cryptography.SHA256]::Create()
     try { ([System.BitConverter]::ToString($s.ComputeHash($b))).Replace('-','').ToLowerInvariant() } finally { $s.Dispose() }
+}
+# Shannon entropy (nats) over one token's top-k candidates. Each carries .logprob (p=exp) or .prob (already p).
+# Normalized over the returned top-k, so it is a top-k-approximate entropy (documented; the tail is unobserved).
+function Get-TokenEntropy($topArr) {
+    if ($null -eq $topArr) { return $null }
+    $arr = @($topArr); if ($arr.Count -eq 0) { return $null }
+    $ps = New-Object System.Collections.Generic.List[double]
+    foreach ($t in $arr) { if (Has $t 'logprob') { $ps.Add([math]::Exp([double]$t.logprob)) } elseif (Has $t 'prob') { $ps.Add([double]$t.prob) } }
+    if ($ps.Count -eq 0) { return $null }
+    $sum = 0.0; foreach ($x in $ps) { $sum += $x }
+    if ($sum -le 0) { return $null }
+    $h = 0.0; foreach ($x in $ps) { $q = $x / $sum; if ($q -gt 0) { $h += (-1.0 * $q * [math]::Log($q)) } }
+    return [math]::Round($h, 4)
 }
 function Get-FreePort([int]$start) {
     for ($p = $start; $p -lt ($start + 300); $p++) {
@@ -262,6 +285,8 @@ try {
             if (Has $p 'warm')             { $Warm = [bool]$p.warm }
             if (Has $p 'evict_warm')       { $EvictWarm = [bool]$p.evict_warm }
             if (Has $p 'warm_registry_path') { $WarmRegistryPath = [string]$p.warm_registry_path }
+            if (Has $p 'logprobs')         { $Logprobs = [bool]$p.logprobs }
+            if (Has $p 'top_logprobs')     { $TopLogprobs = [int]$p.top_logprobs }
         }
     }
     New-Item -ItemType Directory -Path $invDir -Force | Out-Null
@@ -514,6 +539,7 @@ try {
 
             $bodyObj = [ordered]@{ model = $m.model_id; messages = $msgArr; max_tokens = $MaxTokens; temperature = $Temperature; top_p = $TopP; top_k = $TopK; seed = $Seed }
             if ($stopArr.Count -gt 0) { $bodyObj.stop = $stopArr }
+            if ($Logprobs) { $bodyObj.logprobs = $true; $bodyObj.top_logprobs = $TopLogprobs }   # opt-in (Stage-2); off -> body unchanged
             $body = $bodyObj | ConvertTo-Json -Depth 8
             $genSw = [System.Diagnostics.Stopwatch]::StartNew()
             try {
@@ -554,15 +580,38 @@ try {
     }
 
     # ---- parse response ----
-    $content = ''; $finish = 'unknown'; $usage = $null; $timings = $null
+    $content = ''; $finish = 'unknown'; $usage = $null; $timings = $null; $lpBlock = $null
     if ($null -ne $resp -and (Has $resp 'choices')) {
         $ch = @($resp.choices)
         if ($ch.Count -gt 0) {
             $c0 = $ch[0]
             if ((Has $c0 'message') -and (Has $c0.message 'content')) { $content = [string]$c0.message.content }
             if (Has $c0 'finish_reason') { $finish = [string]$c0.finish_reason }
+            # ---- opt-in per-token logprobs -> decision-token entropy (Stage-2). OpenAI schema: choices[0].logprobs.content[] ----
+            if ($Logprobs -and (Has $c0 'logprobs') -and $null -ne $c0.logprobs -and (Has $c0.logprobs 'content') -and $null -ne $c0.logprobs.content) {
+                $lpContent = @($c0.logprobs.content)
+                if ($lpContent.Count -gt 0) {
+                    $ents = New-Object System.Collections.Generic.List[double]; $firstEnt = $null; $decEnt = $null
+                    foreach ($tk in $lpContent) {
+                        $tl = if (Has $tk 'top_logprobs') { @($tk.top_logprobs) } else { @() }
+                        $e = Get-TokenEntropy $tl
+                        if ($null -ne $e) {
+                            $ents.Add($e)
+                            if ($null -eq $firstEnt) { $firstEnt = $e }
+                            if ($null -eq $decEnt) {
+                                $ts = if (Has $tk 'token') { [string]$tk.token } else { '' }
+                                if (-not [string]::IsNullOrWhiteSpace($ts)) { $decEnt = $e }
+                            }
+                        }
+                    }
+                    $meanEnt = if ($ents.Count -gt 0) { [math]::Round((($ents | Measure-Object -Sum).Sum / $ents.Count), 4) } else { $null }
+                    if ($null -eq $decEnt) { $decEnt = $firstEnt }
+                    $lpBlock = [ordered]@{ available = $true; top_k = $TopLogprobs; token_count = $lpContent.Count; first_token_entropy = $firstEnt; mean_entropy = $meanEnt; decision_token_entropy = $decEnt }
+                }
+            }
         }
     }
+    if ($Logprobs -and $null -eq $lpBlock) { $lpBlock = [ordered]@{ available = $false; top_k = $TopLogprobs; token_count = 0; first_token_entropy = $null; mean_entropy = $null; decision_token_entropy = $null } }
     if ((Has $resp 'usage')) { $usage = $resp.usage }
     if ((Has $resp 'timings')) { $timings = $resp.timings }
 
@@ -592,6 +641,7 @@ try {
         server = [ordered]@{ port = $usePort; health_ms = $healthMs; gpu_layers = $ngl; context = $ctx; gpu_lease = $leaseState
             warm = [ordered]@{ enabled = $warmOn; reused = $warmReused; started_new = $warmStartedNew; evicted = $warmEvicted; load_ms = $healthMs; registry_path = $warmRegPath } }
     }
+    if ($null -ne $lpBlock) { $result.generation.logprobs = $lpBlock }   # only present when -Logprobs was requested (off -> byte-identical)
 
     $modelProvenance = @(
         [ordered]@{

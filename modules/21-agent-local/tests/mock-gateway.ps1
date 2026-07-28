@@ -44,7 +44,14 @@ if ($system -like 'You are the decision controller*') {
     $text = if (Has $d 'text') { [string]$d.text } else { '' }
     $fr = if (Has $d 'finish_reason') { [string]$d.finish_reason } else { 'stop' }
     $conf = if ([string]::IsNullOrWhiteSpace($text)) { 0.1 } elseif ($fr -eq 'length') { 0.4 } else { 0.7 }
-    $result = [ordered]@{ model=$modelId; output=[ordered]@{ role='assistant'; text=$text }; generation=[ordered]@{ finish_reason=$fr; prompt_tokens=10; completion_tokens=($text.Length); total_tokens=(10+$text.Length) }; server=[ordered]@{ warm=[ordered]@{ enabled=$true; reused=$false } } }
+    $gen = [ordered]@{ finish_reason=$fr; prompt_tokens=10; completion_tokens=($text.Length); total_tokens=(10+$text.Length) }
+    # STEP-3 seam: when the controller requests logprobs and the scripted decision carries an `entropy`,
+    # surface it exactly as the real gateway does (result.generation.logprobs.decision_token_entropy).
+    if ((Has $p 'logprobs') -and [bool]$p.logprobs -and (Has $d 'entropy')) {
+        $en = [double]$d.entropy
+        $gen.logprobs = [ordered]@{ available=$true; top_k=5; token_count=1; first_token_entropy=$en; mean_entropy=$en; decision_token_entropy=$en }
+    }
+    $result = [ordered]@{ model=$modelId; output=[ordered]@{ role='assistant'; text=$text }; generation=$gen; server=[ordered]@{ warm=[ordered]@{ enabled=$true; reused=$false } } }
     Emit 'ok' $result $conf
 }
 else {

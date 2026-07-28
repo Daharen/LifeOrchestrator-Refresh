@@ -15,7 +15,19 @@
     S0 -- 9B strong        : escalate the WHOLE epoch to the resident 9B, decide=[strong] as a DIRECT one-rung
                              classify (1536-2048 tok). (Calibration D-0058: the 9B needs >=~1024 tok or it
                              returns empty content -> at S0 we provision 2048.)
-  EXCLUDED from this Stage-1 slice (deferred): X0/27B, logprobs/entropy, self-consistency, pattern-learning.
+    X0 -- 27B legacy       : STAGE-2 ADDITIVE, OPT-IN (-AllowLegacy27B, OFF by default). After S0 still fails
+                             its trigger, a SINGLE monotonic one-shot escalation to the legacy 27B
+                             (llm.strong.qwen3p5-27b, b8661) as a DIRECT one-rung classify (2048 tok -- the
+                             27B reasons in-content and returns empty below ~1k tok, per the STEP-1 probe),
+                             STRICTLY deadline-gated: if the hard wall-clock deadline passes before a verified
+                             contract pass, X0 aborts cleanly to completed_unverified / human_verification_required
+                             (never hangs, never claims success on say-so). It reuses the whole-task gpu lease,
+                             the exact residency-key evict+reload, the duplicate-side-effect guard (resume from
+                             the last authoritative state), and the SAME frozen success contract.
+  STAGE-2 OPT-IN also: logprob/entropy decision-confidence (-LogprobConfidence, OFF by default) -- the STEP-1
+  live probe confirmed clean per-token logprobs on BOTH engine builds (b8661 + b10092), so a high decision-token
+  entropy can add ONE more soft strike. It never replaces the heuristic and changes no default.
+  STILL EXCLUDED (deferred): self-consistency, pattern-learning.
 
   CLOSING SIGNAL = a caller-supplied PRE-FROZEN deterministic success contract (schema
   lifeorch.goal_verification/0.1), frozen by hash BEFORE execution. A tier is "good enough" ONLY when the SAME
@@ -65,6 +77,22 @@ param(
     [int]$M0DecideTokens = 768,  [int]$M0GenTokens = 768,  [int]$M0MaxSteps = 6,
     [int]$M1DecideTokens = 1536, [int]$M1GenTokens = 1024, [int]$M1ExtraSteps = 2,
     [int]$S0DecideTokens = 2048, [int]$S0GenTokens = 2048, [int]$S0ExtraSteps = 4,
+    # --- Stage-2 X0/27B one-shot recovery rung (ADDITIVE, OPT-IN, deadline-gated; OFF by default) ---
+    # After S0 still fails its trigger, allow a SINGLE monotonic escalation to the legacy 27B as a DIRECT
+    # one-rung classify, strictly bounded by a HARD wall-clock deadline (never hang; abort cleanly). The
+    # 27B needs a generous token budget (2048) or it returns empty content -- section-5 + the live probe
+    # (first token 'Thinking', empty at 24 tok). Only reachable when -AllowLegacy27B is set.
+    [switch]$AllowLegacy27B,
+    [string]$X0Model = 'llm.strong.qwen3p5-27b',
+    [int]$X0DecideTokens = 2048, [int]$X0GenTokens = 2048, [int]$X0MaxSteps = 2,
+    [int]$X0DeadlineSec = 300, [int]$X0LoadTimeoutSec = 260, [int]$X0MinBudgetSec = 1,
+    # --- Stage-2 logprob/entropy decision-confidence (ADDITIVE, OPT-IN soft signal; OFF by default) ---
+    # Only wired because the STEP-1 live probe confirmed clean per-token logprobs on BOTH engine builds
+    # (b8661 + b10092). When on, decision calls request logprobs and a high decision-token entropy adds ONE
+    # more soft strike; the existing heuristic and every default are unchanged (this is off by default).
+    [switch]$LogprobConfidence,
+    [int]$TopLogprobs = 5,
+    [double]$EntropyStrikeThreshold = 1.0,
     [string]$ToolsPath,
     [string]$Tools,
     [string]$GatewayPath,
@@ -85,6 +113,7 @@ param(
     # --- test seam only (documented; no effect on real runs) ---
     [string[]]$FaultEscalateEpochs = @(),   # inject a synthetic HARD trigger at each named epoch's first step (-> immediate S0)
     [string[]]$FaultSoftEpochs = @(),        # inject 2 synthetic SOFT strikes at each named epoch's first step, WITHOUT acting (-> M0->M1->S0)
+    [int]$X0SimulatedDelaySec = 0,           # test seam: sleep before the X0 decision to drive the deadline-abort path deterministically off-machine
     [string]$InputsJson,
     [string]$ArtifactRoot = (Join-Path $PSScriptRoot 'runtime/artifacts'),
     [string]$InvocationId
@@ -272,6 +301,19 @@ try {
             if ((Has $p 's0_model') -and -not $bound.ContainsKey('S0Model')) { $S0Model = [string]$p.s0_model }
             if ((Has $p 'fault_escalate_epochs') -and -not $bound.ContainsKey('FaultEscalateEpochs')) { $FaultEscalateEpochs = @($p.fault_escalate_epochs | ForEach-Object { [string]$_ }) }
             if ((Has $p 'fault_soft_epochs') -and -not $bound.ContainsKey('FaultSoftEpochs')) { $FaultSoftEpochs = @($p.fault_soft_epochs | ForEach-Object { [string]$_ }) }
+            # --- Stage-2 X0 + logprob-confidence knobs (opt-in) ---
+            if ((Has $p 'allow_legacy_27b')  -and -not $bound.ContainsKey('AllowLegacy27B'))       { $AllowLegacy27B = [bool]$p.allow_legacy_27b }
+            if ((Has $p 'x0_model')          -and -not $bound.ContainsKey('X0Model'))              { $X0Model = [string]$p.x0_model }
+            if ((Has $p 'x0_decide_tokens')  -and -not $bound.ContainsKey('X0DecideTokens'))       { $X0DecideTokens = [int]$p.x0_decide_tokens }
+            if ((Has $p 'x0_gen_tokens')     -and -not $bound.ContainsKey('X0GenTokens'))          { $X0GenTokens = [int]$p.x0_gen_tokens }
+            if ((Has $p 'x0_max_steps')      -and -not $bound.ContainsKey('X0MaxSteps'))           { $X0MaxSteps = [int]$p.x0_max_steps }
+            if ((Has $p 'x0_deadline_s')     -and -not $bound.ContainsKey('X0DeadlineSec'))        { $X0DeadlineSec = [int]$p.x0_deadline_s }
+            if ((Has $p 'x0_load_timeout_s') -and -not $bound.ContainsKey('X0LoadTimeoutSec'))     { $X0LoadTimeoutSec = [int]$p.x0_load_timeout_s }
+            if ((Has $p 'x0_min_budget_s')   -and -not $bound.ContainsKey('X0MinBudgetSec'))       { $X0MinBudgetSec = [int]$p.x0_min_budget_s }
+            if ((Has $p 'x0_simulated_delay_s') -and -not $bound.ContainsKey('X0SimulatedDelaySec')) { $X0SimulatedDelaySec = [int]$p.x0_simulated_delay_s }
+            if ((Has $p 'logprob_confidence') -and -not $bound.ContainsKey('LogprobConfidence'))   { $LogprobConfidence = [bool]$p.logprob_confidence }
+            if ((Has $p 'top_logprobs')      -and -not $bound.ContainsKey('TopLogprobs'))          { $TopLogprobs = [int]$p.top_logprobs }
+            if ((Has $p 'entropy_strike_threshold') -and -not $bound.ContainsKey('EntropyStrikeThreshold')) { $EntropyStrikeThreshold = [double]$p.entropy_strike_threshold }
         }
     }
     if ($bound.ContainsKey('Tools') -and -not [string]::IsNullOrWhiteSpace($Tools)) {
@@ -455,11 +497,16 @@ try {
     }
 
     # ---- gateway calls (direct, warm, pinned to the epoch model) ----
-    function Invoke-GwGenerate([string]$modelId, [string]$system, [string]$prompt, [int]$maxTok, [string]$sub) {
+    function Invoke-GwGenerate([string]$modelId, [string]$system, [string]$prompt, [int]$maxTok, [string]$sub, [bool]$reqLogprobs = $false, [int]$loadTimeoutOverride = 0) {
         $o = [ordered]@{ model=$modelId; system=$system; prompt=$prompt; max_tokens=$maxTok; temperature=$Temperature; seed=$Seed; warm=$true; gpu_lease=$(if ($glMode -eq 'off') { 'off' } else { 'auto' }); gpu_lease_holder=$holder; pwsh_path=$PwshPath; warm_registry_path=$warmRegFile; review_queue_path=$childReviewPath }
         if (-not [string]::IsNullOrWhiteSpace($Registry)) { $o.registry = $Registry }
         if (-not [string]::IsNullOrWhiteSpace($LeaseDir)) { $o.lease_dir = $LeaseDir }
-        if ($LoadTimeoutSec -gt 0) { $o.load_timeout_s = $LoadTimeoutSec }
+        # opt-in per-token logprobs (STEP 3): the gateway adds logprobs/top_logprobs to the chat body and
+        # returns decision-token entropy in result.generation.logprobs. Off by default -> byte-identical request.
+        if ($reqLogprobs) { $o.logprobs = $true; $o.top_logprobs = $TopLogprobs }
+        # X0 bounds its own gateway call inside the hard deadline; else use the module load timeout.
+        if ($loadTimeoutOverride -gt 0) { $o.load_timeout_s = $loadTimeoutOverride }
+        elseif ($LoadTimeoutSec -gt 0) { $o.load_timeout_s = $LoadTimeoutSec }
         return (Invoke-Child $gatewayEntry ($o | ConvertTo-Json -Compress -Depth 12) $sub)
     }
     function Parse-Decision([string]$text) {
@@ -573,6 +620,7 @@ try {
             'M0' { return [ordered]@{ epoch='M0'; model_id=$M0Model; decide_tokens=$M0DecideTokens; gen_tokens=$M0GenTokens; max_steps=$M0MaxSteps } }
             'M1' { return [ordered]@{ epoch='M1'; model_id=$M1Model; decide_tokens=$M1DecideTokens; gen_tokens=$M1GenTokens; max_steps=$M1ExtraSteps } }
             'S0' { return [ordered]@{ epoch='S0'; model_id=$S0Model; decide_tokens=$S0DecideTokens; gen_tokens=$S0GenTokens; max_steps=$S0ExtraSteps } }
+            'X0' { return [ordered]@{ epoch='X0'; model_id=$X0Model; decide_tokens=$X0DecideTokens; gen_tokens=$X0GenTokens; max_steps=$X0MaxSteps } }
         }
         return $null
     }
@@ -582,6 +630,7 @@ try {
     try {
         $inputsDigest = 'sha256:' + (Get-Sha256Hex $utf8.GetBytes(($Goal + '|' + ($labels -join ',') + '|' + [string]$contractHash)))
         $stateEpoch = 'M0'; $modelSwaps = 0; $expandedMidUsed = $false; $loadedModel = $null
+        $x0Attempted = $false; $x0DeadlineUtc = $null   # X0 one-shot state (opt-in, deadline-gated)
         $softWindow = New-Object System.Collections.Generic.List[int]   # per-step soft counts (window of 3)
         $stepsInEpoch = 0; $lastFingerprint = Get-StateFingerprint
         $deadline = [DateTime]::UtcNow.AddSeconds([Math]::Max(30, $TaskTimeoutSec))
@@ -596,16 +645,37 @@ try {
             $epochCfg = Resolve-EpochConfig $stateEpoch
             $modelId = [string]$epochCfg.model_id
 
+            # ----- X0 one-shot HARD wall-clock deadline gate (never hang; abort cleanly BEFORE any side effect) -----
+            # The test seam sleeps to simulate a slow 27B running past the deadline; the deadline check then
+            # aborts to completed_unverified / human_verification_required (never verified_success on say-so).
+            if ($stateEpoch -eq 'X0') {
+                if ($X0SimulatedDelaySec -gt 0 -and -not $faultUsed.ContainsKey('x0delay')) { $faultUsed['x0delay'] = $true; Start-Sleep -Seconds ([Math]::Min($X0SimulatedDelaySec, 120)) }
+                if ($null -ne $x0DeadlineUtc -and [DateTime]::UtcNow -ge $x0DeadlineUtc) {
+                    $finalStatus = if (-not $contractSupplied) { 'completed_unverified' } else { 'human_verification_required' }
+                    $trace.Add([pscustomobject]([ordered]@{ schema=$TRACE_SCHEMA; step=$stepNo; epoch='X0'; model=$modelId
+                        decision=$null; decision_in_set=$null; decision_finish_reason=$null; decision_conf=$null; decision_empty=$null; decision_entropy=$null
+                        tool_invoked=$false; tool_status=$null; skipped_repeat=$false
+                        contract_evaluated=$false; contract_passed=$null; contract_failed=@()
+                        residency_match=$null; residency_mismatch_reason=$null; residency_evicted=$null
+                        hard_trigger='x0_deadline_exceeded'; soft_strikes_this_step=0; soft_strikes_window=0; escalated_to=$null; model_swaps=$modelSwaps
+                        x0_deadline_abort=$true; x0_deadline_remaining_ms=0 }))
+                    Write-Diag "X0 deadline exceeded before a verified pass -> $finalStatus (clean abort, no hang)"
+                    break
+                }
+            }
+
             # ----- Ensure-ResidentModel: exact whole-key residency; evict on mismatch; HARD only if the resident is stale/external -----
             $residency = Ensure-ResidentModel $modelId $loadedModel
             $residencyHardTrigger = [bool]$residency.hard
 
             $rec = [ordered]@{ schema=$TRACE_SCHEMA; step=$stepNo; epoch=$stateEpoch; model=$modelId
-                decision=$null; decision_in_set=$null; decision_finish_reason=$null; decision_conf=$null; decision_empty=$null
+                decision=$null; decision_in_set=$null; decision_finish_reason=$null; decision_conf=$null; decision_empty=$null; decision_entropy=$null
                 tool_invoked=$false; tool_status=$null; skipped_repeat=$false
                 contract_evaluated=$false; contract_passed=$null; contract_failed=@()
                 residency_match=[bool]$residency.match; residency_mismatch_reason=$residency.mismatch_reason; residency_evicted=[bool]$residency.evicted
-                hard_trigger=$null; soft_strikes_this_step=0; soft_strikes_window=0; escalated_to=$null; model_swaps=$modelSwaps }
+                hard_trigger=$null; soft_strikes_this_step=0; soft_strikes_window=0; escalated_to=$null; model_swaps=$modelSwaps
+                x0_deadline_abort=$null; x0_deadline_remaining_ms=$null }
+            if ($stateEpoch -eq 'X0' -and $null -ne $x0DeadlineUtc) { $rec.x0_deadline_remaining_ms = [int][Math]::Max(0, ($x0DeadlineUtc - [DateTime]::UtcNow).TotalMilliseconds) }
 
             $hard = $false; $hardReason = $null; $soft = 0; $softReasons = New-Object System.Collections.Generic.List[string]
             $pd = [pscustomobject]@{ decision=$null; in_set=$false }
@@ -616,20 +686,39 @@ try {
             } else {
                 # ----- DECIDE (direct warm classify, pinned to the epoch model) -----
                 $decCtx = Build-DecisionContext
-                $decR = Invoke-GwGenerate $modelId $decSystem $decCtx $epochCfg.decide_tokens (Join-Path $invDir "decide-$stepNo")
+                # X0 bounds its own gateway call to the remaining hard deadline so the 27B call can never hang.
+                $decLoadTo = 0
+                if ($stateEpoch -eq 'X0' -and $null -ne $x0DeadlineUtc) {
+                    $rem = [int]([Math]::Ceiling(($x0DeadlineUtc - [DateTime]::UtcNow).TotalSeconds))
+                    $decLoadTo = [Math]::Max(5, [Math]::Min($X0LoadTimeoutSec, $rem))
+                }
+                $decR = Invoke-GwGenerate $modelId $decSystem $decCtx $epochCfg.decide_tokens (Join-Path $invDir "decide-$stepNo") ([bool]$LogprobConfidence) $decLoadTo
                 $decEnv = $decR.env; Add-Provenance $modelProvenance $decEnv "decide-$stepNo"
                 $loadedModel = $modelId   # the warm server now holds this epoch's model (loaded by the decision call)
                 $decText = ''; $decFinish=''; $decConf=$null
                 if (Test-ChildOk $decEnv) { $decText = [string](Prop (Prop $decEnv.result 'output' $null) 'text' ''); $decFinish = [string](Prop (Prop $decEnv.result 'generation' $null) 'finish_reason' ''); $decConf = Prop $decEnv 'confidence' $null }
                 $decEmpty = [string]::IsNullOrWhiteSpace($decText)
+                # optional logprob-derived decision-token entropy (STEP 3, opt-in). Additive soft signal ONLY.
+                $decEntropy = $null
+                if (Test-ChildOk $decEnv) {
+                    $gen = Prop $decEnv.result 'generation' $null
+                    $lp = if ($null -ne $gen) { Prop $gen 'logprobs' $null } else { $null }
+                    if ($null -ne $lp) {
+                        if (Has $lp 'decision_token_entropy' -and $null -ne $lp.decision_token_entropy) { $decEntropy = [double]$lp.decision_token_entropy }
+                        elseif (Has $lp 'first_token_entropy' -and $null -ne $lp.first_token_entropy) { $decEntropy = [double]$lp.first_token_entropy }
+                    }
+                }
                 $pd = Parse-Decision $decText
                 $chosen = $pd.decision
-                $rec.decision = $chosen; $rec.decision_in_set = $pd.in_set; $rec.decision_finish_reason = $decFinish; $rec.decision_conf = $decConf; $rec.decision_empty = $decEmpty
+                $rec.decision = $chosen; $rec.decision_in_set = $pd.in_set; $rec.decision_finish_reason = $decFinish; $rec.decision_conf = $decConf; $rec.decision_empty = $decEmpty; $rec.decision_entropy = $decEntropy
 
                 if ($decEmpty) { $hard=$true; $hardReason='empty_decision' }
                 elseif (-not $pd.in_set) { $hard=$true; $hardReason='out_of_set_decision' }
                 elseif ($decFinish -eq 'length') { $hard=$true; $hardReason='length_truncated_decision' }
                 if ($null -ne $decConf -and [double]$decConf -lt 0.5) { $soft++; $softReasons.Add('low_confidence') }
+                # opt-in entropy soft strike: a high decision-token entropy is one more soft signal (never a hard
+                # reject -- a low-entropy wrong answer is still wrong, per the frontier note). Off by default.
+                if ($LogprobConfidence -and $null -ne $decEntropy -and [double]$decEntropy -ge $EntropyStrikeThreshold) { $soft++; $softReasons.Add("high_decision_entropy:$([Math]::Round([double]$decEntropy,3))") }
 
                 # ----- test seam: synthetic HARD trigger to deterministically exercise the live ramp -----
                 if (-not $hard -and (@($FaultEscalateEpochs) -contains $stateEpoch) -and -not $faultUsed.ContainsKey("hard:$stateEpoch")) {
@@ -759,8 +848,29 @@ try {
                 elseif (($stateEpoch -eq 'M0' -or $stateEpoch -eq 'M1') -and $modelSwaps -lt $MaxModelSwaps) {
                     $rec.escalated_to='S0'; $stateEpoch='S0'; $modelSwaps++; $stepsInEpoch=0; $softWindow.Clear()
                 }
+                elseif ($stateEpoch -eq 'S0' -and $AllowLegacy27B -and -not $x0Attempted) {
+                    # ----- OPT-IN X0/27B ONE-SHOT RECOVERY: S0 failed its trigger; escalate ONCE to the legacy 27B,
+                    # strictly deadline-gated. Monotonic + model-affine (M0->M1->S0->X0), never de-escalate. -----
+                    $x0Remaining = ($deadline - [DateTime]::UtcNow).TotalSeconds
+                    if ($x0Remaining -ge $X0MinBudgetSec) {
+                        $x0Attempted = $true
+                        $x0DeadlineUtc = [DateTime]::UtcNow.AddSeconds([Math]::Min([double]$X0DeadlineSec, $x0Remaining))
+                        $MaxTotalSteps += $X0MaxSteps   # guarantee the one-shot X0 epoch its own step budget
+                        $rec.escalated_to='X0'; $stateEpoch='X0'; $modelSwaps++; $stepsInEpoch=0; $softWindow.Clear()
+                        Write-Diag "S0 failed its trigger -> X0 one-shot 27B recovery (AllowLegacy27B); deadline=$([Math]::Round([Math]::Min([double]$X0DeadlineSec,$x0Remaining)))s"
+                    } else {
+                        $rec.escalated_to = $null
+                        $finalStatus = if (-not $contractSupplied) { 'completed_unverified' } else { 'human_verification_required' }
+                        Write-Diag "S0 ceiling + AllowLegacy27B but insufficient deadline for X0 ($([Math]::Round($x0Remaining))s < ${X0MinBudgetSec}s) -> $finalStatus"
+                    }
+                }
+                elseif ($stateEpoch -eq 'X0') {
+                    # X0 (the one-shot 27B) itself failed its trigger -> nowhere above; abort cleanly, never claim success.
+                    $finalStatus = if (-not $contractSupplied) { 'completed_unverified' } else { 'human_verification_required' }
+                    Write-Diag "X0 one-shot recovery failed its trigger -> $finalStatus (top of ladder reached)"
+                }
                 else {
-                    # already at S0 (or swap cap hit) -> local ceiling
+                    # already at S0 (or swap cap hit) with X0 not enabled -> local ceiling (Stage-1 default, UNCHANGED)
                     $finalStatus='local_ceiling_reached'
                 }
             }
@@ -793,7 +903,10 @@ try {
             governor_trace=$trace.ToArray()
             governor_trace_path=$tracePath
             is_review_producer=$false; child_reviews_redirected_to=$childReviewPath
-            excluded=@('X0/27B','logprobs/entropy','self-consistency','pattern-learning')
+            x0=[ordered]@{ enabled=[bool]$AllowLegacy27B; attempted=$x0Attempted; model=$X0Model; deadline_s=$X0DeadlineSec; decide_tokens=$X0DecideTokens; max_steps=$X0MaxSteps; fired=(@($trace.ToArray() | ForEach-Object { $_.epoch }) -contains 'X0') }
+            logprob_confidence=[ordered]@{ enabled=[bool]$LogprobConfidence; top_logprobs=$TopLogprobs; entropy_strike_threshold=$EntropyStrikeThreshold }
+            excluded=@('self-consistency','pattern-learning')
+            optin_stage2=@('X0/27B one-shot recovery via -AllowLegacy27B (deadline-gated)','logprob/entropy decision-confidence via -LogprobConfidence')
         }
         if ($warnings.Count -gt 0 -and $status -eq 'ok') { $status = 'partial' }
     }
@@ -826,11 +939,12 @@ try {
         [void]$mb.AppendLine('')
         foreach ($st in @($result.governor_trace)) {
             [void]$mb.AppendLine("## Step $($st.step) [$($st.epoch) / $($st.model)]")
-            [void]$mb.AppendLine("- decision: $($st.decision) (in_set=$($st.decision_in_set) finish=$($st.decision_finish_reason) empty=$($st.decision_empty))")
+            [void]$mb.AppendLine("- decision: $($st.decision) (in_set=$($st.decision_in_set) finish=$($st.decision_finish_reason) empty=$($st.decision_empty) entropy=$($st.decision_entropy))")
             [void]$mb.AppendLine("- tool: invoked=$($st.tool_invoked) status=$($st.tool_status) skipped_repeat=$($st.skipped_repeat)")
             [void]$mb.AppendLine("- contract: evaluated=$($st.contract_evaluated) passed=$($st.contract_passed) failed=[$(@($st.contract_failed) -join '; ')]")
             [void]$mb.AppendLine("- residency: match=$($st.residency_match) mismatch=$($st.residency_mismatch_reason) evicted=$($st.residency_evicted)")
             [void]$mb.AppendLine("- triggers: hard=$($st.hard_trigger) soft_step=$($st.soft_strikes_this_step) soft_window=$($st.soft_strikes_window) escalated_to=$($st.escalated_to)")
+            if ($st.epoch -eq 'X0') { [void]$mb.AppendLine("- x0: deadline_remaining_ms=$($st.x0_deadline_remaining_ms) deadline_abort=$($st.x0_deadline_abort)") }
             [void]$mb.AppendLine('')
         }
         $amPath = Join-Path $invDir 'autoramp.md'

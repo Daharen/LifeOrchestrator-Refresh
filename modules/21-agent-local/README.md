@@ -102,8 +102,24 @@ and the task **never de-escalates**:
 - **S0 -- 9B strong:** escalate the **whole epoch** to the resident 9B, decide `[strong]` as a **direct** classify
   (2048 tok). *(Live calibration D-0058: the 9B needs >=~1024 tok or it returns empty content; at S0 it decides
   6/6 vs the 3B's 4/6.)*
+- **X0 -- 27B legacy (Stage-2, ADDITIVE + OPT-IN, `-AllowLegacy27B`, OFF by default):** after S0 still fails its
+  trigger, a **SINGLE** monotonic one-shot escalation to the legacy 27B (`llm.strong.qwen3p5-27b`, b8661) as a
+  **direct** one-rung classify (2048 tok -- the 27B reasons in-content and returns empty below ~1k tok, per the
+  Stage-2 live logprobs probe: first token `Thinking`, empty at 24 tok). It is **strictly deadline-gated**: if a
+  hard wall-clock budget (`-X0DeadlineSec`, default 300 s) passes before the frozen contract verifies, X0 **aborts
+  cleanly** to `completed_unverified` / `human_verification_required` -- it never hangs and never claims success on
+  the model's say-so. X0 reuses the whole-task gpu lease, the exact residency-key **evict+reload** into the 27B, the
+  duplicate-side-effect guard (resume from the last authoritative state), and the SAME frozen success contract. With
+  the switch OFF the S0-ceiling path is byte-for-byte the shipped Stage-1 behavior (`local_ceiling_reached`).
 
-**Excluded from this Stage-1 slice:** X0/27B, logprobs/entropy, self-consistency, pattern-learning.
+**Stage-2 logprob/entropy decision-confidence (ADDITIVE + OPT-IN, `-LogprobConfidence`, OFF by default):** the
+Stage-2 STEP-1 live probe confirmed clean per-token logprobs on **BOTH** engine builds (b8661 + b10092), so when the
+switch is on the decision calls request logprobs and a high decision-token entropy (`>= -EntropyStrikeThreshold`,
+default 1.0 nats) adds **one more** soft strike. It never replaces the existing heuristic and changes no default;
+`model.gateway` grows a matching opt-in `-Logprobs` that returns `result.generation.logprobs` (first/mean/decision-
+token entropy). A low-entropy wrong answer is still wrong, so entropy is only ever a *soft* signal, never a hard reject.
+
+**Still excluded (deferred):** self-consistency, pattern-learning.
 
 The **closing signal** is a caller-supplied **pre-frozen deterministic success contract**
 (`lifeorch.goal_verification/0.1`), frozen by hash *before* execution; a tier is "good enough" **only** when the
@@ -132,9 +148,12 @@ pwsh -NoProfile -File .\Invoke-AgentLocal.ps1 -AutoRamp -InputsJson '{
 ```
 
 **Tests:** `tests/Invoke-AutoRampTests.ps1` -- a mock gateway (scripted decisions/args) + a mock tool (real
-filesystem side effects) + the **real** `res.lease`; 11 scenarios / 50 assertions prove epoch monotonicity,
-hard + soft triggers, frozen-contract gating, residency-key mismatch -> evict/reload, idempotency + resume, and the
-`completed_unverified`/`human_verification_required` paths. Validated **live** on the warm server: a floor-solvable
+filesystem side effects) + the **real** `res.lease`; **16 scenarios / 83 assertions** prove epoch monotonicity,
+hard + soft triggers, frozen-contract gating, residency-key mismatch -> evict/reload, idempotency + resume, the
+`completed_unverified`/`human_verification_required` paths, and (Stage-2) the X0 rung firing **only** after S0 and
+**only** under `-AllowLegacy27B`, the deadline-gated clean abort (a simulated slow 27B never hangs), the duplicate-
+side-effect refusal on the X0 resume, and the opt-in entropy soft strike (off by default -> unchanged). Validated
+**live** on the warm server: a floor-solvable
 goal completes at **M0** (no escalation); an engineered goal ramps **M0->M1->S0** with a real 3B->9B swap, and
 **0 orphaned `llama-server`** after teardown. See D-0058 + `ADAPTIVE_RESOURCE_GOVERNOR.md`.
 

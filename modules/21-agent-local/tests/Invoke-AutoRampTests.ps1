@@ -63,7 +63,7 @@ function Run-AutoRamp {
 }
 function Epochs($r) { return @($r.result.governor_trace | ForEach-Object { $_.epoch }) }
 function IsMonotonic($r) {
-    $rank = @{ 'M0'=0; 'M1'=1; 'S0'=2 }
+    $rank = @{ 'M0'=0; 'M1'=1; 'S0'=2; 'X0'=3 }
     $seq = @(Epochs $r | ForEach-Object { $rank[$_] })
     for ($i=1; $i -lt $seq.Count; $i++) { if ($seq[$i] -lt $seq[$i-1]) { return $false } }
     return $true
@@ -204,6 +204,91 @@ Assert (-not [string]::IsNullOrWhiteSpace($r.result.governor_trace_path)) 's11 g
 Assert (Test-Path -LiteralPath $r.result.governor_trace_path) 's11 governor-trace.json exists on disk'
 $traceOk = $false; try { $tj = (Get-Content -LiteralPath $r.result.governor_trace_path -Raw) | ConvertFrom-Json; $traceOk = ($tj.schema -eq 'lifeorch.governor_trace/0.1' -and @($tj.steps).Count -ge 1) } catch {}
 Assert $traceOk 's11 governor-trace.json parses with schema + steps'
+
+# ---------------------------------------------------------------------------------------------------
+Section 'STAGE-2 X0: fires ONLY after S0 fails AND only under -AllowLegacy27B -> verified_success at X0'
+$sc = NewScratch 's12'; $f = Join-Path $sc 'x0.txt'
+$c = @{ schema='lifeorch.goal_verification/0.1'; predicates=@(@{predicate='file_exists';path=$f}) }
+# M0, M1, S0 arg-gens all fail (bad json) -> ramp M0->M1->S0->X0; X0 arg-gen (call 3) is good -> writes the file
+$plan = @{ decisions=@(@{text='doc.io'}, @{text='doc.io'}, @{text='doc.io'}, @{text='doc.io'}); bad_arg_calls=@(0,1,2); args=@{ 'doc.io'=@{op='write';path=$f;content='X0'} } }
+$r = Run-AutoRamp 's12' $sc 'make x0.txt' $c $plan @{ x0_min_budget_s=1 } @('-AllowLegacy27B') $null
+Assert ($r.result.final_status -eq 'verified_success') "s12 verified_success (got $($r.result.final_status))"
+Assert ($r.result.accepted_epoch -eq 'X0') "s12 accepted_epoch=X0 (got $($r.result.accepted_epoch))"
+Assert ((Epochs $r) -contains 'X0') 's12 the X0 rung fired'
+Assert ((Epochs $r) -contains 'S0') 's12 X0 fired only AFTER S0 (S0 present + before X0)'
+Assert (IsMonotonic $r) 's12 monotonic M0->M1->S0->X0 (never de-escalates)'
+Assert ([int]$r.result.model_swaps -eq 2) "s12 model_swaps=2 (M->S0, S0->X0) (got $($r.result.model_swaps))"
+Assert ([bool]$r.result.x0.enabled -and [bool]$r.result.x0.attempted -and [bool]$r.result.x0.fired) 's12 result.x0 records enabled+attempted+fired'
+Assert ($r.result.x0.model -eq 'llm.strong.qwen3p5-27b') 's12 X0 model is the legacy 27B'
+Assert (Test-Path -LiteralPath $f) 's12 the real file was written by the X0 rung'
+$x0row = @($r.result.governor_trace | Where-Object { $_.epoch -eq 'X0' })[0]
+Assert ($null -ne $x0row.x0_deadline_remaining_ms -and [int]$x0row.x0_deadline_remaining_ms -gt 0) 's12 X0 trace row carries deadline_remaining_ms'
+
+# ---------------------------------------------------------------------------------------------------
+Section 'STAGE-2 X0: WITHOUT -AllowLegacy27B the SAME failing plan stops at local_ceiling (Stage-1 default UNCHANGED)'
+$sc = NewScratch 's13'; $f = Join-Path $sc 'nox0.txt'
+$c = @{ schema='lifeorch.goal_verification/0.1'; predicates=@(@{predicate='file_exists';path=$f}) }
+$plan = @{ decisions=@(@{text='doc.io'}, @{text='doc.io'}, @{text='doc.io'}, @{text='doc.io'}); bad_arg_calls=@(0,1,2); args=@{ 'doc.io'=@{op='write';path=$f;content='X0'} } }
+$r = Run-AutoRamp 's13' $sc 'make nox0.txt' $c $plan $null $null $null
+Assert ($r.result.final_status -eq 'local_ceiling_reached') "s13 final_status=local_ceiling_reached (got $($r.result.final_status))"
+Assert ((Epochs $r) -notcontains 'X0') 's13 X0 NEVER fires without the switch'
+Assert ([bool]$r.result.x0.enabled -eq $false -and [bool]$r.result.x0.fired -eq $false) 's13 result.x0 shows disabled + not fired'
+Assert ([int]$r.result.model_swaps -eq 1) "s13 model_swaps=1 (M->S0 only) (got $($r.result.model_swaps))"
+
+# ---------------------------------------------------------------------------------------------------
+Section 'STAGE-2 X0: deadline-gated -- a simulated slow 27B past the deadline aborts cleanly (NEVER hangs)'
+$sc = NewScratch 's14'; $f = Join-Path $sc 'slow.txt'
+$c = @{ schema='lifeorch.goal_verification/0.1'; predicates=@(@{predicate='file_exists';path=$f}) }
+$plan = @{ decisions=@(@{text='doc.io'}, @{text='doc.io'}, @{text='doc.io'}, @{text='doc.io'}); bad_arg_calls=@(0,1,2); args=@{ 'doc.io'=@{op='write';path=$f;content='X0'} } }
+$swW = [System.Diagnostics.Stopwatch]::StartNew()
+$r = Run-AutoRamp 's14' $sc 'make slow.txt' $c $plan @{ x0_min_budget_s=1; x0_deadline_s=1; x0_simulated_delay_s=3 } @('-AllowLegacy27B') $null
+$swW.Stop()
+Assert ($r.result.final_status -eq 'human_verification_required') "s14 aborts to human_verification_required (got $($r.result.final_status))"
+Assert ([bool]$r.result.x0.attempted) 's14 X0 was attempted (fired) before the deadline abort'
+$abortRow = @($r.result.governor_trace | Where-Object { $_.epoch -eq 'X0' -and $_.x0_deadline_abort -eq $true })
+Assert (@($abortRow).Count -eq 1) 's14 exactly one X0 deadline-abort row (single one-shot, no loop)'
+Assert ($abortRow[0].hard_trigger -eq 'x0_deadline_exceeded') "s14 abort trigger=x0_deadline_exceeded (got $($abortRow[0].hard_trigger))"
+Assert (-not (Test-Path -LiteralPath $f)) 's14 NO side effect after the deadline abort'
+Assert ($r.result.verified_success -eq $false) 's14 never claims verified_success past the deadline'
+Assert ($swW.Elapsed.TotalSeconds -lt 30) "s14 returned promptly ($([int]$swW.Elapsed.TotalSeconds)s) -- proves it did not hang"
+
+# ---------------------------------------------------------------------------------------------------
+Section 'STAGE-2 X0: the duplicate-side-effect guard refuses an exact-duplicate mutation on the X0 resume'
+$sc = NewScratch 's15'; $fa = Join-Path $sc 'a.txt'; $fb = Join-Path $sc 'b.txt'
+$c = @{ schema='lifeorch.goal_verification/0.1'; predicates=@(@{predicate='file_exists';path=$fa}, @{predicate='file_exists';path=$fb}) }
+# step1 M0 writes a.txt (progress); M0(step2)/M1/S0 fail -> X0; X0 re-issues the SAME write a.txt -> refused
+$plan = @{ decisions=@(@{text='doc.io'}, @{text='doc.io'}, @{text='doc.io'}, @{text='doc.io'}, @{text='doc.io'}, @{text='doc.io'});
+           bad_arg_calls=@(1,2,3); args_seq=@(@{op='write';path=$fa;content='A'}, $null, $null, $null, @{op='write';path=$fa;content='A'}) }
+$r = Run-AutoRamp 's15' $sc 'make a.txt and b.txt' $c $plan @{ x0_min_budget_s=1 } @('-AllowLegacy27B') $null
+$x0dup = @($r.result.governor_trace | Where-Object { $_.epoch -eq 'X0' -and $_.skipped_repeat -eq $true })
+Assert (@($x0dup).Count -ge 1) 's15 a duplicate mutation was refused DURING the X0 resume (skipped_repeat on an X0 row)'
+Assert ($x0dup[0].tool_invoked -eq $false) 's15 the duplicate X0 mutation was NOT re-invoked (idempotent resume)'
+Assert ($x0dup[0].hard_trigger -eq 'repeat_identical_action_no_state_change') "s15 X0 dup is the frozen HARD trigger (got $($x0dup[0].hard_trigger))"
+Assert (Test-Path -LiteralPath $fa) 's15 a.txt (written at M0) survives the escalation to X0 -- state resumed, not restarted'
+Assert ([bool]$r.result.x0.attempted) 's15 X0 was reached'
+
+# ---------------------------------------------------------------------------------------------------
+Section 'STAGE-2 logprob/entropy soft signal: opt-in adds a strike; OFF by default changes nothing'
+$sc = NewScratch 's16'; $f = Join-Path $sc 'e.txt'
+$c = @{ schema='lifeorch.goal_verification/0.1'; predicates=@(@{predicate='file_exists';path=$f}) }
+# M0 step1: high-entropy decision + a bad arg-gen -> soft strikes -> M1; step2 M1 writes the file
+$planE = @{ decisions=@(@{text='doc.io'; entropy=1.6}, @{text='doc.io'; entropy=0.1}); bad_arg_calls=@(0); args=@{ 'doc.io'=@{op='write';path=$f;content='E'} } }
+# ON: -LogprobConfidence -> the controller requests logprobs; the mock surfaces entropy; the strike is counted
+$rOn = Run-AutoRamp 's16on' $sc 'make e.txt (entropy on)' $c $planE @{ logprob_confidence=$true } $null $null
+$onStep0 = $rOn.result.governor_trace[0]
+Assert ($null -ne $onStep0.decision_entropy -and [double]$onStep0.decision_entropy -eq 1.6) "s16 ON: decision_entropy surfaced (proves logprobs were requested) (got $($onStep0.decision_entropy))"
+Assert (@($onStep0.soft_reasons) -match 'high_decision_entropy') 's16 ON: a high_decision_entropy soft strike was added'
+Assert ([int]$onStep0.soft_strikes_this_step -eq 3) "s16 ON: step1 soft=3 (arg_parse + no_progress + entropy) (got $($onStep0.soft_strikes_this_step))"
+Assert ($rOn.result.final_status -eq 'verified_success') 's16 ON: still completes (additive, not a hard reject)'
+# OFF (default): a fresh scratch so the file_exists contract starts unsatisfied; no logprobs requested, no strike
+$sc2 = NewScratch 's16b'; $f2 = Join-Path $sc2 'e.txt'
+$c2 = @{ schema='lifeorch.goal_verification/0.1'; predicates=@(@{predicate='file_exists';path=$f2}) }
+$planE2 = @{ decisions=@(@{text='doc.io'; entropy=1.6}, @{text='doc.io'; entropy=0.1}); bad_arg_calls=@(0); args=@{ 'doc.io'=@{op='write';path=$f2;content='E'} } }
+$rOff = Run-AutoRamp 's16off' $sc2 'make e.txt (entropy off)' $c2 $planE2 $null $null $null
+$offStep0 = $rOff.result.governor_trace[0]
+Assert ($null -eq $offStep0.decision_entropy) 's16 OFF: no entropy surfaced by default (logprobs NOT requested)'
+Assert (-not (@($offStep0.soft_reasons) -match 'high_decision_entropy')) 's16 OFF: no entropy strike by default'
+Assert ([int]$offStep0.soft_strikes_this_step -eq 2) "s16 OFF: step1 soft=2 (arg_parse + no_progress only) (got $($offStep0.soft_strikes_this_step))"
 
 # ---------------------------------------------------------------------------------------------------
 Write-Host ""
