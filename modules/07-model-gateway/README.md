@@ -114,6 +114,57 @@ while the warm server keeps its VRAM. A warm reuse re-attaches to a caller-held 
 `-Warm` / `-EvictWarm` / `-WarmRegistryPath` are also settable via `-InputsJson` (`warm`, `evict_warm`,
 `warm_registry_path`). Default is **off** → the classic per-call spawn/kill is byte-for-byte unchanged.
 
+## Named pool manager (Governor Phase 3 Stage-1, mechanism C — D-0063)
+
+The pool manager extends the one warm server into a **named** manager that keeps **one** model GPU-active and
+fast-swaps to a named model on demand. On this box (11 GB VRAM, 64 GB RAM) a probe proved exactly one ~7 GB
+model fits at a time and a swap is **GPU-upload-bound (~1.6–4.1 s), not disk-bound** — so the win is *same-model
+residency (~1 ms reuse) plus routing that minimises swaps*, not a farm of hot specialists. The native
+`llama-server` router, `--slot-save-path`, and any coding specialist are **Stage-2+** and are deliberately not
+built here.
+
+**Expanded residency key.** Reuse-vs-swap is decided by an **exact** match of a residency key, not just the
+model filename (D-0063): `model_id + model_sha256 + model_size + engine build/path + gpu_layers + context +
+no_think + cache_type_k + cache_type_v + flash_attn + parallel(-np) + chat_template(+args) + mmproj_sha256 +
+generation_id`. An exact match **reuses** the resident (~1 ms, no reload) and refreshes its keep-resident timer;
+**any** change (e.g. a KV type, context, or `no_think` change) is a **real swap** — the resident is terminated
+(process-exit **and** VRAM-recovery confirmed via `nvidia-smi`), the requested model is loaded via its registry
+engine, `/health` **and** model provenance (`/v1/models`) are confirmed, and a new residency manifest is
+published to `runtime/warm-server.json` (`schema lifeorch.model_gateway.warm/0.2`).
+
+**Operations.**
+
+- **`-EnsureResident`** — make the requested model resident under the residency key, then **return without
+  generating** (the governor's `Ensure-ResidentModel(model_id, config_key)`). Forces `-Warm`. Returns
+  `mode:"ensure_resident"` with a `pool{action(reuse|evict_reload|cold_start), reused, started_new, evicted,
+  evict_confirmed, residency_key, residency_key_sha, swap_count, idle_ms_at_entry, load_ms, provenance, vram}`.
+- **`-PoolStatus`** — read-only report of the current resident (pid, model, `residency_key_sha`, idle age,
+  `swap_count`, health). No lease, no change.
+- **`-SweepIdle`** — evict the resident **iff** it is idle beyond **`-KeepResidentSeconds`** (default **90 s**);
+  a higher-priority contender or another module's GPU request calls this to reclaim the card immediately.
+  Same-model reuse refreshes the idle timer, so an actively-used resident is never swept.
+
+**Whole-task GPU lease.** A residency check/change is performed **under the `gpu` lease held across the whole
+operation** — a per-call lease would let another task swap the model between two calls. The governor acquires
+the lease **once for the whole ramped task** with a stable `-GpuLeaseHolder`; the gateway detects that
+(`already_held`) and **never releases a caller-held lease** (it only releases one it freshly acquired). So even
+across many calls in a task, at most one `llama-server` is ever GPU-resident.
+
+**Swap-minimising policy.** Selection is by **task affinity / the governor's model-affine epochs**, not LRU:
+M0/M1 reuse the same 3B; an escalation does **one** 3B→9B switch and stays on 9B until the task ends (no
+intra-task downshift); default **max one swap per task**; LRU is only a tie-breaker. The gateway records
+`swap_count` per resident lineage so the governor can observe swap-minimisation.
+
+**Same-model prefix reuse (Stage-1).** A pool/warm launch pins **one slot** (`--parallel 1`) and the completion
+request sends an explicit **`-IdSlot`**, so a same-model call reuses the cached prompt prefix (normal prompt
+caching). **`-ClearSlot`** erases the slot at a session boundary. Persistent `--slot-save-path` across an
+eviction is **Stage-2**.
+
+All pool switches are also settable via `-InputsJson` (`ensure_resident`, `pool_status`, `sweep_idle`,
+`cache_type_k`, `cache_type_v`, `flash_attn`, `parallel`, `id_slot`, `clear_slot`, `keep_resident_s`,
+`generation`). Default is **off** → the classic per-call and D-0057 warm paths are byte-for-byte unchanged (a
+non-warm result has no `server.warm.pool` block).
+
 ## Result shape
 
 `result = { model, engine, mode, selected_from, request{messages,sampling}, output{role,text},

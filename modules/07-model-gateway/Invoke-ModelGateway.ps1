@@ -17,6 +17,23 @@
   llama-server is ever on the GPU. Default is OFF -> the classic per-call spawn/kill is byte-for-byte unchanged.
   -EvictWarm tears down the resident server and returns (no generation) for clean teardown / no orphans.
 
+  Governor Phase 3 Stage-1 -- named warm POOL MANAGER (mechanism C, D-0063). The shipped D-0057 warm server is
+  extended into a NAMED POOL MANAGER that keeps ONE model GPU-active and fast-swaps to a named model on demand.
+  Reuse is decided by an EXPANDED RESIDENCY KEY (not just the model filename): model_id + model_sha256 +
+  model_size + engine build/path + gpu_layers + context + no_think + cache_type_k + cache_type_v + flash_attn +
+  parallel(-np) + chat_template(+args) + mmproj_sha256 + generation_id. An EXACT key match reuses the resident
+  (~1 ms, no reload) and refreshes its keep-resident timer; any change (e.g. KV type / context / no_think) is a
+  REAL swap: the resident is terminated (process-exit + VRAM-recovery CONFIRMED), the requested model is loaded
+  via its registry engine, /health + model provenance are confirmed, and a new residency manifest is published.
+  -EnsureResident performs this residency check/change and RETURNS without generating (the governor's
+  Ensure-ResidentModel(model_id, config_key)); -PoolStatus reports the resident + idle age read-only; -SweepIdle
+  evicts a resident idle beyond -KeepResidentSeconds (default 90 s). The gpu lease is HELD across the whole
+  check/change; a caller that pre-holds the lease (stable holder, whole-task) is honored and never released here
+  (owned = not already_held), so at most one llama-server is ever GPU-resident even across separate calls. Same-
+  model PREFIX REUSE is in-scope (normal prompt caching, -np 1, explicit id_slot, clear at session boundary);
+  persistent --slot-save-path across eviction, the native --models router, and any coding specialist are Stage-2+
+  and are NOT built here. Default OFF -> the classic per-call spawn/kill and the D-0057 warm path are unchanged.
+
   Governor Phase 3 Stage-2 -- OPT-IN per-token logprobs (-Logprobs / {"logprobs":true}): the chat request adds
   OpenAI-style logprobs+top_logprobs and the result surfaces result.generation.logprobs {available, top_k,
   token_count, first_token_entropy, mean_entropy, decision_token_entropy} (top-k-approximate Shannon entropy in
@@ -68,13 +85,25 @@ param(
     [string]$WarmRegistryPath,           # override the resident-server registry (default: runtime/warm-server.json)
     # --- Governor Phase 3 Stage-2: opt-in per-token logprobs (OFF by default -> request/response byte-identical) ---
     [switch]$Logprobs,                   # request OpenAI-style logprobs/top_logprobs and return decision-token entropy
-    [int]$TopLogprobs = 5                # top-k candidates per token (llama-server clamps to its own cap)
+    [int]$TopLogprobs = 5,               # top-k candidates per token (llama-server clamps to its own cap)
+    # --- Governor Phase 3 Stage-1: named warm POOL MANAGER (mechanism C, D-0063). All OFF by default -> byte-identical. ---
+    [switch]$EnsureResident,             # pool op: make the requested model resident under the EXPANDED residency key, then RETURN (no generation)
+    [switch]$PoolStatus,                 # read-only: report the current resident manifest + idle age + liveness/health (no lease, no change)
+    [switch]$SweepIdle,                  # evict the resident IFF it is idle beyond the keep-resident window (a contender/other module reclaims the GPU)
+    [string]$CacheTypeK = 'f16',         # KV key-cache type (residency-key field; f16 default per D-0063 -- q8_0 only after the S0 re-pass)
+    [string]$CacheTypeV = 'f16',         # KV value-cache type (residency-key field)
+    [switch]$FlashAttn,                  # enable flash-attention (residency-key field; OFF by default)
+    [int]$Parallel = 1,                  # llama-server slot count (-np); Stage-1 pins 1 for deterministic same-model prefix reuse
+    [int]$IdSlot = 0,                    # explicit slot id for prefix reuse (Stage-1: -np 1 + a single fixed slot)
+    [switch]$ClearSlot,                  # session-boundary: erase the prefix-cache slot before generating (best-effort POST /slots/<id>?action=erase)
+    [int]$KeepResidentSeconds = 90,      # idle keep-resident window; SweepIdle evicts a resident idle beyond this (refresh on same-model reuse)
+    [int]$Generation = -1                # override the residency-key generation_id to FORCE a swap even when all else matches (-1 = registry/model value)
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$SKILL_ID = 'model.gateway'; $SKILL_VERSION = '0.2.0'; $CONTRACT = '0.1'
+$SKILL_ID = 'model.gateway'; $SKILL_VERSION = '0.3.0'; $CONTRACT = '0.1'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $CONF_THRESHOLD = 0.5
 $utf8 = [System.Text.UTF8Encoding]::new($false)
@@ -242,6 +271,71 @@ function Stop-ResidentServer {
     return $false
 }
 
+# ---- Governor Phase 3 Stage-1: named POOL MANAGER (mechanism C, D-0063) helpers ----
+# The EXPANDED residency key -- reuse ONLY on an exact match of every field that changes what is GPU-resident.
+# A matching filename is INSUFFICIENT: a KV-type / context / no_think / engine / generation change is a REAL swap.
+function Get-ResidencyKey {
+    param($M, $Reg, [int]$Ngl, [int]$Ctx, [bool]$NoThink, [string]$Ctk, [string]$Ctv, [bool]$Flash, [int]$Np, [int]$Gen)
+    $p = if (Has $M 'params') { $M.params } else { $null }
+    $sha   = if ($null -ne $p -and (Has $p 'sha256'))        { [string]$p.sha256 }        else { $null }
+    $sz    = if ($null -ne $p -and (Has $p 'size_bytes'))    { [long]$p.size_bytes }       else { $null }
+    $mmsha = if ($null -ne $p -and (Has $p 'mmproj_sha256')) { [string]$p.mmproj_sha256 } else { $null }
+    $ep = if (Has $M 'engine_path') { [string]$M.engine_path } elseif ((Has $Reg 'engines') -and (Has $Reg.engines 'llama-server')) { [string]$Reg.engines.'llama-server' } else { $null }
+    $eb = if (Has $Reg 'engine_build') { [string]$Reg.engine_build } else { $null }
+    $tmpl = if (Has $M 'chat_template') { [string]$M.chat_template } else { $null }
+    $tmplArgs = if (Has $M 'chat_template_args') { [string]($M.chat_template_args | ConvertTo-Json -Depth 6 -Compress) } else { $null }
+    $genId = if ($Gen -ge 0) { $Gen } elseif (Has $M 'generation_id') { [int]$M.generation_id } elseif (Has $Reg 'generation_id') { [int]$Reg.generation_id } else { 0 }
+    return [ordered]@{
+        model_id = [string]$M.model_id; model_sha256 = $sha; model_size_bytes = $sz
+        engine_build = $eb; engine_path = $ep
+        gpu_layers = $Ngl; context = $Ctx; no_think = $NoThink
+        cache_type_k = $Ctk; cache_type_v = $Ctv; flash_attn = $Flash; parallel = $Np
+        chat_template = $tmpl; chat_template_args = $tmplArgs; mmproj_sha256 = $mmsha
+        generation_id = $genId
+    }
+}
+function Get-ResidencyKeySha { param($Key) return (Get-Sha256Hex $utf8.GetBytes(($Key | ConvertTo-Json -Depth 8 -Compress))) }
+# Best-effort GPU free VRAM (MiB) via nvidia-smi; $null when nvidia-smi is absent (off-machine / mock) -> non-fatal.
+function Get-GpuFreeMib {
+    try {
+        $smi = Get-Command nvidia-smi -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($null -eq $smi) { return $null }
+        $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+        try { $o = & $smi.Source '--query-gpu=memory.free' '--format=csv,noheader,nounits' 2>$null } finally { $ErrorActionPreference = $prev }
+        $line = (@($o) | Where-Object { "$_".Trim() -ne '' } | Select-Object -First 1)
+        if ($null -eq $line) { return $null }
+        $n = 0; if ([int]::TryParse((("$line").Trim()), [ref]$n)) { return $n }
+        return $null
+    } catch { return $null }
+}
+# Confirm the resident server actually loaded a model (GET /v1/models, fallback /props). Soft: /health is the hard gate.
+function Confirm-ResidentProvenance {
+    param([string]$ServerHost, [int]$ServerPort, [int]$TimeoutSec = 5)
+    $res = [ordered]@{ ok = $false; reported = @(); source = $null }
+    if ($ServerPort -le 0) { return $res }
+    try {
+        $r = Invoke-RestMethod -Uri "http://$($ServerHost):$ServerPort/v1/models" -TimeoutSec $TimeoutSec -Method Get
+        if ($null -ne $r -and (Has $r 'data')) {
+            $ids = @(@($r.data) | ForEach-Object { if (Has $_ 'id') { [string]$_.id } } | Where-Object { $_ })
+            $res.reported = $ids; $res.source = '/v1/models'; $res.ok = ($ids.Count -gt 0)
+        }
+    } catch {
+        try {
+            $pr = Invoke-RestMethod -Uri "http://$($ServerHost):$ServerPort/props" -TimeoutSec $TimeoutSec -Method Get
+            if ($null -ne $pr) { $res.source = '/props'; $res.ok = $true; if (Has $pr 'model_path') { $res.reported = @([string]$pr.model_path) } }
+        } catch { }
+    }
+    return $res
+}
+# Idle age (ms) of a resident manifest from last_used_utc (else started_at_utc); $null if unknown.
+function Get-ResidentIdleMs {
+    param($Reg)
+    if ($null -eq $Reg) { return $null }
+    $stamp = if (Has $Reg 'last_used_utc') { [string]$Reg.last_used_utc } elseif (Has $Reg 'started_at_utc') { [string]$Reg.started_at_utc } else { $null }
+    if ([string]::IsNullOrWhiteSpace($stamp)) { return $null }
+    try { $t = [DateTime]::Parse($stamp, $null, [System.Globalization.DateTimeStyles]::RoundtripKind); return [int]([DateTime]::UtcNow - $t).TotalMilliseconds } catch { return $null }
+}
+
 $status = 'ok'; $errorObj = $null; $result = $null; $inputsDigest = $null
 $confidence = $null; $modelProvenance = @()
 $artifacts = @()
@@ -287,13 +381,28 @@ try {
             if (Has $p 'warm_registry_path') { $WarmRegistryPath = [string]$p.warm_registry_path }
             if (Has $p 'logprobs')         { $Logprobs = [bool]$p.logprobs }
             if (Has $p 'top_logprobs')     { $TopLogprobs = [int]$p.top_logprobs }
+            if (Has $p 'ensure_resident')  { $EnsureResident = [bool]$p.ensure_resident }
+            if (Has $p 'pool_status')      { $PoolStatus = [bool]$p.pool_status }
+            if (Has $p 'sweep_idle')       { $SweepIdle = [bool]$p.sweep_idle }
+            if (Has $p 'cache_type_k')     { $CacheTypeK = [string]$p.cache_type_k }
+            if (Has $p 'cache_type_v')     { $CacheTypeV = [string]$p.cache_type_v }
+            if (Has $p 'flash_attn')       { $FlashAttn = [bool]$p.flash_attn }
+            if (Has $p 'parallel')         { $Parallel = [int]$p.parallel }
+            if (Has $p 'id_slot')          { $IdSlot = [int]$p.id_slot }
+            if (Has $p 'clear_slot')       { $ClearSlot = [bool]$p.clear_slot }
+            if (Has $p 'keep_resident_s')  { $KeepResidentSeconds = [int]$p.keep_resident_s }
+            if (Has $p 'generation')       { $Generation = [int]$p.generation }
         }
     }
     New-Item -ItemType Directory -Path $invDir -Force | Out-Null
 
-    # ---- warm-server registry path + evict-mode flag (Governor Phase 2) ----
+    # ---- warm-server registry path + mode flags (Governor Phase 2 warm + Phase 3 Stage-1 pool manager) ----
     $warmRegPath = Get-WarmRegistryPath $WarmRegistryPath
-    $doEvictWarm = [bool]$EvictWarm
+    $doEvictWarm  = [bool]$EvictWarm
+    $doPoolStatus = [bool]$PoolStatus
+    $doSweepIdle  = [bool]$SweepIdle
+    $doEnsure     = [bool]$EnsureResident
+    if ($doEnsure) { $Warm = $true }   # a residency op MUST leave the server resident for the next call
 
     if ($doEvictWarm) {
         # ---- EVICT shortcut: tear down the resident warm server and return (no model load, no generation) ----
@@ -312,6 +421,66 @@ try {
             warm   = [ordered]@{ registry_path = $warmRegPath; had_resident = ($null -ne $evResident); was_alive = $evAlive; identity_ok = $evIdentity; evicted = $evEvicted; resident_pid = $(if ($null -ne $evResident -and (Has $evResident 'pid')) { [int]$evResident.pid } else { $null }) }
         }
         Write-Diag "evict_warm: had_resident=$($null -ne $evResident) alive=$evAlive evicted=$evEvicted"
+    }
+    elseif ($doPoolStatus) {
+        # ---- POOL STATUS: read-only report of the current resident (no lease, no model load, no change) ----
+        $psReg = Read-WarmServer $warmRegPath
+        $psAlive = $false; $psId = $false; $psHealthy = $false; $psIdleMs = $null
+        if ($null -ne $psReg) {
+            $psl = Get-WarmServerLiveness $psReg
+            $psAlive = [bool]$psl.alive; $psId = [bool]$psl.identity_ok
+            $psPort = if (Has $psReg 'port') { [int]$psReg.port } else { 0 }
+            $psHealthy = $psAlive -and (Test-ServerHealthy '127.0.0.1' $psPort)
+            $psIdleMs = Get-ResidentIdleMs $psReg
+        }
+        $status = 'ok'
+        $result = [ordered]@{
+            action = 'pool_status'
+            pool = [ordered]@{
+                registry_path = $warmRegPath; has_resident = ($null -ne $psReg)
+                resident_pid = $(if ($null -ne $psReg -and (Has $psReg 'pid')) { [int]$psReg.pid } else { $null })
+                model_id = $(if ($null -ne $psReg -and (Has $psReg 'model_id')) { [string]$psReg.model_id } else { $null })
+                residency_key_sha = $(if ($null -ne $psReg -and (Has $psReg 'residency_key_sha')) { [string]$psReg.residency_key_sha } else { $null })
+                alive = $psAlive; identity_ok = $psId; healthy = $psHealthy
+                idle_ms = $psIdleMs; keep_resident_seconds = $KeepResidentSeconds
+                idle_expired = $(if ($null -ne $psIdleMs) { ($psIdleMs -gt ($KeepResidentSeconds * 1000)) } else { $null })
+                swap_count = $(if ($null -ne $psReg -and (Has $psReg 'swap_count')) { [int]$psReg.swap_count } else { $null })
+                resident_since_utc = $(if ($null -ne $psReg -and (Has $psReg 'resident_since_utc')) { [string]$psReg.resident_since_utc } else { $null })
+                last_used_utc = $(if ($null -ne $psReg -and (Has $psReg 'last_used_utc')) { [string]$psReg.last_used_utc } else { $null })
+            }
+        }
+        Write-Diag "pool_status: has_resident=$($null -ne $psReg) healthy=$psHealthy idle_ms=$psIdleMs"
+    }
+    elseif ($doSweepIdle) {
+        # ---- SWEEP IDLE: evict the resident IFF it is idle beyond the keep-resident window (contender reclaim) ----
+        $swReg = Read-WarmServer $warmRegPath
+        $swIdleMs = Get-ResidentIdleMs $swReg
+        $swWindowMs = $KeepResidentSeconds * 1000
+        $swEvicted = $false; $swKept = $false; $swVramBefore = $null; $swVramAfter = $null; $swReason = 'no_resident'
+        if ($null -ne $swReg) {
+            $swl = Get-WarmServerLiveness $swReg
+            $expired = ($null -ne $swIdleMs -and $swIdleMs -gt $swWindowMs)
+            if (-not $swl.alive) { Clear-WarmServer $warmRegPath; $swReason = 'stale_registry_cleared' }
+            elseif ($expired) {
+                $swVramBefore = Get-GpuFreeMib
+                if (Stop-ResidentServer $swReg $swl) {
+                    $swEvicted = $true; $swReason = 'idle_evicted'; Clear-WarmServer $warmRegPath
+                    Start-Sleep -Milliseconds 200; $swVramAfter = Get-GpuFreeMib
+                } else { $swReason = 'alive_unidentified_not_killed'; $warnings.Add('sweep_idle: resident alive but unidentified; not killed') }
+            } else { $swKept = $true; $swReason = 'within_keep_resident_window' }
+        }
+        $status = 'ok'
+        $result = [ordered]@{
+            action = 'sweep_idle'
+            pool = [ordered]@{
+                registry_path = $warmRegPath; had_resident = ($null -ne $swReg); idle_ms = $swIdleMs
+                keep_resident_seconds = $KeepResidentSeconds; evicted = $swEvicted; kept = $swKept; reason = $swReason
+                resident_pid = $(if ($null -ne $swReg -and (Has $swReg 'pid')) { [int]$swReg.pid } else { $null })
+                vram_free_mib_before = $swVramBefore; vram_free_mib_after = $swVramAfter
+                vram_recovered_mib = $(if ($null -ne $swVramBefore -and $null -ne $swVramAfter) { ($swVramAfter - $swVramBefore) } else { $null })
+            }
+        }
+        Write-Diag "sweep_idle: had_resident=$($null -ne $swReg) idle_ms=$swIdleMs evicted=$swEvicted reason=$swReason"
     }
     else {
 
@@ -372,14 +541,24 @@ try {
     $ngl = if ($GpuLayers -ge 0) { $GpuLayers } elseif (Has $m 'gpu_layers') { [int]$m.gpu_layers } else { 99 }
     $ctx = if ($Context -gt 0) { $Context } elseif (Has $m 'context') { [int]$m.context } else { 4096 }
 
+    # ---- Stage-1 pool manager: resolve the residency-determining knobs + compute the EXPANDED residency key ----
+    $noThink  = ((Has $m 'no_think') -and [bool]$m.no_think)
+    $ctkUse   = $CacheTypeK; $ctvUse = $CacheTypeV
+    $flashUse = [bool]$FlashAttn
+    $npUse    = if ($Parallel -gt 0) { $Parallel } else { 1 }
+    $poolMode = [bool]$Warm    # warm/pool launches get the pool server flags + prefix-reuse plumbing; OFF -> classic path unchanged
+    $residencyKey    = Get-ResidencyKey $m $reg $ngl $ctx $noThink $ctkUse $ctvUse $flashUse $npUse $Generation
+    $residencyKeySha = Get-ResidencyKeySha $residencyKey
+
     # ---- build chat messages ----
     $msgList = New-Object System.Collections.Generic.List[object]
     if ($null -ne $messages) {
         foreach ($mm in @($messages)) { $msgList.Add([ordered]@{ role = [string]$mm.role; content = [string]$mm.content }) }
     } else {
         if (-not [string]::IsNullOrWhiteSpace($System)) { $msgList.Add([ordered]@{ role = 'system'; content = $System }) }
-        if ([string]::IsNullOrWhiteSpace($Prompt)) { throw [PSCustomObject]@{ code = 'no_prompt'; message = "provide -Prompt (or messages in -InputsJson)"; retryable = $false } }
-        $msgList.Add([ordered]@{ role = 'user'; content = $Prompt })
+        if (-not [string]::IsNullOrWhiteSpace($Prompt)) { $msgList.Add([ordered]@{ role = 'user'; content = $Prompt }) }
+        elseif (-not $doEnsure) { throw [PSCustomObject]@{ code = 'no_prompt'; message = "provide -Prompt (or messages in -InputsJson)"; retryable = $false } }
+        # -EnsureResident is a residency op with no generation, so a prompt is not required.
     }
     $msgArr = $msgList.ToArray()
     if ((Has $m 'no_think') -and [bool]$m.no_think) {
@@ -412,6 +591,14 @@ try {
     }
     $srvLog = Join-Path $invDir 'server.out.log'; $srvErr = Join-Path $invDir 'server.err.log'
     $srvArgs = @('-m', $modelPath, '-ngl', "$ngl", '-c', "$ctx", '--host', '127.0.0.1', '--port', "$usePort", '--no-warmup')
+    # Stage-1 pool flags: pin one slot for deterministic same-model prefix reuse (-np 1) + KV/flash-attn key fields.
+    # Only added in pool/warm mode -> the classic per-call (non-warm) launch is byte-for-byte unchanged.
+    if ($poolMode) {
+        $srvArgs += @('--parallel', "$npUse")
+        if (-not [string]::IsNullOrWhiteSpace($ctkUse) -and $ctkUse -ne 'f16') { $srvArgs += @('--cache-type-k', $ctkUse) }
+        if (-not [string]::IsNullOrWhiteSpace($ctvUse) -and $ctvUse -ne 'f16') { $srvArgs += @('--cache-type-v', $ctvUse) }
+        if ($flashUse) { $srvArgs += @('--flash-attn') }
+    }
     $sp = $null; $serverPid = 0; $healthOk = $false; $healthMs = $null; $loadStart = $null
     $resp = $null
     try {
@@ -451,25 +638,52 @@ try {
             }
         }
 
-        # ---- start OR reuse the server (warm-aware), health-wait, complete, teardown ----
+        # ---- POOL MANAGER (Stage-1): reuse on EXACT residency-key match, else evict (confirm exit + VRAM) + reload ----
         $warmOn = [bool]$Warm
         $warmReused = $false; $warmStartedNew = $false; $warmEvicted = $false
+        # pool telemetry (declared before the resident test so the cold-start path leaves them valid under StrictMode)
+        $evictConfirmed = $null; $idleMsAtEntry = $null; $swapCount = 0; $residentSinceUtc = $null
+        $vramBefore = $null; $vramAfter = $null; $vramRecovered = $null; $poolProvenance = $null
+        $residencyAction = 'cold_start'
         $resident = Read-WarmServer $warmRegPath
         if ($null -ne $resident) {
             $rl = Get-WarmServerLiveness $resident
             $residentPort = if (Has $resident 'port') { [int]$resident.port } else { 0 }
-            $sameModel = $false
-            if ((Has $resident 'model_id') -and ([string]$resident.model_id -eq [string]$m.model_id) -and (Has $resident 'ngl') -and ([int]$resident.ngl -eq $ngl) -and (Has $resident 'ctx') -and ([int]$resident.ctx -eq $ctx)) { $sameModel = $true }
+            $idleMsAtEntry = Get-ResidentIdleMs $resident
+            $prevSwaps = if (Has $resident 'swap_count') { [int]$resident.swap_count } else { 0 }
+            # EXACT residency-key match (D-0063). Fall back to the legacy model_id+ngl+ctx test for a pre-Stage-1 manifest.
+            $sameKey = $false
+            if (Has $resident 'residency_key_sha') { $sameKey = ([string]$resident.residency_key_sha -eq $residencyKeySha) }
+            elseif ((Has $resident 'model_id') -and ([string]$resident.model_id -eq [string]$m.model_id) -and (Has $resident 'ngl') -and ([int]$resident.ngl -eq $ngl) -and (Has $resident 'ctx') -and ([int]$resident.ctx -eq $ctx)) { $sameKey = $true }
             $healthy = $rl.alive -and (Test-ServerHealthy '127.0.0.1' $residentPort)
-            if ($warmOn -and $healthy -and $sameModel) {
-                $usePort = $residentPort; $warmReused = $true
-                Write-Diag "warm hit: reusing resident llama-server pid=$($resident.pid) port=$usePort model=$($m.model_id)"
+            if ($warmOn -and $healthy -and $sameKey) {
+                # ~1 ms REUSE: refresh the keep-resident timer (last_used_utc) + carry the swap count; republish the manifest
+                $usePort = $residentPort; $warmReused = $true; $residencyAction = 'reuse'; $swapCount = $prevSwaps
+                $residentSinceUtc = if (Has $resident 'resident_since_utc') { [string]$resident.resident_since_utc } else { $null }
+                $poolProvenance = [ordered]@{ ok = $true; source = 'reuse'; reported = @([string]$m.model_id) }
+                try {
+                    $obj = [ordered]@{}; foreach ($pp in $resident.PSObject.Properties) { $obj[$pp.Name] = $pp.Value }
+                    $obj['last_used_utc'] = ([DateTime]::UtcNow).ToString('o')
+                    [void](Write-WarmServer $warmRegPath $obj)
+                } catch { }
+                Write-Diag "pool reuse: pid=$($resident.pid) port=$usePort key=$($residencyKeySha.Substring(0,12)) idle_ms=$idleMsAtEntry"
             } else {
-                # different model / unhealthy / non-warm call -> evict so at most one server is ever on the GPU
+                # residency-key change / unhealthy / non-warm -> EVICT (confirm process exit + VRAM recovery) then reload
                 if ($rl.alive) {
-                    if (Stop-ResidentServer $resident $rl) { $warmEvicted = $true; Write-Diag "evicted resident server pid=$($resident.pid) (sameModel=$sameModel healthy=$healthy warm=$warmOn)" }
-                    else { $warnings.Add("resident server pid=$($resident.pid) alive but unidentified; not killed (possible external process)"); Write-Diag 'resident unidentified; not killed' }
+                    $vramBefore = Get-GpuFreeMib
+                    if (Stop-ResidentServer $resident $rl) {
+                        $warmEvicted = $true; $evictConfirmed = $true
+                        Start-Sleep -Milliseconds 200; $vramAfter = Get-GpuFreeMib
+                        if ($null -ne $vramBefore -and $null -ne $vramAfter) { $vramRecovered = ($vramAfter - $vramBefore) }
+                        Write-Diag "pool evict: pid=$($resident.pid) sameKey=$sameKey healthy=$healthy warm=$warmOn vram_recovered_mib=$vramRecovered"
+                    } else {
+                        $evictConfirmed = $false
+                        $warnings.Add("resident server pid=$($resident.pid) alive but unidentified; not killed (possible external process)")
+                        Write-Diag 'resident unidentified; not killed'
+                    }
                 }
+                if ($warmOn -and -not $sameKey) { $swapCount = $prevSwaps + 1 } else { $swapCount = $prevSwaps }
+                $residencyAction = if ($warmOn) { 'evict_reload' } else { 'cold_start' }
                 Clear-WarmServer $warmRegPath
                 $resident = $null
             }
@@ -514,13 +728,21 @@ try {
                 $startTicks = 0
                 try { $startTicks = [long]((Get-Process -Id $serverPid -ErrorAction Stop).StartTime.Ticks) } catch { try { if ($null -ne $sp) { $startTicks = [long]$sp.StartTime.Ticks } } catch { } }
                 if ($warmOn) {
-                    # record the resident registry IMMEDIATELY (before the health wait) so a mid-load crash
-                    # leaves a tracked pid that the next call can identify and clean up.
+                    $nowUtc = ([DateTime]::UtcNow).ToString('o')
+                    if ([string]::IsNullOrWhiteSpace($residentSinceUtc)) { $residentSinceUtc = $nowUtc }
+                    # record the resident registry IMMEDIATELY (before the health wait) so a mid-load crash leaves a
+                    # tracked pid the next call can identify + clean up. Stage-1 publishes the EXPANDED residency
+                    # manifest (full key + sha + pool fields) so the NEXT call's reuse test is exact (D-0063).
                     [void](Write-WarmServer $warmRegPath ([ordered]@{
-                        schema = 'lifeorch.model_gateway.warm/0.1'; pid = $serverPid; start_ticks = $startTicks
+                        schema = 'lifeorch.model_gateway.warm/0.2'; pid = $serverPid; start_ticks = $startTicks
                         host = '127.0.0.1'; port = $usePort; model_id = $m.model_id; model_path = $modelPath
                         engine_path = $enginePath; ngl = $ngl; ctx = $ctx
-                        started_at_utc = ([DateTime]::UtcNow).ToString('o'); holder = $glHolder
+                        residency_key = $residencyKey; residency_key_sha = $residencyKeySha
+                        cache_type_k = $ctkUse; cache_type_v = $ctvUse; flash_attn = $flashUse; parallel = $npUse
+                        no_think = $noThink; generation_id = $residencyKey.generation_id
+                        keep_resident_seconds = $KeepResidentSeconds; swap_count = $swapCount
+                        started_at_utc = $nowUtc; resident_since_utc = $residentSinceUtc; last_used_utc = $nowUtc
+                        holder = $glHolder
                     }))
                 }
                 $deadline = (Get-Date).AddSeconds($LoadTimeoutSec)
@@ -532,22 +754,40 @@ try {
                 }
                 $loadStart.Stop(); $healthMs = [int]$loadStart.Elapsed.TotalMilliseconds
                 if (-not $healthOk) { throw [PSCustomObject]@{ code = 'health_timeout'; message = "llama-server did not become healthy within $LoadTimeoutSec s"; retryable = $true } }
+                # Stage-1: confirm the resident actually loaded a model (provenance). Soft -- /health is the hard gate.
+                if ($poolMode) {
+                    $poolProvenance = Confirm-ResidentProvenance '127.0.0.1' $usePort 5
+                    if (-not $poolProvenance.ok) { $warnings.Add('pool: model provenance not confirmed via /v1/models or /props (health OK)') }
+                    else { Write-Diag "pool provenance ok source=$($poolProvenance.source) reported=$([string]::Join(',', @($poolProvenance.reported)))" }
+                }
             } else {
                 # warm reuse: no model load; health already confirmed above
                 $loadStart.Stop(); $healthOk = $true; $healthMs = [int]$loadStart.Elapsed.TotalMilliseconds
             }
 
-            $bodyObj = [ordered]@{ model = $m.model_id; messages = $msgArr; max_tokens = $MaxTokens; temperature = $Temperature; top_p = $TopP; top_k = $TopK; seed = $Seed }
-            if ($stopArr.Count -gt 0) { $bodyObj.stop = $stopArr }
-            if ($Logprobs) { $bodyObj.logprobs = $true; $bodyObj.top_logprobs = $TopLogprobs }   # opt-in (Stage-2); off -> body unchanged
-            $body = $bodyObj | ConvertTo-Json -Depth 8
-            $genSw = [System.Diagnostics.Stopwatch]::StartNew()
-            try {
-                $resp = Invoke-RestMethod -Uri "http://127.0.0.1:$usePort/v1/chat/completions" -Method Post -Body $body -ContentType 'application/json' -TimeoutSec ([Math]::Max(30, $LoadTimeoutSec))
-            } catch {
-                throw [PSCustomObject]@{ code = 'completion_failed'; message = "chat completion request failed: $($_.Exception.Message)"; retryable = $true }
+            if ($doEnsure) {
+                # -EnsureResident: the requested model is resident + provenance-confirmed under the held gpu lease.
+                # RETURN without generating (the governor's Ensure-ResidentModel(model_id, config_key)).
+                Write-Diag "ensure_resident: action=$residencyAction model=$($m.model_id) key=$($residencyKeySha.Substring(0,12)) load_ms=$healthMs reused=$warmReused evicted=$warmEvicted"
+            } else {
+                if ($poolMode -and $ClearSlot) {
+                    # session boundary: erase the pinned prefix-cache slot so a new task does not reuse a stale prefix
+                    try { Invoke-RestMethod -Uri "http://127.0.0.1:$usePort/slots/${IdSlot}?action=erase" -Method Post -TimeoutSec 10 | Out-Null; Write-Diag "cleared prefix slot ${IdSlot} (session boundary)" }
+                    catch { $warnings.Add('clear_slot: slot erase not confirmed (non-fatal)') }
+                }
+                $bodyObj = [ordered]@{ model = $m.model_id; messages = $msgArr; max_tokens = $MaxTokens; temperature = $Temperature; top_p = $TopP; top_k = $TopK; seed = $Seed }
+                if ($stopArr.Count -gt 0) { $bodyObj.stop = $stopArr }
+                if ($Logprobs) { $bodyObj.logprobs = $true; $bodyObj.top_logprobs = $TopLogprobs }   # opt-in (Stage-2); off -> body unchanged
+                if ($poolMode) { $bodyObj.id_slot = $IdSlot }   # Stage-1 same-model prefix reuse: pin a single fixed slot (-np 1)
+                $body = $bodyObj | ConvertTo-Json -Depth 8
+                $genSw = [System.Diagnostics.Stopwatch]::StartNew()
+                try {
+                    $resp = Invoke-RestMethod -Uri "http://127.0.0.1:$usePort/v1/chat/completions" -Method Post -Body $body -ContentType 'application/json' -TimeoutSec ([Math]::Max(30, $LoadTimeoutSec))
+                } catch {
+                    throw [PSCustomObject]@{ code = 'completion_failed'; message = "chat completion request failed: $($_.Exception.Message)"; retryable = $true }
+                }
+                $genSw.Stop()
             }
-            $genSw.Stop()
         }
         finally {
             # teardown: WARM leaves the server resident (registry persists) so the NEXT call reuses it;
@@ -579,6 +819,33 @@ try {
         }
     }
 
+    if ($doEnsure) {
+        # ---- POOL residency result (Stage-1 Ensure-ResidentModel): no generation, confidence stays null ----
+        $result = [ordered]@{
+            model = $m.model_id; engine = 'llama-server'; mode = 'ensure_resident'; selected_from = $selectedFrom
+            pool = [ordered]@{
+                action = $residencyAction; reused = $warmReused; started_new = $warmStartedNew; evicted = $warmEvicted; evict_confirmed = $evictConfirmed
+                residency_key = $residencyKey; residency_key_sha = $residencyKeySha
+                swap_count = $swapCount; keep_resident_seconds = $KeepResidentSeconds
+                idle_ms_at_entry = $idleMsAtEntry; resident_since_utc = $residentSinceUtc
+                load_ms = $healthMs; health_ok = $healthOk; provenance = $poolProvenance
+                vram = [ordered]@{ free_mib_before = $vramBefore; free_mib_after = $vramAfter; recovered_mib = $vramRecovered }
+            }
+            server = [ordered]@{ port = $usePort; health_ms = $healthMs; gpu_layers = $ngl; context = $ctx; gpu_lease = $leaseState
+                warm = [ordered]@{ enabled = $warmOn; reused = $warmReused; started_new = $warmStartedNew; evicted = $warmEvicted; load_ms = $healthMs; registry_path = $warmRegPath } }
+        }
+        $modelProvenance = @(
+            [ordered]@{
+                model_id = $m.model_id; engine = 'llama-server'
+                engine_build = $(if (Has $reg 'engine_build') { [string]$reg.engine_build } else { $null })
+                device = 'cuda:0'
+                params = [ordered]@{ gpu_layers = $ngl; context = $ctx; cache_type_k = $ctkUse; cache_type_v = $ctvUse; flash_attn = $flashUse; parallel = $npUse }
+                residency_key_sha = $residencyKeySha; runtime_ms = $healthMs
+            }
+        )
+        Write-Diag "ensure_resident done: action=$residencyAction reused=$warmReused evicted=$warmEvicted load_ms=$healthMs swaps=$swapCount"
+    }
+    else {
     # ---- parse response ----
     $content = ''; $finish = 'unknown'; $usage = $null; $timings = $null; $lpBlock = $null
     if ($null -ne $resp -and (Has $resp 'choices')) {
@@ -642,6 +909,16 @@ try {
             warm = [ordered]@{ enabled = $warmOn; reused = $warmReused; started_new = $warmStartedNew; evicted = $warmEvicted; load_ms = $healthMs; registry_path = $warmRegPath } }
     }
     if ($null -ne $lpBlock) { $result.generation.logprobs = $lpBlock }   # only present when -Logprobs was requested (off -> byte-identical)
+    # Stage-1 pool telemetry on a WARM generation only (off -> server.warm has no .pool key -> classic path byte-identical)
+    if ($poolMode) {
+        $result.server.warm.pool = [ordered]@{
+            action = $residencyAction; residency_key_sha = $residencyKeySha; swap_count = $swapCount
+            idle_ms_at_entry = $idleMsAtEntry; keep_resident_seconds = $KeepResidentSeconds; id_slot = $IdSlot
+            cache_type_k = $ctkUse; cache_type_v = $ctvUse; flash_attn = $flashUse; parallel = $npUse
+            provenance = $poolProvenance
+            vram = [ordered]@{ free_mib_before = $vramBefore; free_mib_after = $vramAfter; recovered_mib = $vramRecovered }
+        }
+    }
 
     $modelProvenance = @(
         [ordered]@{
@@ -660,6 +937,7 @@ try {
         }
     )
     Write-Diag "ok model=$($m.model_id) finish=$finish ctok=$ctok conf=$confidence"
+    }  # end else (generation path, not ensure_resident)
     }  # end else (non-evict generation path)
 }
 catch {

@@ -24,6 +24,15 @@ try {
         $path = $req.Url.AbsolutePath
         if ($path -eq '/health') {
             $bodyStr = '{"status":"ok"}'; $resp.StatusCode = 200
+        } elseif ($path -eq '/v1/models') {
+            # provenance endpoint the pool manager confirms after a load (Stage-1)
+            $bodyStr = '{"object":"list","data":[{"id":"mock","object":"model","owned_by":"mock-llama-server"}]}'; $resp.StatusCode = 200
+        } elseif ($path -eq '/props') {
+            $bodyStr = '{"model_path":"mock","default_generation_settings":{"n_ctx":4096}}'; $resp.StatusCode = 200
+        } elseif ($path -like '/slots*') {
+            # prefix-cache slot ops (e.g. ?action=erase at a session boundary); ack so the gateway does not warn
+            try { $sr = New-Object System.IO.StreamReader($req.InputStream, $req.ContentEncoding); [void]$sr.ReadToEnd(); $sr.Dispose() } catch { }
+            $bodyStr = '{"id_slot":0,"status":"ok"}'; $resp.StatusCode = 200
         } elseif ($path -eq '/v1/chat/completions') {
             try { $sr = New-Object System.IO.StreamReader($req.InputStream, $req.ContentEncoding); [void]$sr.ReadToEnd(); $sr.Dispose() } catch { }
             $obj = [ordered]@{
