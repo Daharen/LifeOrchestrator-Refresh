@@ -3,7 +3,7 @@
 **Read this after `START_HERE.md`, before you pick an "active module."** The local-agent CORRECTION ARC IS
 COMPLETE (D-0043 governor Phase 1; D-0044 strong tier -> Qwen3.5-9B; D-0046 deterministic terminator) and the
 per-unit ship ceremony is now automated (D-0048 job-runner, section 3). Capability expansion has RESUMED per
-`MODULE_ROADMAP.md -> Build priority`; Widget #2 (Module Launcher / Registry Browser) SHIPPED (D-0049); the fan-out orchestrator #30 has SHIPPED (D-0054); the fan-out DOGFOOD ran end-to-end (D-0055: iteration 1 shipped 3 units -- res.lease gpu->#7, res.lease git->dev.ship, frontier.bridge #31); the current frontier is iteration 2 (section 4), driving the D-0050 offload/audit-loop spine. Full history: `DECISION_LOG.md`
+`MODULE_ROADMAP.md -> Build priority`; Widget #2 (Module Launcher / Registry Browser) SHIPPED (D-0049); the fan-out orchestrator #30 has SHIPPED (D-0054); the fan-out DOGFOOD ran end-to-end (D-0055: iteration 1 shipped 3 units -- res.lease gpu->#7, res.lease git->dev.ship, frontier.bridge #31); the current frontier is fan-out iteration 11 (D-0064) -- iteration 11 shipped the Verification Console UX (widgets/03, commit 206b2dd) with an open verdict-persistence bug now scheduled as iteration 12; the live iteration status + next-unit direction are in `CURRENT_STATE.md` + `FANOUT_ORCHESTRATOR_HANDOFF.md` (this section-1 shipped-list is not backfilled per iteration). Full history: `DECISION_LOG.md`
 (D-0043, D-0044, D-0046, D-0047, D-0048, D-0049, D-0050) + `claude/ADAPTIVE_RESOURCE_GOVERNOR.md`. This doc is the map.
 
 ## 0. Where the project lives (locations)
