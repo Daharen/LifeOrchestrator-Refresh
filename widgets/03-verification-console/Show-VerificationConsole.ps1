@@ -38,6 +38,7 @@ $script:VState = @{
     invokeSkillPath = $InvokeSkillPath
     pwshPath        = $PwshPath
     paths           = $null
+    suspendItemEvents = $false   # true while a programmatic list/control rebuild runs, so it cannot drive a spurious save (D-0064)
 }
 
 function Set-VText {
@@ -410,12 +411,10 @@ function Import-PacketPath {
     }
     $s.packet = $pk
     $s.items = @($pk.items)
-    $s.itemState = @{}
-    foreach ($it in $s.items) {
-        $checks = New-Object System.Collections.Generic.List[object]
-        foreach ($c in @($it.checklist)) { $checks.Add(@{ id = [string]$c.id; text = [string]$c.text; verdict = 'unchecked'; note = '' }) }
-        $s.itemState[[string]$it.id] = @{ checks = $checks.ToArray(); overall = 'skipped'; notes = ''; ran = $false; run = $null; runText = '' }
-    }
+    # per-item verdict state now lives in the CORE (D-0064): a plain id->state store, seeded + saved + read
+    # through Initialize-ItemVerdictStore / Save-ItemVerdictState / Get-ItemVerdictState so the whole
+    # save/restore cycle is unit-tested off-machine (the shell-only logic slipped the 133/133 mock gate).
+    $s.itemState = Initialize-ItemVerdictStore -Items $s.items
     $s.currentId = $null
     Set-VText $s.detailBox (Format-PacketSummary -Packet $pk)
     $plan = [string]$pk.plan_id; if (-not $plan) { $plan = Get-PlanIdFromPacket -Packet $pk }
@@ -431,16 +430,24 @@ function Import-PacketPath {
 function Update-ItemListLabels {
     $s = $script:VState
     $sel = $s.itemList.SelectedIndex
-    $s.itemList.BeginUpdate()
-    $s.itemList.Items.Clear()
-    foreach ($it in $s.items) {
-        $st = $s.itemState[[string]$it.id]
-        $verdict = if ($st) { [string]$st.overall } else { 'skipped' }
-        $mark = switch ($verdict) { 'pass' { '(pass) ' } 'fail' { '(FAIL) ' } 'partial' { '(part) ' } default { '' } }
-        [void]$s.itemList.Items.Add(($mark + (Format-ItemListLine -Item $it)))
+    # Relabelling clears + refills the list, and Clear()/reselect raise SelectedIndexChanged. Suspend item
+    # events across the rebuild so that churn cannot re-enter Show-SelectedItem and drive a spurious
+    # Save-CurrentItemVerdict against transitional control state (a data-loss path). D-0064.
+    $prevSuspend = $s.suspendItemEvents
+    $s.suspendItemEvents = $true
+    try {
+        $s.itemList.BeginUpdate()
+        $s.itemList.Items.Clear()
+        foreach ($it in $s.items) {
+            $st = Get-ItemVerdictState -Store $s.itemState -ItemId ([string]$it.id)
+            $verdict = [string](Get-Prop $st 'overall' 'skipped')
+            $mark = switch ($verdict) { 'pass' { '(pass) ' } 'fail' { '(FAIL) ' } 'partial' { '(part) ' } default { '' } }
+            [void]$s.itemList.Items.Add(($mark + (Format-ItemListLine -Item $it)))
+        }
+        $s.itemList.EndUpdate()
+        if ($sel -ge 0 -and $sel -lt $s.itemList.Items.Count) { $s.itemList.SelectedIndex = $sel }
     }
-    $s.itemList.EndUpdate()
-    if ($sel -ge 0 -and $sel -lt $s.itemList.Items.Count) { $s.itemList.SelectedIndex = $sel }
+    finally { $s.suspendItemEvents = $prevSuspend }
 }
 
 function Get-SelectedItem {
@@ -452,6 +459,7 @@ function Get-SelectedItem {
 
 function Show-SelectedItem {
     $s = $script:VState
+    if ($s.suspendItemEvents) { return }   # a programmatic list/control rebuild is in progress -- ignore (D-0064)
     # save the outgoing item's verdict first
     if ($s.currentId) { Save-CurrentItemVerdict }
     $it = Get-SelectedItem
@@ -476,17 +484,29 @@ function Show-SelectedItem {
     $s.openCombo.Enabled = $hasPaths
     $s.openPathBtn.Enabled = $hasPaths
 
-    # load this item's saved verdict state into the controls
-    $st = $s.itemState[[string]$it.id]
-    $s.checkList.Items.Clear()
-    foreach ($c in @($st.checks)) {
-        $checked = ([string]$c.verdict -eq 'pass')
-        [void]$s.checkList.Items.Add(([string]$c.text), $checked)
+    # load this item's saved verdict state into the controls -- ALL of {checks, overall, notes} restored from
+    # the CORE store (D-0064). suspendItemEvents guards the repopulation so no control update can re-enter a
+    # save; SetItemChecked FORCES the checkbox state, because CheckedListBox.Items.Add(text, [bool]) does not
+    # reliably render the tick under CheckOnClick -- so the check the user saved actually shows on return.
+    $st = Get-ItemVerdictState -Store $s.itemState -ItemId ([string]$it.id)
+    $prevSuspend = $s.suspendItemEvents
+    $s.suspendItemEvents = $true
+    try {
+        $s.checkList.Items.Clear()
+        $ci = 0
+        foreach ($c in @(Get-Prop $st 'checks' @())) {
+            $checked = ([string](Get-Prop $c 'verdict') -eq 'pass')
+            [void]$s.checkList.Items.Add(([string](Get-Prop $c 'text')), $checked)
+            try { $s.checkList.SetItemChecked($ci, $checked) } catch { }
+            $ci++
+        }
+        $ovi = $s.overallCombo.Items.IndexOf([string](Get-Prop $st 'overall' 'skipped'))
+        $s.overallCombo.SelectedIndex = $(if ($ovi -ge 0) { $ovi } else { 0 })
+        $s.notesBox.Text = [string](Get-Prop $st 'notes' '')
     }
-    $ovi = $s.overallCombo.Items.IndexOf([string]$st.overall)
-    $s.overallCombo.SelectedIndex = $(if ($ovi -ge 0) { $ovi } else { 0 })
-    $s.notesBox.Text = [string]$st.notes
-    if ($st.runText) { Set-VText $s.resultBox ([string]$st.runText) }
+    finally { $s.suspendItemEvents = $prevSuspend }
+    $stRunText = [string](Get-Prop $st 'runText' '')
+    if ($stRunText) { Set-VText $s.resultBox $stRunText }
     elseif ([string]$it.kind -eq 'human_action') { Set-VText $s.resultBox 'This is a hand task - do it, then record the verdict below.' }
     elseif ([bool]$am.invalid) { Set-VText $s.resultBox ([string]$am.reason + "`r`n" + [string]$am.fix_hint) }
     else { Set-VText $s.resultBox 'Press Run item to run this module locally.' }
@@ -498,19 +518,17 @@ function Show-SelectedItem {
 function Save-CurrentItemVerdict {
     $s = $script:VState
     if (-not $s.currentId) { return }
-    $st = $s.itemState[[string]$s.currentId]
-    if (-not $st) { return }
-    $checks = New-Object System.Collections.Generic.List[object]
+    if ($s.suspendItemEvents) { return }   # never persist while a programmatic control rebuild is in progress (D-0064)
+    # thin marshaller: read the control snapshot, hand it to the CORE store logic (unit-tested off-machine).
+    $checked = New-Object System.Collections.Generic.List[bool]
+    $texts = New-Object System.Collections.Generic.List[string]
     for ($i = 0; $i -lt $s.checkList.Items.Count; $i++) {
-        $src = if ($i -lt @($st.checks).Count) { @($st.checks)[$i] } else { @{ id = ('c' + ($i + 1)); text = [string]$s.checkList.Items[$i]; note = '' } }
-        $verdict = if ($s.checkList.GetItemChecked($i)) { 'pass' } else { 'unchecked' }
-        $checks.Add(@{ id = [string]$src.id; text = [string]$src.text; verdict = $verdict; note = [string]$src.note })
+        $checked.Add([bool]$s.checkList.GetItemChecked($i))
+        $texts.Add([string]$s.checkList.Items[$i])
     }
-    $st.checks = $checks.ToArray()
-    $st.overall = [string]$s.overallCombo.SelectedItem
-    if (-not $st.overall) { $st.overall = 'skipped' }
-    $st.notes = [string]$s.notesBox.Text
-    $s.itemState[[string]$s.currentId] = $st
+    [void](Save-ItemVerdictState -Store $s.itemState -ItemId ([string]$s.currentId) `
+            -Checked $checked.ToArray() -Overall ([string]$s.overallCombo.SelectedItem) `
+            -Notes ([string]$s.notesBox.Text) -CheckTexts $texts.ToArray())
 }
 
 function Start-ItemRunUI {
@@ -644,6 +662,29 @@ if ($SelfTest) {
                 if ($sawHuman -and $sawRun -and $openOk -and $runDisabledForHuman) { Write-Output 'SELFTEST_ITEMRENDER_OK' }
             }
             if (Get-PacketsDirSafe) { Write-Output 'SELFTEST_PACKETSDIR_OK' }
+
+            # D-0064: exercise the verdict SAVE/RESTORE cycle on the REAL controls under STA. This class of bug
+            # (checklist + Overall verdict reset on navigate-away-and-back) slipped the mock gate; only a
+            # live-form exercise catches a rendered-UI / marshalling regression.
+            $withChecks = -1
+            for ($i = 0; $i -lt @($s.items).Count; $i++) { if (@(@($s.items)[$i].checklist).Count -ge 1) { $withChecks = $i; break } }
+            if ($withChecks -ge 0 -and $s.itemList.Items.Count -gt 1) {
+                $s.itemList.SelectedIndex = $withChecks
+                $targetId = [string](@($s.items)[$withChecks].id)
+                $s.checkList.SetItemChecked(0, $true)                       # tick the first checklist row
+                $pIdx = $s.overallCombo.Items.IndexOf('pass'); if ($pIdx -ge 0) { $s.overallCombo.SelectedIndex = $pIdx }
+                $s.notesBox.Text = 'selftest verdict note'
+                Save-CurrentItemVerdict                                     # what the Save button does
+                $other = if ($withChecks -eq 0) { 1 } else { 0 }
+                $s.itemList.SelectedIndex = $other                          # navigate away...
+                $s.itemList.SelectedIndex = $withChecks                     # ...and back
+                $tickOk = ($s.checkList.Items.Count -ge 1 -and [bool]$s.checkList.GetItemChecked(0))
+                $overallOk = ([string]$s.overallCombo.SelectedItem -eq 'pass')
+                $notesOk = ([string]$s.notesBox.Text -eq 'selftest verdict note')
+                $storeOk = ([string](Get-ItemVerdictState -Store $s.itemState -ItemId $targetId).overall -eq 'pass')
+                if ($tickOk -and $overallOk -and $notesOk -and $storeOk) { Write-Output 'SELFTEST_VERDICT_PERSIST_OK' }
+                else { Write-Output ('SELFTEST_VERDICT_PERSIST_FAIL: tick=' + $tickOk + ' overall=' + $overallOk + ' notes=' + $notesOk + ' store=' + $storeOk) }
+            }
         }
     }
     catch { Write-Output ('SELFTEST_ITEMRENDER_FAIL: ' + $_.Exception.Message) }

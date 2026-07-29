@@ -1054,6 +1054,113 @@ function Format-SkillResult {
 }
 
 # ============================================================================
+#  per-item verdict state (moved out of the shell -- D-0064)
+# ============================================================================
+# The Console's per-item verdict (checklist checks + Overall verdict + notes) used to be saved/restored ONLY
+# in the shell (Show-VerificationConsole.ps1), keyed by item id, and was therefore NOT unit-tested -- the
+# cloud mock gate only drives this WinForms-free core. A live GUI regression (leave an item and come back ->
+# the checklist un-ticks + the Overall verdict reverts to 'skipped') slipped the 133/133 gate for exactly
+# that reason (the D-0049/D-0060 rendered-UI lesson). The pure state logic now lives HERE, over a plain
+# id->state hashtable + plain control-snapshot values (a checked-bool array, an overall string, a notes
+# string), so the whole save/restore cycle -- and that the saved verdicts flow unchanged into the exported
+# result JSON -- is asserted off-machine. The shell is a thin marshaller: it reads control values, calls
+# these functions, and writes control values back.
+#
+# A per-item state is a plain [ordered] dict: { checks[] ; overall ; notes ; ran ; run ; runText }, where
+# each check is { id ; text ; verdict (pass|unchecked|fail|na) ; note }.
+
+function New-ItemVerdictState {
+    <# The default (unverified) state for one packet item: every checklist entry unchecked, overall skipped. #>
+    [CmdletBinding()]
+    param($Item)
+    $checks = New-Object System.Collections.Generic.List[object]
+    foreach ($c in @(Get-Prop $Item 'checklist')) {
+        $checks.Add([ordered]@{
+                id      = [string](Get-Prop $c 'id' '')
+                text    = [string](Get-Prop $c 'text' '')
+                verdict = 'unchecked'
+                note    = ''
+            })
+    }
+    return [ordered]@{ checks = $checks.ToArray(); overall = 'skipped'; notes = ''; ran = $false; run = $null; runText = '' }
+}
+
+function Initialize-ItemVerdictStore {
+    <# Seed a fresh id->state store (a hashtable) for every item in a packet. #>
+    [CmdletBinding()]
+    param($Items)
+    $store = @{}
+    foreach ($it in @($Items)) { $store[[string](Get-Prop $it 'id')] = (New-ItemVerdictState -Item $it) }
+    return $store
+}
+
+function Get-ItemVerdictState {
+    <#
+        Return the saved state for an item id, or a fresh DEFAULT state (never $null) when the id is absent.
+        Returning a valid default is a correctness guard: a null state would null-deref the shell's restore
+        into a silent reset-to-defaults (part of the D-0064 failure class).
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Store, [Parameter(Mandatory)][string]$ItemId)
+    if ($Store -is [System.Collections.IDictionary] -and $Store.Contains($ItemId)) { return $Store[$ItemId] }
+    return [ordered]@{ checks = @(); overall = 'skipped'; notes = ''; ran = $false; run = $null; runText = '' }
+}
+
+function Save-ItemVerdictState {
+    <#
+        Persist a CONTROL SNAPSHOT for an item id into the store and return the updated state. Inputs are plain
+        values (no WinForms): $Checked is a per-checklist-row bool array (ticked = pass), $Overall is the
+        Overall-verdict string, $Notes is the notes text; $CheckTexts (optional) supplies row text when the
+        snapshot has grown past the prior saved rows. Each row's id / text / note are PRESERVED from the prior
+        saved state; ran / run / runText (a completed run) are preserved too, so recording a verdict never
+        discards a run. Guard: an EMPTY snapshot ($Checked count 0) while the item already has saved rows is a
+        transitional read (the checklist control is mid-rebuild), so the prior checks are kept rather than
+        wiped -- a legitimately checklist-less item has no prior rows and stays empty.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]$Store,
+        [Parameter(Mandatory)][string]$ItemId,
+        [bool[]]$Checked = @(),
+        [string]$Overall = 'skipped',
+        [string]$Notes = '',
+        [string[]]$CheckTexts = @()
+    )
+    $prev = Get-ItemVerdictState -Store $Store -ItemId $ItemId
+    $prevChecks = @(Get-Prop $prev 'checks' @())
+    $checkedArr = @($Checked)
+
+    if ($checkedArr.Count -eq 0 -and $prevChecks.Count -gt 0) {
+        $checksOut = $prevChecks                                  # transitional empty snapshot -- do not clobber
+    }
+    else {
+        $out = New-Object System.Collections.Generic.List[object]
+        for ($i = 0; $i -lt $checkedArr.Count; $i++) {
+            $src = if ($i -lt $prevChecks.Count) { $prevChecks[$i] } else { $null }
+            $cid = if ($src) { [string](Get-Prop $src 'id' ('c' + ($i + 1))) } else { 'c' + ($i + 1) }
+            if (-not $cid) { $cid = 'c' + ($i + 1) }
+            $ctext = if ($src) { [string](Get-Prop $src 'text' '') } elseif ($i -lt @($CheckTexts).Count) { [string]$CheckTexts[$i] } else { '' }
+            $cnote = if ($src) { [string](Get-Prop $src 'note' '') } else { '' }
+            $verdict = if ($checkedArr[$i]) { 'pass' } else { 'unchecked' }
+            $out.Add([ordered]@{ id = $cid; text = $ctext; verdict = $verdict; note = $cnote })
+        }
+        $checksOut = $out.ToArray()
+    }
+
+    $ov = if ([string]::IsNullOrWhiteSpace($Overall)) { 'skipped' } else { [string]$Overall }
+    $state = [ordered]@{
+        checks  = $checksOut
+        overall = $ov
+        notes   = [string]$Notes
+        ran     = [bool](Get-Prop $prev 'ran' $false)
+        run     = (Get-Prop $prev 'run' $null)
+        runText = [string](Get-Prop $prev 'runText' '')
+    }
+    $Store[$ItemId] = $state
+    return $state
+}
+
+# ============================================================================
 #  assemble + save the verification result
 # ============================================================================
 
@@ -1172,4 +1279,5 @@ Export-ModuleMember -Function `
     Get-NamedProcessMap, Get-NamedProcessIdSet, Get-ProcessCommandLine, Test-OrphanInScope, `
     Stop-ProcessHard, Invoke-OrphanSweep, Invoke-RunOrphanSweep, `
     Start-SkillProcess, Stop-SkillProcess, Complete-SkillRun, Invoke-SkillRun, Format-SkillResult, `
-    New-RunSummary, New-VerificationResultItem, Get-VerificationSummary, New-VerificationResult, Save-VerificationResult
+    New-RunSummary, New-VerificationResultItem, Get-VerificationSummary, New-VerificationResult, Save-VerificationResult, `
+    New-ItemVerdictState, Initialize-ItemVerdictStore, Get-ItemVerdictState, Save-ItemVerdictState

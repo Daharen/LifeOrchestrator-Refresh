@@ -24,7 +24,9 @@ this box the cheap verifier is often *you* — so this console is the channel th
    An **invalid** item shows a plain-language explanation of what's wrong and how to fix it (not a cryptic
    `[INVALID: ...]`).
 4. Work the item's **checklist** (tick = pass), pick an **overall verdict** (pass / fail / partial / skipped),
-   and add **notes**.
+   add **notes**, and **Save item verdict**. Each item's verdict is kept per-item — it survives moving between
+   items (leave an item and come back and your checks / verdict / notes are still there) and flows unchanged
+   into the exported result.
 5. **Export result** — writes a `lifeorch.verification.result/0.1` JSON that Claude reads back.
 
 The header surfaces the packet's **plan id, title, report_back**, and **source path** so you can locate outputs
@@ -43,6 +45,9 @@ Optional: `launch.bat -PacketPath <packet.json>` to open a packet on start.
   (`Get-RecentPackets` / `Get-DefaultPacketsDir` / `Get-PlanIdFromPacket` / `Format-RecentPacketLine`) and the
   **by-kind action model** (`Get-ItemActionModel` / `Get-ReferencedPaths`) that drive the Run-button state,
   the plain-language invalid message, and the Open affordance — so all that logic is unit-tested, not in the UI.
+  The **per-item verdict state** (`Initialize-ItemVerdictStore` / `Save-ItemVerdictState` / `Get-ItemVerdictState`
+  over a plain id→state store) also lives here (**D-0064**) so the whole checklist + Overall-verdict + notes
+  save/restore cycle is unit-tested off-machine; the shell only marshals control values in and out.
 - `Show-VerificationConsole.ps1` — thin STA WinForms shell (Timer-polled; `-SelfTest` builds+disposes the form).
 - `launch.bat` — double-click launcher.
 - `tests/Invoke-VerificationConsoleTests.ps1` — dual-mode harness (cloud mock gate + `-Live` on Windows).

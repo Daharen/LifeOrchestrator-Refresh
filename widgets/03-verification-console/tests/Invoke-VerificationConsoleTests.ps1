@@ -300,6 +300,63 @@ finally {
     Remove-Item -LiteralPath $fixRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
 
+# 12b. per-item verdict state (CORE) -- D-0064 regression --------------------------------------------------
+#     The save/restore/currentId cycle used to live ONLY in the shell (Show-VerificationConsole.ps1),
+#     untested, and a live GUI reset (checklist + Overall verdict revert on navigate-away-and-back) slipped
+#     the 133/133 mock gate. The pure state logic now lives in the core (Initialize-ItemVerdictStore /
+#     Save-ItemVerdictState / Get-ItemVerdictState); these tests drive the exact reported cycle -- a control
+#     snapshot in, a restore out -- and assert the saved verdicts flow unchanged into the exported result JSON.
+foreach ($fn in 'New-ItemVerdictState', 'Initialize-ItemVerdictStore', 'Get-ItemVerdictState', 'Save-ItemVerdictState') {
+    Ok "verdict state: function exists: $fn" ([bool](Get-Command $fn -ErrorAction SilentlyContinue))
+}
+$vpJson = '{"schema":"lifeorch.verification.packet/0.1","packet_id":"vp-verdict-001","title":"Verdict",' +
+    '"items":[' +
+    '{"id":"A","kind":"human_action","title":"item A","action_text":"do A","checklist":["a1","a2","a3"]},' +
+    '{"id":"B","kind":"human_action","title":"item B","action_text":"do B","checklist":["b1","b2"]}]}'
+$vpk = Import-VerificationPacket -Json $vpJson
+$store = Initialize-ItemVerdictStore -Items $vpk.items
+Ok "verdict state: store seeded for every item" ($store.Contains('A') -and $store.Contains('B'))
+$seedA = Get-ItemVerdictState -Store $store -ItemId 'A'
+Ok "verdict state: seed defaults (skipped, 3 unchecked rows, no notes)" ([string]$seedA.overall -eq 'skipped' -and @($seedA.checks).Count -eq 3 -and (@($seedA.checks | Where-Object { $_.verdict -ne 'unchecked' }).Count -eq 0) -and [string]$seedA.notes -eq '')
+Ok "verdict state: missing id -> default state (never null)" ($null -ne (Get-ItemVerdictState -Store $store -ItemId 'NOPE') -and [string](Get-ItemVerdictState -Store $store -ItemId 'NOPE').overall -eq 'skipped')
+
+# the exact reported cycle: SAVE A (row1 = pass, Overall = pass, a note) -> SAVE B (defaults) -> re-read A
+[void](Save-ItemVerdictState -Store $store -ItemId 'A' -Checked @($true, $false, $false) -Overall 'pass' -Notes 'A verified locally' -CheckTexts @('a1', 'a2', 'a3'))
+[void](Save-ItemVerdictState -Store $store -ItemId 'B' -Checked @($false, $false) -Overall 'skipped' -Notes '' -CheckTexts @('b1', 'b2'))
+$reA = Get-ItemVerdictState -Store $store -ItemId 'A'
+Ok "verdict state: A Overall restored == pass (survives saving B)" ([string]$reA.overall -eq 'pass')
+Ok "verdict state: A checklist restored (row1=pass, rest unchecked)" (@($reA.checks).Count -eq 3 -and [string]@($reA.checks)[0].verdict -eq 'pass' -and [string]@($reA.checks)[1].verdict -eq 'unchecked' -and [string]@($reA.checks)[2].verdict -eq 'unchecked')
+Ok "verdict state: A notes restored" ([string]$reA.notes -eq 'A verified locally')
+Ok "verdict state: A row id/text preserved through save" ([string]@($reA.checks)[0].id -eq 'c1' -and [string]@($reA.checks)[0].text -eq 'a1')
+Ok "verdict state: B stays default after A saved (no cross-item bleed)" ([string](Get-ItemVerdictState -Store $store -ItemId 'B').overall -eq 'skipped')
+# re-save A with the SAME snapshot (what the shell does on every navigation) -> stable, no drift
+[void](Save-ItemVerdictState -Store $store -ItemId 'A' -Checked @($true, $false, $false) -Overall 'pass' -Notes 'A verified locally' -CheckTexts @('a1', 'a2', 'a3'))
+$reA2 = Get-ItemVerdictState -Store $store -ItemId 'A'
+Ok "verdict state: A stable across a second save/restore (no drift)" ([string]$reA2.overall -eq 'pass' -and [string]@($reA2.checks)[0].verdict -eq 'pass' -and [string]$reA2.notes -eq 'A verified locally')
+# transitional EMPTY snapshot must NOT wipe a saved item's checks (data-loss guard)
+[void](Save-ItemVerdictState -Store $store -ItemId 'A' -Checked @() -Overall 'pass' -Notes 'A verified locally' -CheckTexts @())
+$reA3 = Get-ItemVerdictState -Store $store -ItemId 'A'
+Ok "verdict state: empty control snapshot preserves prior checks (no clobber)" (@($reA3.checks).Count -eq 3 -and [string]@($reA3.checks)[0].verdict -eq 'pass')
+
+# EXPORT-CONTAINS-VERDICTS: the saved verdicts flow unchanged into New-VerificationResult + the saved JSON
+$expItems = New-Object System.Collections.Generic.List[object]
+foreach ($vit in @($vpk.items)) {
+    $vst = Get-ItemVerdictState -Store $store -ItemId ([string]$vit.id)
+    $expItems.Add((New-VerificationResultItem -Item $vit -Run $vst.run -Checks $vst.checks -Overall $vst.overall -Notes $vst.notes))
+}
+$vres = New-VerificationResult -Packet $vpk -Items $expItems.ToArray() -VerifiedBy 'gate'
+$vjsonPath = Join-Path ([System.IO.Path]::GetTempPath()) ("vc-verdict-" + [guid]::NewGuid().ToString('N') + '.json')
+try {
+    [void](Save-VerificationResult -Result $vres -Path $vjsonPath)
+    $vread = (Get-Content -LiteralPath $vjsonPath -Raw) | ConvertFrom-Json
+    $vitemA = @($vread.items) | Where-Object { $_.id -eq 'A' } | Select-Object -First 1
+    Ok "export verdicts: A overall = pass in exported JSON" ($null -ne $vitemA -and [string]$vitemA.overall -eq 'pass')
+    Ok "export verdicts: A ticked check verdict = pass in exported JSON" ($null -ne $vitemA -and [string]@($vitemA.checks)[0].verdict -eq 'pass')
+    Ok "export verdicts: A notes carried into exported JSON" ($null -ne $vitemA -and [string]$vitemA.notes -eq 'A verified locally')
+    Ok "export verdicts: summary counts A as the 1 pass (1 pass / 1 skipped / 2 total)" ($vread.summary.pass -eq 1 -and $vread.summary.skipped -eq 1 -and $vread.summary.total -eq 2)
+}
+finally { Remove-Item -LiteralPath $vjsonPath -Force -ErrorAction SilentlyContinue }
+
 # 13. launch.bat shape
 $launch = Join-Path $widgetRoot 'launch.bat'
 $lc = if (Test-Path $launch) { Get-Content $launch -Raw } else { '' }
@@ -318,6 +375,10 @@ if ($Live -and $IsWindows) {
     Ok "SelfTest: by-kind render + Open affordance under STA" ($staTxt -match 'SELFTEST_ITEMRENDER_OK') (($sta -join ' | '))
     Ok "SelfTest: packets dir resolves in-shell" ($staTxt -match 'SELFTEST_PACKETSDIR_OK') (($sta -join ' | '))
     Ok "SelfTest: no rendered-UI scope failure" (-not ($staTxt -match 'SELFTEST_ITEMRENDER_FAIL')) (($sta -join ' | '))
+    # D-0064: the verdict save/restore cycle exercised on the real controls (checklist + Overall + notes
+    # survive navigate-away-and-back). This is the live check the human GUI pass still backstops.
+    Ok "SelfTest: verdict persists across navigation (checklist + Overall + notes)" ($staTxt -match 'SELFTEST_VERDICT_PERSIST_OK') (($sta -join ' | '))
+    Ok "SelfTest: no verdict-persistence regression" (-not ($staTxt -match 'SELFTEST_VERDICT_PERSIST_FAIL')) (($sta -join ' | '))
 
     # REAL fs.observer run through the real Module 1 wrapper, driven from a packet item.
     $realWrap = if ($InvokeSkillPath) { $InvokeSkillPath } else { $paths.InvokeSkillPath }
@@ -404,6 +465,7 @@ if ($Live -and $IsWindows) {
 else {
     Skip "WinForms form self-test" "requires -Live on Windows"
     Skip "SelfTest: in-form discovery + by-kind render" "requires -Live on Windows"
+    Skip "SelfTest: verdict persists across navigation" "requires -Live on Windows"
     Skip "real fs.observer run" "requires -Live on Windows"
     Skip "no-orphan check" "requires -Live on Windows"
     Skip "live orphan (model.gateway tiny warm)" "requires -Live on Windows"
