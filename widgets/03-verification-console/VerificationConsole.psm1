@@ -1169,6 +1169,19 @@ function New-RunSummary {
     [CmdletBinding()]
     param($Run)
     if ($null -eq $Run) { return $null }
+    # Idempotent: a run_summary reloaded from a saved result has no skill_envelope but already carries the
+    # summary fields -- re-emit them rather than emptying artifacts/confidence (iteration 13 auto-load).
+    if ($null -eq (Get-Prop $Run 'skill_envelope') -and (Test-HasProp $Run 'artifacts')) {
+        $ra = New-Object System.Collections.Generic.List[object]
+        foreach ($a in @(Get-Prop $Run 'artifacts')) { $ra.Add([ordered]@{ path = [string](Get-Prop $a 'path'); kind = [string](Get-Prop $a 'kind' ''); bytes = (Get-Prop $a 'bytes') }) }
+        $reErr = $null; $ee = Get-Prop $Run 'error'
+        if ($ee) { $reErr = [ordered]@{ code = [string](Get-Prop $ee 'code' ''); message = [string](Get-Prop $ee 'message' '') } }
+        return [ordered]@{
+            ok = [bool](Get-Prop $Run 'ok' $false); skill_id = [string](Get-Prop $Run 'skill_id'); skill_status = [string](Get-Prop $Run 'skill_status')
+            wrapper_exit = (Get-Prop $Run 'wrapper_exit'); confidence = (Get-Prop $Run 'confidence'); artifacts = $ra.ToArray()
+            artifact_root = [string](Get-Prop $Run 'artifact_root'); elapsed_ms = (Get-Prop $Run 'elapsed_ms'); error = $reErr
+        }
+    }
     $skEnv = Get-Prop $Run 'skill_envelope'
     $arts = New-Object System.Collections.Generic.List[object]
     foreach ($a in @(if ($skEnv) { Get-Prop $skEnv 'artifacts' } else { @() })) {
@@ -1271,6 +1284,154 @@ function Save-VerificationResult {
     return $Path
 }
 
+# ============================================================================
+#  durable verdict persistence: autosave + auto-load (iteration 13)
+# ============================================================================
+# The packet is Claude's immutable SPEC (it carries no verdicts). Verdicts live in a RESULT sidecar. To make
+# 'Save item verdict' durable and to show prior progress when a packet is re-opened (instead of a blank
+# checklist), the shell AUTOSAVES the verdict store to a result file on every save and AUTO-LOADS the newest
+# saved result for a packet when it opens. These CORE helpers are WinForms-free + disk-only, so the whole
+# persistence path is unit-tested off-machine. The packet file itself is NEVER modified.
+
+function Get-VerdictResultsDir {
+    <# The central, always-writable autosave dir for verdict results (gitignored runtime), widget-relative. #>
+    [CmdletBinding()]
+    param([string]$WidgetRoot)
+    if (-not $WidgetRoot) { $WidgetRoot = $script:VerificationWidgetRoot }
+    if (-not $WidgetRoot) { $WidgetRoot = (Get-Location).Path }
+    return [System.IO.Path]::Combine($WidgetRoot, 'runtime', 'results')
+}
+
+function Get-VerdictAutosavePath {
+    <# The canonical autosave path for a packet_id inside the central results dir. #>
+    [CmdletBinding()]
+    param([string]$PacketId, [string]$WidgetRoot)
+    $pkid = if ([string]::IsNullOrWhiteSpace($PacketId)) { 'no-packet-id' } else { [string]$PacketId }
+    $safe = ($pkid -replace '[^A-Za-z0-9._-]', '_')
+    if ($safe.Length -gt 80) { $safe = $safe.Substring(0, 80) }
+    return [System.IO.Path]::Combine((Get-VerdictResultsDir -WidgetRoot $WidgetRoot), ($safe + '.json'))
+}
+
+function Test-IsVerificationResult {
+    <# True when $Obj looks like a lifeorch.verification.result and (when $PacketId is given) is FOR that packet. #>
+    [CmdletBinding()]
+    param($Obj, [string]$PacketId)
+    if ($null -eq $Obj) { return $false }
+    $schema = [string](Get-Prop $Obj 'schema' '')
+    $looksResult = ($schema -eq $script:ResultSchema) -or ($null -ne (Get-Prop $Obj 'items') -and $null -ne (Get-Prop $Obj 'summary'))
+    if (-not $looksResult) { return $false }
+    if ([string]::IsNullOrWhiteSpace($PacketId)) { return $true }
+    return ([string](Get-Prop $Obj 'packet_id' '') -eq $PacketId)
+}
+
+function Read-VerificationResultFile {
+    <# Read + parse a saved result file; $null when missing/malformed (never throws). #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$Path)
+    if ([string]::IsNullOrWhiteSpace($Path) -or -not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
+    try { return (([System.IO.File]::ReadAllText($Path)) | ConvertFrom-Json -ErrorAction Stop) } catch { return $null }
+}
+
+function Find-SavedResultPath {
+    <#
+        Return the NEWEST-by-mtime saved RESULT file that is FOR $PacketId, searching the central results dir
+        and the packet's own directory (so both an autosave and a hand-exported result next to the packet are
+        found). Returns '' when none. Never throws. Disk-only -> unit-tested off-machine against a temp tree.
+    #>
+    [CmdletBinding()]
+    param([string]$PacketPath, [string]$PacketId, [string]$WidgetRoot)
+    $dirs = New-Object System.Collections.Generic.List[string]
+    $dirs.Add((Get-VerdictResultsDir -WidgetRoot $WidgetRoot))
+    if (-not [string]::IsNullOrWhiteSpace($PacketPath)) { $pd = Split-Path -Parent $PacketPath; if ($pd) { $dirs.Add($pd) } }
+    $best = ''; $bestT = [datetime]::MinValue
+    foreach ($d in $dirs) {
+        if ([string]::IsNullOrWhiteSpace($d) -or -not (Test-Path -LiteralPath $d -PathType Container)) { continue }
+        foreach ($f in @(Get-ChildItem -LiteralPath $d -Filter '*.json' -File -ErrorAction SilentlyContinue)) {
+            $obj = $null
+            try { $obj = ([System.IO.File]::ReadAllText($f.FullName)) | ConvertFrom-Json -ErrorAction Stop } catch { continue }
+            if (-not (Test-IsVerificationResult -Obj $obj -PacketId $PacketId)) { continue }
+            $t = $f.LastWriteTimeUtc
+            if ($t -gt $bestT) { $bestT = $t; $best = $f.FullName }
+        }
+    }
+    return $best
+}
+
+function Import-ResultVerdicts {
+    <#
+        Overlay saved verdicts from a RESULT object onto a freshly-seeded store (id->state), matching each item
+        by id and each check by id (then by position). Only verdict fields change; the packet's checklist
+        structure (ids/text) stays authoritative, so a packet that gained/lost checks since the save still
+        loads cleanly. Returns the number of items updated. Pure.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Store, [Parameter(Mandatory)]$Items, $Result)
+    if ($null -eq $Result) { return 0 }
+    $resItems = @(Get-Prop $Result 'items')
+    if ($resItems.Count -eq 0) { return 0 }
+    $byId = @{}
+    foreach ($ri in $resItems) { $rid = [string](Get-Prop $ri 'id' ''); if ($rid -and -not $byId.ContainsKey($rid)) { $byId[$rid] = $ri } }
+    $updated = 0
+    foreach ($it in @($Items)) {
+        $iid = [string](Get-Prop $it 'id' '')
+        if (-not $iid -or -not $byId.ContainsKey($iid)) { continue }
+        $ri = $byId[$iid]
+        $st = Get-ItemVerdictState -Store $Store -ItemId $iid
+        $stChecks = @(Get-Prop $st 'checks' @())
+        $savedChecks = @(Get-Prop $ri 'checks')
+        $savedById = @{}
+        for ($k = 0; $k -lt $savedChecks.Count; $k++) { $cid = [string](Get-Prop $savedChecks[$k] 'id' ''); if ($cid -and -not $savedById.ContainsKey($cid)) { $savedById[$cid] = $savedChecks[$k] } }
+        $newChecks = New-Object System.Collections.Generic.List[object]
+        for ($j = 0; $j -lt $stChecks.Count; $j++) {
+            $sc = $stChecks[$j]
+            $cid = [string](Get-Prop $sc 'id' '')
+            $match = $null
+            if ($cid -and $savedById.ContainsKey($cid)) { $match = $savedById[$cid] }
+            elseif ($j -lt $savedChecks.Count) { $match = $savedChecks[$j] }
+            $verdict = if ($match) { ([string](Get-Prop $match 'verdict' 'unchecked')).ToLowerInvariant() } else { 'unchecked' }
+            $note = if ($match) { [string](Get-Prop $match 'note' '') } else { [string](Get-Prop $sc 'note' '') }
+            $newChecks.Add([ordered]@{ id = [string](Get-Prop $sc 'id' ''); text = [string](Get-Prop $sc 'text' ''); verdict = $verdict; note = $note })
+        }
+        $overall = ([string](Get-Prop $ri 'overall' 'skipped')).ToLowerInvariant(); if (-not $overall) { $overall = 'skipped' }
+        $ran = [bool](Get-Prop $ri 'ran' $false)
+        $runSummary = Get-Prop $ri 'run_summary'
+        $runText = if ($ran) { '(loaded from a saved verdict result -- press Run item to refresh the live output)' } else { '' }
+        $Store[$iid] = [ordered]@{ checks = $newChecks.ToArray(); overall = $overall; notes = [string](Get-Prop $ri 'notes' ''); ran = $ran; run = $runSummary; runText = $runText }
+        $updated++
+    }
+    return $updated
+}
+
+function Build-VerificationResultFromStore {
+    <# Assemble a lifeorch.verification.result from the verdict store + packet items (the export/autosave body). #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Store, [Parameter(Mandatory)]$Items, [Parameter(Mandatory)]$Packet, [string]$VerifiedBy = 'nicholas')
+    $resultItems = New-Object System.Collections.Generic.List[object]
+    foreach ($it in @($Items)) {
+        $st = Get-ItemVerdictState -Store $Store -ItemId ([string](Get-Prop $it 'id' ''))
+        $resultItems.Add((New-VerificationResultItem -Item $it -Run (Get-Prop $st 'run' $null) -Checks (Get-Prop $st 'checks' @()) -Overall ([string](Get-Prop $st 'overall' 'skipped')) -Notes ([string](Get-Prop $st 'notes' ''))))
+    }
+    return (New-VerificationResult -Packet $Packet -Items $resultItems.ToArray() -VerifiedBy $VerifiedBy)
+}
+
+function Save-VerdictStore {
+    <#
+        Assemble a result from the store and WRITE it to disk (the autosave path in the central results dir by
+        default, or -Path). This is what 'Save item verdict' persists so verdicts survive across sessions.
+        Returns the path written, or '' on failure (never throws).
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Store, [Parameter(Mandatory)]$Items, [Parameter(Mandatory)]$Packet, [string]$Path, [string]$WidgetRoot, [string]$VerifiedBy = 'nicholas')
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        $Path = Get-VerdictAutosavePath -PacketId ([string](Get-Prop $Packet 'packet_id' '')) -WidgetRoot $WidgetRoot
+    }
+    try {
+        $result = Build-VerificationResultFromStore -Store $Store -Items $Items -Packet $Packet -VerifiedBy $VerifiedBy
+        [void](Save-VerificationResult -Result $result -Path $Path)
+        return $Path
+    } catch { return '' }
+}
+
 Export-ModuleMember -Function `
     Test-HasProp, Get-Prop, Limit-Text, ConvertTo-CompactJson, ConvertFrom-EnvelopeJson, `
     Resolve-VerificationPaths, Get-PlanIdFromPacket, Get-DefaultPacketsDir, Get-RecentPackets, Format-RecentPacketLine, `
@@ -1280,4 +1441,6 @@ Export-ModuleMember -Function `
     Stop-ProcessHard, Invoke-OrphanSweep, Invoke-RunOrphanSweep, `
     Start-SkillProcess, Stop-SkillProcess, Complete-SkillRun, Invoke-SkillRun, Format-SkillResult, `
     New-RunSummary, New-VerificationResultItem, Get-VerificationSummary, New-VerificationResult, Save-VerificationResult, `
-    New-ItemVerdictState, Initialize-ItemVerdictStore, Get-ItemVerdictState, Save-ItemVerdictState
+    New-ItemVerdictState, Initialize-ItemVerdictStore, Get-ItemVerdictState, Save-ItemVerdictState, `
+    Get-VerdictResultsDir, Get-VerdictAutosavePath, Test-IsVerificationResult, Read-VerificationResultFile, `
+    Find-SavedResultPath, Import-ResultVerdicts, Build-VerificationResultFromStore, Save-VerdictStore

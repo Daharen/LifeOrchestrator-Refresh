@@ -275,10 +275,10 @@ function New-VerificationForm {
     $itemList.Add_SelectedIndexChanged({ Show-SelectedItem })
     $runBtn.Add_Click({ Start-ItemRunUI })
     $cancelBtn.Add_Click({ Stop-ItemRunUI })
-    $saveItemBtn.Add_Click({ Save-CurrentItemVerdict; Update-ItemListLabels })
+    $saveItemBtn.Add_Click({ Save-CurrentItemVerdict; Save-VerdictStoreAuto; Update-ItemListLabels })
     $timer.Add_Tick({ Update-ItemRunUI })
     $form.Add_Shown({ Set-InitialLayout; if ($script:VState.pendingPacketPath) { Import-PacketPath $script:VState.pendingPacketPath } })
-    $form.Add_FormClosing({ if ($script:VState.handle) { try { Stop-SkillProcess -Handle $script:VState.handle } catch { } } })
+    $form.Add_FormClosing({ if ($script:VState.handle) { try { Stop-SkillProcess -Handle $script:VState.handle } catch { } }; try { Save-CurrentItemVerdict; Save-VerdictStoreAuto } catch { } })
 
     return $form
 }
@@ -416,10 +416,23 @@ function Import-PacketPath {
     # save/restore cycle is unit-tested off-machine (the shell-only logic slipped the 133/133 mock gate).
     $s.itemState = Initialize-ItemVerdictStore -Items $s.items
     $s.currentId = $null
+    # Auto-load the newest saved verdicts for this packet so re-opening shows prior progress, not a blank
+    # checklist (iteration 13). Writes nothing here; the packet file is never modified.
+    $s.loadedResultPath = $null; $s.loadedResultCount = 0
+    try {
+        $savedPath = Find-SavedResultPath -PacketPath $Path -PacketId ([string]$pk.packet_id) -WidgetRoot $PSScriptRoot
+        if ($savedPath) {
+            $savedResult = Read-VerificationResultFile -Path $savedPath
+            $s.loadedResultCount = [int](Import-ResultVerdicts -Store $s.itemState -Items $s.items -Result $savedResult)
+            if ($s.loadedResultCount -gt 0) { $s.loadedResultPath = $savedPath }
+        }
+    }
+    catch { $s.loadedResultPath = $null; $s.loadedResultCount = 0 }
     Set-VText $s.detailBox (Format-PacketSummary -Packet $pk)
     $plan = [string]$pk.plan_id; if (-not $plan) { $plan = Get-PlanIdFromPacket -Packet $pk }
+    $loadNote = if ($s.loadedResultCount -gt 0) { '   [loaded saved verdicts for ' + [string]$s.loadedResultCount + ' item(s)]' } else { '' }
     $s.packetLabel.Text = ('Packet: ' + [string]$pk.title + '   plan=' + $(if ($plan) { $plan } else { '(none)' }) +
-        '   (' + [string]$pk.item_count + ' items, report_back=' + [string]$pk.report_back + ')')
+        '   (' + [string]$pk.item_count + ' items, report_back=' + [string]$pk.report_back + ')' + $loadNote)
     $s.packetLabel.ForeColor = [System.Drawing.Color]::Black
     $s.exportBtn.Enabled = $true
     $s.countLabel.Text = 'Items: ' + [string]$pk.item_count
@@ -531,6 +544,19 @@ function Save-CurrentItemVerdict {
             -Notes ([string]$s.notesBox.Text) -CheckTexts $texts.ToArray())
 }
 
+function Save-VerdictStoreAuto {
+    # Persist the whole verdict store to disk (the durable autosave) so 'Save item verdict' survives across
+    # sessions and re-opening the packet shows the saved progress (iteration 13). Never throws.
+    $s = $script:VState
+    if ($null -eq $s.packet) { return }
+    try {
+        $p = Save-VerdictStore -Store $s.itemState -Items $s.items -Packet $s.packet -WidgetRoot $PSScriptRoot
+        if ($p) { $s.autosavePath = $p; $s.stateLabel.Text = 'State: Verdict saved to disk' }
+        else { $s.stateLabel.Text = 'State: Verdict save FAILED (Export still works)' }
+    }
+    catch { }
+}
+
 function Start-ItemRunUI {
     $s = $script:VState
     $it = Get-SelectedItem
@@ -603,16 +629,8 @@ function Invoke-ExportResult {
     $s = $script:VState
     if ($null -eq $s.packet) { return }
     Save-CurrentItemVerdict
-    $resultItems = New-Object System.Collections.Generic.List[object]
-    foreach ($it in $s.items) {
-        $st = $s.itemState[[string]$it.id]
-        $run = if ($st) { $st.run } else { $null }
-        $checks = if ($st) { $st.checks } else { @() }
-        $overall = if ($st) { [string]$st.overall } else { 'skipped' }
-        $notes = if ($st) { [string]$st.notes } else { '' }
-        $resultItems.Add((New-VerificationResultItem -Item $it -Run $run -Checks $checks -Overall $overall -Notes $notes))
-    }
-    $result = New-VerificationResult -Packet $s.packet -Items $resultItems.ToArray()
+    Save-VerdictStoreAuto      # keep the durable autosave in sync with any manual export
+    $result = Build-VerificationResultFromStore -Store $s.itemState -Items $s.items -Packet $s.packet
 
     $dlg = [System.Windows.Forms.SaveFileDialog]::new()
     $dlg.Filter = 'Verification result (*.json)|*.json'
@@ -684,6 +702,17 @@ if ($SelfTest) {
                 $storeOk = ([string](Get-ItemVerdictState -Store $s.itemState -ItemId $targetId).overall -eq 'pass')
                 if ($tickOk -and $overallOk -and $notesOk -and $storeOk) { Write-Output 'SELFTEST_VERDICT_PERSIST_OK' }
                 else { Write-Output ('SELFTEST_VERDICT_PERSIST_FAIL: tick=' + $tickOk + ' overall=' + $overallOk + ' notes=' + $notesOk + ' store=' + $storeOk) }
+
+                # iteration 13: autosave + auto-load durability -- persist the store, RE-OPEN the same packet
+                # (simulating a fresh session), and assert the saved verdict is auto-loaded (not blank).
+                Save-VerdictStoreAuto
+                Import-PacketPath $fx
+                $reState = Get-ItemVerdictState -Store $s.itemState -ItemId $targetId
+                $reChecks = @(Get-Prop $reState 'checks')
+                $reload0 = ($reChecks.Count -ge 1 -and [string](Get-Prop $reChecks[0] 'verdict') -eq 'pass')
+                $reloadOverall = ([string](Get-Prop $reState 'overall') -eq 'pass')
+                if ($reload0 -and $reloadOverall -and $s.loadedResultCount -ge 1) { Write-Output 'SELFTEST_AUTOLOAD_OK' }
+                else { Write-Output ('SELFTEST_AUTOLOAD_FAIL: r0=' + $reload0 + ' overall=' + $reloadOverall + ' loaded=' + $s.loadedResultCount) }
             }
         }
     }

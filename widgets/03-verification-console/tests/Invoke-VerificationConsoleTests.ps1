@@ -357,6 +357,63 @@ try {
 }
 finally { Remove-Item -LiteralPath $vjsonPath -Force -ErrorAction SilentlyContinue }
 
+# 12c. durable verdict persistence: autosave + auto-load (CORE) -- iteration 13 ----------------------------
+#     'Save item verdict' now writes the verdict store to a result sidecar, and opening a packet auto-loads the
+#     NEWEST saved result FOR that packet so re-opening shows prior progress instead of a blank checklist. The
+#     packet file is never modified. The whole persistence path is disk-only + unit-tested here.
+foreach ($fn in 'Get-VerdictResultsDir', 'Get-VerdictAutosavePath', 'Test-IsVerificationResult', 'Read-VerificationResultFile', 'Find-SavedResultPath', 'Import-ResultVerdicts', 'Build-VerificationResultFromStore', 'Save-VerdictStore') {
+    Ok "persistence: function exists: $fn" ([bool](Get-Command $fn -ErrorAction SilentlyContinue))
+}
+Ok "persistence: autosave path is <packet_id>.json under runtime/results" ((Get-VerdictAutosavePath -PacketId 'vp-fixture-001' -WidgetRoot 'C:\w') -match 'runtime[\\/]results[\\/]vp-fixture-001\.json$')
+Ok "persistence: a result is recognized; a packet is NOT" ((Test-IsVerificationResult -Obj ([pscustomobject]@{ schema = 'lifeorch.verification.result/0.1'; packet_id = 'p1'; items = @(); summary = @{} }) -PacketId 'p1') -and -not (Test-IsVerificationResult -Obj $pk -PacketId ''))
+Ok "persistence: a result for a DIFFERENT packet is rejected" (-not (Test-IsVerificationResult -Obj ([pscustomobject]@{ schema = 'lifeorch.verification.result/0.1'; packet_id = 'other'; items = @(); summary = @{} }) -PacketId 'p1'))
+
+$persistRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("vc-persist-" + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path (Join-Path $persistRoot 'runtime') -Force | Out-Null
+try {
+    $ppk = Import-VerificationPacket -Json ('{"schema":"lifeorch.verification.packet/0.1","packet_id":"vp-persist-1","title":"P","items":[' +
+        '{"id":"A","kind":"human_action","title":"A","checklist":["a1","a2"]},{"id":"B","kind":"human_action","title":"B","checklist":["b1"]}]}')
+    $pstore = Initialize-ItemVerdictStore -Items $ppk.items
+    [void](Save-ItemVerdictState -Store $pstore -ItemId 'A' -Checked @($true, $false) -Overall 'pass' -Notes 'done A' -CheckTexts @('a1', 'a2'))
+    $savedTo = Save-VerdictStore -Store $pstore -Items $ppk.items -Packet $ppk -WidgetRoot $persistRoot
+    Ok "persistence: Save-VerdictStore wrote the autosave file" ([bool]$savedTo -and (Test-Path -LiteralPath $savedTo))
+    $found = Find-SavedResultPath -PacketId 'vp-persist-1' -WidgetRoot $persistRoot
+    Ok "persistence: Find-SavedResultPath finds the saved result" ([bool]$found -and (Test-Path -LiteralPath $found))
+    Ok "persistence: Find-SavedResultPath returns '' for an unknown packet" ([string](Find-SavedResultPath -PacketId 'nope-xyz' -WidgetRoot $persistRoot) -eq '')
+
+    # RE-OPEN: a fresh store seeded from the packet, then auto-loaded -> shows the saved verdicts (not blank)
+    $freshStore = Initialize-ItemVerdictStore -Items $ppk.items
+    Ok "persistence: fresh store starts blank (skipped)" ([string](Get-ItemVerdictState -Store $freshStore -ItemId 'A').overall -eq 'skipped')
+    $loadedResult = Read-VerificationResultFile -Path $found
+    $nLoaded = Import-ResultVerdicts -Store $freshStore -Items $ppk.items -Result $loadedResult
+    $reA = Get-ItemVerdictState -Store $freshStore -ItemId 'A'
+    Ok "persistence: auto-load restored A overall=pass across a fresh open" ([string]$reA.overall -eq 'pass' -and $nLoaded -ge 1)
+    Ok "persistence: auto-load restored A checklist (a1=pass, a2=unchecked)" (@($reA.checks).Count -eq 2 -and [string]@($reA.checks)[0].verdict -eq 'pass' -and [string]@($reA.checks)[1].verdict -eq 'unchecked')
+    Ok "persistence: auto-load restored A notes" ([string]$reA.notes -eq 'done A')
+    Ok "persistence: unsaved item B stays default after auto-load" ([string](Get-ItemVerdictState -Store $freshStore -ItemId 'B').overall -eq 'skipped')
+
+    # a packet that GAINED a check since the save still loads (structure stays authoritative; new check unchecked)
+    $ppk2 = Import-VerificationPacket -Json ('{"schema":"lifeorch.verification.packet/0.1","packet_id":"vp-persist-1","title":"P","items":[' +
+        '{"id":"A","kind":"human_action","title":"A","checklist":["a1","a2","a3-new"]}]}')
+    $store2 = Initialize-ItemVerdictStore -Items $ppk2.items
+    [void](Import-ResultVerdicts -Store $store2 -Items $ppk2.items -Result $loadedResult)
+    $reA2 = Get-ItemVerdictState -Store $store2 -ItemId 'A'
+    Ok "persistence: packet gained a check -> old verdicts kept, new check defaults unchecked" (@($reA2.checks).Count -eq 3 -and [string]@($reA2.checks)[0].verdict -eq 'pass' -and [string]@($reA2.checks)[2].verdict -eq 'unchecked')
+
+    # newest-by-mtime wins when two results exist for the same packet (an older one next to the packet)
+    $olderDir = Join-Path $persistRoot 'pkdir'; New-Item -ItemType Directory -Path $olderDir -Force | Out-Null
+    $olderResult = Build-VerificationResultFromStore -Store (Initialize-ItemVerdictStore -Items $ppk.items) -Items $ppk.items -Packet $ppk
+    [void](Save-VerificationResult -Result $olderResult -Path (Join-Path $olderDir 'verification-result-vp-persist-1.json'))
+    (Get-Item -LiteralPath (Join-Path $olderDir 'verification-result-vp-persist-1.json')).LastWriteTimeUtc = [datetime]::new(2000, 1, 1, 0, 0, 0, [System.DateTimeKind]::Utc)
+    $foundNewest = Find-SavedResultPath -PacketPath (Join-Path $olderDir 'verification-packet.json') -PacketId 'vp-persist-1' -WidgetRoot $persistRoot
+    Ok "persistence: newest-by-mtime result wins over an older one" ($foundNewest -eq $savedTo)
+}
+finally { Remove-Item -LiteralPath $persistRoot -Recurse -Force -ErrorAction SilentlyContinue }
+
+# New-RunSummary idempotency (so a reloaded run_summary survives a re-export without losing artifacts/confidence)
+$reSum = New-RunSummary -Run ([ordered]@{ ok = $true; skill_id = 'x.y'; skill_status = 'ok'; wrapper_exit = 0; confidence = 0.9; artifacts = @([ordered]@{ path = 'a.txt'; kind = 'file'; bytes = 5 }); artifact_root = 'root'; elapsed_ms = 12; error = $null })
+Ok "persistence: New-RunSummary is idempotent (artifacts + confidence preserved)" ($reSum.ok -and $reSum.skill_id -eq 'x.y' -and @($reSum.artifacts).Count -eq 1 -and $reSum.confidence -eq 0.9)
+
 # 13. launch.bat shape
 $launch = Join-Path $widgetRoot 'launch.bat'
 $lc = if (Test-Path $launch) { Get-Content $launch -Raw } else { '' }
@@ -379,6 +436,9 @@ if ($Live -and $IsWindows) {
     # survive navigate-away-and-back). This is the live check the human GUI pass still backstops.
     Ok "SelfTest: verdict persists across navigation (checklist + Overall + notes)" ($staTxt -match 'SELFTEST_VERDICT_PERSIST_OK') (($sta -join ' | '))
     Ok "SelfTest: no verdict-persistence regression" (-not ($staTxt -match 'SELFTEST_VERDICT_PERSIST_FAIL')) (($sta -join ' | '))
+    # iteration 13: verdicts persist to disk on Save and auto-load when the packet is re-opened.
+    Ok "SelfTest: verdicts auto-load on packet re-open (durable across sessions)" ($staTxt -match 'SELFTEST_AUTOLOAD_OK') (($sta -join ' | '))
+    Ok "SelfTest: no auto-load regression" (-not ($staTxt -match 'SELFTEST_AUTOLOAD_FAIL')) (($sta -join ' | '))
 
     # REAL fs.observer run through the real Module 1 wrapper, driven from a packet item.
     $realWrap = if ($InvokeSkillPath) { $InvokeSkillPath } else { $paths.InvokeSkillPath }
@@ -466,6 +526,7 @@ else {
     Skip "WinForms form self-test" "requires -Live on Windows"
     Skip "SelfTest: in-form discovery + by-kind render" "requires -Live on Windows"
     Skip "SelfTest: verdict persists across navigation" "requires -Live on Windows"
+    Skip "SelfTest: verdicts auto-load on re-open" "requires -Live on Windows"
     Skip "real fs.observer run" "requires -Live on Windows"
     Skip "no-orphan check" "requires -Live on Windows"
     Skip "live orphan (model.gateway tiny warm)" "requires -Live on Windows"

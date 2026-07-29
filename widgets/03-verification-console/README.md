@@ -27,7 +27,12 @@ this box the cheap verifier is often *you* — so this console is the channel th
    add **notes**, and **Save item verdict**. Each item's verdict is kept per-item — it survives moving between
    items (leave an item and come back and your checks / verdict / notes are still there) and flows unchanged
    into the exported result.
-5. **Export result** — writes a `lifeorch.verification.result/0.1` JSON that Claude reads back.
+5. **Save item verdict** — records that item's verdict *and* auto-saves it to disk. Verdicts are **durable
+   and reloadable**: when you open a packet again (even in a new session), the Console auto-loads the newest
+   saved verdicts for it and shows your prior checks / verdicts / notes — it does **not** start blank. The
+   original packet file is never modified; verdicts live in a result sidecar under `runtime/results/`.
+6. **Export result** — writes a `lifeorch.verification.result/0.1` JSON to a location you choose that Claude
+   reads back (the autosave is kept in sync with it).
 
 The header surfaces the packet's **plan id, title, report_back**, and **source path** so you can locate outputs
 without hunting. It reimplements nothing (runs go through the canonical Module 1 wrapper and its envelope is
@@ -47,7 +52,10 @@ Optional: `launch.bat -PacketPath <packet.json>` to open a packet on start.
   the plain-language invalid message, and the Open affordance — so all that logic is unit-tested, not in the UI.
   The **per-item verdict state** (`Initialize-ItemVerdictStore` / `Save-ItemVerdictState` / `Get-ItemVerdictState`
   over a plain id→state store) also lives here (**D-0064**) so the whole checklist + Overall-verdict + notes
-  save/restore cycle is unit-tested off-machine; the shell only marshals control values in and out.
+  save/restore cycle is unit-tested off-machine; the shell only marshals control values in and out. The
+  **durable persistence** (`Save-VerdictStore` autosave + `Find-SavedResultPath` / `Import-ResultVerdicts`
+  auto-load, keyed by `packet_id`) also lives here so verdicts survive across sessions and reopening a packet
+  shows prior progress — unit-tested end to end.
 - `Show-VerificationConsole.ps1` — thin STA WinForms shell (Timer-polled; `-SelfTest` builds+disposes the form).
 - `launch.bat` — double-click launcher.
 - `tests/Invoke-VerificationConsoleTests.ps1` — dual-mode harness (cloud mock gate + `-Live` on Windows).
