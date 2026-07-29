@@ -1,0 +1,13 @@
+{
+  "schema": "lifeorch.res.lease/0.1",
+  "resource": "gpu",
+  "holder": "W-gpu-run",
+  "holder_pid": 37260,
+  "host": "DESKTOP-PF5FFMF",
+  "lease_id": "3a7c9e18-2b44-4d0a-8f61-1e2c3d4b5a6f",
+  "acquired_at_utc": "2026-07-29T19:45:00.0000000Z",
+  "expires_at_utc": "2026-07-29T20:15:00.0000000Z",
+  "ttl_seconds": 1800,
+  "renew_count": 0,
+  "note": "warm-pool Stage-1 residency check"
+}

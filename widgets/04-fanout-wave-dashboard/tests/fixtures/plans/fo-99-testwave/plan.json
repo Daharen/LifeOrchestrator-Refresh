@@ -1,0 +1,71 @@
+{
+  "schema": "lifeorch.fanout.plan/0.1",
+  "plan_id": "fo-99-testwave",
+  "iteration": 99,
+  "title": "iteration 99 -- fixture wave: 3 workers in mixed states (done / progress / no-report) for the cloud gate",
+  "max_parallel": 3,
+  "report_back": "on_all",
+  "created_at_utc": "2026-07-29T19:50:00.0000000Z",
+  "lease_ttl_seconds": 1800,
+  "lease_wait_seconds": 900.0,
+  "lease_dir": "",
+  "workers": [
+    {
+      "id": "W-gpu-run",
+      "safe_id": "W-gpu-run",
+      "label": "GPU worker still running",
+      "unit": "a GPU unit that is mid-run",
+      "gpu": true,
+      "docs": [],
+      "needs_git": true,
+      "skill_id": "model.gateway",
+      "skill_dir": "modules/07-model-gateway",
+      "inputs": null,
+      "notes": "Single GPU worker. Mechanism C.",
+      "leases": ["gpu", "git"],
+      "acquire_commands": ["acq gpu", "acq git"],
+      "release_commands": ["rel git", "rel gpu"],
+      "prompt_path": "workers/worker-W-gpu-run.prompt.md"
+    },
+    {
+      "id": "W-cpu-done",
+      "safe_id": "W-cpu-done",
+      "label": "CPU worker finished",
+      "unit": "a CPU unit that shipped",
+      "gpu": false,
+      "docs": [],
+      "needs_git": true,
+      "skill_id": "",
+      "skill_dir": "",
+      "inputs": null,
+      "notes": "CPU lane. Edits ONLY ops/setup/.",
+      "leases": "git",
+      "acquire_commands": "acq git",
+      "release_commands": "rel git",
+      "prompt_path": "workers/worker-W-cpu-done.prompt.md"
+    },
+    {
+      "id": "W-code-quiet",
+      "safe_id": "W-code-quiet",
+      "label": "Coding worker that has not reported yet",
+      "unit": "a coding unit still in flight, no report on disk",
+      "gpu": false,
+      "docs": [],
+      "needs_git": true,
+      "skill_id": "",
+      "skill_dir": "",
+      "inputs": null,
+      "notes": "Coding lane. NEW widget.",
+      "leases": "git",
+      "acquire_commands": "acq git",
+      "release_commands": "rel git",
+      "prompt_path": "workers/worker-W-code-quiet.prompt.md"
+    }
+  ],
+  "dispatch_now": ["W-gpu-run", "W-cpu-done", "W-code-quiet"],
+  "queued": [],
+  "conflicts": {
+    "gpu_serialized": [],
+    "doc_contention": []
+  }
+}

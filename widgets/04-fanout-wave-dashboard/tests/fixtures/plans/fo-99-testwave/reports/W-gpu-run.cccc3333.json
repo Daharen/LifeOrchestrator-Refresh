@@ -1,0 +1,9 @@
+{
+  "schema": "lifeorch.fanout.report/0.1",
+  "plan_id": "fo-99-testwave",
+  "worker_id": "W-gpu-run",
+  "state": "progress",
+  "summary": "warm-pool Stage-1 residency check running; 3B resident, measuring a 3B<->9B swap",
+  "needs": "",
+  "reported_at_utc": "2026-07-29T19:55:00.0000000Z"
+}

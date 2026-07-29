@@ -1,0 +1,13 @@
+{
+  "schema": "lifeorch.res.lease/0.1",
+  "resource": "git",
+  "holder": "W-code-quiet",
+  "holder_pid": 41012,
+  "host": "DESKTOP-PF5FFMF",
+  "lease_id": "9b1d0c22-7f10-4e3a-a2b1-0c9e8d7f6a5b",
+  "acquired_at_utc": "2026-07-29T19:58:00.0000000Z",
+  "expires_at_utc": "2026-07-29T20:28:00.0000000Z",
+  "ttl_seconds": 1800,
+  "renew_count": 0,
+  "note": "dev.ship commit"
+}

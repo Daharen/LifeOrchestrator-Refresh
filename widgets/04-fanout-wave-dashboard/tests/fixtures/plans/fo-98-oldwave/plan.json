@@ -1,0 +1,54 @@
+{
+  "schema": "lifeorch.fanout.plan/0.1",
+  "plan_id": "fo-98-oldwave",
+  "iteration": 98,
+  "title": "iteration 98 -- fixture wave: fully done (both workers terminal) so ready_for_handoff is true; also the OLDER plan for the newest-first picker test",
+  "max_parallel": 2,
+  "report_back": "on_all",
+  "created_at_utc": "2026-07-29T18:00:00.0000000Z",
+  "lease_ttl_seconds": 1800,
+  "lease_wait_seconds": 900.0,
+  "lease_dir": "",
+  "workers": [
+    {
+      "id": "OW-a",
+      "safe_id": "OW-a",
+      "label": "old worker a",
+      "unit": "shipped",
+      "gpu": false,
+      "docs": [],
+      "needs_git": true,
+      "skill_id": "",
+      "skill_dir": "",
+      "inputs": null,
+      "notes": "CPU lane.",
+      "leases": "git",
+      "acquire_commands": "acq git",
+      "release_commands": "rel git",
+      "prompt_path": "workers/worker-OW-a.prompt.md"
+    },
+    {
+      "id": "OW-b",
+      "safe_id": "OW-b",
+      "label": "old worker b",
+      "unit": "shipped",
+      "gpu": false,
+      "docs": [],
+      "needs_git": true,
+      "skill_id": "",
+      "skill_dir": "",
+      "inputs": null,
+      "notes": "Coding lane.",
+      "leases": "git",
+      "acquire_commands": "acq git",
+      "release_commands": "rel git",
+      "prompt_path": "workers/worker-OW-b.prompt.md"
+    }
+  ],
+  "dispatch_now": ["OW-a", "OW-b"],
+  "queued": [],
+  "conflicts": {
+    "gpu_serialized": [],
+    "doc_contention": []
+  }
+}

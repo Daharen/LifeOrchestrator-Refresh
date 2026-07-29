@@ -1,0 +1,13 @@
+{
+  "schema": "lifeorch.res.lease/0.1",
+  "resource": "doc:CURRENT_STATE.md",
+  "holder": "orchestrator",
+  "holder_pid": 5120,
+  "host": "DESKTOP-PF5FFMF",
+  "lease_id": "c7e2f4a1-3d55-4b0e-9f22-6a1b2c3d4e5f",
+  "acquired_at_utc": "2026-07-29T19:30:00.0000000Z",
+  "expires_at_utc": "2026-07-29T19:50:00.0000000Z",
+  "ttl_seconds": 1200,
+  "renew_count": 0,
+  "note": "core-doc mirror (this lease is already EXPIRED at the fixed test Now)"
+}

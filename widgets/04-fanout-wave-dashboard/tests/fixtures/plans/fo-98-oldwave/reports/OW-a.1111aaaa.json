@@ -1,0 +1,9 @@
+{
+  "schema": "lifeorch.fanout.report/0.1",
+  "plan_id": "fo-98-oldwave",
+  "worker_id": "OW-a",
+  "state": "done",
+  "summary": "OW-a shipped",
+  "needs": "",
+  "reported_at_utc": "2026-07-29T18:20:00.0000000Z"
+}

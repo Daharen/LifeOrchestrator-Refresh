@@ -1,0 +1,3 @@
+# Widget 04 - Fan-out Wave Dashboard: ignore per-run scratch. It is READ-ONLY over the plans/leases dirs, so
+# it produces no runtime artifacts of its own; this keeps any incidental scratch out of git.
+runtime/
