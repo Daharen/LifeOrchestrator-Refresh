@@ -1,7 +1,7 @@
 # DECISION_LOG
 
 Owns **architectural rationale** so no instance must reread every discussion. Append-only; newest last.
-Read only when a prior decision may bear on your task. **Entry fields:** id · date · decision · reason ·
+Read `DECISION_LOG_INDEX.md` (one row per decision, beside this doc) FIRST, then pull only the entries that bear on your task by ID -- never ingest this whole file (DOC_PROTOCOL.md section 4). **Entry fields:** id · date · decision · reason ·
 alternatives · consequences · affects · state (provisional | locked) · revisit-if.
 
 ---
@@ -1043,3 +1043,36 @@ alternatives · consequences · affects · state (provisional | locked) · revis
 - **verification:** iter 12 gate cloud mock 151/151 (+18 core tests: regression save A -> save B -> re-read A == saved; empty-snapshot no-clobber; export-contains-verdicts) + a live STA SelfTest (SELFTEST_VERDICT_PERSIST_OK). iter 13 gate cloud mock 173/173 (+22 tests) + a live STA SelfTest (SELFTEST_AUTOLOAD_OK). Nicholas re-confirmed the Console live: verdicts persist across navigation + reload -- WORKING. Both shipped via dev.ship under the git lease (widgets/03 only). The formal fo-12 -Action handoff verification packet was SKIPPED (live-confirmed; optional).
 - **affects:** widgets/03-verification-console (VerificationConsole.psm1, Show-VerificationConsole.ps1, tests, README); CURRENT_STATE / FANOUT_ORCHESTRATOR_HANDOFF + new core-docs/ORCHESTRATOR_HANDOFF_2026-07-29-expanded.md. No module / models.json / runtime-behavior change. NOTE: the D-0064 handoff hypothesis (overall combo not restored) was WRONG -- the combo restore already existed; the real root cause was the untested shell-side save/restore cycle (an architecture-of-testing gap, not a missing line).
 - **revisit-if:** next = a NEW fan-out orchestrator running an EXPANDED parallel wave (the "4-lane" acceleration model, Nicholas's directive): 1 GPU worker (<=1/wave clamp) + 1 CPU worker + 1 broad coding worker + 1 externalized frontier-GPT review/audit lane (frontier.bridge #31 courier, off-box). Full spec + role/candidate-unit menu in core-docs/ORCHESTRATOR_HANDOFF_2026-07-29-expanded.md + FANOUT_ORCHESTRATOR_HANDOFF.md 'Expanded wave model'. First expanded wave = iteration 14 (units chosen by the fresh session + Nicholas). Standing GPU-lane candidate: warm-pool Stage-1 (mechanism C) per WARM_POOL_DESIGN sections 6 + 9; outstanding frontier ask: the audio/image/video model leads (generators #22-#25).
+
+### D-0066 -- Core-docs consolidation: one live handoff, doc budgets, decision-log index, fanout-agent slots, archive/ tree
+- **date:** 2026-07-29 · **state:** locked
+- **decision:** (a) Exactly ONE live orchestrator handoff -- `FANOUT_ORCHESTRATOR_HANDOFF.md`, rewritten in
+  place each orchestrator session (outgoing version snapshotted to `archive/handoffs/` first); the four
+  overlapping handoffs (`HANDOFF.md`, `ORCHESTRATOR_HANDOFF_2026-07-28/-29/-29-expanded.md`) are absorbed +
+  retired to `archive/handoffs/` and their Project mirrors deleted. (b) Every hot core doc gets a size
+  budget and a REPLACE-don't-append rule, codified in the new `DOC_PROTOCOL.md`; the four bloated docs are
+  slimmed with full pre-slim snapshots in `archive/doc-snapshots/2026-07-29/` (CURRENT_STATE 160->~27 KB,
+  MODULE_ROADMAP 75->~31 KB, TOOL_MODEL_REGISTRY 92->~39 KB, REVIEW_QUEUE 29->~13 KB). (c) DECISION_LOG
+  stays append-only + uncapped; a SEPARATE small `DECISION_LOG_INDEX.md` (one row per decision, mirrored)
+  is the routine access path — consumers read the index, then pull entries by ID. (d) Worker briefs get numbered slot docs `core-docs/fanout/FANOUT_AGENT_00N.md`
+  (template + 001=GPU / 002=CPU / 003=coding), mirrored to the Project at `claude/fanout/`, so Nicholas
+  dispatches a worker by pointing a fresh session at one doc; used briefs archive to `archive/fanout-agents/`.
+  The retired `claude/iter11-stage1-DRAFT.md` is renumbered into `FANOUT_AGENT_001.md` (warm-pool Stage-1,
+  i14). (e) `archive/` is git-tracked and indexed (`archive/ARCHIVE_INDEX.md`); nothing is deleted, only
+  moved.
+- **reason:** CURRENT_STATE (160 KB) and DECISION_LOG (295 KB) had grown past what any agent can ingest
+  whole; `[prior]`-chain accretion duplicated the same history in three docs; four handoffs overlapped; the
+  Project doc list was bloating every session's context. The most important data must forward without
+  blowing up context, and nothing may be lost (Nicholas's directive).
+- **alternatives:** keep accreting (unusable); move history into the Project (bloats every session; disk+git
+  is canonical); a database (overkill for text docs).
+- **consequences:** doc editors must follow DOC_PROTOCOL (budgets, replace-don't-append, snapshot-then-
+  rewrite, index upkeep, "you bust it you slim it"); a cold-start orchestrator ingests ~60 KB of hot docs (a module session ~40 KB); doc budgets are
+  actual+~10-15% and rise only via a new D-entry;
+  archived content is one copy-out away; Project mirror set shrinks by 5 docs and gains DOC_PROTOCOL +
+  fanout/ briefs.
+- **affects:** every core doc; `core-docs/fanout/` (new); `archive/` (new); the Project mirror map
+  (DOC_PROTOCOL section 8); START_HERE reading order + checklist.
+- **revisit-if:** a budget proves genuinely too tight for a doc's current-truth content (raise it in
+  DOC_PROTOCOL via a new D-entry, don't silently bust it); or the slot-dispatch flow doesn't match how
+  Nicholas actually dispatches workers after a couple of waves.

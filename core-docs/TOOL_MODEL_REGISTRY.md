@@ -1,765 +1,333 @@
 # TOOL_MODEL_REGISTRY
 
-Owns **what already exists and can actually be used** — tools, executables, models, services, skills.
-Prevents every fresh instance from rediscovering the machine; later becomes the basis for task routing.
-Read only when selecting or invoking a tool/model. Add an entry the moment you install or verify something.
+**Lookup registry** — what exists on this box and can actually be invoked. Read when **selecting or invoking** a
+tool/model; add an entry the moment you install or verify one.
 
-**Entry fields:** id · status · type · location · invocation · supported tasks · I/O formats ·
-quality tier · speed · CPU/GPU/mem · network · cost · limitations · last successful test · skill ids.
-**Status vocab:** installed · available · inactive · broken · planned · retired.
-
----
-
-### `exec.bootstrap` — Trusted High-Risk Bootstrap Executor
-- **status:** installed, running (crashed once 2026-07-24T06:26:36Z on a transient file-sharing violation, since
-  restarted; now **auto-recovered by Module 00.1 `exec.watchdog`**). Emits `control/heartbeat.json` +
-  `control/last-exit.json` for supervision (additive; 12/12 unaffected). · **type:** skill/service (PowerShell) ·
-  **location:** `LifeOrchestrator-Refresh/modules/00-bootstrap-executor/` (canonical. The original at `proteus_repo/tools/trusted-bootstrap-executor/` was stopped and is pending removal from the game repo.)
-  · **NOTE:** restart the live executor once (`ops/restart-executor.bat`) so it begins emitting the new markers.
-- **invocation:** `pwsh -NoProfile -File .\Start-BootstrapExecutor.ps1` (+ `Submit-`/`Stop-`); tasks are
-  directories atomically published into `runtime/pending/`.
-- **supported tasks:** run arbitrary local PowerShell task packages with concurrency, timeout,
-  output/exit/timing capture, restart recovery.
-- **I/O:** in = task dir (`task.json` + `task.ps1`); out = `result.json` + `stdout.txt`/`stderr.txt`.
-- **quality:** n/a (deterministic harness) · **speed:** poll-bounded (30s queue poll in the running instance) ·
-  **CPU/GPU/mem:** low / none / low · **network:** none · **cost:** local only.
-- **limitations:** trust-based (not a sandbox); Windows-focused (`taskkill`); no orphan-child reaping
-  after crash; polling latency. **File-sharing violations are now self-healed in-process** (`Invoke-WithFileRetry`
-  around state-writes + finalization moves, + a per-loop `IOException`/`UnauthorizedAccessException` guard) and
-  also externally recovered by the watchdog. · **last test:** 2026-07-24, 12/12 (pwsh 7.4.6, with markers +
-  self-heal). · **skills:** `exec.bootstrap`.
-
-### `pwsh` — PowerShell 7.4.6 (runtime)
-- **status:** installed · **type:** executable ·
-  **location:** `C:\Users\just_\.dotnet\tools\pwsh.exe` (.NET global tool; user PATH `~\.dotnet\tools`).
-- **invocation:** `pwsh -NoProfile -ExecutionPolicy Bypass -File <script>` (new shells) or the full path.
-- **supported tasks:** primary scripting/execution runtime for skills and the executor. Loads managed UI
-  Automation (`UIAutomationClient`/`UIAutomationTypes`), `System.Windows.Forms`/`System.Drawing`, and can host
-  a WinForms message loop on an STA runspace (verified 2026-07-24 for the Module 5 probe test).
-- **limitations:** shim reports process path as `dotnet.exe` (pass explicit `-PwshPath`); pinned version
-  because the latest tool package is broken; not on system PATH (per-user only). · **last test:** 2026-07-24.
-
-### `dotnet` — .NET SDK 9.0.100
-- **status:** installed · **type:** executable · **location:** `C:\Program Files\dotnet\dotnet.exe`
-- **supported tasks:** build/run .NET & C++ interop tooling; installs .NET global tools (no admin).
-- **network:** yes (NuGet). · **last test:** 2026-07-24 (installed the pwsh tool).
-
-### `git` — version control
-- **status:** installed · **type:** executable · **location:** on PATH ·
-  **supported tasks:** repo ops in `LifeOrchestrator-Refresh` (and the game repo). · **last test:** 2026-07-24 (Module 4 commit).
-
-### `winget` — Windows Package Manager
-- **status:** installed · **type:** executable ·
-  **location:** `C:\Users\just_\AppData\Local\Microsoft\WindowsApps\winget.exe`
-- **supported tasks:** install software. **limitation:** system-wide installs need a UAC/admin approval
-  the automation cannot click. · **last test:** availability confirmed 2026-07-24.
-
-### `ffmpeg` / `ffprobe` — media transcode + probe (Gyan.dev full build)
-- **status:** installed · **type:** executable · **location:** `ffmpeg` on PATH at
-  `C:\Users\just_\AppData\Local\Microsoft\WinGet\Links\ffmpeg.exe` (WinGet `Gyan.FFmpeg`; real package bin
-  `…\WinGet\Packages\Gyan.FFmpeg_*\ffmpeg-8.1-full_build\bin\`). **Version 8.1-full_build.**
-- **invocation:** `ffmpeg -hide_banner -nostdin -y -i <in> [filters] [-ar -ac -c:a -b:a] -map_metadata -1 <out>`;
-  `ffprobe -v error -print_format json -show_format -show_streams <file>`.
-- **supported tasks:** decode/encode/transcode/resample/rechannel/loudness-normalize audio (and general A/V); probe
-  media metadata. Full encoder set: libmp3lame, aac, flac, libopus, libvorbis, pcm_s16le/s24le/s32le/f32le, +video.
-- **quality:** deterministic transcode · **speed:** fast (CPU; NVENC/CUDA available) · **network:** none · **cost:** local only.
-- **limitation / gotcha:** **`ffprobe` on PATH is shadowed** — `where.exe ffprobe` returns a Python
-  `…\Python310\Scripts\ffprobe.exe` shim *before* the real `…\WinGet\Links\ffprobe.exe`. Resolve ffprobe as the
-  **sibling of the resolved ffmpeg** (or exclude `\Python*\Scripts\`). The Linux device-mount cannot `stat` the
-  WinGet `Links\*.exe` reparse points (Windows `Test-Path`/`where.exe` resolve them fine). · **last test:**
-  2026-07-24 (`m10-ffprobe-001`; used by Module 10). · **skills:** `audio.ingest`.
-
-### `Pillow` (PIL) + `numpy` — imaging backend (used by image.util)
-- **status:** installed · **type:** Python library · **location:** the **system python**
-  `C:\Users\just_\AppData\Local\Programs\Python\Python312\python.exe` (**PIL 10.2.0 + numpy 1.26.4**, also cv2 4.9.0);
-  fallback the **speech venv** (F:, PIL 12.2.0 + numpy 2.4.4).
-- **invocation:** via the `image.util` Python worker `image_worker.py` (the wrapper resolves the interpreter and passes an
-  args JSON); or ad-hoc `python -c "from PIL import Image; ..."`.
-- **supported tasks:** open/save png/jpg/webp/bmp/tiff, resize (LANCZOS/bicubic/…), crop, format convert + quality,
-  metadata/EXIF read, and (with numpy) a DCT perceptual hash. `PIL.features` confirms webp/libtiff/jpg/zlib all present.
-- **quality:** deterministic; perceptual hashes are **stable across PIL/numpy versions** (`m15-probe-001`: identical pHash
-  on PIL 10.2/numpy 1.26 and PIL 12.2/numpy 2.4) · **speed:** fast (CPU) · **network:** none · **cost:** local only.
-- **limitation / gotcha:** `image.util` uses the **system python** (CPU-only, not the CUDA/speech venv) for
-  parallel-safety; Pillow 12 dropped the `transp_webp` feature name (harmless "Unknown feature" warning if checked). ·
-  **last test:** 2026-07-25 (`m15-probe-001` + `m15-test-001`; used by Module 15). · **skills:** `image.util`.
-
-### `ref.echo` — Reference Echo Skill (Module 1)
-- **status:** installed · **type:** skill (PowerShell) ·
-  **location:** `LifeOrchestrator-Refresh/modules/01-skill-bootstrap/skills/ref.echo/`
-- **invocation:** direct `pwsh -NoProfile -File .\Invoke-RefEcho.ps1 -Message <s> -Repeat <n>` (or
-  `-InputsJson '<json>'`); wrapped `pwsh -File ..\..\Invoke-Skill.ps1 -SkillDir . -InputsJson '<json>'`;
-  or as an `exec.bootstrap` task package.
-- **supported tasks:** trivial echo / skill-channel health-check + canonical contract worked example.
-- **I/O:** in = `{message:string, repeat:int}`; out = `lifeorch.skill.result/0.1` envelope on stdout +
-  `runtime/artifacts/<invocation_id>/{echo.txt,result.json,stderr.txt}`.
-- **quality:** deterministic (confidence null) · **speed:** ~0.1s · **CPU/GPU/mem:** low/none/~64MB ·
-  **network:** none · **cost:** local only. · **last test:** 2026-07-24 via executor. · **skills:** `ref.echo`.
-
-### `skill.bootstrap` — Skill contract tooling (Module 1)
-- **status:** installed · **type:** library/tooling (PowerShell) ·
-  **location:** `LifeOrchestrator-Refresh/modules/01-skill-bootstrap/` (`lib/SkillContract.psm1`, `Invoke-Skill.ps1`)
-- **invocation:** `Import-Module .\lib\SkillContract.psm1` → `Test-SkillManifest` / `Test-SkillResultEnvelope`;
-  generic runner `pwsh -File .\Invoke-Skill.ps1 -SkillDir <dir> [-InputsJson '<json>']`.
-- **supported tasks:** validate a `lifeorch.skill.manifest/0.1` manifest and a `lifeorch.skill.result/0.1`
-  envelope; run any conforming skill and emit a `lifeorch.skill.invocation_report/0.1`.
-- **I/O:** in = skill dir + optional inputs JSON; out = invocation-report JSON.
-- **limitations:** field/type/enum checks (not full JSON-Schema); pwsh path defaults to the pinned
-  dotnet-tool build. · **last test:** 2026-07-24 (reused by Modules 2–5). · **skills:** n/a (harness).
-
-### `fs.observer` — Filesystem Observer (Module 2)
-- **status:** installed · **type:** skill (PowerShell) ·
-  **location:** `LifeOrchestrator-Refresh/modules/02-fs-observer/`
-- **invocation:** direct `pwsh -NoProfile -File .\Invoke-FsObserver.ps1 -Path <dir> -Depth <n> [-Pattern <glob>]`
-  (or `-InputsJson '<json>'`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
-- **supported tasks:** deterministic depth-bounded directory tree + metadata + name/glob search; no screenshots.
-- **I/O:** in = `{path, depth, pattern, include_hidden, max_entries}`; out = `lifeorch.skill.result/0.1` envelope +
-  `runtime/artifacts/<id>/{tree.md,index.json,stderr.txt,result.json}`.
-- **quality:** deterministic (confidence null) · **speed:** sub-second for small trees · **CPU/GPU/mem:** low/none/~128MB ·
-  **network:** none · **cost:** local only. · **last test:** 2026-07-24 via executor (tests 16/16). · **skills:** `fs.observer`.
-
-### `proc.observer` — Process & Window Observer (Module 3)
-- **status:** installed · **type:** skill (PowerShell + Win32 via Add-Type) ·
-  **location:** `LifeOrchestrator-Refresh/modules/03-proc-observer/`
-- **invocation:** direct `pwsh -NoProfile -File .\Invoke-ProcObserver.ps1 [-NameFilter <glob>] [-VisibleOnly <bool>]`
-  (or `-InputsJson '<json>'`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
-- **supported tasks:** snapshot running processes + top-level windows (titles, owning pid/name, bounds, min/max, foreground); no screenshots.
-- **I/O:** in = `{visible_only, name_filter, max_items}`; out = `lifeorch.skill.result/0.1` envelope +
-  `runtime/artifacts/<id>/{report.md,processes.json,windows.json,stderr.txt,result.json}`.
-- **quality:** deterministic read of live state (confidence null; snapshot) · **speed:** ~1–3s · **CPU/GPU/mem:** low/none/~128MB ·
-  **network:** none · **cost:** local only. · **last test:** 2026-07-24 via executor (tests 16/16). · **skills:** `proc.observer`.
-
-### `uia.inspector` — UI Automation Inspector (Module 4)
-- **status:** installed · **type:** skill (PowerShell + managed UI Automation) ·
-  **location:** `LifeOrchestrator-Refresh/modules/04-uia-inspector/`
-- **invocation:** direct `pwsh -NoProfile -File .\Invoke-UiaInspector.ps1 [-Hwnd <n>|-ProcessId <n>|-Title <glob>] [-Depth <n>] [-NameFilter <glob>]`
-  (else the desktop root; or `-InputsJson '<json>'`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
-- **supported tasks:** read-only UIA control-tree walk of a target window (control type, name, automation id, class, bounds, patterns, state).
-- **I/O:** in = `{hwnd, pid, title, depth, max_elements, name_filter}`; out = `lifeorch.skill.result/0.1` envelope +
-  `runtime/artifacts/<id>/{tree.md,elements.json,stderr.txt,result.json}`.
-- **quality:** deterministic read of live UI state (confidence null) · **speed:** ~1–5s · **CPU/GPU/mem:** low/none/~256MB ·
-  **network:** none · **cost:** local only.
-- **limitations:** read-only (acting is Module 5 `uia.actor`); point-in-time; some apps (e.g. Unity games) expose no UIA tree; bounded by depth/max_elements.
-  · **last test:** 2026-07-24 via executor (tests 16/16). · **skills:** `uia.inspector`.
-
-### `uia.actor` — UI Automation Actor (Module 5)
-- **status:** installed · **type:** skill (PowerShell + managed UI Automation) ·
-  **location:** `LifeOrchestrator-Refresh/modules/05-uia-actor/`
-- **invocation:** direct `pwsh -NoProfile -File .\Invoke-UiaActor.ps1 [-Hwnd <n>|-ProcessId <n>|-Title <glob>]
-  -Action <invoke|toggle|select|expand|collapse|setvalue|focus> [-AutomationId <exact>] [-Name <glob>]
-  [-ControlType <exact>] [-Path <child-index path>] [-Value <s>] [-DryRun]` (or `-InputsJson '<json>'`);
-  wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
-- **supported tasks:** perform ONE UIA control-pattern action on a single element located by automation id /
-  name / control type / inspector child-path: invoke, toggle, select, expand, collapse, setvalue, focus.
-  UIA patterns only (no synthetic mouse/keyboard). `-DryRun`/`-WhatIf` resolves + reports the intended action
-  without performing it; before/after control state captured on real actions.
-- **I/O:** in = `{hwnd,pid,title,action,automation_id,name,control_type,path,value,dry_run,depth,max_elements}`;
-  out = `lifeorch.skill.result/0.1` envelope (result = `{target, action, dry_run, performed, actionable,
-  requested_pattern, pattern_supported, locator, resolved_element, candidate_count, candidates[],
-  before_state, after_state, blockers[]}`) + `runtime/artifacts/<id>/{action.md,action.json,stderr.txt,result.json}`.
-- **quality:** deterministic (confidence null) · **speed:** ~1–5s (bounded property search when no path) ·
-  **CPU/GPU/mem:** low/none/~256MB · **network:** none · **cost:** local only.
-- **limitations:** **side-effecting** (`parallel_safe:false`); one action per invocation; no window
-  management (move/resize/close), no scroll/range-value/multi-select, no keyboard text where no ValuePattern,
-  no wait-for-element retries; ambiguous locators error with a candidate list (refine or use path); targets
-  that expose no usable pattern return `pattern_unsupported`.
-  · **last test:** 2026-07-24 via executor (tests **26/26**; live invoke/toggle/setvalue on a WinForms probe). · **skills:** `uia.actor`.
-
-### `capture.screen` — Screenshot & Region Capture (Module 6)
-- **status:** installed · **type:** skill (PowerShell + WinForms/GDI + Win32 via Add-Type) ·
-  **location:** `LifeOrchestrator-Refresh/modules/06-capture-screen/`
-- **invocation:** direct `pwsh -NoProfile -File .\Invoke-CaptureScreen.ps1 [-Target <monitor|window|app|region>]
-  [-Monitor <index|all|primary>] [-Hwnd <n>|-ProcessId <n>|-Title <glob>] [-App <glob>] [-X -Y -Width -Height]
-  [-Format <png|jpg>]` (target inferred from the locator when omitted; or `-InputsJson '<json>'`); wrapped via
-  `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
-- **supported tasks:** capture a monitor / a top-level window (hwnd/pid/title) / an app's main window (process
-  name) / an explicit screen rectangle to a PNG (or JPG q90). The visual-capture complement to the UIA skills —
-  use when a target exposes no usable UIA tree (Unity/game/canvas) or visual verification is needed.
-- **I/O:** in = `{target,monitor,hwnd,pid,title,app,x,y,width,height,format}`; out = `lifeorch.skill.result/0.1`
-  envelope (result = `{mode, requested, capture{rectangle,format,image_width,image_height,path,bytes,sha256},
-  window, monitor, environment{virtual_screen,monitors[]}}`) + `runtime/artifacts/<id>/{capture.png|jpg,
-  capture.json,capture.md,stderr.txt,result.json}`.
-- **quality:** deterministic pixel copy of live screen state (confidence null) · **speed:** ~1–2s ·
-  **CPU/GPU/mem:** low/none/~256MB · **network:** none · **cost:** local only.
-- **limitations:** **read-only, screen-pixel copy** — captures whatever is on screen at the target's rect; an
-  occluded window captures what covers it, a minimized window is `window_minimized`; it does **not**
-  raise/activate/move windows and uses no synthetic input (`parallel_safe:true`). No image post-processing
-  (resize/crop/OCR/base64 → Module 15), no off-screen `PrintWindow` compositing, no video/batch. Per-Monitor-V2
-  DPI awareness set once per process. · **last test:** 2026-07-24 via executor (tests **39/39**; smoke
-  `m6-smoke-001` captured a real dual-monitor primary). · **skills:** `capture.screen`.
-
-### `exec.watchdog` — Executor Watchdog & Recovery (Module 00.1)
-- **status:** installed · **type:** service + tool (PowerShell) ·
-  **location:** `LifeOrchestrator-Refresh/modules/00.1-exec-watchdog/`
-- **invocation:** `ops/start-watchdog.bat` (supervise) · `ops/stop-watchdog.bat` · `ops/recover-executor.bat [-Force]`;
-  direct `pwsh -File .\Watch-Executor.ps1` / `.\Recover-Executor.ps1`.
-- **supported tasks:** **cooperative** auto-recovery of the executor — restart on crash / hard-kill, kill+restart
-  on hang; **stand down** on an authorized graceful stop (`last-exit` reason `stop_requested`/`signal`). On-demand
-  force kill+restart via `Recover-Executor.ps1 -Force`. Crash-loop backoff.
-- **I/O:** reads `control/{executor.lock,heartbeat.json,last-exit.json}`; writes `control/watchdog.json`,
-  `logs/watchdog.log`; honors `control/watchdog.stop.requested`. `Recover-Executor.ps1` prints a
-  `lifeorch.exec.recovery/0.1` JSON summary.
-- **quality:** deterministic decision logic (`Get-WatchdogDecision`, pure) · **speed:** poll ~10s · **CPU/GPU/mem:** low/none/low ·
-  **network:** none · **cost:** local only.
-- **limitations:** **cooperative, not perpetual** by design (honors manual stop — a `taskkill /F`/power-loss looks
-  like a crash and is recovered); **no** boot/OS persistence, does not survive logout/reboot, does not self-revive;
-  session-scoped and user-launched; single host. Window-close is honored best-effort via a C# console-ctrl handler
-  (verify on your machine; else stop via Ctrl+C / `stop-executor.bat`). · **last test:** 2026-07-24 via executor
-  (tests **22/22**; Module 0 regression re-run 12/12). · **skills:** `exec.watchdog`. See DECISION_LOG D-0013.
-
-### `model.gateway` — Local Model Gateway (Module 7)
-- **status:** installed · **type:** skill (PowerShell wrapping llama.cpp `llama-server`) ·
-  **location:** `LifeOrchestrator-Refresh/modules/07-model-gateway/`
-- **invocation:** direct `pwsh -NoProfile -File .\Invoke-ModelGateway.ps1 [-Model <id>|-Tier <tiny|weak|mid|strong>]
-  -Prompt <s> [-System <s>] [-MaxTokens -Temperature -TopP -TopK -Seed -Stop] [-Registry -Port -GpuLayers -Context
-  -LoadTimeoutSec -ReviewQueuePath]` (or `-InputsJson '<json {…,messages[]}>'`); wrapped via
-  `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
-- **supported tasks:** run a local **LLM** (GGUF text) and return the completion + token counts + timings +
-  finish_reason, with full `model_provenance` and a `confidence`. Model chosen from `models.json` by id/tier/default.
-  Declares STT/TTS/embedding (staged) but returns `model_not_wired` for them (wired in Modules 11/12/23).
-- **I/O:** in = `{model|tier, prompt|messages, system, max_tokens, temperature, top_p, top_k, seed, stop, …}`;
-  out = `lifeorch.skill.result/0.1` envelope (result = `{model, engine, mode, selected_from, request, output{text},
-  generation{finish_reason,prompt_tokens,completion_tokens,total_tokens,timings}, server{port,health_ms,gpu_layers,
-  context}}`) + `runtime/artifacts/<id>/{output.txt,exchange.json,result.json,stderr.txt,server.*.log}`.
-- **determinism:** **mixed** (deterministic wrapping; stochastic output) · **confidence:** heuristic
-  (stop→0.7, length→0.4, empty→0.1; `<0.5` → review queue) · **speed:** small models load+gen in ~1–2 s
-  (GPU); 27B slower (partial offload) · **CPU/GPU/mem:** low / **CUDA (RTX 2080 Ti)** / ~2 GB+model ·
-  **network:** none (loopback only) · **cost:** local only.
-- **limitations:** **`parallel_safe:false`** (per-call server binds a port + most of VRAM); one server per call
-  (no warm worker — D-0002); LLM text only in the MVP; no streaming; no auto model selection (routing = Module 24).
-  · **last test:** 2026-07-24 via executor (**tests 28/28**, live 0.5B/1.5B). · **skills:** `model.gateway`. See D-0016.
-
-### `classify.batch` — Batch Classification & Sorting (Module 8)
-- **status:** installed · **type:** skill (PowerShell; **consumes `model.gateway`**) ·
-  **location:** `LifeOrchestrator-Refresh/modules/08-classify-batch/`
-- **invocation:** direct `pwsh -NoProfile -File .\Invoke-ClassifyBatch.ps1 -InputsJson '<json {mode,tier|model,
-  labels|fields,items|items_path,max_tokens,temperature,seed,max_input_chars,confidence_threshold,...}>'` (or named
-  params `-Mode -Tier -Labels -Fields -Items ...`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`;
-  or an `exec.bootstrap` task. Spawns the gateway child with `-PwshPath` (default the dotnet-tool pwsh).
-- **supported tasks:** batch **categorize / label / extract** over a list of `{id?,text}` items. `mode=classify`
-  (exactly one label from a closed `labels` set — also routing/sorting), `multilabel` (zero+ labels), `extract`
-  (named `fields` → JSON object). Calls `model.gateway` once per item (default `-Tier weak`=1.5B), groups results
-  (`label→[ids]`), routes low-confidence items to the review queue.
-- **I/O:** in = the JSON above (items inline or via `items_path` .jsonl/.json); out = `lifeorch.skill.result/0.1`
-  envelope (result = `{mode, model, selected_from, labels?|fields?, count, ok_count, flagged_count, error_count,
-  confidence_threshold, items[{id,label?|labels?|extracted?,confidence,finish_reason,in_set,flagged,flag_reason,
-  review_id,...}], groups{}, review_queue_path, review_count}`) + `runtime/artifacts/<id>/{classified.json,
-  classified.md,result.json,stderr.txt, gateway/…, _gateway_review_suppressed.jsonl}`.
-- **determinism:** **mixed** (deterministic orchestration/parsing/grouping; stochastic model labels) ·
-  **confidence:** per-item completeness+validity **heuristic** (classify in-set+stop 0.8 / fuzzy 0.6 / out-of-set 0.2;
-  multilabel 0.75/0.7/0.5/0.15; extract 0.75/0.5/0.3/0.1; `length` caps ≤0.4); envelope confidence = mean per-item;
-  `<threshold` (default 0.5) → `review_queue.jsonl` (`flagged_by:"classify.batch"`) · **speed:** per-item ×
-  gateway per-call model load (small models ~2–5 s/item) · **CPU/GPU/mem:** low / CUDA (via gateway) / ~2 GB+model ·
-  **network:** none · **cost:** local only.
-- **limitations:** **`parallel_safe:false`** (drives the gateway → GPU/port contention); **one gateway call per item**
-  with per-call model load (no warm worker — throughput caveat; D-0002/D-0016); closed label/field sets only (no
-  open-vocabulary/taxonomy learning); heuristic (not calibrated) confidence; grouping/index only — **no physical file
-  moving** (a `sort.files` mover is a follow-on); suppresses the gateway's own review-queue writes to the artifact dir.
-  · **last test:** 2026-07-24 via executor (**tests 33/33**; `m8-test-001`, exit 0, ~26s). · **skills:**
-  `classify.batch`. See D-0017.
-
-### `review.processor` — Review Queue Processor (Module 9)
-- **status:** installed · **type:** skill (PowerShell; **consumes `model.gateway`**) ·
-  **location:** `LifeOrchestrator-Refresh/modules/09-review-processor/`
-- **invocation:** direct `pwsh -NoProfile -File .\Invoke-ReviewProcessor.ps1 [-QueuePath <file> | -ReviewQueuePath]
-  [-MaxItems <n>] [-FlaggedBy <model.gateway|classify.batch>] [-Reason <s>] [-Tier <tiny|weak|mid|strong> | -Model <id>]
-  [-GpuLayers <n>] [-LoadTimeoutSec <s>] [-EscalateThreshold <0..1>] [-DryRun] [-ResolutionLogPath <file>]` (or
-  `-InputsJson '<json {queue_path,max_items,flagged_by,reason,ids,tier,model,gpu_layers,load_timeout_s,max_tokens,
-  temperature,seed,escalate_threshold,max_fragment_chars,dry_run,resolution_log_path,registry,gateway_path,pwsh_path}>'`);
-  wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
-- **supported tasks:** **drain `review_queue.jsonl`** — select OPEN flagged items (both producers) and adjudicate each
-  **single** item with a **stronger** local model (default `-Tier mid`=3B; `strong`=27B) via `model.gateway`, consuming
-  only the item + its `source_ref` fragment + `weak_result`. Resolves (`resolution`+`status:"resolved"`) or escalates
-  (`status:"escalated"`, `escalated_to:"frontier"`). Updates the queue **in place** (history preserved) + appends
-  `review_resolved.jsonl` (`lifeorch.review.resolution/0.1`); `-DryRun` writes nothing.
-- **I/O:** in = the JSON above (queue on disk); out = `lifeorch.skill.result/0.1` envelope (result = `{queue_path,
-  dry_run, tier, reviewer_model, selected_from, escalate_threshold, selected_count, resolved_count, escalated_count,
-  error_count, skipped_malformed, open_remaining, queue_written, items[{id,flagged_by,reason,requested,kind,
-  prior_status,new_status,verdict,decision,reviewer_confidence,model_self_confidence,escalated_to,finish_reason,
-  source_fragment_resolved,error}], resolution_log_path, resolution_count}`) + `runtime/artifacts/<id>/{review.json,
-  review.md,result.json,stderr.txt, gateway/…, _gateway_review_suppressed.jsonl}`.
-- **determinism:** **mixed** (deterministic select/parse/queue-rewrite; stochastic reviewer output) · **confidence:**
-  structural reviewer heuristic (valid JSON verdict + in-set corrected answer + generation completeness; `length` caps
-  ≤0.4; envelope = mean over adjudicated items) · **speed:** `mid`(3B) ~5s load + fast; `strong`(27B) slow (~2 tok/s,
-  cold load ~90s — pass `-LoadTimeoutSec 300`) · **CPU/GPU/mem:** low / CUDA (via gateway) / ~2–4 GB+model ·
-  **network:** none · **cost:** local only.
-- **limitations:** **`parallel_safe:false`** (drives the gateway + rewrites the shared queue file); **one gateway call
-  per item** with per-call model load (no warm worker — D-0002/D-0016); heuristic (not calibrated) reviewer confidence;
-  escalation is a **status transition**, not a frontier call (the frontier / #24 drains `escalated`); the in-place
-  write re-reads immediately before an atomic replace but is not a full concurrency protocol (single background drainer
-  assumed); a thinking-style `strong` model may exhaust `max_tokens` before the JSON verdict → safely escalated (tune
-  follow-on); no compaction/archival of resolved items (follow-on). · **last test:** 2026-07-24 via executor
-  (**tests 34/34**; `m9-test-003`, exit 0, ~150s incl. the 27B). · **skills:** `review.processor`. See D-0018.
-
-### `audio.ingest` — Audio Ingest / Normalize & Convert (Module 10)
-- **status:** installed · **type:** skill (PowerShell wrapping `ffmpeg`/`ffprobe`) ·
-  **location:** `LifeOrchestrator-Refresh/modules/10-audio-ingest/`
-- **invocation:** direct `pwsh -NoProfile -File .\Invoke-AudioIngest.ps1 -InputFile <path> [-Format <wav|mp3|flac|
-  opus|ogg|m4a>] [-SampleRate <hz|0>] [-Channels <1|2|0>] [-SampleFormat <s16|s24|s32|flt>] [-Loudness <none|peak|
-  ebu>] [-PeakDb -LoudnessI -LoudnessTP -LoudnessLRA] [-Bitrate <e.g. 192k>] [-FfmpegPath -FfprobePath]` (or
-  `-InputsJson '<json {input,format,sample_rate,channels,sample_fmt,loudness,peak_db,loudness_i,loudness_tp,
-  loudness_lra,bitrate,ffmpeg_path,ffprobe_path}>'`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`;
-  or an `exec.bootstrap` task.
-- **supported tasks:** normalize+convert one audio/media file (first audio stream; audio extracted from video) to a
-  target format/rate/channels/sample-format with optional peak or EBU R128 loudness. **Defaults produce whisper-ready
-  16 kHz mono s16 WAV** — the front door for the audio track (feeds Module 11 `speech.stt`).
-- **I/O:** in = a file path + options; out = `lifeorch.skill.result/0.1` envelope (result = `{input{path,exists,
-  audio_stream_present,probe}, output{path,format,container,codec,sample_rate,channels,sample_fmt,bitrate,duration_s,
-  bytes,sha256,probe}, normalization{sample_rate,channels,sample_fmt,loudness}, ffmpeg{path,version,argv[]},
-  ffprobe{path}}`) + `runtime/artifacts/<id>/{audio.<ext>,ingest.json,ingest.md,result.json,stderr.txt}`.
-- **determinism:** deterministic (confidence null; no model) · **speed:** ~0.5–2 s for short clips (CPU) ·
-  **CPU/GPU/mem:** CPU / none / ~256 MB · **network:** none · **cost:** local only.
-- **limitations:** one input → one output (`batch:false`; no directory/batch); audio only (video dropped, `-vn`); no
-  trimming/segmentation/VAD/concat/mix/denoise/EQ (→ Module 13 / follow-ons); `sample_fmt` applies to wav only;
-  requires `ffmpeg`/`ffprobe` (present). `parallel_safe:true` (CPU-bound; heavy fan-out contends CPU only). · **last
-  test:** 2026-07-24 via executor (**tests 43/43**; `m10-test-001`, exit 0, ~17s; pre-shipped on cloud ffmpeg 6.1
-  43/43). · **skills:** `audio.ingest`. See D-0019.
-
-### `speech.stt` — Speech-to-Text Transcription (Module 11)
-- **status:** installed · **type:** skill (PowerShell wrapping the whisper.cpp `whisper-cli`) ·
-  **location:** `LifeOrchestrator-Refresh/modules/11-speech-stt/`
-- **invocation:** direct `pwsh -NoProfile -File .\Invoke-SpeechStt.ps1 -InputFile <path> [-Normalize <auto|always|never>]
-  [-Language <code>] [-Translate] [-Threads <n>] [-NoGpu] [-BeamSize <n>] [-BestOf <n>] [-MaxLen <n>] [-SplitOnWord]
-  [-OffsetMs <ms>] [-DurationMs <ms>] [-SegmentConfidenceThreshold <0..1>] [-MaxReviewSegments <n>] [-Model <id>]
-  [-Registry|-WhisperCliPath|-AudioIngestPath|-PwshPath|-ReviewQueuePath <override>]` (or `-InputsJson '<json {input,
-  normalize,language,translate,threads,no_gpu,beam_size,best_of,max_len,split_on_word,offset_ms,duration_ms,
-  segment_confidence_threshold,max_review_segments,min_speech_seconds,model,registry,whisper_cli_path,audio_ingest_path,
-  pwsh_path,review_queue_path}>'`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an
-  `exec.bootstrap` task.
-- **supported tasks:** timestamped transcription of one audio/media file. Resolves the STT model + whisper CLI from
-  `models.json`; consumes whisper-ready 16 kHz mono s16 WAV directly and **normalizes other inputs via `audio.ingest`**
-  (Module 10). Emits timestamped segments with per-segment + overall confidence (mean whisper token probability).
-- **I/O:** in = a file path + options; out = `lifeorch.skill.result/0.1` envelope (result = `{input,audio,model,params,
-  language,text,segment_count,token_count,confidence{overall,min_segment,low_confidence_segments},
-  segments[{index,t0_ms,t1_ms,t0,t1,text,confidence,token_count,low_confidence}],review{threshold,flagged_count,truncated,
-  queue_path},whisper{cli,systeminfo,runtime_ms,real_time_factor}}`) + `runtime/artifacts/<id>/{whisper.json,whisper.srt,
-  whisper.txt,transcript.json,transcript.md,result.json,stderr.txt,whisper.log, normalize/…}`.
-- **determinism:** **mixed** (deterministic orchestration/parse; stochastic model output) · **confidence:** mean whisper
-  per-token probability over content tokens (per-segment + overall); `< -SegmentConfidenceThreshold` (0.5) → `review_queue.jsonl`
-  (`flagged_by:"speech.stt"`, bounded by `-MaxReviewSegments`) · **speed:** base.en on **CUDA (RTX 2080 Ti)** ≈ 0.07
-  real-time factor (11 s audio in ~0.7 s) · **CPU/GPU/mem:** low / CUDA (CPU fallback via `-NoGpu`/CPU build) / ~1 GB.
-- **limitations:** **`parallel_safe:false`** (binds the CUDA context, like `model.gateway`); one file per invocation
-  (`batch:false` — no directory/batch); no VAD/segmentation/diarization/word-level artifacts (→ Module 13 / follow-ons);
-  `base.en` is English-only; per-call CLI spawn (no warm whisper-server yet); confidence is a token-probability signal,
-  not calibrated correctness. · **last test:** 2026-07-24 via executor (**tests 27/27**; `m11-test-001`, exit 0, ~14 s;
-  live smoke `m11-smoke-001` transcribed jfk.wav on CUDA). · **skills:** `speech.stt`. See D-0020.
-
-### `speech.tts` — Text-to-Speech Synthesis (Module 12)
-- **status:** installed · **type:** skill (PowerShell wrapper + Python worker `tts_infer.py` under the speech venv) ·
-  **location:** `LifeOrchestrator-Refresh/modules/12-speech-tts/`
-- **invocation:** direct `pwsh -NoProfile -File .\Invoke-SpeechTts.ps1 -Text <string> [-Speaker <name>] [-Language <name>]
-  [-Instruct <style>] [-Seed <int>] [-Dtype <bfloat16|float16|float32>] [-SampleRate <hz|0>] [-Format <wav|mp3|flac|opus|
-  ogg|m4a>] [-MaxNewTokens <n>] [-ConfidenceThreshold <0..1>] [-Model <id>] [-Registry|-PythonPath|-TtsInferPath|
-  -AudioIngestPath|-PwshPath|-ReviewQueuePath <override>]` (or `-InputsJson '<json {text,speaker,language,instruct,seed,
-  dtype,sample_rate,format,max_new_tokens,confidence_threshold,model,registry,python_path,tts_infer_path,audio_ingest_path,
-  pwsh_path,review_queue_path}>'`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
-- **supported tasks:** synthesize one utterance of speech from text using Qwen3-TTS CustomVoice (preset speakers).
-  Resolves the TTS model + venv python from `models.json`; produces 24 kHz mono PCM16 WAV; optional format/rate conversion
-  via `audio.ingest`. English speakers Ryan/Aiden (+ Chinese/Japanese/Korean voices — use the text's native language).
-- **I/O:** in = text + options; out = `lifeorch.skill.result/0.1` envelope (result = `{input{text,chars}, model{id,name,
-  engine,engine_env,device,dtype,attn}, params{speaker,language,instruct,seed,max_new_tokens}, audio{path,sample_rate,
-  channels,samples,duration_s,bytes,sha256,format,native_sample_rate,converted}, confidence{overall,reason}, review{
-  threshold,flagged,queue_path}, synthesis{runtime_ms,real_time_factor}}`) + `runtime/artifacts/<id>/{speech.wav,tts.json,
-  tts.md,result.json,stderr.txt,py.log,tts_args.json,tts_meta.json, convert/…}`.
-- **determinism:** **mixed** (deterministic orchestration; the model samples with `do_sample=true`, seedable via `-Seed`) ·
-  **confidence:** synthesis-completeness heuristic (audio produced + duration vs. input length; `< -ConfidenceThreshold`
-  0.5 → `review_queue.jsonl`, `flagged_by:"speech.tts"`) · **speed:** per-call model load ~30–40 s cold; synthesis ~5×
-  real-time on the RTX 2080 Ti (rtf ≈ 5.2 for the 0.6B) · **CPU/GPU/mem:** low / **CUDA (RTX 2080 Ti)** / ~2–4 GB+model.
-- **limitations:** **`parallel_safe:false`** (binds the CUDA context + loads a model); one utterance per invocation
-  (`batch:false`); per-call model load (no warm worker yet); GPU (CUDA) required; preset-speaker CustomVoice only (no
-  voice clone/design in the MVP); confidence is a completeness signal, not audio quality. · **last test:** 2026-07-24 via
-  executor (**tests 25/25**; `m12-test-001`, exit 0, ~132 s; live smoke `m12-smoke-001` synthesized 5.52 s on CUDA). ·
-  **skills:** `speech.tts`. See D-0021.
-
-### `voice.live` — Voice Interaction Loop (Module 13)
-- **status:** installed · **type:** skill (PowerShell orchestrator; composes other skills) ·
-  **location:** `LifeOrchestrator-Refresh/modules/13-voice-live/`
-- **invocation:** direct `pwsh -NoProfile -File .\Invoke-VoiceLive.ps1 -InputFile <audio> [-Respond <bool>] [-Speak <bool>]
-  [-ReadbackTranscript <bool>] [-System <prompt>] [-Tier <tiny|weak|mid|strong>] [-MaxTokens <n>] [-Speaker <name>]
-  [-Language <name>] [-Format <wav|mp3|...>] [-SttModel|-GatewayModel|-TtsModel <id>] [-SttPath|-GatewayPath|-TtsPath|
-  -PwshPath|-ReviewQueuePath <override>]` (or `-InputsJson '<json {input,respond,speak,readback_transcript,system,tier,
-  max_tokens,speaker,language,stt_model,gateway_model,tts_model,format,stt_path,gateway_path,tts_path,pwsh_path,
-  review_queue_path}>'`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
-- **supported tasks:** one **voice turn** from an audio file — transcribe (`speech.stt`; whisper segments = utterance/VAD)
-  → optionally answer (`model.gateway`) → optionally speak the answer/transcript (`speech.tts`) to `reply.wav`. Composes
-  the child skills (spawned as pwsh; overridable paths) and parses their envelopes; reimplements nothing.
-- **I/O:** in = an audio path + options; out = `lifeorch.skill.result/0.1` envelope (result = `{input{path},
-  speech_detected, transcript{text,utterance_count,confidence,language,artifact_dir}, response{text,model,confidence,
-  finish_reason}|null, reply{path,format,sample_rate,duration_s,bytes,sha256}|null, stages[{name,status,ms,error}],
-  config{…}, child_review_path, child_review_count}`) + `runtime/artifacts/<id>/{voice.json,voice.md,reply.wav,
-  result.json,stderr.txt,child_review.jsonl, stt/,gateway/,tts/}`.
-- **determinism:** **mixed** (deterministic orchestration; stochastic children) · **confidence:** = the STT transcript
-  confidence · **model_provenance:** aggregate of all child models (stt+gateway+tts), stage-tagged · **speed:** a full
-  turn pays three cold model loads (~1–2 min; observed ~58 s — stt ~1.8 s / respond ~2.7 s / speak ~54 s) · **CPU/GPU/mem:**
-  low / **CUDA** (via children) / ~2–4 GB+models.
-- **limitations:** **`parallel_safe:false`** (children bind CUDA sequentially); one turn per invocation (`batch:false`);
-  three cold model loads (no warm worker); **file-driven only** — no live mic capture / streaming (non-goal); standalone
-  VAD deferred (no VAD ggml model staged); it is an **orchestrator, not a review producer** (aggregates child flags to
-  an in-artifact file by default). · **last test:** 2026-07-24 via executor (**tests 21/21**; `m13-test-001`, exit 0; live
-  smoke `m13-smoke-001` — full JFK turn, 12.56 s reply). · **skills:** `voice.live`. See D-0022.
-
-### `ocr.layout` — OCR + Layout (Module 14)
-- **status:** installed · **type:** skill (pwsh-7 wrapper + Windows PowerShell 5.1 WinRT worker `ocr_worker.ps1`) ·
-  **location:** `LifeOrchestrator-Refresh/modules/14-ocr-layout/`
-- **invocation:** direct `pwsh -NoProfile -File .\Invoke-OcrLayout.ps1 -InputFile <image> [-Language <bcp47>]
-  [-Engine <model_id>|-Model <id>] [-ConfidenceThreshold <0..1>] [-MaxReviewLines <n>] [-Capture]
-  [-CaptureInputsJson '<json>'] [-Registry|-OcrWorkerPath|-Powershell51Path|-CapturePath|-PwshPath|-ReviewQueuePath
-  <override>]` (or `-InputsJson '<json {input,language,engine,model,confidence_threshold,max_review_lines,capture,
-  capture_inputs,min_image_pixels,registry,ocr_worker_path,powershell51_path,capture_path,pwsh_path,review_queue_path}>'`);
-  wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
-- **supported tasks:** OCR one image → recognized **text + per-word pixel bounding boxes + lines in reading order**
-  (+ text angle). The visual text-extraction complement to `capture.screen`; use for screenshots, scanned pages, UI/canvas
-  text, or — with `-Capture` — text read straight off the live screen (composes `capture.screen`, Module 6).
-- **I/O:** in = an image path (png/jpg/bmp/tif/gif) or a `-Capture` spec; out = `lifeorch.skill.result/0.1` envelope
-  (result = `{input{path,exists,source,capture?}, image{width,height,text_angle}, engine{id,name,engine,
-  recognizer_language,available_languages}, params, text, word_count, line_count, lines[{index,text,confidence,
-  low_confidence,bounding_rect{x,y,width,height},words[{text,x,y,width,height}]}], confidence{overall,min_line,
-  low_confidence_lines,reason}, review{...}, ocr{engine_env,runtime_ms,max_image_dimension}}`) +
-  `runtime/artifacts/<id>/{ocr.json,ocr.md,ocr_args.json,ocr_meta.json,worker.log,result.json,stderr.txt, capture/…}`.
-- **determinism:** **mixed** (deterministic orchestration; perception output) · **confidence:** legibility **heuristic**
-  (fraction of clean words → [0.1,0.9] per line + overall; NOT calibrated; `<threshold` 0.5 → `review_queue.jsonl`
-  `flagged_by:"ocr.layout"`, `verify_ocr`/`verify_no_text`) · **speed:** ~0.5–1 s (per-call `powershell.exe` spawn; the
-  OCR itself ~74 ms) · **CPU/GPU/mem:** low / none / ~256 MB · **network:** none · **cost:** local only.
-- **limitations:** **`parallel_safe:true`** (binds no port/VRAM/CUDA; only shared write is the append-only review queue);
-  one image per invocation (`batch:false`); **Windows.Media.Ocr only** in the MVP (Tesseract declared, not wired);
-  no per-word confidence from the engine (heuristic); an image over `MaxImageDimension` (10000 px) returns
-  `image_too_large` (downscale → Module 15 follow-on); no overlay PNG / multi-column reflow / PDF (follow-ons);
-  **`ocr_worker.ps1` must stay ASCII-only** (Windows PowerShell 5.1 reads a BOM-less `.ps1` as ANSI, not UTF-8). ·
-  **last test:** 2026-07-25 via executor (**tests 30/30**; `m14-test-003`, exit 0; real-registry smoke `m14-smoke-001`).
-  · **skills:** `ocr.layout`. See D-0023.
-
-### `image.util` — Image Utilities (Module 15)
-- **status:** installed · **type:** skill (pwsh-7 wrapper + Pillow+numpy Python worker `image_worker.py`) ·
-  **location:** `LifeOrchestrator-Refresh/modules/15-image-util/`
-- **invocation:** direct `pwsh -NoProfile -File .\Invoke-ImageUtil.ps1 -InputFile <image> [-Op <meta|resize|crop|convert|
-  tile|similarity>] [-Width -Height -Mode <fit|fill|exact> -MaxDimension -Resample -AllowUpscale] [-X -Y -CropWidth
-  -CropHeight -Normalized -Region -RegionFraction] [-Format <png|jpg|webp|bmp|tiff> -Quality -OutputName] [-TileCols
-  -TileRows | -TileWidth -TileHeight -TileOverlap] [-CompareTo <image>] [-HashSize -NoPerceptualHash] [-PythonPath
-  -ImageWorkerPath]` (or `-InputsJson '<json {input,op,width,height,mode,max_dimension,resample,allow_upscale,x,y,
-  crop_width,crop_height,normalized,region,region_fraction,format,quality,output_name,tile_cols,tile_rows,tile_width,
-  tile_height,tile_overlap,compare_to,hash_size,no_perceptual_hash,python_path,image_worker_path}>'`); wrapped via
-  `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
-- **supported tasks:** one image -> metadata + hashes always, plus one op: **resize** (fit/fill/exact or `max_dimension`,
-  reporting `scale_x`/`scale_y` for box rescaling), **crop** (pixel rect / normalized / named region), **convert**
-  (png/jpg/webp/bmp/tiff + quality), **tile** (grid or fixed size + overlap), **similarity** (pHash/dHash Hamming + score).
-  Deterministic image plumbing for the perception block; unblocks `ocr.layout`'s MaxImageDimension downscale + box overlay.
-- **I/O:** in = an image path + op params; out = `lifeorch.skill.result/0.1` envelope (result = `{input{path,exists,bytes,
-  sha256,format,mode,width,height,has_alpha}, op, params, metadata{format,mode,width,height,has_alpha,dpi,n_frames,exif},
-  hashes{sha256,phash,dhash,hash_bits}, outputs[{path,format,mode,width,height,bytes,sha256}], resize|crop|tile|similarity,
-  runtime_ms, worker}`) + `runtime/artifacts/<id>/{image.json,image.md,image_args.json,image_meta.json,worker.log,
-  result.json,stderr.txt, <produced image(s)>}`.
-- **determinism:** **deterministic** (confidence **null**; empty `model_provenance`; **not** a review producer) ·
-  **speed:** ~0.2–0.8 s per op (per-call python spawn) · **CPU/GPU/mem:** CPU / none / ~256 MB · **network:** none · **cost:** local only.
-- **limitations:** one image per invocation (`batch:false`; no directory/glob); no draw/annotate/overlay, rotate/flip/
-  auto-orient, denoise/filters (follow-ons); multi-frame handled on frame 0 only; **not a `model.gateway` model — no
-  `models.json` entry** (a tool, like ffmpeg). `parallel_safe:true` (CPU-bound; no port/VRAM/CUDA binding). · **last test:**
-  2026-07-25 via executor (**tests 48/48**; `m15-test-001`, exit 0; pre-shipped on the cloud box, real worker, Pillow 12.2,
-  48/48). · **skills:** `image.util`. See D-0024. **Fix 2026-07-25 (Module 16):** `image_worker.py` now coerces JPEG `dpi`
-  (`IFDRational`) to float before JSON — a real JPEG previously truncated the worker meta; re-verified 48/48.
-
-### `detect.objects` — Object Detection (Module 16)
-- **status:** installed · **type:** skill (pwsh-7 wrapper + onnxruntime Python worker `detect_worker.py` under the system python) ·
-  **location:** `LifeOrchestrator-Refresh/modules/16-detect-objects/`
-- **invocation:** direct `pwsh -NoProfile -File .\Invoke-DetectObjects.ps1 -InputFile <image> [-Model <id>|-Tier <nano|tiny>]
-  [-ScoreThreshold <0..1>] [-ConfidenceThreshold <0..1>] [-NmsThreshold <0..1>] [-MaxDetections <n>] [-Classes <name,...>]
-  [-Provider <cpu|cuda|dml>] [-MaxDimension <n>] [-MaxReviewDetections <n>] [-MinImagePixels <n>] [-Capture]
-  [-CaptureInputsJson '<json>'] [-Registry|-ModelPath|-DetectWorkerPath|-PythonPath|-ImageUtilPath|-CapturePath|-PwshPath|
-  -ReviewQueuePath <override>]` (or `-InputsJson '<json {input,model,tier,score_threshold,confidence_threshold,nms_threshold,
-  max_detections,classes,provider,max_dimension,max_review_detections,min_image_pixels,capture,capture_inputs,registry,
-  model_path,detect_worker_path,python_path,image_util_path,capture_path,pwsh_path,review_queue_path}>'`); wrapped via
-  `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
-- **supported tasks:** detect objects in one image → labeled boxes with **real per-detection confidence**. Resolves an ONNX
-  detector from `models.json` (`type=detector`, decoupled from the gateway `wired` gate). Compose `capture.screen` (`-Capture`)
-  to detect on the live screen, or `image.util` (`-MaxDimension`) to downscale a huge input and rescale boxes back.
-- **I/O:** in = an image path (or `-Capture`) + options; out = `lifeorch.skill.result/0.1` envelope (result = `{input{path,
-  exists,source,capture?}, image{width,height}, model{id,name,family,engine,provider,input_size,num_classes,path},
-  params{score_threshold,confidence_threshold,nms_threshold,max_detections,classes}, preprocess{max_dimension,downscaled,
-  scale_x,scale_y,original,artifact_dir}, detection_count, class_summary{class:count}, detections[{index,class_id,class,score,
-  low_confidence,box{x,y,width,height}}], confidence{overall,mean,min,low_confidence_count,reason}, review{...},
-  detect{engine_env,provider,infer_ms,runtime_ms}}`) + `runtime/artifacts/<id>/{detect.json,detect.md,detect_args.json,
-  detect_meta.json,worker.log,result.json,stderr.txt, capture/…, image_util/…}`.
-- **determinism:** **mixed** (deterministic orchestration/decode; model output) · **confidence:** the **best detection's real
-  score** (objectness × class prob; 0.1 sentinel when empty); `< -ConfidenceThreshold` 0.5 → `review_queue.jsonl`
-  (`flagged_by:"detect.objects"`, `verify_detections`); zero objects on a non-empty image → `verify_no_objects` · **speed:**
-  ~0.06–0.2 s inference on CPU for YOLOX-Nano (per-call python spawn adds ~0.5 s) · **CPU/GPU/mem:** CPU / none (default) / ~512 MB.
-- **limitations:** **`parallel_safe:true`** with the default CPU provider (binds no port/VRAM/CUDA; only shared write is the
-  append-only review queue) — **`-Provider cuda|dml` is NOT parallel-safe**; one image per invocation (`batch:false`);
-  COCO-80 classes (YOLOX); no overlay/annotated output (needs an `image.util` draw op — follow-on); no segmentation/oriented
-  boxes/tracking (later modules). · **last test:** 2026-07-25 via executor (**tests 38/38**; `m16-test-001`, exit 0; probe
-  `m16-probe-001` staged the model + confirmed live CPU inference; pre-shipped on the cloud box, real worker, onnxruntime 1.25,
-  34/34). · **skills:** `detect.objects`. See D-0025.
-
-### `image.interpret` — Image Interpretation / VLM (Module 17)
-- **status:** installed · **type:** skill (pwsh-7 wrapper, **no python worker**; drives the staged llama.cpp `llama-server`
-  in multimodal mode over HTTP) · **location:** `LifeOrchestrator-Refresh/modules/17-image-interpret/`
-- **invocation:** direct `pwsh -NoProfile -File .\Invoke-ImageInterpret.ps1 -InputFile <image> [-Prompt <q>]
-  [-Mode <caption|describe|vqa|screen>] [-System <s>] [-Model <id>|-Tier <3b>] [-MaxTokens <n>] [-Temperature <n>]
-  [-TopP <n>] [-Seed <n>] [-ConfidenceThreshold <0..1>] [-MaxDimension <n>] [-Capture] [-CaptureInputsJson '<json>']
-  [-Context|-GpuLayers|-Port|-LoadTimeoutSec <n>] [-Registry|-ModelPath|-MmprojPath|-EnginePath|-ImageUtilPath|
-  -CapturePath|-PythonPath|-PwshPath|-ReviewQueuePath|-VlmResponsePath <override>]` (or `-InputsJson '<json {input,prompt,
-  mode,system,model,tier,max_tokens,temperature,top_p,seed,confidence_threshold,max_dimension,capture,capture_inputs,
-  context,gpu_layers,port,load_timeout_sec,registry,model_path,mmproj_path,engine_path,image_util_path,capture_path,
-  python_path,pwsh_path,review_queue_path,vlm_response_path}>'`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1
-  -SkillDir .`; or an `exec.bootstrap` task.
-- **supported tasks:** caption / detailed description / VQA / screen interpretation of one image with a local VLM. Resolves
-  a VLM from `models.json` (`type=vlm`, decoupled from the gateway `wired` gate). Compose `capture.screen` (`-Capture`) to
-  interpret the live screen, or `image.util` (`-MaxDimension`) to downscale a huge input before sending (bounds vision tokens).
-- **I/O:** in = an image path (or `-Capture`) + a prompt/mode; out = `lifeorch.skill.result/0.1` envelope (result = `{input{path,
-  exists,source,capture?}, image{width,height,mime}, model{id,name,family,engine,format,quant,context,gpu_layers,path,mmproj},
-  request{mode,system,prompt,max_tokens,temperature,top_p,seed}, preprocess{...}, interpretation{text,finish_reason,
-  prompt_tokens,completion_tokens,total_tokens,timings}, confidence{value,reason,refusal}, review{...},
-  server{mode,port,health_ms,gpu_layers,context}}`) + `runtime/artifacts/<id>/{interpret.json,interpret.md,interpret_args.json,
-  server.out.log,server.err.log,result.json,stderr.txt, capture/…, image_util/…}`.
-- **determinism:** **mixed** · **confidence:** a documented **completeness + refusal + non-empty heuristic** (stop 0.7 / length
-  0.4 / refusal 0.3 / empty 0.1; NOT calibrated); `< -ConfidenceThreshold` 0.5 → `review_queue.jsonl`
-  (`flagged_by:"image.interpret"`, `verify_interpretation`; reason `low_confidence`/`needs_strong_review`(refusal)/
-  `failed_transform`(empty)) · **speed:** cold `llama-server` load a few s + image decode ~0.1 s + ~111 tok/s generate on the
-  RTX 2080 Ti · **CPU/GPU/mem:** GPU (CUDA, ~3.1 GB VLM weights fully offloaded) / ~6 GB.
-- **limitations:** **`parallel_safe:false`** (starts a `llama-server` bound to a loopback port + the GPU — run one at a time);
-  one image per invocation (`batch:false`); free-text only — **no grounding/bounding boxes** (that is `detect.objects` #16 /
-  `#22`) and not an OCR path (that is `ocr.layout` #14); confidence is a completeness/refusal heuristic, not calibrated; no
-  warm server / streaming. · **last test:** 2026-07-25 via executor (**tests 48/48**; `m17-test-001/002`, exit 0; probes
-  `m17-probe-001` mmproj support / `m17-probe-002` staged + live-verified / `m17-probe-003` captured the seam fixture;
-  pre-shipped on the cloud box via a captured-real-response seam, 40/40). · **skills:** `image.interpret`. Registry id
-  `vlm.qwen2p5-vl-3b` (models.json, `wired:false`). See D-0026.
-
-### `logic.escalator` — Local Logic Escalator (Module 19)
-- **status:** installed · **type:** skill (PowerShell orchestrator; composes `model.gateway` #7 across tiers) ·
-  **location:** `modules\19-logic-escalator\Invoke-LogicEscalator.ps1`.
-- **purpose:** an escalating ladder of local LLM tiers (tiny 0.5B → weak 1.5B → mid 3B → strong 27B via the gateway): the
-  weakest answers; each higher tier judges and accepts-or-produces; **deterministic ground-truth gates** (in-set /
-  JSON-schema+grounding / self-consistency) anchor every rung — a hard-fail overrides an LLM-judge accept, strong
-  self-consistency short-circuits. Cost-offload keystone (Phase A #1). **No new model / no `models.json` change** (composes
-  the four already-wired LLM tiers). `determinism:"mixed"`, `parallel_safe:false`, `batch:true`. Orchestrator, NOT a review
-  producer (suppresses child gateway review writes; surfaces `needs_frontier`).
-- **calibrated (via executor):** 3-tier K=1 = 78.6% acc / 0.20 false-approval / −89% cost; 4-tier = 57.1% (the 27B emits
-  empty verdicts at MVP token caps → fail-safe `needs_frontier`); **does NOT reach ~95%** — reported plainly (see
-  `modules\19-logic-escalator\CALIBRATION.md`).
-- **last test:** 2026-07-25 via executor (**24/24 mock + 28/28 `-Live` — `m19-test-001`**, 0 orphaned `llama-server`;
-  calibration `m19-calib-002/003`; 10 files sha256 byte-exact `m19-verify-001`). · **skills:** `logic.escalator`. See D-0030.
-
-### `doc.io` — Local Document I/O (Module 20)
-- **status:** installed · **type:** skill (pure PowerShell + .NET; no external binary/Python/model) ·
-  **location:** `LifeOrchestrator-Refresh/modules/20-doc-io/`
-- **invocation:** direct `pwsh -NoProfile -File .\Invoke-DocIo.ps1 -Op <read|write|edit|append> -Path <file>
-  [read: -StartLine -EndLine -MaxBytes] [write: -Content -Overwrite -CreateDirs -Eol <lf|crlf>] [edit: -OldString
-  -NewString -ReplaceAll -ExpectCount] [append: -Content -EnsureNewline -Create] [-Encoding <utf-8|utf-8-bom>]
-  [-ExpectSha256 <hex>] [-NoPreimage]` (or `-InputsJson '<json {op,path,content,old_string,new_string,replace_all,
-  expect_count,start_line,end_line,max_bytes,eol,overwrite,create_dirs,create,ensure_newline,encoding,expect_sha256,
-  no_preimage}>'`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
-- **supported tasks:** read (whole file or a 1-indexed inclusive line range), write (create/overwrite), edit (exact
-  `old_string`→`new_string`; unique by default, `replace_all`/`expect_count`), and append UTF-8 **text documents**.
-  The read/write/edit/append primitive local models (the escalator #19, a future `agent.local`, Widgets) call.
-- **I/O:** in = an op + a path (+ op params); out = `lifeorch.skill.result/0.1` envelope (result = `{op, path, existed,
-  file{encoding,bom,eol,line_count,byte_count,char_count,sha256}, + op-specific: read→content/returned; write→created/
-  bytes_written/sha256_before/preimage; edit→occurrences/replacements/sha256_before/preimage; append→created/
-  bytes_appended/ensured_newline/sha256_before/preimage}`) + `runtime/artifacts/<id>/{doc.json,doc.md,result.json,
-  stderr.txt, read.txt | before.<ext>+after.<ext>}`.
-- **determinism:** **deterministic** (confidence **null**; empty `model_provenance`; **not** a review producer) ·
-  **speed:** ~0.2–0.5 s per op (per-call pwsh spawn) · **CPU/GPU/mem:** low / none / ~128 MB · **network:** none · **cost:** local only.
-- **safety:** **atomic** temp+rename writes (no torn files / no leftover `.docio-*.tmp`); optional `-ExpectSha256`
-  optimistic-concurrency precondition (`precondition_failed`); recoverable `before.<ext>` pre-image; **EOL preservation**
-  (a CRLF file stays CRLF); UTF-8 default + UTF-16 BOM detect/preserve; binary (NUL) files refused for read/edit/append.
-- **limitations:** **`parallel_safe:false`** (first general external-file mutator — writes arbitrary caller-chosen
-  paths; conservative, see D-0031); one file + one op per invocation (`batch:false`); exact-string edit only (no
-  regex/diff); **text** only (no structured-format field edits); no move/copy/rename/delete/mkdir (a future `fs.manage`);
-  UTF-8 / UTF-16-BOM only. **Not a `model.gateway` model — no `models.json` entry** (a tool, like ffmpeg). · **last
-  test:** 2026-07-25 via executor (**88/88 live — `m20-test-001`**, exit 0; pre-shipped on the cloud box, real skill +
-  real Module 1 wrapper, 88/88; 8 files sha256 byte-exact). · **skills:** `doc.io`. See D-0031.
-
-### `agent.local` — Local Orchestrator / Agent (Module 21)
-- **status:** installed · **type:** skill (PowerShell orchestrator; composes `logic.escalator` #19 + `model.gateway` #7
-  and invokes conforming Modules as child skills; **no new model / no `models.json` change**) ·
-  **location:** `LifeOrchestrator-Refresh/modules/21-agent-local/`
-- **invocation:** direct `pwsh -NoProfile -File .\Invoke-AgentLocal.ps1 -Goal <string> [-WorkingDir <dir>]
-  [-MaxSteps <int=4>] [-DryRun] [-DecisionTiers tiny,weak,mid] [-GenTier mid] [-FrontierThreshold 0.5]
-  [-MaxObservationChars 600] [-MaxTranscriptChars 4000] [-Temperature 0.0] [-Seed 42] [-MaxTokens 512]
-  [-ToolsPath <tools.json>] [-Tools <json>] [-EscalatorPath] [-GatewayPath] [-Registry <models.json>] [-PwshPath]
-  [-LoadTimeoutSec] [-ReviewQueuePath]` (or `-InputsJson '<json {goal,working_dir,max_steps,dry_run,decision_tiers,
-  gen_tier,frontier_threshold,max_observation_chars,max_transcript_chars,temperature,seed,max_tokens,tools_path,tools,
-  escalator_path,gateway_path,registry,pwsh_path,load_timeout_s,review_queue_path}>'`); wrapped via
-  `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
-- **supported tasks:** a bounded ReAct loop that, given a natural-language **goal**, decides which tool to call
-  **through the escalator** (closed-set `classify` over the registered tool names + `finish`; in-set gate), generates
-  the tool's arguments **via the gateway**, invokes the tool (a conforming Module child skill), observes, and repeats
-  until `finish` or the `max_steps` budget. Default tool registry (`tools.json`): **`doc.io` #20 + `fs.observer` #2**
-  (the registry IS the capability surface — no arbitrary-shell tool).
-- **I/O:** in = a goal (+ optional working_dir + tuning); out = `lifeorch.skill.result/0.1` envelope (result = `{goal,
-  working_dir, status (completed|stopped|error), final_answer, needs_frontier, stop_reason, step_count, max_steps,
-  dry_run, tools_available[], steps[{index,decision{chosen_tool,confidence,accepted_tier,needs_frontier},args,
-  tool{skill_id,invoked,status,error},observation}], cost{}}`) + `runtime/artifacts/<id>/{agent.json,agent.md,
-  result.json,stderr.txt,child_review.jsonl, decision-*/arggen-*/tool-*/final child sub-roots}`. `confidence` = the min
-  per-step decision confidence; `model_provenance` = the stage-tagged aggregate of every child call.
-- **determinism:** **mixed** · **parallel_safe:** false (drives the gateway → GPU/port; can invoke `doc.io` mutations) ·
-  **speed:** several cold model loads per step (no warm worker — D-0002); keep `max_steps` small · **cost:** local only.
-- **safety / guardrails:** a hard `max_steps` budget (exhausting → `stopped` + `needs_frontier`); a `-DryRun` plan-preview
-  (invokes nothing); the closed tool registry (no shell tool); **orchestrator, NOT a review producer** (redirects child
-  review writes to an in-artifact `child_review.jsonl`; canonical `review_queue.jsonl` + the seven-producer set untouched).
-- **limitations:** the tiny/weak/mid models **under-use the `finish` action** (both live goals ran to `max_steps`; the
-  budget is the backstop — D-0032; better termination is the #1 follow-on); one goal per invocation (`batch:false`); a
-  linear loop (no sub-agents / planning DAG / reflection); MVP registry is `doc.io` + `fs.observer` only. **Not a
-  `model.gateway` model — no `models.json` entry** (an orchestrator that composes the wired tiers). · **last test:**
-  2026-07-25 via executor (**39/39 mock `-Live` — `m21-test-001` + a REAL end-to-end run `m21-live-001`** wrote a file on
-  disk through real children, 0 orphaned `llama-server`, queue 1→1; pre-shipped on the cloud box real orchestrator +
-  mock-children + real Module 1 wrapper, 39/39; 10 files sha256 byte-exact `m21-verify-001`). · **skills:** `agent.local`. See D-0032.
-
-### `gen.audio` -- Local Audio Generation (Module 22)
-- **status:** installed · **type:** skill (PowerShell wrapping `ffmpeg` lavfi sources; **no model**) · **location:** `LifeOrchestrator-Refresh/modules/22-gen-audio/`
-- **invocation:** direct `pwsh -NoProfile -File .\Invoke-GenAudio.ps1 -Kind <tone|chord|noise|sweep|silence> [-Frequency <hz> | -Note <A4|C#3|Bb5>] [-Frequencies '440,554.37' | -Notes 'C4,E4,G4'] [-Waveform <sine|square|triangle|sawtooth>] [-Color <white|pink|brown|blue|violet|velvet>] [-Seed <int>] [-FreqStart -FreqEnd] [-Duration <s>] [-SampleRate <hz>] [-Channels <1|2>] [-Amplitude <0..1>] [-FadeInMs -FadeOutMs] [-Format <wav|mp3|flac|opus|ogg|m4a>] [-SampleFormat <s16|s24|s32|flt>] [-Bitrate <e.g. 192k>] [-FfmpegPath -FfprobePath]` (or `-InputsJson '<json {kind,frequency,note,frequencies,notes,waveform,color,seed,freq_start,freq_end,duration,sample_rate,channels,amplitude,fade_in_ms,fade_out_ms,format,sample_fmt,bitrate,...}>'`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
-- **supported tasks:** generate one synthetic signal -- `tone`/`chord` (sine/square/triangle/sawtooth partials, by frequency or note name), `noise` (six colors, seeded/reproducible), `sweep` (linear chirp), `silence` -- with duration/sample-rate/channels/amplitude/fade shaping, encoded directly to any of six formats. Notification beeps, alert tones/chords, reference pitches, masking/focus noise, test signals, audio fixtures. For loudness normalization, pipe the output through `audio.ingest`.
-- **I/O:** in = a spec (named params or `-InputsJson`); out = `lifeorch.skill.result/0.1` envelope (result = `{generation{kind,waveform?,frequencies?,note?,notes?,color?,seed?,freq_start?,freq_end?,duration_s,sample_rate,channels,amplitude,fade_in_ms,fade_out_ms}, output{path,format,container,codec,sample_rate,channels,sample_fmt,bitrate,duration_s,bytes,sha256,probe}, source{lavfi}, ffmpeg{path,version,argv[]}, ffprobe{path}}`) + `runtime/artifacts/<id>/{audio.<ext>,gen.json,gen.md,result.json,stderr.txt}`.
-- **determinism:** deterministic (confidence null; no model; seeded noise -> byte-reproducible) · **speed:** ~0.3-1 s per short signal (CPU) · **CPU/GPU/mem:** CPU / none / ~256 MB · **network:** none · **cost:** local only.
-- **limitations:** one signal per invocation (`batch:false`); procedural only -- **no neural text-to-audio / SFX** (a documented follow-on) and **no music composition** (→ `gen.music`); no mixing/editing of existing audio (never reads an input file); no loudness/EQ/denoise (pipe through `audio.ingest`); libopus output is resampled to 48 kHz for non-standard rates (warned). `parallel_safe:true` (CPU-bound). Requires `ffmpeg` (present). · **last test:** 2026-07-25 via executor (**tests 43/43**; `m22-test-001`, exit 0; pre-shipped off-machine on cloud ffmpeg 6.1.1, 41/41; 8 files sha256 byte-exact). · **skills:** `gen.audio`. See D-0033.
-
-### `gen.image` -- Local Image Generation (Module 23)
-- **status:** installed · **type:** skill (PowerShell wrapper + `diffusers` Python worker `gen_image_infer.py` under the speech venv) · **location:** `LifeOrchestrator-Refresh/modules/23-gen-image/`
-- **invocation:** direct `pwsh -NoProfile -File .\Invoke-GenImage.ps1 -Prompt <text> [-NegativePrompt <text>] [-Width <n>] [-Height <n>] [-Steps <n>] [-Guidance <n>] [-Seed <n>] [-Scheduler <dpm++|euler|euler_a|ddim>] [-Format <png|jpg|webp>] [-ConfidenceThreshold <0..1>] [-Model <id>|-Tier <alias>] [-Registry|-PythonPath|-GenInferPath|-ReviewQueuePath <override>]` (or `-InputsJson '<json {prompt,negative_prompt,width,height,steps,guidance,seed,scheduler,format,confidence_threshold,model,tier,registry,python_path,gen_infer_path,review_queue_path}>'`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
-- **supported tasks:** text-to-image -- one prompt → one PNG/JPG/WEBP with a local Stable Diffusion pipeline. Resolves an image-gen model from `models.json` (`type=image-gen`, decoupled from the gateway `wired` gate). Thumbnails, placeholder/mock art, icons, illustration drafts, test fixtures -- generated locally instead of on the frontier allotment.
-- **I/O:** in = a prompt + options; out = `lifeorch.skill.result/0.1` envelope (result = `{input{prompt,negative_prompt,chars}, model{id,name,family,engine,engine_env,device,dtype,path}, request{width,height,steps,guidance,seed,scheduler,format}, image{path,format,width,height,mode,bytes,sha256,pixel_std,pixel_mean}, confidence{overall,reason}, review{threshold,flagged,queue_path}, generation{load_ms,gen_ms,runtime_ms,vram_peak_gb,diffusers,torch}}`) + `runtime/artifacts/<id>/{image.<png|jpg|webp>,gen.json,gen.md,gen_args.json,gen_meta.json,py.log,result.json,stderr.txt}`.
-- **determinism:** **mixed** (deterministic orchestration; stochastic sampler, seedable -- a fixed seed is byte-reproducible on this GPU) · **confidence:** a generation-completeness / non-blank heuristic from the image pixel std (blank/uniform <=2 → 0.1, very-low <8 → 0.3, low <15 → 0.5, has-content >=15 → 0.9; NOT aesthetic quality, NOT calibrated); `<threshold` (0.5) → `review_queue.jsonl` (`flagged_by:"gen.image"`, `verify_generation`) -- the **eighth** producer · **speed:** ~2-3 s per 512x512 image + ~2 s cold pipeline load on the RTX 2080 Ti · **CPU/GPU/mem:** GPU (CUDA, ~2.6 GB VRAM at 512x512) / ~6 GB.
-- **limitations:** **`parallel_safe:false`** (binds the CUDA context + loads a model); one image per invocation (`batch:false`; no `num_images>1` / grids); **text-to-image only** -- no img2img / inpainting / ControlNet / upscaling / LoRA (follow-ons); **SD 1.5 only** in the MVP (FLUX.1-schnell / SDXL / SDXL-Turbo are documented follow-on tiers); safety_checker disabled (content responsibility with the caller); no warm/persistent pipeline worker; confidence is a completeness/non-blank heuristic, not calibrated. · **last test:** 2026-07-25 via executor (**tests 32/32 `-Live`**; `m23-test-005`, exit 0; pre-shipped off-machine via a stdlib mock worker + real wrapper, 42/42; Module 7 re-verified 28/28). · **skills:** `gen.image`. Registry id `image.sd15` (models.json, `wired:false`). See D-0034.
-
-### `gen.music` -- Local Music Generation (Module 24)
-- **status:** installed · **type:** skill (PowerShell wrapper + transformers Python worker `music_gen_infer.py` under the speech venv) · **location:** `LifeOrchestrator-Refresh/modules/24-gen-music/`
-- **invocation:** direct `pwsh -NoProfile -File .\Invoke-GenMusic.ps1 -Prompt <text> [-Duration <1..30>] [-Guidance <0..15>] [-Temperature <0..2>] [-TopK <n>] [-TopP <0..1>] [-Seed <n>] [-Normalize <bool>] [-Format <wav|mp3|flac|opus|ogg|m4a>] [-SampleRate <hz>] [-ConfidenceThreshold <0..1>] [-Model <id>|-Tier <alias>] [-Registry|-PythonPath|-MusicInferPath|-AudioIngestPath|-PwshPath|-ReviewQueuePath <override>]` (or `-InputsJson '<json {prompt,duration,guidance,temperature,top_k,top_p,seed,normalize,format,sample_rate,confidence_threshold,model,tier,...}>'`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
-- **supported tasks:** text-to-music -- one prompt → one short **instrumental** clip with a local MusicGen model. Resolves a music-gen model from `models.json` (`type=music-gen`, decoupled from the gateway `wired` gate). Produces 32 kHz mono PCM16 WAV (peak-normalized); a non-wav `-Format`/`-SampleRate` is produced by composing `audio.ingest` (#10). Notification stingers, mood beds, musical sketches -- generated locally instead of on the frontier allotment.
-- **I/O:** in = a prompt + options; out = `lifeorch.skill.result/0.1` envelope (result = `{input{prompt,chars}, model{id,name,family,engine,engine_env,device,dtype,path}, request{duration_s,guidance,temperature,top_k,top_p,seed,max_new_tokens,format,sample_rate}, audio{path,format,sample_rate,channels,samples,duration_s,bytes,sha256,rms,peak,normalized,native_sample_rate,converted}, confidence{overall,reason}, review{threshold,flagged,queue_path}, generation{load_ms,gen_ms,runtime_ms,real_time_factor,vram_peak_gb,transformers,torch}}`) + `runtime/artifacts/<id>/{music.<ext>,gen.json,gen.md,gen_args.json,gen_meta.json,py.log,result.json,stderr.txt, convert/…}`.
-- **determinism:** **mixed** (deterministic orchestration; stochastic sampler, seedable -- a fixed seed is byte-reproducible on this GPU) · **confidence:** a generation-completeness / non-silent heuristic from the audio RMS (silent/failed <=0.005 → 0.1, very-low <0.02 → 0.3, low <0.05 → 0.5, has-content >=0.05 → 0.9; + a duration-shortfall guard; NOT musical quality, NOT calibrated); `<threshold` (0.5) → `review_queue.jsonl` (`flagged_by:"gen.music"`, `verify_generation`) -- the **ninth** producer · **speed:** ~7-8 s per ~5 s clip + ~2 s model load on the RTX 2080 Ti · **CPU/GPU/mem:** GPU (CUDA, ~2.4 GB VRAM) / ~6 GB.
-- **limitations:** **`parallel_safe:false`** (binds the CUDA context + loads a model); one clip per invocation (`batch:false`); **instrumental only** (MusicGen has no vocals/lyrics); **MusicGen Small only** in the MVP (Medium/Large + Stable Audio Open + MusicgenMelody are documented follow-on tiers); bounded to 1..30 s (the model's trained horizon; longer via sliding-window is a follow-on); no warm/persistent worker; confidence is a completeness/non-silent heuristic, not calibrated. **No new library install** -- transformers already ships MusicGen (so Module 12 is unaffected). · **last test:** 2026-07-26 via executor (**tests 42/42 `-Live`**; `m24-test-002`, exit 0; pre-shipped off-machine via a stdlib mock worker + real wrapper, 49/49; Module 7 re-verified 28/28). · **skills:** `gen.music`. Registry id `music.musicgen-small` (models.json, `wired:false`). See D-0035.
-
-### `gen.video` -- Local Video Generation (Module 25)
-- **status:** installed · **type:** skill (PowerShell wrapper + `diffusers` Python worker `video_gen_infer.py` under the speech venv; MP4 via ffmpeg) · **location:** `LifeOrchestrator-Refresh/modules/25-gen-video/`
-- **invocation:** direct `pwsh -NoProfile -File .\Invoke-GenVideo.ps1 -Prompt <text> [-NegativePrompt <text>] [-NumFrames <n>] [-Width <n>] [-Height <n>] [-Steps <n>] [-Guidance <n>] [-Fps <n>] [-Seed <n>] [-Format <mp4|gif>] [-Offload <bool>] [-ConfidenceThreshold <0..1>] [-Model <id>|-Tier <alias>] [-Registry|-PythonPath|-VideoInferPath|-FfmpegPath|-ReviewQueuePath|-PwshPath <override>]` (or `-InputsJson '<json {prompt,negative_prompt,num_frames,width,height,steps,guidance,fps,seed,format,offload,confidence_threshold,model,tier,...}>'`); wrapped via `..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir .`; or an `exec.bootstrap` task.
-- **supported tasks:** text-to-video -- one prompt → one short **silent** MP4/GIF with a local AnimateDiff pipeline (an SD-1.5 base + an AnimateDiff-Lightning 4-step motion adapter). Resolves a video-gen model from `models.json` (`type=video-gen`, decoupled from the gateway `wired` gate). Placeholder/mock motion, animated icons, mood loops, test fixtures -- generated locally instead of on the frontier allotment.
-- **I/O:** in = a prompt + options; out = `lifeorch.skill.result/0.1` envelope (result = `{input{prompt,negative_prompt,chars}, model{id,name,family,engine,engine_env,device,dtype,base,adapter,path}, request{num_frames,width,height,steps,guidance,seed,fps,format}, video{path,format,codec,width,height,num_frames,fps,duration_s,bytes,sha256}, motion{mean_abs_interframe_diff,per_frame_std_min,pixel_std}, confidence{overall,reason}, review{threshold,flagged,queue_path}, generation{load_ms,gen_ms,runtime_ms,vram_peak_gb,offload,diffusers,torch}}`) + `runtime/artifacts/<id>/{video.<mp4|gif>,gen.json,gen.md,gen_args.json,gen_meta.json,py.log,result.json,stderr.txt, frames/…}`.
-- **determinism:** **mixed** (deterministic orchestration; stochastic sampler, seedable -- a fixed seed is byte-reproducible on this GPU) · **confidence:** a generation-completeness / non-blank + non-static heuristic from the frame pixel std (blank <=2 → 0.1, <8 → 0.3, <15 → 0.5, >=15 → 0.9) + a motion guard on the mean inter-frame difference (<=0.5 → 0.3 static, <1.5 → 0.5 low_motion); NOT calibrated; `<threshold` (0.5) → `review_queue.jsonl` (`flagged_by:"gen.video"`, `verify_generation`) -- the **tenth** producer · **speed:** ~57 s warm (~120 s cold, CUDA warmup) for a 16-frame 512² 4-step clip on the RTX 2080 Ti · **CPU/GPU/mem:** GPU (CUDA, **~4.75 GB VRAM** full-GPU, no offload) / ~8 GB.
-- **limitations:** **`parallel_safe:false`** (binds the CUDA context + loads a model); one clip per invocation (`batch:false`); **text-to-video only** -- no img2video/video2video, ControlNet/motion-LoRA, interpolation/upscaling (follow-ons); **AnimateDiff-Lightning 4-step on SD 1.5 only** in the MVP (AnimateDiff full / SVD / CogVideoX / LTX are follow-on tiers, the last two need newer bf16 HW); silent (no audio track); short (~2 s at 16f/8fps); no warm/persistent worker; confidence is a completeness/motion heuristic, not calibrated. **No new library install** -- diffusers already present; MP4 via the present ffmpeg 8.1, GIF via Pillow. · **last test:** 2026-07-26 via executor (**tests 46/46 `-Live`**; `m25-test-002`, exit 0; pre-shipped off-machine via a stdlib mock worker + real wrapper, 54/54; Module 7 re-verified 28/28). · **skills:** `gen.video`. Registry id `video.animatediff-lightning` (models.json, `wired:false`). See D-0036.
-
-### `Windows.Media.Ocr` — system OCR engine (used by ocr.layout)
-- **status:** installed (system) · **type:** WinRT API (`Windows.Media.Ocr.OcrEngine`) · **location:** OS component;
-  reached via **Windows PowerShell 5.1** at `C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe` (5.1.19041.6456).
-- **supported tasks:** printed-text OCR → words with `BoundingRect`, lines (reading order), `TextAngle`. Recognizer
-  languages present: **en-US**. `MaxImageDimension = 10000`. Zero install, no admin, no GPU, no network, no model file.
-- **gotcha:** **pwsh 7.4.6 cannot load the WinRT projection** on this box (`m14-probe-001`); reach it only from Windows
-  PowerShell 5.1 via the `System.Runtime.WindowsRuntime` `AsTask`/`Await` reflection pattern (as `ocr_worker.ps1` does).
-  Also: 5.1 parses a BOM-less `.ps1` as ANSI — keep any 5.1 worker ASCII-only. · **last test:** 2026-07-25
-  (`m14-probe-001` live; `m14-test-003`). · **skills:** `ocr.layout`. Registry id `ocr.windows.media` (models.json, `wired:false`).
-
-### `tesseract` — Tesseract OCR (declared; a future ocr.layout engine)
-- **status:** installed, **not yet wired** · **type:** executable · **location:** `C:\Program Files\Tesseract-OCR\tesseract.exe`
-  (found by `m14-probe-001`). · **supported tasks (when wired):** OCR with **calibrated per-word confidence** + hOCR/TSV
-  boxes + multi-language. · **why declared:** the natural second engine behind `ocr.layout -Engine` and the calibrated-
-  confidence follow-on; not built in the Module 14 MVP (one engine, per the one-module rule). Registry id `ocr.tesseract`.
+- **Machine-readable twin:** `modules/07-model-gateway/models.json` — the authority for **exact absolute paths,
+  sha256, tiers, engine_path, gpu_layers, context**. This doc must never contradict it.
+- **Not owned here:** build order / per-module status / **deferred follow-ons** → `MODULE_ROADMAP.md` · now-summary
+  → `CURRENT_STATE.md` · review-queue schema + producer/consumer table → `REVIEW_QUEUE.md` · orchestrator ops →
+  `FANOUT_ORCHESTRATOR_HANDOFF.md` · governor design → `ADAPTIVE_RESOURCE_GOVERNOR.md` · rationale →
+  `DECISION_LOG.md` · pre-consolidation full text (full flag lists, I/O schemas, per-band confidence ladders) →
+  `archive/`. **Status vocab:** installed · available · inactive · broken · planned · retired.
+- **Universal skill invocation:** `pwsh -NoProfile -File .\Invoke-<Name>.ps1 <params>` (every skill also accepts
+  `-InputsJson '<json>'`, same keys in snake_case), or wrapped
+  `pwsh -File ..\..\01-skill-bootstrap\Invoke-Skill.ps1 -SkillDir . -InputsJson '<json>'`, or as an
+  `exec.bootstrap` task package. Each emits a `lifeorch.skill.result/0.1` envelope on stdout +
+  `runtime/artifacts/<invocation_id>/`. Flags shown are the load-bearing subset (full sets: each `Invoke-*.ps1`).
+  `ps:` = `parallel_safe` · `v:` = last verification (tests · task id · date). Review producers flag to
+  `review_queue.jsonl` below confidence 0.5 unless overridden; confidences are heuristic, **not calibrated**.
+- **Discipline:** never list a tool `installed` you have not invoked here; prefer `planned` until verified.
 
 ---
 
-## Hardware profile (measured 2026-07-24 — DESKTOP-PF5FFMF)
-- **CPU:** Intel Core i9-9900KF — 8 cores / 16 threads @ 3.6 GHz.
-- **RAM:** 64 GB (63.9 GB total; ~38 GB free at measure).
-- **GPU:** **NVIDIA GeForce RTX 2080 Ti, 11 GB VRAM** (11264 MiB), driver 591.74, compute cap 7.5, CUDA present
-  (nvidia-smi). (Two DisplayLink USB "adapters" are not compute GPUs.)
-- **OS:** Windows 10 Pro 19045 (x64). **Drives (fixed):** C: 893 GB (**~67 GB / 7.5% free — constrained**);
+## 1. Host executables & runtimes
+
+**`pwsh` — PowerShell 7.4.6** · `C:\Users\just_\.dotnet\tools\pwsh.exe` (.NET global tool; user PATH
+`~\.dotnet\tools`, **not** system PATH) · `pwsh -NoProfile -ExecutionPolicy Bypass -File <script>`. Runtime for all
+skills + the executor; loads managed UI Automation (`UIAutomationClient`/`UIAutomationTypes`) +
+`System.Windows.Forms`/`System.Drawing`; can host a WinForms loop on an STA runspace. **GOTCHA:** the shim reports
+its process path as `dotnet.exe` — pass an explicit `-PwshPath` when a skill spawns a child. **Version pinned** (the
+latest tool package is broken). Verified 2026-07-24.
+
+**`dotnet` — .NET SDK 9.0.100** · `C:\Program Files\dotnet\dotnet.exe`; installs .NET global tools without admin
+(network = NuGet). **`git`** · on PATH; commits go through `dev.ship`, which holds the `res.lease` **`git`** lease
+(D-0055). **`winget`** · `…\AppData\Local\Microsoft\WindowsApps\winget.exe` — **GOTCHA:** system-wide installs need
+a UAC/admin approval **the automation cannot click**. All verified 2026-07-24.
+
+**`ffmpeg` / `ffprobe` — Gyan.dev full build 8.1** · `…\AppData\Local\Microsoft\WinGet\Links\ffmpeg.exe` (package
+bin `…\WinGet\Packages\Gyan.FFmpeg_*\ffmpeg-8.1-full_build\bin\`) ·
+`ffmpeg -hide_banner -nostdin -y -i <in> [filters] [-ar -ac -c:a -b:a] -map_metadata -1 <out>` ·
+`ffprobe -v error -print_format json -show_format -show_streams <file>`. Encoders: libmp3lame, aac, flac, libopus,
+libvorbis, pcm_s16/s24/s32/f32le + video; deterministic; NVENC/CUDA available.
+**GOTCHA (ffprobe shadowing):** `where.exe ffprobe` returns a **Python shim** `…\Python310\Scripts\ffprobe.exe`
+*before* the real `…\WinGet\Links\ffprobe.exe` — **resolve ffprobe as the sibling of the resolved ffmpeg** (or
+exclude `\Python*\Scripts\`). The Linux device-mount cannot `stat` the WinGet `Links\*.exe` reparse points (Windows
+`Test-Path`/`where.exe` resolve them fine). Verified 2026-07-24 (`m10-ffprobe-001`); used by #10, #22, #25.
+
+**`Pillow` (PIL) + `numpy`** · the **system python** `…\AppData\Local\Programs\Python\Python312\python.exe`
+(**PIL 10.2.0 + numpy 1.26.4**, cv2 4.9.0); fallback = the speech venv on F: (PIL 12.2.0 + numpy 2.4.4). pHashes are
+**stable across PIL/numpy versions** (`m15-probe-001`). **GOTCHA:** `image.util` uses the system python (CPU-only,
+not the CUDA/speech venv) for parallel-safety; Pillow 12 dropped `transp_webp` (harmless warning). Verified 2026-07-25.
+
+**`Windows.Media.Ocr` — system OCR engine** (id `ocr.windows.media`, `wired:false`) · WinRT
+(`Windows.Media.Ocr.OcrEngine`), OS component; zero install, no admin/GPU/network/model file; recognizer languages
+**en-US**; `MaxImageDimension = 10000`. Reached only via **Windows PowerShell 5.1**
+`C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe` (5.1.19041.6456). **GOTCHA:** **pwsh 7.4.6 cannot load
+the WinRT projection** here (`m14-probe-001`) — use the 5.1 `System.Runtime.WindowsRuntime` `AsTask`/`Await`
+reflection pattern; **5.1 parses a BOM-less `.ps1` as ANSI**, so any 5.1 worker must stay **ASCII-only**. Verified
+2026-07-25 (used by #14).
+
+**`tesseract` — installed, NOT wired** (id `ocr.tesseract`) · `C:\Program Files\Tesseract-OCR\tesseract.exe`
+(`m14-probe-001`). The natural second `ocr.layout -Engine` (calibrated per-word confidence, hOCR/TSV,
+multi-language). **OPEN follow-on.**
+
+---
+
+## 2. Skills & Modules
+
+### 2.1 Skill index
+`ps` = `parallel_safe` · **prod** = review-queue producer (`flagged_by` = the skill id) · det = determinism.
+Paths are repo-relative; every entry also takes `-InputsJson`. Extended contracts + gotchas: §2.2.
+
+| id (M#) | entrypoint · key params | what · contract · binding limits | v: |
+|---|---|---|---|
+| `exec.bootstrap` (M0) | `modules/00-bootstrap-executor/Start-BootstrapExecutor.ps1` (+`Submit-`/`Stop-`; `ops/restart-executor.bat`) | runs local PowerShell **task packages** (concurrency, timeout, capture, restart recovery); task dirs atomically published to `runtime/pending/`; det · **trust-based, NOT a sandbox** | 12/12 + 16/16 hardened 2026-07-28 · D-0056 |
+| `exec.watchdog` (M00.1) | `modules/00.1-exec-watchdog/` via `ops/start-watchdog.bat`, `ops/recover-executor.bat [-Force]` | cooperative executor recovery (crash / hang / heartbeating-but-wedged); det; **session-scoped — no boot persistence** | 22/22 · 33/33 hardened 2026-07-28 · D-0013/56 |
+| `skill.bootstrap` (M1) | `modules/01-skill-bootstrap/` — `Import-Module lib\SkillContract.psm1`; `Invoke-Skill.ps1 -SkillDir <dir>` | validates the manifest + result envelopes, runs any conforming skill → `…invocation_report/0.1`; field/type/enum checks only | 2026-07-24; reused by every Module |
+| `ref.echo` (M1) | `modules/01-skill-bootstrap/skills/ref.echo/Invoke-RefEcho.ps1 -Message <s> -Repeat <n>` | skill-channel health check + the canonical contract example; det | 2026-07-24 via executor |
+| `fs.observer` (M2) | `modules/02-fs-observer/Invoke-FsObserver.ps1 -Path <dir> -Depth <n> [-Pattern <glob>]` | depth-bounded tree + metadata + name/glob search; det · **ps:true**; in `agent.local` tools.json | 16/16 2026-07-24 |
+| `proc.observer` (M3) | `modules/03-proc-observer/Invoke-ProcObserver.ps1 [-NameFilter <glob>] [-VisibleOnly]` | processes + top-level windows (titles, pid/name, bounds, min/max, foreground); det snapshot | 16/16 2026-07-24 |
+| `uia.inspector` (M4) | `modules/04-uia-inspector/Invoke-UiaInspector.ps1 [-Hwnd\|-ProcessId\|-Title <glob>] [-Depth]` | read-only UIA control-tree walk; det; **some apps (Unity) expose NO UIA tree** → use #6/#14 | 16/16 2026-07-24 |
+| `uia.actor` (M5) | `modules/05-uia-actor/Invoke-UiaActor.ps1 [-Hwnd\|-ProcessId\|-Title] -Action <invoke\|toggle\|select\|expand\|collapse\|setvalue\|focus> [-AutomationId\|-Name\|-ControlType\|-Path] [-Value -DryRun]` | ONE UIA pattern action on one element (no synthetic input); det · **ps:false (SIDE-EFFECTING)**; ambiguous locators → candidate list; no window management; no keyboard text without a ValuePattern | **26/26** 2026-07-24 (live WinForms probe) |
+| `capture.screen` (M6) | `modules/06-capture-screen/Invoke-CaptureScreen.ps1 [-Target <monitor\|window\|app\|region>] [-Monitor -Hwnd\|-ProcessId\|-Title\|-App] [-X -Y -Width -Height -Format]` | monitor / window / app main window / rect → PNG (JPG q90) + `sha256`; det pixel copy · **ps:true**. **GOTCHA:** copies **screen pixels** — an occluded window captures what covers it, a minimized one → `window_minimized`; it never raises/activates/moves windows and uses no synthetic input; no post-processing (→#15); Per-Monitor-V2 DPI set once per process | **39/39** `m6-smoke-001` 2026-07-24 |
+| `model.gateway` (M7) | `modules/07-model-gateway/Invoke-ModelGateway.ps1 [-Model <id>\|-Tier <tiny\|weak\|mid\|strong>] -Prompt <s> [-System -MaxTokens -Temperature -Seed -GpuLayers -Context -LoadTimeoutSec -EvictWarm]` | **the single entry point to local text LLMs** (llama.cpp `llama-server`); mixed · **ps:false** (port + most of VRAM) · **prod**; no streaming | base **42/42** + warm **23/23**, 0 orphans, 2026-07-28 · D-0016/44/55/57/62 |
+| `classify.batch` (M8) | `modules/08-classify-batch/Invoke-ClassifyBatch.ps1 -InputsJson '{mode,tier\|model,labels\|fields,items\|items_path,confidence_threshold}'` | batch categorize/label/extract; one #7 call per item (default `weak`); mixed · **ps:false** · **prod**; **index only — no file moving** (→#28) | **33/33** `m8-test-001` 2026-07-24 · D-0017 |
+| `review.processor` (M9) | `modules/09-review-processor/Invoke-ReviewProcessor.ps1 [-QueuePath -MaxItems -FlaggedBy -Tier\|-Model -EscalateThreshold -DryRun]` | drains `review_queue.jsonl` with a stronger model (default `mid`; `strong` = the resident 9B); resolves or escalates in place; **consumer, not a producer** | **34/34** `m9-test-003` 2026-07-24 · D-0018 |
+| `audio.ingest` (M10) | `modules/10-audio-ingest/Invoke-AudioIngest.ps1 -InputFile <path> [-Format <wav\|mp3\|flac\|opus\|ogg\|m4a>] [-SampleRate -Channels -SampleFormat -Bitrate] [-Loudness <none\|peak\|ebu>]` | ffmpeg normalize+convert one file; **defaults = whisper-ready 16 kHz mono s16 WAV**; det · **ps:true**; audio only (`-vn`) | **43/43** `m10-test-001` 2026-07-24 · D-0019 |
+| `speech.stt` (M11) | `modules/11-speech-stt/Invoke-SpeechStt.ps1 -InputFile <path> [-Normalize <auto\|always\|never>] [-Language -Translate -NoGpu -Model]` | whisper.cpp timestamped transcription (normalizes via #10); mixed · **ps:false** (CUDA) · **prod**; base.en ≈ **0.07 rtf**; **English-only** | **27/27** `m11-test-001` + live smoke 2026-07-24 · D-0020 |
+| `speech.tts` (M12) | `modules/12-speech-tts/Invoke-SpeechTts.ps1 -Text <s> [-Speaker -Language -Instruct -Seed -Format -Model]` | Qwen3-TTS CustomVoice → 24 kHz mono PCM16 WAV; **Ryan/Aiden** + zh/ja/ko; mixed · **ps:false** (CUDA) · **prod**; ~30–40 s cold load | **25/25** `m12-test-001` 2026-07-24 · D-0021 |
+| `voice.live` (M13) | `modules/13-voice-live/Invoke-VoiceLive.ps1 -InputFile <audio> [-Respond -Speak -ReadbackTranscript -Tier -Speaker -Language -Format]` | one voice turn #11 → #7 → #12 → `reply.wav`; **ps:false** · orchestrator/non-producer; **file-driven only — no mic/streaming** | **21/21** `m13-test-001` + live smoke 2026-07-24 · D-0022 |
+| `ocr.layout` (M14) | `modules/14-ocr-layout/Invoke-OcrLayout.ps1 -InputFile <image> [-Language <bcp47>] [-Engine <model_id>] [-ConfidenceThreshold -Capture]` | text + **per-word pixel boxes + reading-order lines** via Windows.Media.Ocr in a PS 5.1 worker; mixed · **ps:true** · **prod** | **30/30** `m14-test-003` + smoke 2026-07-25 · D-0023 |
+| `image.util` (M15) | `modules/15-image-util/Invoke-ImageUtil.ps1 -InputFile <image> -Op <meta\|resize\|crop\|convert\|tile\|similarity>` + per-op flags (`-Width -Height -Mode <fit\|fill\|exact> -MaxDimension`; `-X -Y -CropWidth -CropHeight -Region`; `-Format -Quality`; `-TileCols -TileRows`; `-CompareTo`) | metadata + hashes always plus one op; `resize` reports `scale_x`/`scale_y` for box rescaling; Pillow+numpy on the **system python**; **det**, non-producer · **ps:true**; frame 0 only; **no `models.json` entry** | **48/48** `m15-test-001` 2026-07-25 (JPEG `dpi`/`IFDRational` fix) · D-0024 |
+| `detect.objects` (M16) | `modules/16-detect-objects/Invoke-DetectObjects.ps1 -InputFile <image> [-Model\|-Tier <nano\|tiny>] [-ScoreThreshold -NmsThreshold -Classes -MaxDimension -Capture] [-Provider <cpu\|cuda\|dml>]` | ONNX YOLOX boxes with **real per-detection confidence**; **ps:true on the DEFAULT CPU provider — `-Provider cuda\|dml` is NOT parallel-safe** · **prod**; COCO-80 | **38/38** `m16-test-001` + probe 2026-07-25 · D-0025 |
+| `image.interpret` (M17) | `modules/17-image-interpret/Invoke-ImageInterpret.ps1 -InputFile <image> [-Prompt] [-Mode <caption\|describe\|vqa\|screen>] [-Model\|-Tier <3b>] [-MaxTokens -Seed -MaxDimension -Capture -GpuLayers -Port]` | local VLM caption/describe/VQA/screen via `llama-server` multimodal HTTP; **ps:false** (port+GPU, one at a time) · **prod**; ~111 tok/s; **no boxes** (→#16) | **48/48** `m17-test-001/002` 2026-07-25 · D-0026 |
+| `logic.escalator` (M19) | `modules\19-logic-escalator\Invoke-LogicEscalator.ps1` | tier ladder via #7 with **deterministic ground-truth gates**; `batch:true` · non-producer; **calibrated 78.6 % acc / 0.20 false-approval / −89 % cost — NOT ~95 %** | **24/24 mock + 28/28 `-Live`** `m19-test-001` 2026-07-25 · D-0030 |
+| `doc.io` (M20) | `modules/20-doc-io/Invoke-DocIo.ps1 -Op <read\|write\|edit\|append> -Path <file>` + op flags (`-StartLine -EndLine -MaxBytes`; `-Content -Overwrite -CreateDirs -Eol <lf\|crlf>`; `-OldString -NewString -ReplaceAll -ExpectCount`; `-EnsureNewline -Create`) + `[-Encoding -ExpectSha256 -Lease]` | the UTF-8 **text-document** read/write/exact-edit/append primitive; **det**, non-producer · **ps:false** (arbitrary caller paths); no move/copy/mkdir (→#28) | **106/106 `-Live`** (88 base + 18 lease) 2026-07-28 · D-0031/56 |
+| `agent.local` (M21) | `modules/21-agent-local/Invoke-AgentLocal.ps1 -Goal <s> [-WorkingDir -MaxSteps <8> -DryRun -Route] [-Profile <frugal\|floor\|max>] [-AutoRamp[:$false]\|-NoAutoRamp] [-AllowLegacy27B] [-DecisionTiers -GenTier -Seed -MaxTokens -ToolsPath]` | bounded ReAct loop (#19 decide → #7 args → child skill → observe); **the registry IS the capability surface — NO arbitrary-shell tool**; **ps:false** · non-producer | **102/102** + AutoRamp **122/122** + live floor-check PASS 2026-07-28 · D-0032/41/43/46/59–62 |
+| `gen.audio` (M22) | `modules/22-gen-audio/Invoke-GenAudio.ps1 -Kind <tone\|chord\|noise\|sweep\|silence> [-Frequency\|-Note\|-Frequencies\|-Notes] [-Waveform <sine\|square\|triangle\|sawtooth>] [-Color <white\|pink\|brown\|blue\|violet\|velvet>] [-Seed -FreqStart -FreqEnd -Duration -SampleRate -Channels -Amplitude -FadeInMs -FadeOutMs -Format]` | ffmpeg-lavfi synthetic signals (**no model**): beeps, chords, pitches, noise, fixtures; det (seeded → byte-reproducible) · **ps:true**; **no neural TTA/SFX**, no music (→#24) | **43/43** `m22-test-001` 2026-07-25 · D-0033 |
+| `gen.image` (M23) | `modules/23-gen-image/Invoke-GenImage.ps1 -Prompt <text> [-NegativePrompt -Width -Height -Steps -Guidance -Seed] [-Scheduler <dpm++\|euler\|euler_a\|ddim>] [-Format <png\|jpg\|webp>] [-Model\|-Tier]` | SD 1.5 text-to-image (diffusers, speech venv); **ps:false** (CUDA) · **prod**; ~2–3 s @512², **~2.6 GB VRAM**; **`safety_checker` DISABLED** | **32/32 `-Live`** `m23-test-005` 2026-07-25 · D-0034 |
+| `gen.music` (M24) | `modules/24-gen-music/Invoke-GenMusic.ps1 -Prompt <text> [-Duration <1..30>] [-Guidance <0..15>] [-Temperature -TopK -TopP -Seed -Normalize -Format -Model\|-Tier]` | MusicGen **instrumental** clip → 32 kHz mono PCM16 WAV; **ps:false** (CUDA) · **prod**; **~2.4 GB VRAM**; Small only, **1..30 s** | **42/42 `-Live`** `m24-test-002` 2026-07-26 · D-0035 |
+| `gen.video` (M25) | `modules/25-gen-video/Invoke-GenVideo.ps1 -Prompt <text> [-NegativePrompt -NumFrames -Width -Height -Steps -Guidance -Fps -Seed -Offload] [-Format <mp4\|gif>] [-Model\|-Tier]` | AnimateDiff-Lightning 4-step on SD 1.5 → short **silent** MP4/GIF; **ps:false** (CUDA) · **prod**; **~4.75 GB VRAM**; ~2 s clips | **46/46 `-Live`** `m25-test-002` 2026-07-26 · D-0036 |
+| `route.tools` (M27) | `modules/27-route-tools/Invoke-RouteTools.ps1` | request + `tools.json` → #7 at **MID** + a **deterministic catalog gate** → the minimal validated tool-id subset; non-executing, injection-resistant. `strong` was HARD-refused (`strong_tier_forbidden`, empty 27B output); **since D-0043 it SOFT-warns and proceeds** — the catalog gate makes a garbage selection safe (consumer falls back to the full set) | **33/33** off-machine 2026-07-28 · D-0040, D-0043 |
+| `fs.manage` (M28) | `modules/28-fs-manage/Invoke-FsManage.ps1` | copy/move/mkdir with **smart path resolution** — known folders via `[Environment]::GetFolderPath` (finds a **OneDrive-redirected Desktop**), `~`, `%ENV%`; overwrite-guarded; det | 21/21 + **25/25** `m29-verify-001` + REAL e2e `m29-after-003` 2026-07-26 · D-0042 |
+| `res.lease` (M29) | `modules/29-resource-lease/Invoke-ResLease.ps1 <acquire\|release\|renew\|status\|list>` | filesystem lease/lock with TTL; atomic `CreateNew` reservation, race-safe stale reclaim, `lease_id`, **timezone-safe expiry**; det · **ps:true** | **38/38** + **41/41 `-Live`** `m29-reslease-ship-003` `36d7e0be` 2026-07-27 · D-0053 |
+| `orchestrate.fanout` (M30) | `modules/30-orchestrate-fanout/Invoke-OrchestrateFanout.ps1 -Action <plan\|report\|status\|handoff\|list>` (+ `FANOUT_PROTOCOL.md`) | scaffolding for N parallel worker Cowork sessions on #29 — one action per invocation; det · **ps:true**; ops → `FANOUT_ORCHESTRATOR_HANDOFF.md` | **51/51** cloud (`2ffe162e`) + **71/71 `-Live`** `2afd5de` 2026-07-28 · D-0054/58 |
+
+### 2.2 Extended contracts & gotchas
+
+**#0 `exec.bootstrap`.** Emits `control/heartbeat.json` (health `degraded`, `poll_error_streak`,
+`stuck_finalize_count`, `oldest_stuck_finalize_age_seconds`) + `control/last-exit.json`. **Hardening (D-0056):** on
+timeout/cancel it reaps the **whole process tree** incl. a detached `llama-server` (per-PID descendants → root →
+orphan-name sweep) **before** the finalize move; a blocked `running→done` move is DEFERRED (`degraded`) rather than
+starving pending-claim; file-sharing violations self-heal. Canonical dir `modules/00-bootstrap-executor/`; the old
+`proteus_repo/tools/trusted-bootstrap-executor/` is stopped, pending removal from the game repo.
+
+**#00.1 `exec.watchdog`.** Session-scoped and user-launched: no boot/OS persistence, does not survive
+logout/reboot, does not self-revive. **(Re)start `ops/start-watchdog.bat` before any unattended multi-worker run.**
+A `taskkill /F`/power loss reads as a crash and is recovered; an authorized `stop_requested`/`signal` exit makes it
+stand down.
+
+**#7 `model.gateway` — warm server (Governor Phase 2, DONE, D-0057).** The persistent `llama-server` is launched
+**DETACHED via `Win32_Process.Create` so it OUTLIVES the executor Job** — the fix for the D-0055/D-0056 executor
+wedge. Reuse-on-same-model, evict-on-model-change, `-EvictWarm` for a clean stop; warm reuse `load_ms` **1** vs
+**1196** cold. The per-call **`gpu` `res.lease`** keeps **≤1 server on the GPU**.
+**GOTCHA (never reintroduce):** a task that **blocks while holding** a persistent server both fails on timeout and
+orphans the server → the executor livelocks on the finalize move. Launch detached and **return**.
+**`no_think` hook (D-0044):** a model entry with `"no_think": true` makes the gateway append ` /no_think` to the
+system message; without it Qwen3.5 models leave reasoning ON and emit **EMPTY content at `finish=length`**.
+
+**#9 `review.processor` — OPEN caveats.** Escalation is a **status transition, not a frontier call** (the human /
+#31 drains `escalated`). The in-place queue write re-reads immediately before an atomic replace but is **NOT a full
+concurrency protocol** — a single background drainer is assumed. **A thinking-style `strong` model may exhaust
+`max_tokens` before emitting the JSON verdict → the item is safely escalated.** **No compaction/archival of resolved
+items yet (OPEN).**
+
+**#14 `ocr.layout`.** **Windows.Media.Ocr only** in the MVP (Tesseract declared, not wired). An image over
+`MaxImageDimension` (**10000 px**) returns `image_too_large` → downscale with #15. **`ocr_worker.ps1` MUST stay
+ASCII-only** — Windows PowerShell 5.1 reads a BOM-less `.ps1` as ANSI, not UTF-8.
+
+**#19 `logic.escalator` — known defect (OPEN).** As a *judge* over a weak tier's answer the ladder **anchors** on
+that answer — the measured reason `agent.local` now decides at a **mid-only floor** (D-0043). A
+lower-tier-valid-over-higher-tier-empty fallback is **not built**. Detail: `modules\19-logic-escalator\CALIBRATION.md`.
+
+**#20 `doc.io` — safety + lease.** **Atomic** temp+rename writes (no torn files, no leftover `.docio-*.tmp`);
+optional `-ExpectSha256` optimistic-concurrency precondition (`precondition_failed`); recoverable `before.<ext>`
+pre-image; **EOL preservation** (a CRLF file stays CRLF); UTF-8 default with UTF-16 BOM detect/preserve; binary (NUL)
+files refused. **`-Lease` (D-0056)** is opt-in: acquires the `doc:<relpath>` lease around the read-modify-write,
+releases by `lease_id`, returns `doc_lease_unavailable` when contended, degrades gracefully when off / absent.
+
+**#21 `agent.local` — current defaults (newest state).** `DecisionTiers=[mid]`, the **mid-only floor** (D-0043: the
+`[tiny,weak,mid]` ladder actively DEGRADED decisions — 3.8x slower AND wrong); `MaxSteps=8`; `-Profile` presets
+`frugal={[tiny,weak,mid],mid,6,512}` / `floor={[mid],mid,8,768}` (default) / `max={[mid],strong,10,2048}` — explicit
+params always beat a profile. **`-AutoRamp` is DEFAULT-ON since D-0062**: monotonic model-affine epochs M0→M1→S0; a
+contract-less goal closes at M0 via the D-0046 deterministic terminator once ≥1 required side-effecting tool
+succeeds; `-NoAutoRamp` / `-AutoRamp:$false` reproduce the strict floor byte-for-byte. `-AllowLegacy27B` is the
+opt-in **deadline-gated** X0/27B one-shot recovery rung (D-0060).
+**tools.json (curated 10):** `doc.io` · `fs.observer` · `capture.screen` · `ocr.layout` · `detect.objects` ·
+`image.interpret` · `speech.stt` · `audio.ingest` · `gen.image` · `gen.music`; `fs.manage` #28 is wired with
+`resolve_paths:false` (path args passed verbatim). `-Route` pre-selects a subset via #27 (D-0041). **Guardrails:** a
+hard `max_steps` budget (exhausting → `stopped` + `needs_frontier`); `-DryRun` plan preview; the closed tool
+registry; child review writes go to an in-artifact `child_review.jsonl`, leaving the canonical `review_queue.jsonl`
+and the ten-producer set untouched. **KNOWN OPEN (D-0032):** the tiny/weak/mid models **under-use the `finish`
+action** — the budget is the backstop; better termination remains the #1 follow-on.
+
+**#29 `res.lease` — conventional resources + order.** `gpu` (one model run at a time) → `git` (commit lock) →
+`doc:<path>` (doc ownership). **Always acquire in gpu → git → doc order; release by `lease_id`.** Wired consumers
+(trio complete): `gpu` → #7 and `git` → `dev.ship` (both D-0055); `doc:<path>` → #20 `-Lease` (D-0056). A UTC-7
+stale-detection bug was caught live and fixed. **OPEN:** auto-renew; live monitoring; a fair scheduler.
+
+**#30 `orchestrate.fanout` — boundary + scheduling.** `plan` computes `dispatch_now` as a trial of `MaxParallel`
+**clamped to one GPU worker**, flags gpu-serialization + doc-ownership conflicts, emits each worker's ordered
+gpu→git→doc `res.lease` acquire/release commands + a worker prompt + one check-in prompt, and runs an optional
+read-only `res.lease list` preflight; `handoff` emits a `lifeorch.verification.packet/0.1` + next-iteration prompts.
+**HARD BOUNDARY: it never spawns or drives an AI session — the human is the courier** (D-0051/D-0052).
+**packet validation (D-0058):** emitted `run_module` items must carry `inputs` MATCHING the target skill's op
+contract (fo-1/fo-4 passed `{task,files}` where `frontier.bridge pack` needs `{prompt,files}`).
+
+### 2.3 Built but NOT yet given a registry entry
+Shipped, but no full entry above — **absence here is not "not built"** (status/detail: `MODULE_ROADMAP.md`).
+Test counts across this doc are as-of-registration; the authoritative per-suite table is `CURRENT_STATE.md ->
+Current tests`.
+- **`image.index` (M18)** `modules/18-image-index/` — fuses #15 (always) + optional #14/#16/#17
+  (`-Ocr`/`-Detect`/`-Interpret`/`-All`, `-Capture`); children run **sequentially** (VLM VRAM/port contention);
+  non-producer; ps:false; confidence = **min** stochastic stage. 41/41 · D-0027.
+- **`agent.coding` (M26)** WORK_ORDER only — **DEFERRED, NOT built**: no safe code-execution substrate on this box
+  (`m26-probe-001`: WSL launcher but no distro; Windows Sandbox absent + needs elevation; no Docker) · D-0037.
+- **`frontier.bridge` (M31)** `modules/31-frontier-bridge/` — deterministic **LOCAL-ONLY, NO-NETWORK** context
+  packager (`pack` + read-return with answer-markers/`pack_id`/validator). **It never contacts, scrapes or drives
+  any external AI UI.** 65/65 at build (+ hardened return-capture `b17a945`) · D-0052/55/57.
+- **Widgets** `widgets/01-local-agent-console` (Plan/Run + `-AutoRamp` toggle, 91/91 `-Live`), `02-module-launcher`,
+  `03-verification-console` (audit loop; teardown sweeps orphan detached `llama-server`; 173/173 cloud mock + live STA SelfTests) · D-0041/57/58/64/65.
+  **`dev.ship`** holds the `git` lease around index-check + add + commit; 39/39 · D-0055.
+
+---
+
+## 3. Hardware profile (measured 2026-07-24 — DESKTOP-PF5FFMF)
+- **CPU:** Intel Core i9-9900KF — 8 c / 16 t @ 3.6 GHz. **RAM:** 64 GB (63.9 total; ~38 free at measure).
+- **GPU:** **NVIDIA GeForce RTX 2080 Ti, 11 GB VRAM** (11264 MiB), driver **591.74**, compute cap **7.5**, CUDA
+  present. Driver max CUDA **13.1**; CUDA **13.2** toolkit installed. (Two DisplayLink USB "adapters" are **not**
+  compute GPUs.) **Practical budget ≈ 9.9 GB free** after OS/desktop — the cap that makes the 27B impractical (D-0061).
+- **OS:** Windows 10 Pro 19045 (x64). **Drives (fixed):** C: 893 GB (**~67 GB / 7.5 % free — CONSTRAINED**);
   E: "Game Drive" 858 GB (~534 GB free); **F: "Storage space" 3.72 TB (~1.78 TB free)** — large-data home. (No D:.)
 
-## Local model runtimes (verified on this machine)
-- **llama.cpp `llama-server` / `llama-cli`** — CUDA build **b8661 (b7ad48ebd)**, at
-  `F:\Qwen3.5-27B\llama.cpp\build\bin\`; **portable copy** at
-  `F:\…\LifeOrchestrator-Refresh_Large_Data\_engines\llama.cpp\bin\` (shared by `model.gateway` #7 +
-  `image.interpret` #17; relocated 2026-07-25 out of the `_pending-model-storage` staging area — D-0028; runs
-  standalone; needs a system CUDA runtime). `model.gateway` uses `llama-server` (chat completions). Note: this build's
-  `llama-cli` is interactive-only (rejects `-no-cnv`); use `llama-server` for scripting.
-  **Multimodal-capable (verified 2026-07-25, `m17-probe-001/002`):** `llama-server --help` exposes `-mm/--mmproj`,
-  `--mmproj-offload`, `--image-min/max-tokens` (full mtmd support); launched with `--mmproj <projector.gguf>` it accepts
-  OpenAI-style `image_url` (base64 data URI) content on `/v1/chat/completions`. **Wired by `image.interpret` (Module 17)**
-  with the Qwen2.5-VL-3B GGUF — a live dog.jpg caption ran at ~111 tok/s, weights fully GPU-offloaded.
-- **whisper.cpp** — CUDA + CPU builds with `whisper-cli.exe`/`whisper-server.exe` under
-  `F:\Local_TTS_Large_Data\external\whisper.cpp_{cuda,cpu_backup_2026_04_17}\build\bin\Release\`. **Verified + wired by
-  `speech.stt` (Module 11), 2026-07-24.** Both builds load headless (`m11-probe-001`; the CUDA build initializes the RTX
-  2080 Ti); flags confirmed on this build: `-oj`/`-ojf` (full JSON incl. per-token `p`), `-osrt`/`-otxt`, `-of <base>`,
-  `-np`, `-l <lang>`, `-ng`, `-t`, `-bs`/`-bo` (`m11-probe-002` transcribed the bundled `samples\jfk.wav`, base.en on
-  CUDA ≈ 0.07 rtf). `whisper-cli` accepts flac/mp3/ogg/wav; `speech.stt` still normalizes to 16 kHz mono s16 WAV via
-  `audio.ingest` by default for determinism. `llama-cli`-style interactive gotchas do **not** apply here.
-- **Speech Python venv** — `F:\My_Programs\Local_Computer_Speech_Large_Data\python_env\Scripts\python.exe` (Python
-  3.12.10; torch 2.11.0+cu128, torchaudio, transformers 4.57.3, accelerate, safetensors, soundfile 0.13.1, librosa 0.11,
-  onnxruntime, **`qwen_tts`**). **Verified + wired by `speech.tts` (Module 12), 2026-07-24** (`m12-probe-001/002`): CUDA
-  available on the RTX 2080 Ti; `qwen_tts.Qwen3TTSModel.generate_custom_voice(...)` loads bf16 + `sdpa` (flash-attn absent)
-  and returns `(List[np.ndarray], sr=24000)`. This is the venv the TTS models run under (registry `engine_env`).
-- **System Python** 3.12.10 (`…\AppData\Local\Programs\Python\Python312`) with torch 2.2.1 + onnxruntime 1.17.1 +
-  **Pillow 10.2.0 + numpy 1.26.4 + cv2 4.9.0**. **Wired by `image.util` (Module 15)** — its Pillow+numpy worker runs
-  under this interpreter (CPU-only, so `parallel_safe`; not the CUDA/speech venv). Verified 2026-07-25 (`m15-probe-001`).
-- **onnxruntime (system python)** — **onnxruntime-gpu 1.17.1** + onnxruntime-directml 1.17.1 (providers available:
-  Tensorrt/CUDA/CPU). **Wired by `detect.objects` (Module 16)** as the detector runtime; the worker requests
-  **`CPUExecutionProvider`** by default (deterministic + parallel-safe — no GPU binding). Verified live 2026-07-25
-  (`m16-probe-001`: CPU-provider session load + YOLOX-Nano inference reproducing the cloud detections byte-for-byte).
-  torch 2.2.1 + torchvision 0.17.1 are also present (unused by this MVP).
-- **diffusers (speech venv)** -- **diffusers 0.35.2**, installed 2026-07-25 (Module 23) into the **speech venv** (torch 2.11.0+cu128, transformers 4.57.3, accelerate, safetensors, torchvision 0.26). **Wired by `gen.image` (Module 23)** as the text-to-image runtime: a Python worker (`gen_image_infer.py`) runs `StableDiffusionPipeline.from_pretrained(..., torch_dtype=float16, variant="fp16", local_files_only=True)` on CUDA. Verified live 2026-07-25 (`m23-probe-002`: SD 1.5 512x512 in 2.8 s, VRAM peak 2.61 GB). The install added only diffusers + importlib_metadata + zipp -- torch/transformers/`qwen_tts` unchanged (Module 12 re-verified). The system python's torch is CPU-only, so GPU image gen runs under the speech venv. **MusicGen (Module 24)** runs under this same venv via transformers `MusicgenForConditionalGeneration` -- no install was needed (transformers 4.57.3 already ships it), so the venv package set is unchanged (Module 12/speech.tts unaffected).
-- Ollama / LM Studio: **not installed.** git / winget / .NET SDK 9 / node: present (see above).
+## 4. Local model runtimes (verified on this machine)
+**llama.cpp — TWO BUILDS, side by side:**
+- **b8661 (b7ad48ebd), CUDA — the DEFAULT engine for every tier except the 9B.** Source build
+  `F:\Qwen3.5-27B\llama.cpp\build\bin\`; **portable copy**
+  `F:\…\LifeOrchestrator-Refresh_Large_Data\_engines\llama.cpp\bin\` (shared by #7 + #17; relocated 2026-07-25 out
+  of `_pending-model-storage` — D-0028). Runs standalone but **needs a system CUDA runtime**.
+- **b10092, CUDA 12.4, SELF-CONTAINED** (bundles `cudart64_12`/`cublas64_12`/`cublasLt64_12`) at
+  `_engines\llama.cpp-b10092\bin\`. **Only the strong-tier 9B pins `engine_path` to it** (a per-model override the
+  gateway already supported) → zero global blast radius; cu12.4 chosen for guaranteed compat with driver 591.74.
+  Qwen2.5-3B (mid) also loads on b10092 (backward-compat verified).
+- **BOTH builds must remain staged.** Do NOT consolidate onto a single engine without re-verifying EVERY tier
+  plus the VLM (#17) — the b10092 universal-engine probe across all 5 fixtures is the gated unit for that
+  (`FANOUT_ORCHESTRATOR_HANDOFF.md` §4, GPU menu (d)); the VLM is the gating fixture.
+- **Why the split:** Qwen3.5-9B is a hybrid attention-SSM arch that **b8661 CANNOT load** (`missing tensor
+  blk.32.ssm_conv1d.weight`). The dense 27B loads fine on b8661.
+- **GOTCHA:** this build's `llama-cli` is **interactive-only** (rejects `-no-cnv`) — **use `llama-server` for
+  scripting.** Clean per-token logprobs are confirmed on **both** builds (D-0060).
+- **Multimodal (verified `m17-probe-001/002`):** `llama-server --help` exposes `-mm/--mmproj`, `--mmproj-offload`,
+  `--image-min/max-tokens` (full mtmd support); with `--mmproj <projector.gguf>` it accepts OpenAI-style `image_url`
+  (base64 data URI) content on `/v1/chat/completions`. Wired by #17 with the Qwen2.5-VL-3B GGUF.
 
-## Installed local models (inventory — DO NOT re-download; portable copies on F:)
-Relocated 2026-07-25 out of the temporary staging area into per-owning-module homes under
-`F:\My_Programs\LifeOrchestrator-Refresh_Large_Data\<NN>-<module>\` (D-0028; the `_pending-model-storage\`
-staging area and its `MIGRATION.md` are deleted). The `file/dir` column below is relative to
-`…_Large_Data\`; **the exact absolute paths live in `models.json`.** `wired` = runnable by `model.gateway` today.
+**whisper.cpp** — CUDA + CPU builds with `whisper-cli.exe`/`whisper-server.exe` under
+`F:\Local_TTS_Large_Data\external\whisper.cpp_{cuda,cpu_backup_2026_04_17}\build\bin\Release\`. Both load headless
+(`m11-probe-001`; the CUDA build initializes the RTX 2080 Ti). Flags confirmed: `-oj`/`-ojf` (full JSON incl.
+per-token `p`), `-osrt`/`-otxt`, `-of <base>`, `-np`, `-l <lang>`, `-ng`, `-t`, `-bs`/`-bo`. `whisper-cli` accepts
+flac/mp3/ogg/wav; #11 still normalizes to 16 kHz mono s16 WAV via `audio.ingest` for determinism. The `llama-cli`
+interactive gotcha does **not** apply here. Wired by #11, 2026-07-24.
+
+**Speech Python venv** — `F:\My_Programs\Local_Computer_Speech_Large_Data\python_env\Scripts\python.exe`
+(Python 3.12.10; torch **2.11.0+cu128**, torchaudio, transformers **4.57.3**, accelerate, safetensors, soundfile
+0.13.1, librosa 0.11, onnxruntime, **`qwen_tts`**, **diffusers 0.35.2**, torchvision 0.26).
+`qwen_tts.Qwen3TTSModel.generate_custom_voice(...)` loads bf16 + `sdpa` (flash-attn absent) → `(List[np.ndarray],
+sr=24000)`. **This is the venv every GPU generator runs under** (`engine_env`): #12, #23, #24, #25. The diffusers
+install (2026-07-25) added only diffusers + importlib_metadata + zipp — torch/transformers/`qwen_tts` unchanged;
+MusicGen needed **no** install. Verified `m12-probe-001/002`, `m23-probe-002`.
+
+**System Python** 3.12.10 (`…\AppData\Local\Programs\Python\Python312`) — torch 2.2.1 (**CPU-only**),
+**onnxruntime-gpu 1.17.1** + onnxruntime-directml 1.17.1 (providers: Tensorrt/CUDA/CPU), torchvision 0.17.1,
+**Pillow 10.2.0 + numpy 1.26.4 + cv2 4.9.0**. Wired by #15 and #16 (its worker requests **`CPUExecutionProvider`**
+by default — deterministic + parallel-safe, no GPU binding; `m16-probe-001` reproduced the cloud YOLOX-Nano
+detections byte-for-byte). **GPU work must use the speech venv, not this interpreter.**
+
+**Ollama / LM Studio: NOT installed.** git / winget / .NET SDK 9 / node: present.
+
+## 5. Installed local models (inventory — DO NOT re-download; portable copies on F:)
+Per-owning-module homes under `F:\My_Programs\LifeOrchestrator-Refresh_Large_Data\<NN>-<module>\` (relocated
+2026-07-25, D-0028; the `_pending-model-storage\` staging area + its `MIGRATION.md` are deleted — the source
+originals are recorded in **D-0028**). `file/dir` is relative to `…_Large_Data\`; **exact absolute paths, sha256 and
+engine settings live in `models.json`.** `wired` = runnable by `model.gateway` today.
 
 | model_id | type | file/dir (under …_Large_Data\) | size | engine | wired |
 |---|---|---|---|---|---|
-| `llm.weak.qwen2p5-0p5b` | llm | `07-model-gateway\llm\Qwen2.5-0.5B-Instruct-Q4_K_M\…gguf` | 0.38 GB | llama-server | **yes** |
-| `llm.weak.qwen2p5-1p5b` | llm | `07-model-gateway\llm\Qwen2.5-1.5B-Instruct-Q4_K_M\…gguf` | 0.94 GB | llama-server | **yes** (default) |
-| `llm.weak.qwen2p5-3b` | llm | `07-model-gateway\llm\Qwen2.5-3B-Instruct-IQ4_XS\…gguf` | 1.66 GB | llama-server | **yes** |
-| `llm.strong.qwen3p5-27b` | llm | `07-model-gateway\llm\Qwen3.5-27B-Q4_K_M\…gguf` | 16.3 GB | llama-server | **yes** (partial GPU, ngl=32 tuned M9) |
-| `stt.whisper.base-en` | stt | `11-speech-stt\stt\whisper-ggml-base.en\ggml-base.en.bin` | 0.14 GB | whisper.cpp | **via `speech.stt`** (M11) |
-| `tts.weak.qwen3-0p6b` | tts | `12-speech-tts\Qwen3-TTS-12Hz-0.6B-CustomVoice\` (+ bundled `speech_tokenizer\`) | 2.38 GB | transformers | **via `speech.tts`** (M12, default) |
-| `tts.strong.qwen3-1p7b` | tts | `12-speech-tts\Qwen3-TTS-12Hz-1.7B-CustomVoice\` (+ bundled `speech_tokenizer\`) | 4.31 GB | transformers | **via `speech.tts`** (M12) |
-| `embedding.qwen3-0p6b` | embedding | `23-artifact-search\embedding\Qwen3-Embedding-0.6B\` | 1.12 GB | transformers | no → M23 |
-| `detect.yolox.nano` | detector | `16-detect-objects\detector\yolox-nano\yolox_nano.onnx` | 3.66 MB | onnxruntime | **via `detect.objects`** (M16, default) |
-| `detect.yolox.tiny` | detector | `16-detect-objects\detector\yolox-tiny\yolox_tiny.onnx` | 20.2 MB | onnxruntime | **via `detect.objects`** (M16, `-Tier tiny`) |
-| `vlm.qwen2p5-vl-3b` | vlm | `17-image-interpret\vlm\Qwen2.5-VL-3B-Instruct-GGUF\{...Q4_K_M.gguf,mmproj-...f16.gguf}` | 1.80 + 1.25 GB | llama-server (mmproj) | **via `image.interpret`** (M17, default) |
-| `image.sd15` | image-gen | `23-gen-image\stable-diffusion-v1-5\` (diffusers fp16 folder) | 2.13 GB | diffusers | **via `gen.image`** (M23, default) |
-| `music.musicgen-small` | music-gen | `24-gen-music\musicgen-small\` (transformers folder, safetensors) | 2.37 GB | transformers | **via `gen.music`** (M24, default) |
-| `video.animatediff-lightning` | video-gen | `25-gen-video\animatediff-lightning\` (motion adapter) + base `23-gen-image\stable-diffusion-v1-5\` | 0.91 GB (+SD1.5) | diffusers | **via `gen.video`** (M25, default) |
+| `llm.weak.qwen2p5-0p5b` | llm | `07-model-gateway\llm\Qwen2.5-0.5B-Instruct-Q4_K_M\…gguf` | 0.38 GB | llama-server b8661 | **yes** — tier `tiny` |
+| `llm.weak.qwen2p5-1p5b` | llm | `07-model-gateway\llm\Qwen2.5-1.5B-Instruct-Q4_K_M\…gguf` | 0.94 GB | llama-server b8661 | **yes** — tier `weak`, gateway default |
+| `llm.weak.qwen2p5-3b` | llm | `07-model-gateway\llm\Qwen2.5-3B-Instruct-IQ4_XS\…gguf` | 1.66 GB | llama-server b8661 | **yes** — tier `mid`, the decision floor |
+| `llm.strong.qwen3p5-9b` | llm | `07-model-gateway\llm\Qwen3.5-9B-Q5_K_M\Qwen_Qwen3.5-9B-Q5_K_M.gguf` | **7.11 GB** (7,111,487,520 B; sha `a686d88e…`) | llama-server **b10092** (`engine_path` pin) | **yes** — tier `strong` |
+| `llm.strong.qwen3p5-9b-q4` | llm | `07-model-gateway\llm\Qwen3.5-9B-Q4_K_M\Qwen_Qwen3.5-9B-Q4_K_M.gguf` | 6.17 GB (6,169,341,984 B; sha `d784ce9e…`; ~6.9 GB VRAM at load) | llama-server **b10092** | no — kept for a **one-flip rollback** |
+| `llm.strong.qwen3p5-27b` | llm | `07-model-gateway\llm\Qwen3.5-27B-Q4_K_M\…gguf` | 16.3 GB | llama-server b8661 | retained via `-Model` / `-AllowLegacy27B`; **no longer the tier** |
+| `stt.whisper.base-en` | stt | `11-speech-stt\stt\whisper-ggml-base.en\ggml-base.en.bin` | 0.14 GB | whisper.cpp | via `speech.stt` #11 |
+| `tts.weak.qwen3-0p6b` | tts | `12-speech-tts\Qwen3-TTS-12Hz-0.6B-CustomVoice\` (+ bundled `speech_tokenizer\`) | 2.38 GB | transformers | via `speech.tts` #12 (default) |
+| `tts.strong.qwen3-1p7b` | tts | `12-speech-tts\Qwen3-TTS-12Hz-1.7B-CustomVoice\` (+ bundled `speech_tokenizer\`) | 4.31 GB | transformers | via `speech.tts` #12 |
+| `embedding.qwen3-0p6b` | embedding | `23-artifact-search\embedding\Qwen3-Embedding-0.6B\` | 1.12 GB | transformers | no — pre-provisioned for the unbuilt artifact-search module |
+| `detect.yolox.nano` | detector | `16-detect-objects\detector\yolox-nano\yolox_nano.onnx` | 3.66 MB | onnxruntime | via `detect.objects` #16 (default) |
+| `detect.yolox.tiny` | detector | `16-detect-objects\detector\yolox-tiny\yolox_tiny.onnx` | 20.2 MB | onnxruntime | via `detect.objects` #16 (`-Tier tiny`) |
+| `vlm.qwen2p5-vl-3b` | vlm | `17-image-interpret\vlm\Qwen2.5-VL-3B-Instruct-GGUF\{…Q4_K_M.gguf, mmproj-…f16.gguf}` | 1.80 + 1.25 GB | llama-server (mmproj) | via `image.interpret` #17 (default) |
+| `image.sd15` | image-gen | `23-gen-image\stable-diffusion-v1-5\` (diffusers fp16 folder) | 2.13 GB | diffusers | via `gen.image` #23 (default) |
+| `music.musicgen-small` | music-gen | `24-gen-music\musicgen-small\` (transformers folder, safetensors) | 2.37 GB | transformers | via `gen.music` #24 (default) |
+| `video.animatediff-lightning` | video-gen | `25-gen-video\animatediff-lightning\` (motion adapter) + base `23-gen-image\stable-diffusion-v1-5\` | 0.91 GB (+SD1.5) | diffusers | via `gen.video` #25 (default) |
 
-Tiers (`models.json`): LLM `tiny`=0.5B, `weak`=1.5B (default), `mid`=3B, `strong`=27B; detector `nano` (default) / `tiny`; vlm `3b` (default); image-gen `sd15` (default); music-gen `small` (default).
-Detectors are COCO-80 YOLOX ONNX (Apache-2.0), run under the system python's onnxruntime (CPU by default), decoupled from the
-gateway `wired` gate. The redundant standalone `tts.tokenizer.qwen3-12hz` entry was **removed 2026-07-25** (de-duplicated —
-byte-identical to each voice's bundled `speech_tokenizer\`, which the voices actually load; D-0028). The source originals the
-portable copies came from (the deleted `MIGRATION.md`'s content) are recorded in DECISION_LOG **D-0028**.
+- **Tiers (`models.json`):** LLM `tiny`=0.5B, `weak`=1.5B (gateway default), `mid`=3B (the decision floor),
+  `strong`=**Qwen3.5-9B Q5_K_M**; detector `nano` (default) / `tiny`; vlm `3b`; image-gen `sd15`; music-gen `small`.
+- **Licenses:** detectors are COCO-80 **YOLOX ONNX (Apache-2.0)**; the VLM is **Qwen2.5-VL-3B-Instruct GGUF Q4_K_M +
+  mmproj-f16 (Apache-2.0)**; the 9B GGUFs are **bartowski** quants.
+- The standalone `tts.tokenizer.qwen3-12hz` entry was **removed 2026-07-25** — byte-identical to each voice's
+  bundled `speech_tokenizer\`, which the voices actually load (D-0028). Detector / vlm / image-gen / music-gen /
+  video-gen entries are read by their own skills and are deliberately **decoupled from the gateway `wired` gate**
+  (`wired:false` is correct for them).
 
-## Large-data storage (F:)
-- **Root:** `F:\My_Programs\LifeOrchestrator-Refresh_Large_Data\` — home for all module data >~50 MB (D-0015).
-  Contains the shared `_engines\` (llama.cpp) and per-owning-module homes `07-model-gateway\`, `11-speech-stt\`,
-  `12-speech-tts\`, `16-detect-objects\`, `17-image-interpret\`, `23-artifact-search\` (embedding, pre-provisioned
-  for the unbuilt Module 23), `README.md`, and two `.lnk` shortcuts. The temporary `_pending-model-storage\` staging
-  area was **emptied and deleted 2026-07-25** (D-0028).
-- **Rule:** the C: repo never stores model weights; skills reference models by absolute F: paths in their registry
-  (`models.json`). Each model lives under its owning module's `…_Large_Data\<NN>-<module>\` home; the shared llama.cpp
-  engine under `…_Large_Data\_engines\`.
+## 6. Strong LLM tier — current state (D-0044 → D-0061 → D-0062)
+- **Tier now:** `tiers.llm.strong` = **`llm.strong.qwen3p5-9b` (Qwen3.5-9B Q5_K_M, bartowski)** — fully GPU-resident
+  **~7.11 GB**, `gpu_layers=99`, `context=8192`, `no_think:true`, `engine_path` pinned to **b10092**. Live S0
+  calibration **6/6 @ 2048 tok**, non-empty, `finish=stop`. Q4→Q5 = a fidelity upgrade with real KV headroom (on
+  11 GB the binding budget is **KV-cache/context, not weight-fit**).
+- **Rollback:** the Q4_K_M entry is retained as **`llm.strong.qwen3p5-9b-q4` (`wired:false`)**; Q4 measured ~6.9 GB,
+  ngl 99, ~4.3 GB headroom, GPU-bound **~68 tok/s**.
+- **`no_think` REQUIRED:** without the gateway's ` /no_think` hook the 9B leaves reasoning ON and emits **EMPTY
+  content at `finish=length`**. **TOKEN-BUDGET GOTCHA (documented, NOT a regression):** the 32-token
+  latency-calibration harness returns EMPTY on **BOTH Q4 and Q5**; the 9B needs **≥ ~1024 tokens** to emit a
+  decision — hence S0 uses **2048**.
+- **The 27B is DEMOTED but reachable** (`-Model` / `agent.local -AllowLegacy27B`, deadline-gated). **Validated
+  impractical (D-0061): NO Qwen3.5-27B quant fits GPU-bound on the 11 GB card** (~9.9 GB free — IQ2_XXS 9.61 GB
+  collapses quality; IQ3_XXS 12.8 / Q2_K 12.1 / Q3_K_M 14.8 GB are over); the incumbent Q4 decides correctly but at
+  **2.1 tok/s** partial offload (~88 s warm / ~170 s cold). Probe:
+  `modules/07-model-gateway/runtime/x0quant/probe-table.md`; confirmed independently by the couriered frontier report
+  (`core-docs/research/2026-07-28-frontier-local-model-selection.md`) — the 9B's hybrid arch keeps KV ~32 KiB/token
+  vs a dense 14B's ~160. The 27B is a **generation/verification/routing rung, NOT an escalator decision-classifier
+  rung** (escalating the DECISION to it re-broke with empty output, `m31-p1-max-001`) — hence `-Profile max` = mid
+  decisions + strong generation.
+- **Consumers of `-Tier strong`:** the governor's max `gen_tier`, `review.processor` #9, `agent.local`'s S0 epoch.
+- **OPEN / deferred:** Q6_K (7.96 GB) is the documented alternative quant; an optional **specialist pool**
+  (Gemma-4-12B code, Ministral-3-14B math, Gemma-4-E4B backup) behind a one-active-GPU-model + warm-RAM-pool + router
+  is **designed, not built** (D-0063). The frontier report's **audio/image/video model leads are still outstanding
+  (TBD — request from Nicholas)**.
 
-### Planned / not yet present (do not assume these exist)
-- **Object detectors** — present (Module 16): `detect.yolox.nano`/`detect.yolox.tiny` (COCO-80 ONNX) on F: under `16-detect-objects\`.
-- **Vision / multimodal (VLM)** models — present (Module 17): `vlm.qwen2p5-vl-3b` (Qwen2.5-VL-3B-Instruct GGUF Q4_K_M + mmproj-f16,
-  Apache-2.0) on F: under `17-image-interpret\`, run via the shared `llama-server` (multimodal) by `image.interpret`. C++ toolchain for native modules — verify
-  (CMake/MSVC) before the first C++ module; register when confirmed.
+**Legacy 27B operating notes (moved from REVIEW_QUEUE, D-0066):** `gpu_layers` TUNED 28 -> **32** (Module 9
+sweep `m9-tune27b-001`, 2026-07-24: {20,28,36} all loaded; throughput 1.43 / 1.67 / 1.93 tok/s; 32 leaves
+headroom for desktop VRAM). Cold first load ~90 s (16 GB from F:), warm ~7–9 s — a cold load approaches the
+gateway's 120 s default `LoadTimeoutSec` (which bounds load AND the request at ~2 tok/s), so pass
+`-LoadTimeoutSec ~300` for ANY 27B run. Reachable only via `-Model` / `-AllowLegacy27B` (deadline-gated).
 
-**Discipline:** never list a tool as `installed` you have not actually invoked on this machine. Prefer
-`planned` until verified, and record the `last successful test` date on every status change.
+**Engine CUDA-runtime dependency (open):** the portable `_engines\llama.cpp\bin\` (b8661, 72 MB) copy runs
+today but links a CUDA runtime installed OUTSIDE `F:\Qwen3.5-27B`. Confirm the runtime's home before that
+folder is torn down; if it lived only there, restage the CUDA DLLs too. (b10092 is self-contained.)
 
-### `route.tools` -- Tool Router (Module 27)
-- **Added 2026-07-26 (D-0040).** A skill (not a model): given a request + the attachable-tools registry (agent.local's `tools.json`), it calls `model.gateway` at the MID tier with the validated router prompt (m27-router-001) and DETERMINISTICALLY GATES the emitted JSON array against the catalog -> the minimal validated tool-id subset. Fast, non-executing, injection-resistant; `tier=strong` is REFUSED (the 27B thinking tier emits empty output). Orchestrator/non-producer. **No new model / no `models.json` change.** Composes #7. Entrypoint `modules/27-route-tools/Invoke-RouteTools.ps1`. Tests: 34/34 off-machine + `m28-verify-001`/`m28-harness-001`/`m28-live-001` live. See D-0040.
-- **Also 2026-07-26 (D-0041):** `agent.local` (#21) gained `-Route` + a curated 10-tool `tools.json` (doc.io/fs.observer/capture.screen/ocr.layout/detect.objects/image.interpret/speech.stt/audio.ingest/gen.image/gen.music); the Local Agent Console gained Plan/Run. `fs.manage` (copy/move/mkdir) deferred as the next gap. See D-0041.
+## 7. Large-data storage (F:)
+- **Root:** `F:\My_Programs\LifeOrchestrator-Refresh_Large_Data\` — home for all module data > ~50 MB (D-0015).
+  Holds the shared `_engines\` (`llama.cpp\` = b8661, `llama.cpp-b10092\`) and per-owning-module homes
+  `07-model-gateway\`, `11-speech-stt\`, `12-speech-tts\`, `16-detect-objects\`, `17-image-interpret\`,
+  `23-artifact-search\` (embedding, pre-provisioned), `23-gen-image\`, `24-gen-music\`, `25-gen-video\`, plus
+  `README.md` + two `.lnk` shortcuts. `_pending-model-storage\` was **emptied and deleted 2026-07-25** (D-0028).
+- **RULE:** the C: repo **never** stores model weights or engines; skills reference them by absolute F: paths in
+  `models.json`. C: is at ~7.5 % free — do not stage large data there.
 
-### `fs.manage` -- File Manage (copy/move/mkdir) (Module 28)
-- **Added 2026-07-26 (D-0042).** A deterministic tool (not a model): copy/move/mkdir with smart path resolution -- known folders (desktop/downloads/documents/pictures/music/videos/home/temp via `[Environment]::GetFolderPath`, so a OneDrive-redirected Desktop is found), `~`, `%ENV%`, absolute, relative; a folder dest keeps the source filename; overwrite-guarded. Pure PowerShell + .NET; **no external binary / Python / model / `models.json` change**; not a review producer. `modules/28-fs-manage/Invoke-FsManage.ps1`. Wired into `agent.local`'s `tools.json` with `resolve_paths:false` (agent passes its path args verbatim). Tests 21/21 off-machine + `m29-verify-001` 25/25 + the REAL e2e `m29-after-003` (a dog image on the real Desktop). See D-0042.
-
-### `res.lease` -- Resource Lease / Lock (Module 29)
-- **Added 2026-07-27 (D-0053).** A deterministic tool (not a model): a filesystem lease/lock so N processes on this box arbitrate contended resources -- acquire/release/renew/status/list a named lease with a TTL. Atomic `File.Open(..CreateNew..)` reservation, race-safe stale reclaim (per-stale claim marker + re-verify + atomic `File.Move` overwrite), holder identity + a lease_id token, blocking/non-blocking acquire, same-holder re-attach; **timezone-safe expiry** (Kind-aware `ConvertTo-Utc`; a UTC-7 stale-detection bug was caught by the live gate and fixed). Conventional resources: `gpu` (one model run at a time), `git` (commit lock), `doc:<path>` (doc-ownership); acquire-order gpu->git->doc. Pure PowerShell + .NET; **no external binary / Python / model / `models.json` change**; `parallel_safe:true`; not a review producer. `modules/29-resource-lease/Invoke-ResLease.ps1`. Tests **38/38** off-machine (incl. N-way cross-process mutual-exclusion + concurrent stale-reclaim) + **41/41 `-Live`** via the job-runner (`m29-reslease-ship-003`, commit `36d7e0be`). Follow-ons: wire `gpu`/`git`/`doc:*` into consumers; the fan-out orchestrator. See D-0053.
-
-### `orchestrate.fanout` -- Fan-out Orchestrator (Module 30)
-- **Added 2026-07-27 (D-0054).** A deterministic tool (not a model): the fan-out orchestrator scaffolding for N parallel worker Cowork sessions, built on `res.lease` #29. One action per invocation -- `plan | report | status | handoff | list`. `plan` schedules (dispatch_now = trial of MaxParallel, clamped to one GPU worker; gpu-serialization + doc-ownership conflict flags), emits each worker's ordered gpu->git->doc `res.lease` acquire/release commands + a worker prompt + one Nicholas check-in prompt, and runs an optional read-only `res.lease list` preflight; `report`/`status` roll up worker progress + a ready-for-handoff cadence; `handoff` emits a Verification Console packet (`lifeorch.verification.packet/0.1`) + next-iteration prompts. Never spawns/drives an AI session (the human is the courier; D-0051/D-0052). Pure PowerShell + .NET; **no external binary / Python / model / `models.json` change**; `parallel_safe:true`; not a review producer. `modules/30-orchestrate-fanout/Invoke-OrchestrateFanout.ps1` (+ `FANOUT_PROTOCOL.md`). Tests **51/51** off-machine + **51/51 `-Live`** via the job-runner (`m30-fanout-ship-001`, commit `2ffe162e`). Follow-ons: a fan-out dogfood; wire res.lease consumers; auto-renew / live monitoring / a fair scheduler. See D-0054.
-
-## Strong LLM tier update -- D-0044 (2026-07-26)
-
-`tiers.llm.strong`: `llm.strong.qwen3p5-27b` -> **`llm.strong.qwen3p5-9b`** (Qwen3.5-9B Q4_K_M, bartowski).
-- **Why:** the 27B is ~16 GB Q4 on an 11 GB card = PARTIAL offload (CPU-bound ~2 tok/s; a 30-min agent timeout, D-0043). The 9B fits FULLY on the GPU (~6.9 GB, ngl 99, ~4.3 GB headroom) -> GPU-bound ~68 tok/s, clean output.
-- **Engine:** Qwen3.5-9B is a hybrid attention-SSM arch the box engine **b8661 cannot load** (missing `ssm_conv1d`). A side-by-side **llama.cpp b10092 (CUDA 12.4, self-contained cudart/cublas)** is staged at `_engines\llama.cpp-b10092\bin\`; the 9B entry pins `engine_path` to it (per-model override the gateway already supported). Every other tier stays on b8661 -- no global change. Driver 591.74 / CUDA 13.1 max / CUDA 13.2 toolkit / compute 7.5; cu12.4 chosen for guaranteed driver compat.
-- **Thinking control:** new optional model field **`no_think: true`** -> the gateway appends ` /no_think` to the system message (Qwen3.5 reasoning off; default llama-server flags otherwise leave it ON and it emits empty content at finish=length). Set on the 9B entry.
-- **Registry:** added `llm.strong.qwen3p5-9b` (engine_path=b10092, gpu_layers=99, context=8192, no_think=true, sha256 d784ce9e...). The `llm.strong.qwen3p5-27b` entry is RETAINED (reachable via -Model) but no longer the tier. Consumers of `-Tier strong` (governor max gen_tier, review.processor #9) now get the 9B -- faster.
-- **Residual:** end-to-end placement is gated by the D-0032 terminator (mid-tier premature `finish`), orthogonal to this swap.
+## 8. Planned / not yet present (do not assume these exist)
+- **C++ toolchain for native modules** — **verify CMake/MSVC before the first C++ module**; register when confirmed.
+- **Tesseract as a wired OCR engine** — binary present, not wired (§1).
+- **Warm multi-model pool + router** — designed only (D-0063).
+- **A safe code-execution substrate** (WSL distro / Windows Sandbox / container / vetted restricted runspace) —
+  absent; blocks `agent.coding` #26 (D-0037).
+- **Standalone VAD model** — not staged (`voice.live` #13 uses whisper segments).

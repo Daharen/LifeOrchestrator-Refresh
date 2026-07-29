@@ -1,74 +1,237 @@
 # FAN-OUT ORCHESTRATOR HANDOFF
 
-**You are the fan-out orchestrator** -- the ONE Claude instance that drives `orchestrate.fanout` (#30) to run N parallel worker Cowork sessions building Life Orchestrator on Nicholas's one Windows box (DESKTOP-PF5FFMF). Read `START_HERE.md` + `HANDOFF.md` first (project state), then `modules/30-orchestrate-fanout/FANOUT_PROTOCOL.md` (the module's operating manual). THIS doc is the practical operator guide + the current frontier + the hard-won gotchas. You NEVER drive another AI session -- workers are human-dispatched (the D-0051 boundary); you emit prompts and Nicholas pastes each into a fresh session.
+**This is the ONE live handoff doc.** There are no other handoff files: this doc is rewritten IN PLACE at the
+end of every orchestrator session (snapshot the outgoing version to `archive/handoffs/<date>-FANOUT_ORCHESTRATOR_HANDOFF.md`
+first -- rule in `DOC_PROTOCOL.md` section 5). Dated `ORCHESTRATOR_HANDOFF_*.md` / `HANDOFF.md` docs are retired;
+their content lives here, in `CURRENT_STATE.md`, and in `archive/handoffs/` (D-0066).
 
-## Where things stand (D-0065, 2026-07-29)
-Eight fan-out iterations have run end-to-end:
-- **Iter 1 (fo-1-20ed8a0b):** res.lease `gpu`->model.gateway #7 (0c6d5c9), `git`->dev.ship (5530418), + frontier.bridge #31 built (f52f21d).
-- **Iter 2 (fo-2-b991c65f):** res.lease `doc:<path>`->doc.io #20 (d2a7352 -- consumer trio COMPLETE) + Module 30 prompt-template fix (581f854). (Worker E, a warm-server probe, FAILED and WEDGED the executor -- see the incident.)
-- **Iter 3 (fo-3-cf4965fb):** single-worker executor+watchdog HARDENING (e5b93ab).
-- **Iter 4 (fo-4-31706096):** Governor Phase 2 DONE (detached warm server, f8c961a; warm reuse ~1ms vs ~1200ms cold), Verification Console audit loop validated end-to-end (174360d), frontier.bridge return-capture hardened + a real Phase 3 escalation pack (b17a945).
-res.lease consumer trio complete; executor+watchdog hardened + restarted-live; Governor Phase 2 done; the audit loop is exercised + gated.
-- **Iter 5 (fo-5-c76df95a):** widgets/03 Console teardown orphan-sweep (033fd6f, TD -- a scope-guarded before/after PID-set diff reaps the DETACHED warm llama-server Process.Kill misses; cloud 101/101 + live 112/112) + orchestrate.fanout #30 handoff packet-input validation (2afd5de, MK -- input_warning on a contract mismatch; plan/report/status + plan.json unchanged; live 71/71). Governor Phase 3 frontier second opinion couriered back (frontier.bridge return 0af2f2d9) + folded into claude/ADAPTIVE_RESOURCE_GOVERNOR.md. Governor Phase 3 Stage-1 is now BUILT (see Iter 6).
-- **Iter 6 (fo-6-b918dbb8):** Governor Phase 3 Stage-1 auto-ramp controller SHIPPED as agent.local #21 opt-in `-AutoRamp` (0005e41, module 21 ONLY -- model.gateway #7 + route.tools #27 untouched): monotonic model-affine epochs M0->M1->S0, a pre-frozen `lifeorch.goal_verification/0.1` success contract, whole-task gpu lease + exact warm-server residency-key matching, hard/2-strike triggers, duplicate-side-effect guard, a governor trace. Live calibration (warm, temp0 seed42, 6 real states): resident 9B DIRECT decisions 6/6 vs 3B 4/6 (S0 holds; S0 needs >=~1024 tok or the 9B returns empty -- a HARD trigger). off-machine 50/50 + agent.local 87/87 green; LIVE floor->M0 no-escalation + engineered ramp M0->M1->S0 (1 swap), 0 orphans. - **Iter 7 (fo-7-5a4c227d):** a 2-worker wave (0 conflicts) -- AR-console-autoramp wired `-AutoRamp` into the Local Agent Console widget 01 as an opt-in toggle + governor-trace render (33da9a5; 85/85 + 90/90); S2-x0-logprobs shipped a logprobs live-probe (clean per-token logprobs on BOTH builds b8661+b10092) + a deadline-gated X0/27B one-shot recovery rung `-AllowLegacy27B` (LIVE FIRED -> verified_success at epoch X0, ramp 3B->9B->27B = 1 swap into the 27B, 0 orphans) + an opt-in logprob-entropy signal (830efcc; 83/83). A post-ship orchestrator `.GetNewClosure()` fix cleared a live-GUI Console toggle crash (null-ref 'Enabled' on $null from bare-local WinForms handlers) + added a SelfTest toggle guard (b1f36f0; live 91/91, 0 orphans); Nicholas re-confirmed the GUI live, so the Local Agent Console (widget 01) live-GUI adoption pass is DONE. The widget-03 Verification Console GPU pass (H #3) remains a separate residual.
-- **Iter 8 (fo-8-e6f2d44f):** adoption+practicality, 2 workers (0 conflicts). AR8-default-on flipped agent.local's default to `-AutoRamp` (278c088, mock gates green) but the orchestrator's real-model floor-check caught a CONTRACT-LESS REGRESSION (no success contract -> the controller ignores the agent's `finish` -> loops to max_steps + status=error; the strict-floor opt-out finishes in 1 step) -> REVERTED byte-exact vs b1f36f0 (fbacf69); the known-good opt-in default is restored (controller+flag+contract path remain opt-in). X0-quant returned a NEGATIVE RESULT -- no Qwen3.5-27B quant fits GPU-bound on 11 GB (~9.9 GB free; IQ2_XXS 9.61 GB collapses quality; usable quants 12-15 GB) -> the resident 9B Q4 is the effective top rung; nothing shipped. Nicholas couriered a ChatGPT (GPT-5.6) deep-research model-selection report (digest core-docs/research/2026-07-28-frontier-local-model-selection.md) confirming the 27B is impractical + recommending a fidelity upgrade to Qwen3.5-9B-Q5_K_M.
-- **Iter 9 (fo-9-d4139304):** AR9-close FIXED the D-0061 contract-less -AutoRamp closing (the M0 epoch closes via the D-0046 terminator once >=1 required side-effecting tool succeeds -- the iter-8 all-routed-tools inversion is gone) + re-enabled -AutoRamp DEFAULT-ON (e444851; real-model floor-check PASS: completed/M0/0-swaps/0-orphans; off-machine 122/122 + agent.local 102/102 + Console 89/89 + route.tools 33/33; -NoAutoRamp/-AutoRamp:$false reproduce the strict floor byte-for-byte); Q5-stage upgraded the 9B strong tier Q4_K_M -> Q5_K_M (0bd2733; 7.11 GB, models.json repointed in place, Q4 kept wired:false for rollback; orchestrator live S0 6/6 @2048 tok PASS -- the 32-tok latency harness returns empty on BOTH quants, documented, not a regression). 0 conflicts, 2/2.
-- **Iter 10 (fo-10-fbfbae02):** warm multi-model pool + router DESIGN-FIRST. WMP-design shipped modules/07-model-gateway/WARM_POOL_DESIGN.md (c07125f, scope-clean) + a real-box probe (m10-warmpool-probe-002, 0 orphans): one ~7 GB model fits the 11 GB GPU (9B Q5 -> 2902 MiB free; ~93k-tok KV headroom); swap is GPU-upload-bound (~1.6-4.1 s), same-model reuse ~1 ms, page-cache warmth does NOT help; BOTH builds expose native --models/--alias + --slot-save-path + --cache-reuse; all GGUFs (28.5 GiB) fit 64 GB RAM. frontier.bridge pack 12da1fca couriered to ChatGPT Pro -> second opinion CONFIRMS mechanism C (native router only a supervisor, does not remove the ~4 s upload; --models-max not a VRAM oracle; B rejected), folded into the design section 9 + DECISION_LOG D-0063. Stage-1 = mechanism C (a NAMED POOL MANAGER extending the D-0057 warm server + residency-key + task-affinity/model-affine-epoch policy + whole-task gpu lease + 90 s keep-resident); native --models router + slot save/restore + a coding specialist gated to Stage-2+.
-- **Iter 11 (fo-11-4dbc8dce):** Verification Console UX, 1 CPU worker VC-ux (0 conflicts). Commit 206b2dd (4 files, +602/-28): widgets/03-verification-console VerificationConsole.psm1 (+302; new core fns Get-RecentPackets / Get-ItemActionModel / Get-ReferencedPaths, unit-tested), Show-VerificationConsole.ps1 (+221), tests (+84), README. Delivered: Open-latest + Recent-packets picker + default browse dir; human_action Run-disabled + Open affordance; plain-language INVALID; run_module Run enabled; artifact_root + plan_id / report_back / source in the header. Gate cloud 133/133 + CPU-only live SelfTest OK; Nicholas live-tested the GUI. OPEN BUG (-> iteration 12): verdict persistence -- leave + return to an item and the checklist + Overall verdict reset to defaults; unknown whether Export also loses them; traced to Show-VerificationConsole.ps1 (Show-SelectedItem / Save-CurrentItemVerdict, Overall-combo not restored on select); a regression from the ~221-line rewrite that slipped the 133/133 gate (mock/API gates miss rendered-UI bugs, D-0049/D-0060). Iteration 11 handoff was NOT formally run (verification = Nicholas's live-GUI pass).
-- **Iter 12 (fo-12-e93a4cdd):** Verification Console verdict-persistence FIX, 1 CPU worker VC-verdict-fix (0 conflicts). Commit 49f7feb (widgets/03 only): moved the per-item verdict save/restore/currentId cycle out of the untested shell into the WinForms-free core (New-ItemVerdictState / Initialize-ItemVerdictStore / Get-ItemVerdictState / Save-ItemVerdictState; restore ALL of {checklist, overall, notes} on select; SetItemChecked; suspend-events data-loss guard). Determination: the D-0064 reset was VIEW-ONLY -- the exported JSON always retained verdicts. Gate cloud mock 151/151 (+18 tests) + live STA SelfTest SELFTEST_VERDICT_PERSIST_OK.
-- **Iter 13 (ad-hoc, no fan-out plan):** Verification Console DURABLE verdicts (Nicholas follow-on in the same worker session). Commit f3c1ec7 (widgets/03 only): Save-VerdictStore autosaves the store to a runtime/results/ sidecar keyed by packet_id (on Save / form-close / Export) + opening a packet AUTO-LOADS the newest saved result (Find-SavedResultPath + Import-ResultVerdicts, match by item id then check id/position); the packet file is never modified. Gate cloud mock 173/173 (+22 tests) + live STA SelfTest SELFTEST_AUTOLOAD_OK. Nicholas live-confirmed the Console WORKING.
+**You are the fan-out orchestrator** -- the ONE Claude instance that scopes work units, drives
+`orchestrate.fanout` (#30) to emit worker prompts, and hands them to Nicholas, who dispatches each into a
+FRESH Cowork session. You NEVER drive another AI session (the hard D-0051 boundary) -- every lane is
+human-dispatched, including the frontier lane (a human-couriered pack, not a driven session).
 
-**Next = a NEW fan-out orchestrator running the EXPANDED 4-lane wave (iteration 14; see 'Expanded wave model' below + core-docs/ORCHESTRATOR_HANDOFF_2026-07-29-expanded.md). Per wave: 1 GPU worker (<=1/wave HARD clamp) + 1 CPU worker + 1 broad coding worker + 1 externalized frontier-GPT review/audit lane (frontier.bridge #31 courier, off-box). Units chosen by the fresh session + Nicholas from the candidate menu; standing GPU candidate = warm-pool Stage-1 (mechanism C) per WARM_POOL_DESIGN sections 6 + 9. Iterations 12-13 (Verification Console verdict fix + durable verdicts) are DONE + live-confirmed (D-0065); HEAD f3c1ec7.**
+## 0. TL;DR
 
-## Expanded wave model (the acceleration plan, D-0065)
-Nicholas's directive: accelerate parallel work by running up to FOUR lanes per wave. The orchestrator still NEVER drives another AI session (D-0051) -- every lane is human-dispatched (Nicholas opens a fresh Cowork session per on-box worker + pastes its prompt; for the frontier lane he couriers the pack to the external GPT + pastes the answer back).
-- **GPU lane (<=1 per wave -- HARD CLAMP).** One Cowork worker on a GPU-bound unit (any llama-server / CUDA pipeline on the 11 GB GPU). Physically capped at 1 concurrent (every model module is parallel_safe:false). More GPU work = serialize across waves, never parallelize. ONLY this lane may touch model modules / models.json.
-- **CPU lane (>=1).** One Cowork worker on a CPU-only module/infra unit; runs alongside the GPU lane.
-- **Coding lane (CPU, >=1).** A broad-remit CPU worker -- refinement, expansion, interfaces, widgets, tests, anything non-GPU. A DISTINCT module/area from the CPU lane (never two workers in one module).
-- **Frontier-review lane (off-box, external GPT -- frontier.bridge #31).** NOT a Cowork worker + NOT box/GPU-bound. The orchestrator emits a pack {prompt, files}; Nicholas couriers it to ChatGPT Pro / GPT-5.x + pastes the answer back; the orchestrator folds it into docs. Consumes NO gpu/git/doc lease -> fully parallel + free; ideal for audit / review / second-opinion / research.
-**Clamps + concurrency:** <=1 GPU worker; the box has PROVEN 3 concurrent Cowork sessions OK, so 1 GPU + 2 CPU = MaxParallel 3 is the validated on-box ceiling (scale CPU workers up only while the executor heartbeat stays degraded:false / poll_error_streak 0 / stuck_finalize_count 0). The git lease serialises ALL commits across lanes; workers use docs:[] so doc contention is 0 by design (the orchestrator mirrors core-docs). The frontier lane is off-box (bounded only by Nicholas's courier bandwidth). Wedge risk scales with concurrency -- any persistent llama-server MUST launch DETACHED + reap before finalize (D-0055/56); reassert the 0-orphan check.
-**Wave loop:** scope 1 GPU + 1-2 CPU/coding units (distinct modules) + 1 frontier review topic -> `plan` with MaxParallel = on-box worker count + WorkersJson (gpu only on the GPU worker, docs:[] on all) -> confirm dispatch_now <= MaxParallel, exactly <=1 gpu, 0 doc contention, clean preflight -> emit the frontier pack separately (frontier.bridge `pack`) -> relay the check-in + every worker prompt + the frontier pack as FILES (SendUserFile) -> workers run + report; frontier answer couriered back -> `status` until ready_for_handoff -> `handoff` -> fold the frontier answer + mirror the core-docs under the git lease -> iterate.
-**Candidate-unit menu (the fresh session + Nicholas pick each wave):**
-- GPU: (a) warm-pool Stage-1 = the NAMED POOL MANAGER (mechanism C) per WARM_POOL_DESIGN sections 6 + 9 (READY draft claude/iter11-stage1-DRAFT.md, renumber); (b) warm-pool Stage-2 probes (native --models router on b8661/b10092, slot save/restore, a coding-specialist behind its >=30-task benchmark; gated after Stage-1); (c) a generator build #22-#25 (BLOCKED on the frontier model-leads); (d) the b10092 universal-engine probe across all 5 fixtures (VLM = gating test).
-- CPU: (a) portability / new-machine bring-up (a scoped setup.ps1: config-driven repo-root + data-root, prereq check, model/engine staging, GPU detect, machine-specific models.json, a verify pass -- do before a hardware upgrade); (b) wire res.lease consumers into more callers; (c) a model-module narrowing / hardening pass; (d) executor/watchdog resilience follow-ups.
-- Coding: (a) Verification Console polish/expansion (it is the audit surface now -- a results browser, a diff view, batch verdicts); (b) Local Agent Console (widgets/01) refinements; (c) a NEW widget (e.g. a fan-out wave dashboard = plan/worker/lease state); (d) test-coverage + interface cleanups; (e) Module Launcher (widget 02) enhancements.
-- Frontier (audit/review/research): (a) request the audio/image/video MODEL LEADS from the frontier report (unblocks generators #22-#25 -- outstanding + high-value); (b) a design/impl audit of warm-pool Stage-1 (mechanism C) -- red-team the residency-key / whole-task-lease / keep-resident policy; (c) a correctness/security review of a shipped module (executor, res.lease, or the Console durable-verdicts sidecar); (d) a second opinion on any risky decision.
+- Read section 2 (orient + verify the box), then run **iteration 14 -- the first EXPANDED 4-lane wave**
+  (section 4). The GPU-lane brief is pre-authored at `core-docs/fanout/FANOUT_AGENT_001.md`; pick the CPU +
+  coding + frontier units with Nicholas from the candidate menu.
+- Workers use `docs:[]`; YOU mirror the shared core-docs under the `git` lease (section 7). Doc rules --
+  budgets, replace-don't-append, archive -- live in `DOC_PROTOCOL.md`; follow them or the docs re-bloat.
+- Deliver worker prompts + verification packets + frontier packs to Nicholas as FILES (SendUserFile), never
+  as on-disk GUID paths (the #1 UX lesson). Worker briefs ALSO go into the numbered
+  `core-docs/fanout/FANOUT_AGENT_00N.md` slots (mirrored to the Project) so Nicholas can dispatch a worker by
+  telling a fresh session "read claude/fanout/FANOUT_AGENT_00N.md and execute it" (section 5).
+- Iterations 1-13 are DONE + live-confirmed (ledger in section 3; rationale D-0055..D-0065). The core-docs
+  consolidation is DONE (D-0066). Box state at handoff: section 11.
 
-## The loop (each iteration)
-1. **Scope units.** 1..N units that can run in parallel. Per worker: `gpu` (any model/render run)? `docs` -> leave `[]` (see the doc rule); `needs_git` (default true); `skill_id`+`skill_dir`+`inputs` if the output is a runnable module (-> a run_module verification item).
-2. **plan.** Author a task.ps1 that calls `Invoke-OrchestrateFanout.ps1 -Action plan -Title ... -Iteration N -MaxParallel M -ReportBack on_all -WorkersJson '<json>'`; run it through the executor. It returns dispatch_now (<=M, at most ONE gpu worker) / queued / conflicts / a prompt per worker + one check-in. Confirm 0 gpu/doc conflicts + a clean preflight.
-3. **Relay.** Stage + read the emitted workers/worker-*.prompt.md + check-in.prompt.md; give Nicholas the check-in + each worker prompt to paste into a FRESH Cowork session (one per worker).
-4. **Workers run.** Each acquires its res.lease(s) in gpu->git->doc order, does ONE unit, ships via dev.ship, then `-Action report ... -State done`.
-5. **status -> handoff.** `-Action status -PlanId <id>` until ready_for_handoff; then `-Action handoff -PlanId <id>` (emits a Verification Console packet + next prompts).
-6. **YOU mirror the docs** (workers never touch core-docs): acquire the res.lease `git` lease, do CRLF-safe fail-closed anchored edits + commit with trailers, mirror the changed core-docs to the Project, release. Then iterate.
+## 1. Role + hard boundary (non-negotiable)
 
-## Required access (grant at session start)
-Every orchestrator AND worker session needs exactly ONE grant to operate: **connect the repo folder `C:\Users\just_\LifeOrchestrator-Refresh`** (the desktop app "Add folder", or approve a device_request_folder_access for that path). That single folder connection is sufficient for everything -- reading the repo, driving the executor via exec-job.sh (the queue lives under runtime/ inside that folder), staging (device_stage_files), and committing (via the executor). Nothing else is needed at startup: the large-data drive (F:) is accessed natively by the Windows executor, NOT the session; the GPU is the executor process's; computer-use (Task Manager) is only for the rare out-of-band wedge recovery, not routine operation. Grants are PER SESSION -- prime each new session with this one folder grant as soon as it starts. Machine-level prerequisite (not a per-session grant): the executor process must be running on the box (ops/start-executor.bat or the watchdog), heartbeat fresh + degraded:false.
+`orchestrate.fanout` (#30) is deterministic scaffolding on `res.lease` (#29): a `gpu` lease, a `git` commit
+lock, `doc:<path>` ownership. YOU supply judgement (what the units are, when to fan out vs serialize).
+Human-dispatched workers: the module emits prompts; Nicholas starts a fresh session per worker. Workers
+report; the orchestrator mirrors the core-docs. <=1 GPU worker per wave, ALWAYS. Ship every unit via
+`dev.ship` (Module 0 job-runner). The orchestrator NEVER drives another AI session (D-0051) -- the frontier
+lane is a couriered pack (D-0052), automated access to any external AI stays OUT.
 
-## Running pwsh on the box (critical)
-`device_bash` is a **Linux VM** with the repo mounted -- it CANNOT run Windows pwsh. All pwsh runs through the **executor** (a Windows process). Write a task.ps1 to `modules/30-orchestrate-fanout/runtime/` via a device_bash heredoc, then `bash modules/00-bootstrap-executor/exec-job.sh run <id> <timeout> <task.ps1> <maxwait> "<desc>"`. Ship a unit gate+commit with `exec-job.sh devship`. Long/GPU jobs: re-run `exec-job.sh wait <id>` (device_bash caps ~45s). Confirm the executor is alive first: `modules/00-bootstrap-executor/runtime/control/heartbeat.json` fresh + `degraded:false`.
+## 2. First 15 minutes: orient + verify the box
 
-## Worker-spec rules
-- **docs:[] on every worker.** Workers REPORT; the orchestrator mirrors shared core-docs (step 6). Zeroes doc-contention.
-- **<=1 GPU worker per wave** (the clamp). Every model module is parallel_safe:false (one llama-server/pipeline on the 11 GB GPU). CPU workers run alongside it.
-- **Correct inputs.** If you set skill_id, give `inputs` matching that skill op contract (e.g. frontier.bridge `pack` needs {prompt,files}, NOT {task,...} -- a real defect the audit loop caught, D-0057).
-- **Single-worker for core infra** (the executor/watchdog, dev.ship, orchestrate.fanout itself) -- isolate it so it cannot collide with concurrent workers.
-- Distinct module per worker; commits serialize on the `git` lease (+ dev.ship index-clean guard). MaxParallel: start 2, scale as the box proves it keeps up (it handled 3 fine).
+Read (Project mirrors these; disk is canonical): `core-docs/START_HERE.md`, `core-docs/CURRENT_STATE.md`,
+THIS doc, `modules/30-orchestrate-fanout/FANOUT_PROTOCOL.md` (the module manual; its "start MaxParallel 2" sizing is
+superseded for this box — 3 = 1 GPU + 2 CPU is validated, section 4). When editing docs:
+`core-docs/DOC_PROTOCOL.md`. For the standing GPU build: `modules/07-model-gateway/WARM_POOL_DESIGN.md`
+sections 6 + 9 and `core-docs/fanout/FANOUT_AGENT_001.md`.
+The gotcha corpus is owned by `CURRENT_STATE.md` -> Known failures — read it before touching the box.
 
-## Gotchas (hard-won)
-- **The wedge (now hardened, D-0055/56):** a task that BLOCKS while holding a persistent llama-server orphans it (the executor Job kill cannot reap a detached grandchild) and locks a running/ file, livelocking the poll loop while the heartbeat stays fresh (watchdog blind). FIX shipped (G, e5b93ab): reap the whole tree before finalize + isolate per-task finalize + watchdog wedge-detection via heartbeat health fields (degraded/poll_error_streak/stuck_finalize_count). LAUNCH ANY PERSISTENT SERVER DETACHED so the task returns (E2 Win32_Process.Create, f8c961a).
-- **If it wedges anyway:** the executor cannot run its own cleanup while wedged; kill the orphan OUT-OF-BAND. computer-use TERMINALS are click-only (cannot type), so use **Task Manager** (full tier) End task on llama-server.exe. The lock releases and the executor self-recovers.
-- **device_stage_files stale snapshot:** re-staging a previously-staged uploads path returns OLD bytes. Stage a FRESH never-staged path (or the real core-docs/*.md directly, not a reused docmirror/).
-- **Doc edits:** core-docs are CRLF. Edit via a fail-closed anchored pwsh pass (normalize LF for matching; throw if an anchor is not found exactly N times; atomic temp+rename; re-apply CRLF). Commit ONLY the named files under the git lease; never `git add -A`; trailers required. Mirror by fresh-copying to a never-staged path, staging, and project_write to the Project (HANDOFF mirrors to claude/HANDOFF.md; others to top-level).
-- **Watchdog** is session-scoped/non-persistent (D-0013). (Re)start ops/start-watchdog.bat for unattended runs; it now catches a wedged-but-heartbeating executor.
+Verify the box (in `device_bash`, `cd ~/mnt/LifeOrchestrator-Refresh`):
+- `cat modules/00-bootstrap-executor/runtime/control/heartbeat.json` -> `at_utc` fresh, `degraded:false`,
+  `poll_error_streak:0`, `stuck_finalize_count:0`.
+- `ls modules/29-resource-lease/runtime/leases/` -> expect empty (no lease held).
+- `git log -1 --format='%h %s'` -> confirm HEAD matches section 11 (read-only git over the mount is fine;
+  ALL git writes go through the executor).
+`device_bash` is a Linux VM -- it CANNOT run Windows pwsh; all pwsh runs through the executor via
+`modules/00-bootstrap-executor/exec-job.sh` (section 7).
 
-## Current frontier / candidate next units (iteration 5+)
-- **Governor Phase 3 (auto-ramp) -- NOW THE RECOMMENDED NEXT UNIT (iteration 6).** The frontier second opinion is IN (Nicholas couriered worker I's pack d9df215c to ChatGPT Pro; the answer is at modules/31-frontier-bridge/runtime/artifacts/0af2f2d9-82cc-4841-87f8-eadf241d15be/frontier-pack-0af2f2d9.answer.md). It REFINES the design to a MONOTONIC, MODEL-AFFINE EPOCH controller (M0 3B floor -> M1 expanded-mid no-reload retry -> S0 9B strong DIRECT decisions -> optional X0 one-shot 27B), closed by a pre-frozen deterministic success contract (lifeorch.goal_verification/0.1), a WHOLE-TASK gpu lease (renew ~30s), and an EXACT resident-model manifest; the Stage-1 slice + failure-mode bounds are captured in claude/ADAPTIVE_RESOURCE_GOVERNOR.md. Build it as ONE GPU worker (+ a small live mid-vs-strong decision calibration first).
-- **Module 30 packet-input fix** (H #1) -- DONE (iter 5, MK, 2afd5de): the handoff packet validates run_module inputs against each skill.json op contract and annotates a mismatch with input_warning (surfaces, never rewrites); live 71/71.
-- **Verification Console teardown fix** (H #2) -- DONE (iter 5, TD, 033fd6f): widgets/03 run-teardown reaps the detached warm llama-server via a scope-guarded before/after PID-set diff + a -Live 0-orphan assertion; cloud 101/101 + live 112/112.
-- **Residual human Console pass** (H #3): run a model.gateway (GPU) item in the live Console GUI.
-- **Portability / new-machine bring-up (BACKLOG -- do when it earns it, e.g. before a hardware upgrade; captured now so it is ready to execute then):** relocate the whole stack to a fresh Windows 11 box in ONE setup pass. The repo (modules/widgets/docs -- plain pwsh + .NET + JSON) is already portable; what is machine-wired is (1) the model/engine DATA on F: (gitignored, tens of GB), (2) the hard-coded ABSOLUTE PATHS (C:/Users/just_/LifeOrchestrator-Refresh + F:/My_Programs/... in the executor, models.json, lease/plan/calibration dirs, generated worker prompts), (3) GPU/CUDA tuning (RTX 2080 Ti 11 GB quant/gpu_layers + the b8661/b10092 llama.cpp builds). SCOPE: a config-driven repo-root + data-root; a setup.ps1 bootstrap (check prereqs; stage/download models+engines; detect GPU; write a machine-specific models.json); a verify pass (heartbeat + strong-tier smoke gen + S0 calibration). NOT major -- a scoped bring-up module, not a rewrite. Full spec in MODULE_ROADMAP.md.
-- Apply the warm-server pattern to the other model modules; wire res.lease consumers into more callers; a model-module narrowing pass.
+## 3. Where things stand
 
-## Reference
-Plans: modules/30-orchestrate-fanout/runtime/plans/<plan_id>/. Artifacts (prompts, packets): .../runtime/artifacts/<invocation_id>/. Shared lease dir: modules/29-resource-lease/runtime/leases/. Commits: fo-1 0c6d5c9/5530418/f52f21d (+docs dd481b9); fo-2 d2a7352/581f854; fo-3 e5b93ab (+docs eed48e0); fo-4 f8c961a/174360d/b17a945. fo-5 033fd6f/2afd5de (+docs 7b394c5); fo-6 0005e41 (+docs 3c84661); fo-7 33da9a5/830efcc + toggle-fix b1f36f0 (+docs 1d20127); fo-8 278c088 REVERTED by fbacf69 (default-on contract-less regression), X0-quant negative-result (no commit) (+docs c1763c1). fo-9 e444851 (AR9-close, D-0061 contract-less closing fix + -AutoRamp default-on) / 0bd2733 (Q5-stage, 9B strong tier Q5_K_M) (+docs this pass).
+**Now:** modules 0-31 + widgets 01-03 built (one-liners in `CURRENT_STATE.md`); the fan-out loop has run 13
+iterations end-to-end; the Verification Console is the trusted audit surface (durable verdicts,
+live-confirmed); the Governor's `-AutoRamp` is DEFAULT-ON (M0->M1->S0, opt-in deadline-gated X0/27B); the
+strong tier is Qwen3.5-9B Q5_K_M, fully GPU-resident on engine b10092; the 27B is validated impractical on
+the 11 GB GPU. Warm-pool Stage-1 (mechanism C) is designed + frontier-confirmed and is the standing GPU
+candidate.
+
+**Iteration ledger** (one line each; detail = the D-entry; commits verifiable in git):
+
+- i1 `fo-1-20ed8a0b` (D-0055): res.lease `gpu`->model.gateway #7 `0c6d5c9`; `git`->dev.ship `5530418`; frontier.bridge #31 built `f52f21d`. 3/3, 0 conflicts.
+- i2 `fo-2-b991c65f` (D-0056): `doc:<path>`->doc.io #20 `d2a7352` (consumer trio complete); #30 template fix `581f854`; worker E (warm server) FAILED + WEDGED the executor (recovered out-of-band).
+- i3 `fo-3-cf4965fb` (D-0056): single-worker executor+watchdog HARDENING `e5b93ab`; executor restarted onto it.
+- i4 `fo-4-31706096` (D-0057): Governor Phase 2 DETACHED warm server `f8c961a` (warm ~1 ms vs ~1200 ms cold); Console audit loop validated end-to-end `174360d`; frontier.bridge hardened + a real Phase 3 pack `b17a945`.
+- i5 `fo-5-c76df95a` (D-0058): Console teardown orphan-sweep `033fd6f`; #30 handoff packet-input validation `2afd5de`; Phase 3 frontier second opinion folded into ADAPTIVE_RESOURCE_GOVERNOR.md.
+- i6 `fo-6-b918dbb8` (D-0059): Governor Phase 3 Stage-1 opt-in `-AutoRamp` `0005e41`; calibration resident-9B 6/6 vs 3B 4/6 (S0 needs >=~1024 tok or the 9B returns empty -- a HARD trigger).
+- i7 `fo-7-5a4c227d` (D-0060): X0/27B one-shot recovery rung + logprob-entropy signal `830efcc`; Console `-AutoRamp` toggle `33da9a5` + `.GetNewClosure()` toggle-crash fix `b1f36f0`; live-GUI adoption pass DONE.
+- i8 `fo-8-e6f2d44f` (D-0061): `-AutoRamp` default-on TRIED `278c088` then REVERTED byte-exact `fbacf69` (contract-less closing regression caught by a real-model floor-check); 27B quant NEGATIVE RESULT (no GPU-bound fit on 11 GB).
+- i9 `fo-9-d4139304` (D-0062): contract-less closing FIXED + `-AutoRamp` DEFAULT-ON `e444851`; 9B strong tier Q4_K_M -> Q5_K_M `0bd2733` (Q4 kept `wired:false` for rollback).
+- i10 `fo-10-fbfbae02` (D-0063): WARM_POOL_DESIGN.md shipped `c07125f` + a real-box probe + a couriered second opinion CONFIRMING mechanism C (named pool manager; native `--models` router is only a supervisor).
+- i11 `fo-11-4dbc8dce` (D-0064): Verification Console UX `206b2dd` (packet discovery, by-kind render, output locations); left an open verdict-persistence display bug.
+- i12 `fo-12-e93a4cdd` (D-0065): verdict save/restore moved into the tested WinForms-free core `49f7feb`; the D-0064 reset was VIEW-ONLY (exports never lost data).
+- i13 ad-hoc, no plan (D-0065): DURABLE verdicts -- results sidecar keyed by packet_id + auto-load on open `f3c1ec7`; Nicholas live-confirmed the Console WORKING.
+- docs: consolidation pass (D-0066, this doc set): one live handoff, budgets, DECISION_LOG index, fanout slots, `archive/` tree.
+
+Docs commits per iteration (git archaeology): i1 `dd481b9` · i3 `eed48e0` · i5 `7b394c5` · i6 `3c84661` ·
+i7 `1d20127` · i8 `c1763c1`; later ones are named in `archive/handoffs/`. Runtime paths: plans
+`modules/30-orchestrate-fanout/runtime/plans/<plan_id>/` · emitted prompts/packets
+`.../runtime/artifacts/<invocation_id>/` · leases `modules/29-resource-lease/runtime/leases/`.
+
+Numbering: fanned-out waves + ad-hoc commits share one counter; **the next wave is iteration 14.**
+
+## 4. Current frontier: iteration 14 -- the EXPANDED 4-lane wave (D-0065)
+
+Nicholas's directive: accelerate by running up to FOUR lanes per wave. Every lane is human-dispatched.
+
+- **GPU lane (<=1 per wave -- HARD CLAMP).** One Cowork worker on a GPU-bound unit (any llama-server / CUDA
+  pipeline on the 11 GB GPU; every model module is `parallel_safe:false`). More GPU work = serialize across
+  waves. ONLY this lane may touch model modules / `models.json`. Leases gpu->git.
+- **CPU lane (>=1).** One Cowork worker on a CPU-only module/infra unit. Lease git.
+- **Coding lane (CPU, >=1).** A broad-remit CPU worker -- refinement, interfaces, widgets, tests -- in a
+  DISTINCT module/area from the CPU lane (never two workers in one module). Lease git.
+- **Frontier-review lane (off-box).** NOT a Cowork worker: the orchestrator emits a frontier.bridge #31
+  `pack` (`{prompt, files}` -- NOT `{task,...}`, D-0057); Nicholas couriers it to ChatGPT Pro / GPT-5.x and
+  pastes the answer back; the orchestrator captures it under
+  `modules/31-frontier-bridge/runtime/artifacts/<id>/` and folds it into docs. No lease; fully parallel.
+  Audit-and-review-only is a perfectly good use.
+
+**Clamps.** <=1 GPU worker, always. The box has PROVEN 3 concurrent Cowork sessions OK: **1 GPU + 2 CPU =
+MaxParallel 3** is the validated ceiling; grow CPU workers only while the executor heartbeat stays healthy
+under load. The `git` lease serialises all commits (fast, fine). `docs:[]` on all workers -> doc contention
+0 by design. Wedge risk scales with concurrency: persistent llama-servers MUST launch DETACHED and be reaped
+before finalize (D-0055/56); reassert the 0-orphan check every wave.
+
+**Wave loop:** scope 1 GPU + 1-2 CPU/coding units (distinct modules) + 1 frontier topic -> fill the
+`FANOUT_AGENT_00N` slots (section 5) -> author `workers-i14.json` + `task-plan-i14.ps1` (copy
+`task-plan-i12.ps1`; `-Iteration 14 -MaxParallel 3`; `gpu:true` only on the GPU worker) -> run `plan` via the
+executor; confirm `dispatch_now` <= 3, exactly <=1 gpu, 0 doc contention, clean preflight -> emit the
+frontier pack separately -> relay the check-in + every worker prompt + the pack as FILES + slot docs ->
+workers run + report -> poll `-Action status -PlanId fo-14-<id>` until `ready_for_handoff` -> `-Action
+handoff` -> fold the frontier answer, mirror the core-docs (D-0067+), archive the used briefs -> iterate.
+
+**Candidate-unit menu** (pick with Nicholas each wave):
+- GPU: (a) **warm-pool Stage-1 = the NAMED POOL MANAGER (mechanism C)** per WARM_POOL_DESIGN sections 6+9 --
+  the standing candidate, brief READY at `core-docs/fanout/FANOUT_AGENT_001.md`; (b) warm-pool Stage-2
+  probes (native `--models` router, slot save/restore, a coding specialist behind its >=30-task benchmark — pass
+  thresholds in WARM_POOL_DESIGN §9 — gated after Stage-1); (c) a generator build #22-#25 (BLOCKED on the frontier model-leads); (d) the b10092
+  universal-engine probe across all 5 fixtures (VLM = the gating test).
+- CPU: (a) portability / new-machine bring-up (scoped `setup.ps1`; full spec in MODULE_ROADMAP.md -- do
+  before a hardware upgrade); (b) wire res.lease consumers into more callers; (c) a model-module narrowing /
+  hardening pass; (d) executor / watchdog resilience follow-ups.
+- Coding: (a) Verification Console polish (results browser, diff view, batch verdicts); (b) Local Agent
+  Console refinements; (c) a NEW widget (e.g. a fan-out wave dashboard: plan/worker/lease state); (d)
+  test-coverage + interface cleanups; (e) Module Launcher enhancements.
+- Frontier: (a) **request the audio/image/video MODEL LEADS** from the report (unblocks generators #22-#25 --
+  outstanding + high-value); (b) a red-team audit of warm-pool Stage-1 (residency key / whole-task lease /
+  keep-resident policy); (c) a correctness/security review of a shipped module (executor, res.lease, the
+  Console durable-verdicts sidecar); (d) a second opinion on any risky decision.
+
+## 5. Worker briefs: the FANOUT_AGENT slot system (D-0066)
+
+Numbered brief docs (`core-docs/fanout/FANOUT_AGENT_001..003` = GPU/CPU/coding lanes; template
+`FANOUT_AGENT_TEMPLATE.md`; mirrored at `claude/fanout/`) decouple "what a worker must do" from chat
+pasting: fill a slot at wave scoping (usually by pasting the `plan`-emitted worker prompt into its Unit
+section), mirror it, and Nicholas dispatches a fresh Cowork session with "Read the Project doc
+`claude/fanout/FANOUT_AGENT_00N.md` and execute it" plus the one folder grant (section 10). Slot docs still
+travel to Nicholas as FILES too. Lifecycle + archiving (READY/DISPATCHED/EMPTY, archive on completion,
+menus live only in section 4): `DOC_PROTOCOL.md` section 6.
+
+## 6. Locations
+
+- **Repo (canonical, git):** `C:\Users\just_\LifeOrchestrator-Refresh\` -- `core-docs/` + `modules/` +
+  `widgets/` + `archive/` + `ops/`. Disk is canonical; the attached Claude Project mirrors `core-docs/` for
+  desktop-less sessions (mirror map in `DOC_PROTOCOL.md` section 8).
+- **Large data (gitignored):** `F:\My_Programs\LifeOrchestrator-Refresh_Large_Data\` -- per-owning-module
+  model homes; `_engines\llama.cpp` (b8661, default) + `_engines\llama.cpp-b10092` (CUDA 12.4,
+  self-contained; ONLY the 9B strong tier pins it via `engine_path`).
+- **Executor:** `modules\00-bootstrap-executor\runtime\` (staging -> pending -> running -> completed/failed);
+  driven via `exec-job.sh`. Heartbeat: `runtime/control/heartbeat.json`. Watchdog: `ops/start-watchdog.bat`.
+- **Box:** `DESKTOP-PF5FFMF` -- RTX 2080 Ti 11 GB (CC 7.5), i9-9900KF 8c/16t, 64 GB RAM, Win10 Pro; C:
+  constrained (~67 GB free), F: 3.72 TB large-data home. Full profile: TOOL_MODEL_REGISTRY.md.
+
+## 7. Mechanics cheat-sheet
+
+- **Run pwsh via the executor** (from `device_bash`, `~/mnt/LifeOrchestrator-Refresh`): write a `task.ps1`
+  under `modules/30-orchestrate-fanout/runtime/`, then
+  `bash modules/00-bootstrap-executor/exec-job.sh run <id> <timeout> <task.ps1> <maxwait> "<desc>"`.
+  Long/GPU jobs: re-run `exec-job.sh wait <id>` (device_bash caps ~45 s per call). Verbs:
+  `submit|wait|run|devship|status`; `EXEC_RT` overrides the runtime dir.
+- **Cloud -> device:** gate off-machine FIRST (cloud pwsh 7.4.6 on Linux — install per-session from the
+  7.4.6 linux-x64 tarball, e.g. `/home/claude/pwsh764/pwsh` — plus a mock/seam harness), then `SendUserFile`
+  + `device_commit_files` the changed files onto the repo (byte-exact; <=20 MB/file). Large binaries
+  (models/engines) download ON the device via an executor `curl.exe` task — never through the bridge.
+  `device_bash` cannot delete files — `mv` unwanted ones into a `_to_delete\` folder.
+- **Ship a unit:** `exec-job.sh devship <id> <inputs.json> <timeout>` -- dev.ship verifies sha256 + AST +
+  tests FAIL-CLOSED, then commits ONLY the named files under the `git` lease with trailers. Inputs = `files:[{path,sha256}]`,
+  `ast_check`, `test_argv` (with the `{PWSH}`/`{REPO}` tokens), `commit` + `commit_files` +
+  `commit_message`-with-trailers, `check_orphans`; the index-clean guard means it can never fold in an
+  unrelated staged edit. Full schema: the `Invoke-DevShip.ps1` header + `modules/00-bootstrap-executor/README.md`.
+- **Author a plan:** write `workers-i<N>.json` (per-worker `{id,label,unit,gpu?,docs:[],needs_git?,skill_id?,
+  skill_dir?,inputs?,notes}`) + a `task-plan-i<N>.ps1` (copy `task-plan-i12.ps1`), run it, confirm
+  `dispatch_now` / <=1 gpu / 0 conflicts / clean preflight. `-Action status -PlanId <id>` polls;
+  `-Action handoff` emits the Verification Console packet + next prompts. If `status` returns no artifact,
+  read the worker reports under `plans/<id>/reports/` directly -- they are the source of truth.
+- **Frontier pack:** frontier.bridge #31 `pack` op takes `{prompt, files}`. Emit, stage, SendUserFile;
+  Nicholas couriers + pastes the answer back; capture under
+  `modules/31-frontier-bridge/runtime/artifacts/<id>/...answer.md`; fold into the relevant doc/decision.
+- **Doc edits + mirror (CRLF-safe, fail-closed; full rules in DOC_PROTOCOL.md):** core-docs are CRLF (some
+  module docs LF -- preserve per-file EOL). Edit on-device with a fail-closed Python pass (assert each anchor
+  occurs exactly once; atomic temp+rename; re-apply the file's EOL). Commit via an executor `task.ps1`:
+  acquire the `git` lease -> `git reset -q` -> `git add -- <named docs>` -> assert exactly those staged
+  (Compare-Object) -> `git commit -F <msg>` -> release. Trailers required: `Co-Authored-By: <the acting
+  Claude model> <noreply@anthropic.com>` + `Claude-Session: <url>`. NEVER `git add -A`. Then re-mirror to the
+  Project: copy the edited docs into a FRESH never-staged `docmirror-i<N>/` dir, `device_stage_files` that,
+  copy into the working dir, `project_write` with `local_path` (must be inside the working dir, not /tmp).
+- **DECISION_LOG upkeep:** append the new `D-00NN` entry at the bottom of `DECISION_LOG.md` AND append its
+  one-row line to the table in `DECISION_LOG_INDEX.md` (two files, one anchored edit each; mark a superseded
+  predecessor in its INDEX row only — entries are never edited). Update `CURRENT_STATE.md` by REPLACING sections -- never append
+  `[prior]` chains (DOC_PROTOCOL section 3).
+- **Deliver everything to Nicholas as FILES** (SendUserFile) -- prompts, packets, packs. Never GUID paths.
+
+## 8. Worker-spec rules
+
+- `docs:[]` on EVERY worker (the orchestrator mirrors core-docs; zeroes doc contention).
+- <=1 GPU worker per wave; every model module is `parallel_safe:false`.
+- Distinct module/area per worker -- never two workers in one module (commits serialise on the git lease but
+  would logically clobber).
+- Correct `inputs` for any skill_id (match the skill.json op contract -- e.g. frontier.bridge `pack` =
+  `{prompt,files}`; a mismatch surfaces as `input_warning`, D-0057/D-0058).
+- Single-worker waves for core infra (executor/watchdog, dev.ship, orchestrate.fanout itself).
+- Workers acquire leases in gpu -> git -> doc order, do ONE unit, ship via dev.ship, then
+  `-Action report -State done`.
+
+## 9. Gotchas (the load-bearing four — full corpus: `CURRENT_STATE.md` -> Known failures)
+
+- **The wedge (hardened D-0055/56 — respect it anyway):** a task that BLOCKS holding a persistent
+  llama-server orphans it and can livelock the executor while the heartbeat stays fresh. Launch persistent
+  servers DETACHED; reap before finalize; assert 0 orphans every wave. If wedged anyway: kill the orphan
+  OUT-OF-BAND — Task Manager -> End task `llama-server.exe` (computer-use terminals are click-only and
+  cannot type, so Task Manager is the tool); the executor then self-recovers.
+- **`device_stage_files` stale snapshot:** re-staging a previously-staged path returns OLD bytes. Always
+  stage a FRESH never-staged path (the `docmirror-i<N>/` pattern).
+- **Git discipline:** read-only git over the Linux mount only (its M-list is CRLF noise; mount-side git
+  writes leave a stale `index.lock` device_bash cannot unlink); ALL git writes through the executor under
+  the `git` lease; NEVER `git add -A`; `project_write local_path` must be inside the working dir, not /tmp.
+- **Deliver files, not paths** (SendUserFile) — and keep `-MaxParallel` at 3 until the heartbeat proves more.
+
+## 10. Required access (grant at session start)
+
+Every orchestrator AND worker session needs exactly ONE grant: **connect the repo folder
+`C:\Users\just_\LifeOrchestrator-Refresh`** (desktop app "Add folder", or approve a
+device_request_folder_access). That covers reading the repo, driving the executor, staging, and committing.
+F: is reached natively by the Windows executor, not by the session. Machine prerequisite (not per-session):
+the executor process running (`ops/start-executor.bat` or the watchdog), heartbeat fresh + `degraded:false`.
+Computer-use (Task Manager) is only for out-of-band wedge recovery.
+
+## 11. Box state at handoff (2026-07-29, doc-consolidation pass, D-0066)
+
+Docs-only pass — no code, no `models.json` change. No res.lease held (gpu/git free); iterations done
+through 13; the Verification Console is live-confirmed WORKING. HEAD = the D-0066 consolidation commit
+(parent `6e27ba3`, branch `master`) — confirm live with `git log -1`; if it still shows `6e27ba3`, the
+D-0066 docs commit did not land — re-run it under the git lease before dispatching a wave. Executor identity + health:
+`CURRENT_STATE.md` + the live heartbeat (section 2). **Start at section 2, then run iteration 14 (section 4).**
