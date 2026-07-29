@@ -102,10 +102,11 @@ D-refs, re-check size. Check sizes at every mirror: `wc -c core-docs/*.md` (devi
   have context. If they disagree, disk wins -- re-mirror disk -> Project.
 - Docs cite DISK paths only (the mirror map below is what makes them resolvable from the Project); the
   one exception is a dispatch instruction aimed at a Project-only session (`claude/fanout/...`).
-- Mirror map: `CURRENT_STATE.md`, `DECISION_LOG.md`, `DECISION_LOG_INDEX.md`, `MODULE_ROADMAP.md`, `TOOL_MODEL_REGISTRY.md`,
+- Mirror map: `CURRENT_STATE.md`, `DECISION_LOG.md`, `MODULE_ROADMAP.md`, `TOOL_MODEL_REGISTRY.md`,
   `REVIEW_QUEUE.md`, `PROJECT_DIRECTION.md`, `SKILL_CONTRACT.md`, `MODULE_WORK_ORDER_TEMPLATE.md`,
-  `START_HERE.md`, `DOC_PROTOCOL.md` -> Project top-level. `FANOUT_ORCHESTRATOR_HANDOFF.md`,
-  `ARCHITECTURE_MAP.md`, `ADAPTIVE_RESOURCE_GOVERNOR.md` -> `claude/`. `research/*` -> `claude/research/`.
+  `START_HERE.md` -> Project top-level. `FANOUT_ORCHESTRATOR_HANDOFF.md`, `ARCHITECTURE_MAP.md`,
+  `ADAPTIVE_RESOURCE_GOVERNOR.md`, `DOC_PROTOCOL.md`, `DECISION_LOG_INDEX.md` -> `claude/` (the Project
+  places new agent-written docs under `claude/`). `research/*` -> `claude/research/`.
   `fanout/*` -> `claude/fanout/`. `archive/` -> NOT mirrored.
 - Mirror at session end (START_HERE checklist). Only the frontier agent touches the Project; the executor
   cannot. Deleting a Project doc is allowed ONLY for a doc retired to archive/ in the same pass (verify the
