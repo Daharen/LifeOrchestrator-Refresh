@@ -77,18 +77,27 @@ function New-VerificationForm {
     $openBtn = [System.Windows.Forms.Button]::new()
     $openBtn.Text = 'Open packet...'
     $openBtn.Location = [System.Drawing.Point]::new(8, 7)
-    $openBtn.Size = [System.Drawing.Size]::new(110, 26)
+    $openBtn.Size = [System.Drawing.Size]::new(108, 26)
+    # D-0063: kill the GUID hunt -- open the newest packet directly, or pick from a recent list.
+    $openLatestBtn = [System.Windows.Forms.Button]::new()
+    $openLatestBtn.Text = 'Open latest'
+    $openLatestBtn.Location = [System.Drawing.Point]::new(120, 7)
+    $openLatestBtn.Size = [System.Drawing.Size]::new(96, 26)
+    $recentBtn = [System.Windows.Forms.Button]::new()
+    $recentBtn.Text = 'Recent packets...'
+    $recentBtn.Location = [System.Drawing.Point]::new(220, 7)
+    $recentBtn.Size = [System.Drawing.Size]::new(126, 26)
     $exportBtn = [System.Windows.Forms.Button]::new()
     $exportBtn.Text = 'Export result...'
-    $exportBtn.Location = [System.Drawing.Point]::new(124, 7)
+    $exportBtn.Location = [System.Drawing.Point]::new(352, 7)
     $exportBtn.Size = [System.Drawing.Size]::new(120, 26)
     $exportBtn.Enabled = $false
     $packetLabel = [System.Windows.Forms.Label]::new()
-    $packetLabel.Text = 'No packet loaded. Open a verification packet Claude wrote.'
-    $packetLabel.Location = [System.Drawing.Point]::new(258, 12)
+    $packetLabel.Text = 'No packet loaded. Open latest, pick a recent packet, or browse for one Claude wrote.'
+    $packetLabel.Location = [System.Drawing.Point]::new(484, 12)
     $packetLabel.AutoSize = $true
     $packetLabel.ForeColor = [System.Drawing.Color]::DimGray
-    $toolbar.Controls.AddRange(@($openBtn, $exportBtn, $packetLabel))
+    $toolbar.Controls.AddRange(@($openBtn, $openLatestBtn, $recentBtn, $exportBtn, $packetLabel))
 
     # ===== outer split: left (items) | right (run + verdict) =====
     $outer = [System.Windows.Forms.SplitContainer]::new()
@@ -118,8 +127,32 @@ function New-VerificationForm {
     $detailBox.Font = $mono
     $detailBox.WordWrap = $true
     $detailBox.Text = 'Open a packet, then select an item on the left.'
+
+    # ----- 'Open' affordance for an item's referenced files / folders (D-0063: surface output locations) -----
+    $openPanel = [System.Windows.Forms.Panel]::new()
+    $openPanel.Dock = 'Bottom'
+    $openPanel.Height = 34
+    $lblOpen = [System.Windows.Forms.Label]::new()
+    $lblOpen.Text = 'Open:'
+    $lblOpen.Location = [System.Drawing.Point]::new(4, 9)
+    $lblOpen.AutoSize = $true
+    $openCombo = [System.Windows.Forms.ComboBox]::new()
+    $openCombo.DropDownStyle = 'DropDownList'
+    $openCombo.Location = [System.Drawing.Point]::new(46, 6)
+    $openCombo.Size = [System.Drawing.Size]::new(250, 24)
+    $openCombo.Anchor = 'Top,Left,Right'
+    $openCombo.Enabled = $false
+    $openPathBtn = [System.Windows.Forms.Button]::new()
+    $openPathBtn.Text = 'Open'
+    $openPathBtn.Location = [System.Drawing.Point]::new(302, 5)
+    $openPathBtn.Size = [System.Drawing.Size]::new(70, 24)
+    $openPathBtn.Anchor = 'Top,Right'
+    $openPathBtn.Enabled = $false
+    $openPanel.Controls.AddRange(@($lblOpen, $openCombo, $openPathBtn))
+
     $leftSplit.Panel2.Controls.Add($detailBox)
     $leftSplit.Panel2.Controls.Add($lblDetail)
+    $leftSplit.Panel2.Controls.Add($openPanel)
 
     $outer.Panel1.Controls.Add($leftSplit)
 
@@ -222,13 +255,21 @@ function New-VerificationForm {
 
     $s = $script:VState
     $s.form = $form; $s.openBtn = $openBtn; $s.exportBtn = $exportBtn; $s.packetLabel = $packetLabel
+    $s.openLatestBtn = $openLatestBtn; $s.recentBtn = $recentBtn
     $s.itemList = $itemList; $s.detailBox = $detailBox
+    $s.openPanel = $openPanel; $s.openCombo = $openCombo; $s.openPathBtn = $openPathBtn; $s.currentOpenPaths = @()
     $s.runBtn = $runBtn; $s.cancelBtn = $cancelBtn; $s.runHint = $runHint; $s.resultBox = $resultBox
     $s.overallCombo = $overallCombo; $s.saveItemBtn = $saveItemBtn; $s.notesBox = $notesBox; $s.checkList = $checkList
     $s.stateLabel = $stateLabel; $s.elapsedLabel = $elapsedLabel; $s.countLabel = $countLabel; $s.timer = $timer
     $s.outerSplit = $outer; $s.leftSplit = $leftSplit; $s.rightSplit = $rightSplit
 
+    # NOTE (D-0060): handlers that touch only $script:VState / script functions are scope-safe as-is (the
+    # existing handlers do the same). .GetNewClosure() is applied where a handler captures a LOCAL var (the
+    # Recent-packets picker below) -- that is the bare-local null-ref case the lesson is about.
     $openBtn.Add_Click({ Invoke-OpenPacket })
+    $openLatestBtn.Add_Click({ Invoke-OpenLatestPacket })
+    $recentBtn.Add_Click({ Invoke-OpenRecentPacket })
+    $openPathBtn.Add_Click({ Invoke-OpenSelectedReferencedPath })
     $exportBtn.Add_Click({ Invoke-ExportResult })
     $itemList.Add_SelectedIndexChanged({ Show-SelectedItem })
     $runBtn.Add_Click({ Start-ItemRunUI })
@@ -246,13 +287,117 @@ function Set-InitialLayout {
     Set-SplitterDistanceSafe $s.outerSplit 400
     Set-SplitterDistanceSafe $s.leftSplit ([int]($s.leftSplit.Height * 0.5))
     Set-SplitterDistanceSafe $s.rightSplit ([int]($s.rightSplit.Height * 0.55))
+    # size the 'Open' affordance row to the detail pane width
+    try {
+        $op = $s.openPanel
+        $s.openPathBtn.Left = [Math]::Max(120, $op.Width - $s.openPathBtn.Width - 8)
+        $s.openCombo.Width = [Math]::Max(80, $s.openPathBtn.Left - $s.openCombo.Left - 8)
+    }
+    catch { }
+}
+
+function Get-PacketsDirSafe {
+    $s = $script:VState
+    if ($null -eq $s.paths) { try { $s.paths = Resolve-VerificationPaths } catch { } }
+    $repoRoot = if ($s.paths) { $s.paths.RepoRoot } else { $null }
+    try { return (Get-DefaultPacketsDir -RepoRoot $repoRoot) } catch { return $null }
 }
 
 function Invoke-OpenPacket {
     $dlg = [System.Windows.Forms.OpenFileDialog]::new()
     $dlg.Filter = 'Verification packet (*.json)|*.json|All files (*.*)|*.*'
     $dlg.Title = 'Open verification packet'
+    # D-0063: default the browse dialog into the fan-out artifacts dir so the user is already at the packets.
+    $pd = Get-PacketsDirSafe
+    if ($pd -and (Test-Path -LiteralPath $pd)) { $dlg.InitialDirectory = $pd }
     if ($dlg.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Import-PacketPath $dlg.FileName }
+}
+
+function Invoke-OpenLatestPacket {
+    # Open the newest verification packet by mtime -- no GUID hunt (D-0063).
+    $pd = Get-PacketsDirSafe
+    $recent = @(Get-RecentPackets -PacketsDir $pd -Max 1)
+    if ($recent.Count -eq 0) {
+        [void][System.Windows.Forms.MessageBox]::Show(("No verification packets found under:`r`n" + [string]$pd + "`r`n`r`nUse 'Open packet...' to browse for one."), 'Verification Console')
+        return
+    }
+    Import-PacketPath ([string]$recent[0].path)
+}
+
+function Show-RecentPacketsPicker {
+    # Build a modal list of recent packets and return the chosen index (or -1). ShowDialog is modal, so the
+    # selection is read AFTER it returns -- no handler-captured state needed except the double-click shortcut.
+    param($Entries)
+    $picker = [System.Windows.Forms.Form]::new()
+    $picker.Text = 'Recent verification packets (newest first)'
+    $picker.Size = [System.Drawing.Size]::new(840, 420)
+    $picker.StartPosition = 'CenterParent'
+    $picker.MinimizeBox = $false; $picker.MaximizeBox = $false
+
+    $list = [System.Windows.Forms.ListBox]::new()
+    $list.Dock = 'Fill'
+    $list.Font = [System.Drawing.Font]::new('Consolas', 9.5)
+    $list.IntegralHeight = $false
+    foreach ($e in @($Entries)) { [void]$list.Items.Add((Format-RecentPacketLine -Entry $e)) }
+    if ($list.Items.Count -gt 0) { $list.SelectedIndex = 0 }
+
+    $btnPanel = [System.Windows.Forms.Panel]::new(); $btnPanel.Dock = 'Bottom'; $btnPanel.Height = 44
+    $okBtn = [System.Windows.Forms.Button]::new(); $okBtn.Text = 'Open'; $okBtn.Size = [System.Drawing.Size]::new(90, 28)
+    $okBtn.Location = [System.Drawing.Point]::new(640, 8); $okBtn.Anchor = 'Top,Right'
+    $okBtn.DialogResult = [System.Windows.Forms.DialogResult]::OK
+    $cancelBtn = [System.Windows.Forms.Button]::new(); $cancelBtn.Text = 'Cancel'; $cancelBtn.Size = [System.Drawing.Size]::new(90, 28)
+    $cancelBtn.Location = [System.Drawing.Point]::new(736, 8); $cancelBtn.Anchor = 'Top,Right'
+    $cancelBtn.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+    $btnPanel.Controls.AddRange(@($okBtn, $cancelBtn))
+    $picker.AcceptButton = $okBtn; $picker.CancelButton = $cancelBtn
+
+    # double-click a row = open it. This handler captures the LOCAL $picker, so .GetNewClosure() is REQUIRED
+    # (D-0060: a bare local in a WinForms handler resolves to $null when the handler fires outside this scope).
+    $list.Add_DoubleClick({ $picker.DialogResult = [System.Windows.Forms.DialogResult]::OK; $picker.Close() }.GetNewClosure())
+
+    $picker.Controls.Add($list)
+    $picker.Controls.Add($btnPanel)
+    $result = $picker.ShowDialog()
+    $idx = $list.SelectedIndex
+    $picker.Dispose()
+    if ($result -eq [System.Windows.Forms.DialogResult]::OK -and $idx -ge 0) { return $idx }
+    return -1
+}
+
+function Invoke-OpenRecentPacket {
+    $pd = Get-PacketsDirSafe
+    $recent = @(Get-RecentPackets -PacketsDir $pd -Max 25)
+    if ($recent.Count -eq 0) {
+        [void][System.Windows.Forms.MessageBox]::Show(("No verification packets found under:`r`n" + [string]$pd + "`r`n`r`nUse 'Open packet...' to browse for one."), 'Verification Console')
+        return
+    }
+    $idx = Show-RecentPacketsPicker -Entries $recent
+    if ($idx -ge 0 -and $idx -lt $recent.Count) { Import-PacketPath ([string]$recent[$idx].path) }
+}
+
+function Open-PathInShell {
+    param([string]$Path)
+    if ([string]::IsNullOrWhiteSpace($Path)) { return }
+    try {
+        if (-not (Test-Path -LiteralPath $Path)) {
+            [void][System.Windows.Forms.MessageBox]::Show(("Not found on disk:`r`n" + $Path), 'Verification Console'); return
+        }
+        if (Test-Path -LiteralPath $Path -PathType Container) {
+            Start-Process -FilePath $Path | Out-Null                                   # open the folder
+        }
+        else {
+            Start-Process -FilePath 'explorer.exe' -ArgumentList ('/select,"' + $Path + '"') | Out-Null   # reveal the file
+        }
+    }
+    catch { [void][System.Windows.Forms.MessageBox]::Show(("Could not open:`r`n" + $Path + "`r`n" + $_.Exception.Message), 'Verification Console') }
+}
+
+function Invoke-OpenSelectedReferencedPath {
+    $s = $script:VState
+    $idx = $s.openCombo.SelectedIndex
+    $paths = @($s.currentOpenPaths)
+    if ($idx -lt 0 -or $idx -ge $paths.Count) { return }
+    Open-PathInShell ([string]$paths[$idx].path)
 }
 
 function Import-PacketPath {
@@ -273,7 +418,9 @@ function Import-PacketPath {
     }
     $s.currentId = $null
     Set-VText $s.detailBox (Format-PacketSummary -Packet $pk)
-    $s.packetLabel.Text = ('Packet: ' + [string]$pk.title + '   (' + [string]$pk.item_count + ' items, report_back=' + [string]$pk.report_back + ')')
+    $plan = [string]$pk.plan_id; if (-not $plan) { $plan = Get-PlanIdFromPacket -Packet $pk }
+    $s.packetLabel.Text = ('Packet: ' + [string]$pk.title + '   plan=' + $(if ($plan) { $plan } else { '(none)' }) +
+        '   (' + [string]$pk.item_count + ' items, report_back=' + [string]$pk.report_back + ')')
     $s.packetLabel.ForeColor = [System.Drawing.Color]::Black
     $s.exportBtn.Enabled = $true
     $s.countLabel.Text = 'Items: ' + [string]$pk.item_count
@@ -310,7 +457,24 @@ function Show-SelectedItem {
     $it = Get-SelectedItem
     if ($null -eq $it) { return }
     $s.currentId = [string]$it.id
-    Set-VText $s.detailBox (Format-ItemDetail -Item $it)
+
+    if ($null -eq $s.paths) { try { $s.paths = Resolve-VerificationPaths } catch { } }
+    $repoRoot = if ($s.paths) { $s.paths.RepoRoot } else { $null }
+    Set-VText $s.detailBox (Format-ItemDetail -Item $it -RepoRoot $repoRoot)
+
+    # The core action model decides Run-button state + which referenced paths to offer 'Open' for. All the
+    # by-kind / validity logic is in the core (unit-tested); the shell only renders it here.
+    $am = Get-ItemActionModel -Item $it -RepoRoot $repoRoot
+    $s.currentOpenPaths = @($am.open_paths)
+    $s.openCombo.Items.Clear()
+    foreach ($p in @($s.currentOpenPaths)) {
+        $mark = if ([bool](Get-Prop $p 'exists' $false)) { '' } else { '  (not found)' }
+        [void]$s.openCombo.Items.Add(([string](Get-Prop $p 'label') + $mark))
+    }
+    $hasPaths = (@($s.currentOpenPaths).Count -gt 0)
+    if ($hasPaths) { $s.openCombo.SelectedIndex = 0 }
+    $s.openCombo.Enabled = $hasPaths
+    $s.openPathBtn.Enabled = $hasPaths
 
     # load this item's saved verdict state into the controls
     $st = $s.itemState[[string]$it.id]
@@ -323,10 +487,12 @@ function Show-SelectedItem {
     $s.overallCombo.SelectedIndex = $(if ($ovi -ge 0) { $ovi } else { 0 })
     $s.notesBox.Text = [string]$st.notes
     if ($st.runText) { Set-VText $s.resultBox ([string]$st.runText) }
-    else { Set-VText $s.resultBox $(if ([string]$it.kind -eq 'human_action') { 'This is a hand task - do it, then record the verdict below.' } else { 'Press Run item to run this module locally.' }) }
+    elseif ([string]$it.kind -eq 'human_action') { Set-VText $s.resultBox 'This is a hand task - do it, then record the verdict below.' }
+    elseif ([bool]$am.invalid) { Set-VText $s.resultBox ([string]$am.reason + "`r`n" + [string]$am.fix_hint) }
+    else { Set-VText $s.resultBox 'Press Run item to run this module locally.' }
 
-    $canRun = ([string]$it.kind -eq 'run_module' -and [bool]$it.valid -and $null -eq $s.handle)
-    $s.runBtn.Enabled = $canRun
+    $s.runBtn.Enabled = ([bool]$am.can_run -and $null -eq $s.handle)
+    $s.runHint.Text = [string]$am.reason
 }
 
 function Save-CurrentItemVerdict {
@@ -365,6 +531,7 @@ function Start-ItemRunUI {
 
     Set-VText $s.resultBox ('Running ' + [string]$it.skill_id + ' through the Module 1 wrapper ...' + "`r`n" + '(loading any models this module needs can take a moment)')
     $s.runBtn.Enabled = $false; $s.openBtn.Enabled = $false; $s.cancelBtn.Enabled = $true
+    $s.openLatestBtn.Enabled = $false; $s.recentBtn.Enabled = $false
     $s.stateLabel.Text = 'State: Running ' + [string]$it.skill_id
     $s.startedUtc = [datetime]::UtcNow
     try {
@@ -377,6 +544,7 @@ function Start-ItemRunUI {
         $s.stateLabel.Text = 'State: Error'
         Set-VText $s.resultBox ('Failed to start the module:' + "`r`n" + $_.Exception.Message)
         $s.runBtn.Enabled = $true; $s.openBtn.Enabled = $true; $s.cancelBtn.Enabled = $false
+        $s.openLatestBtn.Enabled = $true; $s.recentBtn.Enabled = $true
     }
 }
 
@@ -398,6 +566,7 @@ function Update-ItemRunUI {
     }
     $s.stateLabel.Text = if ($run.ok) { 'State: Done (' + [string]$run.skill_status + ')' } else { 'State: Finished (' + [string]$run.skill_status + ')' }
     $s.runBtn.Enabled = $true; $s.openBtn.Enabled = $true; $s.cancelBtn.Enabled = $false
+    $s.openLatestBtn.Enabled = $true; $s.recentBtn.Enabled = $true
     $s.handle = $null
 }
 
@@ -408,6 +577,7 @@ function Stop-ItemRunUI {
     $s.stateLabel.Text = 'State: Cancelled'
     $s.resultBox.AppendText("`r`n`r`n[cancelled by user]")
     $s.runBtn.Enabled = $true; $s.openBtn.Enabled = $true; $s.cancelBtn.Enabled = $false
+    $s.openLatestBtn.Enabled = $true; $s.recentBtn.Enabled = $true
     $s.handle = $null
 }
 
@@ -447,8 +617,37 @@ function Invoke-ExportResult {
 if ($PacketPath) { $script:VState.pendingPacketPath = $PacketPath }
 $form = New-VerificationForm
 if ($SelfTest) {
-    $form.Dispose()
     Write-Output 'SELFTEST_FORM_OK'
+    # D-0060 lesson (mock/API gates miss rendered-UI bugs): exercise the NEW discovery + by-kind rendering
+    # paths on the built form under STA, so a scope/null bug in Show-SelectedItem / Get-ItemActionModel / the
+    # Open affordance is caught here, not only in a human pass. Defensive: a throw prints a FAIL marker the
+    # gate asserts on, rather than crashing the SelfTest.
+    try {
+        $s = $script:VState
+        $fx = Join-Path $PSScriptRoot (Join-Path 'tests' (Join-Path 'fixtures' 'packet.json'))
+        if (Test-Path -LiteralPath $fx) {
+            Import-PacketPath $fx
+            if ($s.itemList.Items.Count -ge 3) { Write-Output 'SELFTEST_PACKET_LOADED_OK' }
+            $sawHuman = $false; $sawRun = $false
+            for ($i = 0; $i -lt $s.itemList.Items.Count; $i++) {
+                $s.itemList.SelectedIndex = $i    # fires Show-SelectedItem -> Get-ItemActionModel + Open combo
+                $it = @($s.items)[$i]
+                if ([string]$it.kind -eq 'human_action') { $sawHuman = $true }
+                if ([string]$it.kind -eq 'run_module') { $sawRun = $true }
+            }
+            $humanIdx = -1
+            for ($i = 0; $i -lt @($s.items).Count; $i++) { if ([string](@($s.items)[$i].kind) -eq 'human_action') { $humanIdx = $i; break } }
+            if ($humanIdx -ge 0) {
+                $s.itemList.SelectedIndex = $humanIdx
+                $openOk = ($s.openCombo.Items.Count -ge 1)          # human fixture references launch.bat
+                $runDisabledForHuman = (-not $s.runBtn.Enabled)     # nothing to run for a hand task
+                if ($sawHuman -and $sawRun -and $openOk -and $runDisabledForHuman) { Write-Output 'SELFTEST_ITEMRENDER_OK' }
+            }
+            if (Get-PacketsDirSafe) { Write-Output 'SELFTEST_PACKETSDIR_OK' }
+        }
+    }
+    catch { Write-Output ('SELFTEST_ITEMRENDER_FAIL: ' + $_.Exception.Message) }
+    $form.Dispose()
     return
 }
 [System.Windows.Forms.Application]::EnableVisualStyles()

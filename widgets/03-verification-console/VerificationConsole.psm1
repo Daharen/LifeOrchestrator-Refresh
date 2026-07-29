@@ -140,6 +140,134 @@ function Resolve-VerificationPaths {
 }
 
 # ============================================================================
+#  packet discovery (kill the GUID hunt -- D-0063)
+# ============================================================================
+# The fan-out orchestrator (#30) writes each verification packet to
+# modules/30-orchestrate-fanout/runtime/artifacts/<invocation_id>/verification-packet.json -- a pile of
+# GUID-named folders. Opening the right one via a raw file dialog is the D-0063 pain point. These CORE
+# helpers (WinForms-free, disk-only, so the cloud gate tests them) let the shell offer 'Open latest packet'
+# and a 'Recent packets' picker instead: scan that dir, parse each packet's plan_id/title/created_at/item
+# count, and return them newest-first by file mtime.
+
+function Get-PlanIdFromPacket {
+    <#
+        Derive the fan-out PLAN id for a packet. Emitted packets carry no explicit plan_id field; the plan id
+        is embedded in packet_id as 'vp-<plan_id>-i<N>' (e.g. vp-fo-9-d4139304-i9 -> fo-9-d4139304). An
+        explicit 'plan_id' field (future packets) wins if present. Returns '' when nothing is derivable.
+    #>
+    [CmdletBinding()]
+    param($Packet, [string]$PacketId)
+    if ($null -ne $Packet) {
+        $explicit = [string](Get-Prop $Packet 'plan_id' '')
+        if ($explicit) { return $explicit }
+        if (-not $PacketId) { $PacketId = [string](Get-Prop $Packet 'packet_id' '') }
+    }
+    if ([string]::IsNullOrWhiteSpace($PacketId)) { return '' }
+    $m = [regex]::Match($PacketId, '^vp-(?<plan>.+?)-i\d+$')
+    if ($m.Success) { return $m.Groups['plan'].Value }
+    if ($PacketId -like 'vp-*') { return $PacketId.Substring(3) }
+    return $PacketId
+}
+
+function Get-DefaultPacketsDir {
+    <# The fan-out artifacts dir (where orchestrate.fanout #30 writes verification-packet.json), repo-relative. #>
+    [CmdletBinding()]
+    param([string]$RepoRoot)
+    if (-not $RepoRoot) { $RepoRoot = (Resolve-VerificationPaths).RepoRoot }
+    # [IO.Path]::Combine is a pure string join (no PSDrive resolution) so a foreign-platform RepoRoot in a
+    # cloud-gate test does not throw "Cannot find drive 'C'".
+    return [System.IO.Path]::Combine($RepoRoot, 'modules', '30-orchestrate-fanout', 'runtime', 'artifacts')
+}
+
+function Get-RecentPackets {
+    <#
+        Scan -PacketsDir (default: the fan-out artifacts dir) for */verification-packet.json and return a
+        normalized, NEWEST-FIRST (by file mtime) list so the console can offer 'Open latest' + a 'Recent
+        packets' picker WITHOUT the user hunting through GUID-named folders. Each entry:
+          { path, dir, invocation_id, mtime_utc, mtime_ms, ok, error, schema, packet_id, plan_id, title,
+            created_at, created_by, report_back, item_count }
+        A malformed packet is INCLUDED with ok=false + a short error (never throws) so the picker surfaces it
+        rather than silently dropping it. Returns @() when the dir is absent/empty. WinForms-free + disk-only,
+        so it is unit-tested off-machine against a temp fixture tree.
+    #>
+    [CmdletBinding()]
+    param([string]$PacketsDir, [string]$RepoRoot, [int]$Max = 20)
+    if (-not $PacketsDir) { $PacketsDir = Get-DefaultPacketsDir -RepoRoot $RepoRoot }
+    if ([string]::IsNullOrWhiteSpace($PacketsDir) -or -not (Test-Path -LiteralPath $PacketsDir -PathType Container)) {
+        return @()   # callers wrap in @(...) so an empty result is a 0-length array (no StrictMode .Count trip)
+    }
+    $files = New-Object System.Collections.Generic.List[object]
+    foreach ($d in @(Get-ChildItem -LiteralPath $PacketsDir -Directory -ErrorAction SilentlyContinue)) {
+        $pf = Join-Path $d.FullName 'verification-packet.json'
+        if (Test-Path -LiteralPath $pf -PathType Leaf) {
+            $fi = Get-Item -LiteralPath $pf -ErrorAction SilentlyContinue
+            if ($null -ne $fi) { $files.Add($fi) }
+        }
+    }
+    $entries = New-Object System.Collections.Generic.List[object]
+    foreach ($fi in ($files | Sort-Object -Property LastWriteTimeUtc -Descending)) {
+        $dir = Split-Path -Parent $fi.FullName
+        $invId = Split-Path -Leaf $dir
+        $ok = $false; $errTxt = ''; $obj = $null
+        try { $obj = ([System.IO.File]::ReadAllText($fi.FullName)) | ConvertFrom-Json -ErrorAction Stop; $ok = $true }
+        catch { $errTxt = 'unreadable packet: ' + $_.Exception.Message }
+        $schema = ''; $pkid = ''; $title = ''; $createdAt = ''; $createdBy = ''; $reportBack = ''; $count = 0; $planId = ''
+        if ($ok -and $null -ne $obj) {
+            $schema     = [string](Get-Prop $obj 'schema' '')
+            $pkid       = [string](Get-Prop $obj 'packet_id' '')
+            $title      = [string](Get-Prop $obj 'title' '')
+            $createdAt  = [string](Get-Prop $obj 'created_at_utc' (Get-Prop $obj 'created_at' ''))
+            $createdBy  = [string](Get-Prop $obj 'created_by' '')
+            $reportBack = [string](Get-Prop $obj 'report_back' '')
+            $rawItems   = Get-Prop $obj 'items'
+            $count      = if ($null -eq $rawItems) { 0 } else { @($rawItems).Count }
+            $planId     = Get-PlanIdFromPacket -Packet $obj
+        }
+        $entries.Add([pscustomobject]@{
+                path          = $fi.FullName
+                dir           = $dir
+                invocation_id = $invId
+                mtime_utc     = $fi.LastWriteTimeUtc
+                mtime_ms      = ([System.DateTimeOffset]::new($fi.LastWriteTimeUtc)).ToUnixTimeMilliseconds()
+                ok            = $ok
+                error         = $errTxt
+                schema        = $schema
+                packet_id     = $pkid
+                plan_id       = $planId
+                title         = $title
+                created_at    = $createdAt
+                created_by    = $createdBy
+                report_back   = $reportBack
+                item_count    = $count
+            })
+        if ($entries.Count -ge $Max) { break }
+    }
+    return $entries.ToArray()   # callers wrap in @(...); a 0/1-length result stays correct after @()
+}
+
+function Format-RecentPacketLine {
+    <# One display line for the 'Recent packets' picker: plan_id + title + item-count + created/mtime. #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Entry)
+    if (-not [bool](Get-Prop $Entry 'ok' $true)) {
+        return ('[unreadable]  ' + [string](Get-Prop $Entry 'invocation_id') + '  -  ' + [string](Get-Prop $Entry 'error'))
+    }
+    $plan = [string](Get-Prop $Entry 'plan_id'); if (-not $plan) { $plan = '(no plan id)' }
+    $title = [string](Get-Prop $Entry 'title'); if (-not $title) { $title = '(untitled)' }
+    $count = [string](Get-Prop $Entry 'item_count')
+    $when = [string](Get-Prop $Entry 'created_at')
+    if (-not $when) {
+        $mt = Get-Prop $Entry 'mtime_utc'
+        if ($mt -is [datetime]) { $when = $mt.ToString('yyyy-MM-dd HH:mm') + 'Z' }
+    }
+    else {
+        try { $when = ([datetime]$when).ToUniversalTime().ToString('yyyy-MM-dd HH:mm') + 'Z' } catch { }
+    }
+    $plural = if ($count -eq '1') { '' } else { 's' }
+    return ($plan.PadRight(18) + '  ' + $title + '   [' + $count + ' item' + $plural + ']   ' + $when)
+}
+
+# ============================================================================
 #  packet import + validation
 # ============================================================================
 
@@ -230,15 +358,19 @@ function Import-VerificationPacket {
 
     $ok = ($items.Count -gt 0)
     $err = if ($ok) { '' } else { 'packet has no items' }
+    $packetId = [string](Get-Prop $obj 'packet_id' '')
     return [pscustomobject]@{
         ok          = $ok
         error       = $err
         path        = $Path
+        packet_dir  = $(if ($Path) { Split-Path -Parent $Path } else { '' })
         schema      = $schema
-        packet_id   = [string](Get-Prop $obj 'packet_id' '')
+        packet_id   = $packetId
+        plan_id     = (Get-PlanIdFromPacket -Packet $obj -PacketId $packetId)
         title       = [string](Get-Prop $obj 'title' '')
         intro       = [string](Get-Prop $obj 'intro' '')
         created_by  = [string](Get-Prop $obj 'created_by' '')
+        created_at  = [string](Get-Prop $obj 'created_at_utc' (Get-Prop $obj 'created_at' ''))
         report_back = ([string](Get-Prop $obj 'report_back' 'on_all')).ToLowerInvariant()
         warnings    = $warn.ToArray()
         items       = $items.ToArray()
@@ -257,10 +389,16 @@ function Format-PacketSummary {
         return $sb.ToString()
     }
     _addp ('PACKET: ' + [string](Get-Prop $Packet 'title'))
-    _addp ('id: ' + [string](Get-Prop $Packet 'packet_id') +
-        '   by: ' + [string](Get-Prop $Packet 'created_by') +
-        '   items: ' + [string](Get-Prop $Packet 'item_count') +
+    $plan = [string](Get-Prop $Packet 'plan_id')
+    if (-not $plan) { $plan = Get-PlanIdFromPacket -Packet $Packet }
+    _addp ('plan: ' + $(if ($plan) { $plan } else { '(none)' }) +
+        '   packet_id: ' + [string](Get-Prop $Packet 'packet_id') +
         '   report_back: ' + [string](Get-Prop $Packet 'report_back'))
+    _addp ('by: ' + [string](Get-Prop $Packet 'created_by') +
+        '   items: ' + [string](Get-Prop $Packet 'item_count') +
+        $(if ([string](Get-Prop $Packet 'created_at')) { '   created: ' + [string](Get-Prop $Packet 'created_at') } else { '' }))
+    $src = [string](Get-Prop $Packet 'path')
+    if ($src) { _addp ('source: ' + $src) }
     $intro = [string](Get-Prop $Packet 'intro')
     if ($intro) { _addp ''; foreach ($ln in ($intro -split "`n")) { _addp ('  ' + $ln.TrimEnd()) } }
     $w = @(Get-Prop $Packet 'warnings')
@@ -276,30 +414,166 @@ function Format-ItemListLine {
     return ($tag + ' ' + [string](Get-Prop $Item 'id') + '  -  ' + [string](Get-Prop $Item 'title') + $flag)
 }
 
+function Get-ReferencedPaths {
+    <#
+        Best-effort extract repo-relative / file-looking path tokens from free text (a human_action's
+        action_text or a run item's expected text), so the console can offer an 'Open' affordance for the
+        artifacts, packs, and docs an item references. Pure string work; existence is tested only when a
+        -RepoRoot (or an absolute token) lets us resolve it, so it is unit-tested off-machine. Returns an
+        array of { raw, path, exists, is_dir, label }, de-duplicated (case-insensitive), capped at -Max.
+    #>
+    [CmdletBinding()]
+    param([string]$Text, [string]$RepoRoot, [int]$Max = 12)
+    $out = New-Object System.Collections.Generic.List[object]
+    if ([string]::IsNullOrWhiteSpace($Text)) { return $out.ToArray() }
+
+    $topDirs = 'modules|widgets|core-docs|ops|tests|runtime|examples'
+    $exts = 'json|jsonl|md|ps1|psm1|psd1|txt|bat|csv|log'
+    # (a) tokens that start at a known repo top-level dir and continue with path segments;
+    # (b) tokens anywhere that end in a known file extension (segments may include dots, e.g. *.answer.md).
+    $patterns = @(
+        ('(?<![\w./\\])(?:' + $topDirs + ')(?:[\\/][\w.\-]+)+'),
+        ('(?<![\w./\\])[\w.\-]+(?:[\\/][\w.\-]+)*\.(?:' + $exts + ')')
+    )
+    $seen = @{}
+    foreach ($pat in $patterns) {
+        foreach ($m in [regex]::Matches($Text, $pat)) {
+            $raw = ([string]$m.Value).Trim().TrimEnd('.', ',', ')', ';', ':')
+            if ([string]::IsNullOrWhiteSpace($raw)) { continue }
+            $key = $raw.ToLowerInvariant()
+            if ($seen.ContainsKey($key)) { continue }
+            $seen[$key] = $true
+            $resolved = $raw
+            if (-not [System.IO.Path]::IsPathRooted($raw) -and $RepoRoot) {
+                $resolved = [System.IO.Path]::Combine($RepoRoot, ($raw -replace '/', [System.IO.Path]::DirectorySeparatorChar))
+            }
+            $exists = $false; $isDir = $false
+            if ($RepoRoot -or [System.IO.Path]::IsPathRooted($raw)) {
+                try { if (Test-Path -LiteralPath $resolved) { $exists = $true; $isDir = (Test-Path -LiteralPath $resolved -PathType Container) } } catch { }
+            }
+            $out.Add([pscustomobject]@{ raw = $raw; path = $resolved; exists = $exists; is_dir = $isDir; label = $raw })
+            if ($out.Count -ge $Max) { break }
+        }
+        if ($out.Count -ge $Max) { break }
+    }
+    return $out.ToArray()
+}
+
+function Get-ItemActionModel {
+    <#
+        Decide, from an item's kind + validity, what the UI should do with it: whether the 'Run item' button
+        is live (can_run), a plain-language reason, the hand-action text (human_action), a plain-language
+        fix_hint for an INVALID item (replacing the cryptic '[INVALID: ...]'), and any referenced
+        file/artifact/module paths to offer an 'Open' affordance for. ALL the enable/disable + plain-language
+        logic lives HERE (WinForms-free) so it is unit-tested; the shell only reads these fields.
+        Returns: { kind, can_run, invalid, reason, fix_hint, action_text, open_paths[] }.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)]$Item, [string]$RepoRoot)
+    $kind = ([string](Get-Prop $Item 'kind')).ToLowerInvariant()
+    $valid = [bool](Get-Prop $Item 'valid' $true)
+    $err = [string](Get-Prop $Item 'error')
+    $actionText = [string](Get-Prop $Item 'action_text')
+    $expected = [string](Get-Prop $Item 'expected')
+    $skillDir = [string](Get-Prop $Item 'skill_dir')
+
+    $canRun = $false; $invalid = $false; $reason = ''; $fix = ''
+
+    if (-not $valid) {
+        $invalid = $true
+        if ($err -match 'skill_dir') {
+            $reason = 'This item is marked as a module to run, but the packet did not say which module to run.'
+            $fix = 'The module path (skill_dir) is missing. Ask Claude to re-issue the packet with the module''s skill_dir, or complete it by hand and record the verdict below.'
+        }
+        elseif ($err -match 'kind') {
+            $reason = ('This item has an unrecognised kind (' + [string](Get-Prop $Item 'kind') + ').')
+            $fix = 'Expected a module to run (run_module) or a hand action (human_action). Ask Claude to re-issue the packet.'
+        }
+        else {
+            $reason = 'This item cannot be run as written.'
+            $fix = $(if ($err) { $err } else { 'Ask Claude to re-issue the packet.' })
+        }
+    }
+    elseif ($kind -eq 'human_action') {
+        $reason = 'Hand task -- there is nothing to run here. Do it, then record the verdict below.'
+    }
+    elseif ($kind -eq 'run_module') {
+        $canRun = $true
+        $reason = 'Runs this module locally through the Module 1 wrapper.'
+    }
+    else {
+        $reason = 'Unknown item kind.'
+    }
+
+    $paths = New-Object System.Collections.Generic.List[object]
+    # a runnable module -> offer its module folder; then any files/artifacts named in the action/expected text.
+    if ($kind -eq 'run_module' -and $skillDir) {
+        $resolved = Resolve-ItemSkillDir -Item $Item -RepoRoot $RepoRoot
+        $exists = $false; try { if ($resolved) { $exists = (Test-Path -LiteralPath $resolved) } } catch { }
+        $paths.Add([pscustomobject]@{ raw = $skillDir; path = $resolved; exists = $exists; is_dir = $true; label = ('module folder: ' + $skillDir) })
+    }
+    foreach ($p in @(Get-ReferencedPaths -Text (($actionText + "`n" + $expected)) -RepoRoot $RepoRoot)) { $paths.Add($p) }
+
+    return [pscustomobject]@{
+        kind        = $kind
+        can_run     = $canRun
+        invalid     = $invalid
+        reason      = $reason
+        fix_hint    = $fix
+        action_text = $actionText
+        open_paths  = $paths.ToArray()
+    }
+}
+
 function Format-ItemDetail {
     [CmdletBinding()]
-    param([Parameter(Mandatory)]$Item)
+    param([Parameter(Mandatory)]$Item, [string]$RepoRoot)
     $sb = [System.Text.StringBuilder]::new()
     function _addi([string]$line = '') { [void]$sb.AppendLine($line) }
     $kind = [string](Get-Prop $Item 'kind')
+    $am = Get-ItemActionModel -Item $Item -RepoRoot $RepoRoot
     _addi ([string](Get-Prop $Item 'id') + '   -   ' + [string](Get-Prop $Item 'title'))
-    _addi ('kind: ' + $kind + $(if (-not [bool](Get-Prop $Item 'valid' $true)) { '   [INVALID: ' + [string](Get-Prop $Item 'error') + ']' } else { '' }))
+    _addi ('kind: ' + $kind)
+    if ([bool]$am.invalid) {
+        _addi ''
+        _addi 'CANNOT RUN:'
+        _addi ('  ' + [string]$am.reason)
+        if ([string]$am.fix_hint) { foreach ($ln in (([string]$am.fix_hint) -split "`n")) { _addi ('  ' + $ln.TrimEnd()) } }
+    }
     _addi ''
     if ($kind -eq 'human_action') {
-        _addi 'ACTION (do this by hand):'
+        _addi 'ACTION (do this by hand -- nothing to run):'
         foreach ($ln in (([string](Get-Prop $Item 'action_text')) -split "`n")) { _addi ('  ' + $ln.TrimEnd()) }
     }
-    else {
+    elseif ($kind -eq 'run_module') {
         _addi ('MODULE: ' + [string](Get-Prop $Item 'skill_id') + '   (' + [string](Get-Prop $Item 'skill_dir') + ')')
         _addi ''
         _addi 'INPUTS (JSON passed as -InputsJson):'
         _addi ('  ' + [string](Get-Prop $Item 'inputs_json'))
+        _addi ''
+        _addi 'OUTPUT LOCATION:'
+        _addi '  After Run item, the run pane shows the produced artifacts + the artifact folder path'
+        _addi '  (wrapper.stdout.txt / wrapper.stderr.txt live there too) so you can open the outputs.'
+    }
+    else {
+        # unknown / invalid kind: still surface whatever the item carries.
+        $at = [string](Get-Prop $Item 'action_text')
+        if ($at) { _addi 'ACTION:'; foreach ($ln in ($at -split "`n")) { _addi ('  ' + $ln.TrimEnd()) } }
     }
     $exp = [string](Get-Prop $Item 'expected')
     if ($exp) {
         _addi ''
         _addi 'EXPECTED:'
         foreach ($ln in ($exp -split "`n")) { _addi ('  ' + $ln.TrimEnd()) }
+    }
+    $op = @($am.open_paths)
+    if ($op.Count -gt 0) {
+        _addi ''
+        _addi ('REFERENCED FILES / FOLDERS (' + $op.Count + ') -- select one below and press Open:')
+        foreach ($p in $op) {
+            $mark = if ([bool](Get-Prop $p 'exists' $false)) { '' } else { '   (not found on disk)' }
+            _addi ('  - ' + [string](Get-Prop $p 'label') + $mark)
+        }
     }
     $cl = @(Get-Prop $Item 'checklist')
     _addi ''
@@ -731,6 +1005,13 @@ function Format-SkillResult {
         _addr ''
     }
 
+    $artRoot = [string](Get-Prop $Run 'artifact_root')
+    if ($artRoot) {
+        _addr ('OUTPUT LOCATION: ' + $artRoot)
+        _addr '  (this run''s wrapper.stdout.txt / wrapper.stderr.txt + any artifacts below live under here)'
+        _addr ''
+    }
+
     if ($skEnv) {
         $res = Get-Prop $skEnv 'result'
         _addr 'RESULT PAYLOAD:'
@@ -885,8 +1166,9 @@ function Save-VerificationResult {
 
 Export-ModuleMember -Function `
     Test-HasProp, Get-Prop, Limit-Text, ConvertTo-CompactJson, ConvertFrom-EnvelopeJson, `
-    Resolve-VerificationPaths, Import-VerificationPacket, ConvertTo-NormalizedChecklist, `
-    Format-PacketSummary, Format-ItemListLine, Format-ItemDetail, Resolve-ItemSkillDir, `
+    Resolve-VerificationPaths, Get-PlanIdFromPacket, Get-DefaultPacketsDir, Get-RecentPackets, Format-RecentPacketLine, `
+    Import-VerificationPacket, ConvertTo-NormalizedChecklist, `
+    Format-PacketSummary, Format-ItemListLine, Format-ItemDetail, Get-ReferencedPaths, Get-ItemActionModel, Resolve-ItemSkillDir, `
     Get-NamedProcessMap, Get-NamedProcessIdSet, Get-ProcessCommandLine, Test-OrphanInScope, `
     Stop-ProcessHard, Invoke-OrphanSweep, Invoke-RunOrphanSweep, `
     Start-SkillProcess, Stop-SkillProcess, Complete-SkillRun, Invoke-SkillRun, Format-SkillResult, `

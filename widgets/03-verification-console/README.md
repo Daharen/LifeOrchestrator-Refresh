@@ -12,16 +12,24 @@ this box the cheap verifier is often *you* — so this console is the channel th
 ## What it does
 
 1. **Open a verification packet** (`lifeorch.verification.packet/0.1`) — a JSON file Claude writes describing
-   items to check.
+   items to check. Three ways, so you never hunt through GUID-named folders (**D-0063**):
+   **Open latest** (the newest packet by mtime, one click), **Recent packets...** (a picker of the last N by
+   plan id + title + created + item-count, newest first), or **Open packet...** (a browse dialog that already
+   starts in the fan-out artifacts dir).
 2. For each **`run_module`** item: press **Run item** to run that Module locally through the Module 1 wrapper
-   (`Invoke-Skill.ps1`), and see the inputs, status, result payload, and artifacts.
-3. For each **`human_action`** item: do the described task by hand (the "handed subtask" channel).
+   (`Invoke-Skill.ps1`), and see the inputs, status, result payload, artifacts, and the **output/artifact
+   folder path**.
+3. For each **`human_action`** item: the **Run item** button is disabled (nothing to run); the action text is
+   shown prominently, and any files/folders it references get an **Open** affordance so you can jump to them.
+   An **invalid** item shows a plain-language explanation of what's wrong and how to fix it (not a cryptic
+   `[INVALID: ...]`).
 4. Work the item's **checklist** (tick = pass), pick an **overall verdict** (pass / fail / partial / skipped),
    and add **notes**.
 5. **Export result** — writes a `lifeorch.verification.result/0.1` JSON that Claude reads back.
 
-It reimplements nothing (runs go through the canonical Module 1 wrapper and its envelope is parsed) and is
-**not** a review-queue producer.
+The header surfaces the packet's **plan id, title, report_back**, and **source path** so you can locate outputs
+without hunting. It reimplements nothing (runs go through the canonical Module 1 wrapper and its envelope is
+parsed) and is **not** a review-queue producer.
 
 ## Run it
 
@@ -31,7 +39,10 @@ Optional: `launch.bat -PacketPath <packet.json>` to open a packet on start.
 ## Files
 
 - `VerificationConsole.psm1` — WinForms-free driver core (packet import + validation, run-through-wrapper,
-  result assembly + save). Cloud-gate-testable.
+  result assembly + save). Cloud-gate-testable. Also the **packet-discovery** helpers
+  (`Get-RecentPackets` / `Get-DefaultPacketsDir` / `Get-PlanIdFromPacket` / `Format-RecentPacketLine`) and the
+  **by-kind action model** (`Get-ItemActionModel` / `Get-ReferencedPaths`) that drive the Run-button state,
+  the plain-language invalid message, and the Open affordance — so all that logic is unit-tested, not in the UI.
 - `Show-VerificationConsole.ps1` — thin STA WinForms shell (Timer-polled; `-SelfTest` builds+disposes the form).
 - `launch.bat` — double-click launcher.
 - `tests/Invoke-VerificationConsoleTests.ps1` — dual-mode harness (cloud mock gate + `-Live` on Windows).

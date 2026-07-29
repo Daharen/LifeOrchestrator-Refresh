@@ -42,6 +42,8 @@ Write-Host "=== Verification Console tests (Live=$Live, IsWindows=$IsWindows) ==
 # 1. exported functions exist
 foreach ($fn in 'Resolve-VerificationPaths', 'Import-VerificationPacket', 'ConvertTo-NormalizedChecklist',
     'Format-PacketSummary', 'Format-ItemListLine', 'Format-ItemDetail', 'Resolve-ItemSkillDir',
+    'Get-PlanIdFromPacket', 'Get-DefaultPacketsDir', 'Get-RecentPackets', 'Format-RecentPacketLine',
+    'Get-ReferencedPaths', 'Get-ItemActionModel',
     'Start-SkillProcess', 'Stop-SkillProcess', 'Complete-SkillRun', 'Invoke-SkillRun', 'Format-SkillResult',
     'New-RunSummary', 'New-VerificationResultItem', 'Get-VerificationSummary', 'New-VerificationResult', 'Save-VerificationResult',
     'Get-NamedProcessMap', 'Get-NamedProcessIdSet', 'Get-ProcessCommandLine', 'Test-OrphanInScope',
@@ -145,6 +147,77 @@ Ok "resolve skill_dir: relative joins repo root" ((Resolve-ItemSkillDir -Item $f
 $absItem = [pscustomobject]@{ skill_dir = (Join-Path ([System.IO.Path]::GetTempPath()) 'abs-x') }
 Ok "resolve skill_dir: absolute passes through" ((Resolve-ItemSkillDir -Item $absItem -RepoRoot 'C:\repo') -eq $absItem.skill_dir)
 
+# 8c. packet discovery + by-kind action model + rendering (D-0063 UX unit) --------------------------------
+# plan-id derivation (emitted packets carry no plan_id field; it is embedded in packet_id vp-<plan>-i<N>)
+Ok "planid: from packet_id vp-<plan>-i<N>" ((Get-PlanIdFromPacket -PacketId 'vp-fo-9-d4139304-i9') -eq 'fo-9-d4139304')
+Ok "planid: explicit plan_id field wins" ((Get-PlanIdFromPacket -Packet ([pscustomobject]@{ plan_id = 'p-x'; packet_id = 'vp-y-i2' })) -eq 'p-x')
+Ok "planid: non-vp id passes through" ((Get-PlanIdFromPacket -PacketId 'custom-123') -eq 'custom-123')
+Ok "packetsdir: joins the fan-out artifacts path" ((Get-DefaultPacketsDir -RepoRoot 'C:\repo') -match 'modules[\\/]30-orchestrate-fanout[\\/]runtime[\\/]artifacts')
+
+# Get-RecentPackets against a temp fixture tree: newest-first by mtime; parse plan/title/count; malformed kept.
+$rpRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("vc-recent-" + [guid]::NewGuid().ToString('N'))
+try {
+    $mkPacket = {
+        param($dir, $id, $title, $n, $when, $mtime)
+        $d = Join-Path $rpRoot $dir; New-Item -ItemType Directory -Path $d -Force | Out-Null
+        $its = @(); for ($k = 1; $k -le $n; $k++) { $its += @{ id = "i$k"; kind = 'run_module'; title = "t$k"; skill_dir = 'modules/02-fs-observer' } }
+        $pk2 = [ordered]@{ schema = 'lifeorch.verification.packet/0.1'; packet_id = $id; title = $title; created_by = 'claude'; created_at_utc = $when; report_back = 'on_all'; items = $its }
+        $p = Join-Path $d 'verification-packet.json'
+        ($pk2 | ConvertTo-Json -Depth 8) | Set-Content -LiteralPath $p -Encoding utf8
+        (Get-Item -LiteralPath $p).LastWriteTimeUtc = $mtime
+    }
+    & $mkPacket 'aaaa' 'vp-fo-1-abc-i1' 'Plan one' 2 '2026-07-01T10:00:00Z' ([datetime]::new(2026, 7, 1, 10, 0, 0, [System.DateTimeKind]::Utc))
+    & $mkPacket 'bbbb' 'vp-fo-2-def-i2' 'Plan two' 3 '2026-07-05T10:00:00Z' ([datetime]::new(2026, 7, 5, 10, 0, 0, [System.DateTimeKind]::Utc))
+    & $mkPacket 'cccc' 'vp-fo-3-ghi-i1' 'Plan three' 1 '2026-07-03T10:00:00Z' ([datetime]::new(2026, 7, 3, 10, 0, 0, [System.DateTimeKind]::Utc))
+    $badDir = Join-Path $rpRoot 'dddd'; New-Item -ItemType Directory -Path $badDir -Force | Out-Null
+    '{ not valid json ' | Set-Content -LiteralPath (Join-Path $badDir 'verification-packet.json') -Encoding utf8
+    (Get-Item -LiteralPath (Join-Path $badDir 'verification-packet.json')).LastWriteTimeUtc = [datetime]::new(2026, 7, 2, 10, 0, 0, [System.DateTimeKind]::Utc)
+
+    $recent = @(Get-RecentPackets -PacketsDir $rpRoot)
+    Ok "recent: found all 4 (incl. malformed)" ($recent.Count -eq 4) ("count=$($recent.Count)")
+    Ok "recent: newest first by mtime" ($recent[0].plan_id -eq 'fo-2-def' -and $recent[1].plan_id -eq 'fo-3-ghi')
+    $bad = @($recent | Where-Object { -not $_.ok })
+    Ok "recent: malformed packet kept as ok=false + error" ($bad.Count -eq 1 -and [bool]$bad[0].error)
+    $good = @($recent | Where-Object { $_.ok })
+    Ok "recent: parses plan_id/title/item_count" ((@($good | Where-Object { $_.plan_id -eq 'fo-1-abc' -and $_.title -eq 'Plan one' -and $_.item_count -eq 2 }).Count) -eq 1)
+    Ok "recent: -Max caps the list" ((@(Get-RecentPackets -PacketsDir $rpRoot -Max 2)).Count -eq 2)
+    Ok "recent: absent dir -> empty array (no throw)" ((@(Get-RecentPackets -PacketsDir (Join-Path $rpRoot 'nope'))).Count -eq 0)
+
+    Ok "recent line: shows plan + item count" ((Format-RecentPacketLine -Entry $recent[0]) -match 'fo-2-def' -and (Format-RecentPacketLine -Entry $recent[0]) -match '\[3 items\]')
+    Ok "recent line: singular '1 item'" ((Format-RecentPacketLine -Entry ($good | Where-Object { $_.item_count -eq 1 } | Select-Object -First 1)) -match '\[1 item\]')
+    Ok "recent line: malformed shows [unreadable]" ((Format-RecentPacketLine -Entry $bad[0]) -match '\[unreadable\]')
+}
+finally { Remove-Item -LiteralPath $rpRoot -Recurse -Force -ErrorAction SilentlyContinue }
+
+# referenced-path extraction from free text (for the Open affordance)
+$refs = @(Get-ReferencedPaths -Text 'see modules/07-model-gateway and core-docs/HANDOFF.md plus a.answer.md; not_a_path here')
+Ok "refs: extracts repo dir + doc + dotted file" ((@($refs | Where-Object { $_.raw -eq 'modules/07-model-gateway' }).Count -eq 1) -and (@($refs | Where-Object { $_.raw -eq 'core-docs/HANDOFF.md' }).Count -eq 1) -and (@($refs | Where-Object { $_.raw -eq 'a.answer.md' }).Count -eq 1))
+Ok "refs: ignores prose words" ((@($refs | Where-Object { $_.raw -eq 'here' }).Count) -eq 0)
+Ok "refs: none when text has no paths" ((@(Get-ReferencedPaths -Text 'no paths at all in this sentence')).Count -eq 0)
+
+# action model: run_module valid / human_action / invalid missing skill_dir / unknown kind
+$amFs = Get-ItemActionModel -Item $fs -RepoRoot 'C:\repo'
+Ok "action model: run_module valid -> can_run + module folder offered" ([bool]$amFs.can_run -and -not [bool]$amFs.invalid -and (@($amFs.open_paths | Where-Object { $_.label -match 'module folder' }).Count -eq 1))
+$amHu = Get-ItemActionModel -Item $hu -RepoRoot 'C:\repo'
+Ok "action model: human_action -> cannot run + hand-task reason + action_text" ((-not [bool]$amHu.can_run) -and (-not [bool]$amHu.invalid) -and $amHu.reason -match 'hand task' -and [bool]$amHu.action_text)
+$amA = Get-ItemActionModel -Item $ia -RepoRoot 'C:\repo'
+Ok "action model: invalid missing skill_dir -> cannot run + plain-language fix" ((-not [bool]$amA.can_run) -and [bool]$amA.invalid -and $amA.fix_hint -match 'skill_dir')
+$amB = Get-ItemActionModel -Item $ib -RepoRoot 'C:\repo'
+Ok "action model: unknown kind -> cannot run + invalid + plain reason" ((-not [bool]$amB.can_run) -and [bool]$amB.invalid -and $amB.reason -match 'unrecognised')
+
+# Format-ItemDetail: the cryptic '[INVALID: ...]' is replaced by a plain-language 'CANNOT RUN' block
+$invDetail = Format-ItemDetail -Item $ia -RepoRoot 'C:\repo'
+Ok "detail: invalid item shows plain-language CANNOT RUN + what to fix" ($invDetail -match 'CANNOT RUN' -and $invDetail -match 'skill_dir')
+Ok "detail: invalid item drops the cryptic [INVALID: tag" (-not ($invDetail -match '\[INVALID:'))
+$huDetail = Format-ItemDetail -Item $hu -RepoRoot 'C:\repo'
+Ok "detail: human item shows ACTION + REFERENCED (launch.bat)" ($huDetail -match 'ACTION' -and $huDetail -match 'REFERENCED' -and $huDetail -match 'launch\.bat')
+$runDetail = Format-ItemDetail -Item $fs -RepoRoot 'C:\repo'
+Ok "detail: run item shows OUTPUT LOCATION + MODULE/INPUTS/EXPECTED/CHECKLIST" ($runDetail -match 'OUTPUT LOCATION' -and $runDetail -match 'MODULE' -and $runDetail -match 'INPUTS' -and $runDetail -match 'EXPECTED' -and $runDetail -match 'CHECKLIST')
+
+# Format-PacketSummary surfaces the plan id + report_back prominently in the header
+$sumReal = Format-PacketSummary -Packet $rp
+Ok "summary: shows derived plan id + report_back" ($sumReal -match 'plan: fo-1-20ed8a0b' -and $sumReal -match 'report_back')
+
 # 8b. run-teardown orphan sweep (deterministic; no real llama-server needed) -----------------------------
 #    Proves the safety contract of the name-based sweep WITHOUT a GPU: (a) empty names -> no-op; (b) the
 #    scope guard (llama-server always ours; any other name needs a command-line marker); (c) a PID alive
@@ -189,6 +262,7 @@ try {
     Ok "run ok: manifest_valid + invoked + envelope_valid" ($run.manifest_valid -and $run.invoked -and $run.envelope_valid)
     $rt = Format-SkillResult -Run $run
     foreach ($needle in 'MODULE:', 'WRAPPER:', 'RESULT:', 'ARTIFACTS') { Ok "result transcript contains '$needle'" ($rt -match [regex]::Escape($needle)) }
+    Ok "result transcript surfaces OUTPUT LOCATION (artifact_root)" ($rt -match 'OUTPUT LOCATION')
 
     # 10. error scenarios via the mock
     $errRun = Invoke-SkillRun -SkillDir $modDir -InputsJson '{"path":"ERRORME"}' -InvokeSkillPath $mockPath -PwshPath $PwshPath
@@ -236,7 +310,14 @@ Ok "launch.bat runs Show-VerificationConsole.ps1" ($lc -match 'Show-Verification
 # ----- live / Windows-only -----
 if ($Live -and $IsWindows) {
     $sta = & $PwshPath -NoProfile -STA -File (Join-Path $widgetRoot 'Show-VerificationConsole.ps1') -SelfTest 2>&1
-    Ok "WinForms form builds (SelfTest)" (($sta -join "`n") -match 'SELFTEST_FORM_OK') (($sta -join ' | '))
+    $staTxt = ($sta -join "`n")
+    Ok "WinForms form builds (SelfTest)" ($staTxt -match 'SELFTEST_FORM_OK') (($sta -join ' | '))
+    # the new discovery + by-kind rendering paths exercised on the real form under STA (D-0060: catch
+    # rendered-UI/scope bugs the mock gate can't see).
+    Ok "SelfTest: fixture packet loaded into the form" ($staTxt -match 'SELFTEST_PACKET_LOADED_OK') (($sta -join ' | '))
+    Ok "SelfTest: by-kind render + Open affordance under STA" ($staTxt -match 'SELFTEST_ITEMRENDER_OK') (($sta -join ' | '))
+    Ok "SelfTest: packets dir resolves in-shell" ($staTxt -match 'SELFTEST_PACKETSDIR_OK') (($sta -join ' | '))
+    Ok "SelfTest: no rendered-UI scope failure" (-not ($staTxt -match 'SELFTEST_ITEMRENDER_FAIL')) (($sta -join ' | '))
 
     # REAL fs.observer run through the real Module 1 wrapper, driven from a packet item.
     $realWrap = if ($InvokeSkillPath) { $InvokeSkillPath } else { $paths.InvokeSkillPath }
@@ -322,6 +403,7 @@ if ($Live -and $IsWindows) {
 }
 else {
     Skip "WinForms form self-test" "requires -Live on Windows"
+    Skip "SelfTest: in-form discovery + by-kind render" "requires -Live on Windows"
     Skip "real fs.observer run" "requires -Live on Windows"
     Skip "no-orphan check" "requires -Live on Windows"
     Skip "live orphan (model.gateway tiny warm)" "requires -Live on Windows"
