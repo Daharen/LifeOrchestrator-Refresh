@@ -1,0 +1,24 @@
+{
+  "schema": "lifeorch.setup.config/0.1",
+  "generated_utc": "2026-07-29T21:14:04.1244308Z",
+  "generated_by": "ops/setup/setup.ps1 -Action detect",
+  "repo_root": "C:\\Users\\just_\\LifeOrchestrator-Refresh",
+  "data_root": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data",
+  "machine": {
+    "hostname": "DESKTOP-PF5FFMF",
+    "username": "just_",
+    "os": "Microsoft Windows 10.0.19045",
+    "platform": "Win32NT",
+    "is_windows": true,
+    "gpu": {
+      "present": true,
+      "name": "NVIDIA GeForce RTX 2080 Ti",
+      "vram_total_mib": 11264,
+      "source": "nvidia-smi"
+    }
+  },
+  "provenance": {
+    "repo_root": "hint",
+    "data_root": "hint"
+  }
+}

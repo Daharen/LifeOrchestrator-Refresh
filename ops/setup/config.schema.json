@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "lifeorch.setup.config/0.1",
+  "title": "Life Orchestrator setup config",
+  "description": "Machine-portable repo-root + data-root + machine profile. Resolved by Resolve-LifeorchConfig (ops/setup/LifeorchConfig.psm1). Generated per machine by setup.ps1 -Action detect -WriteConfig; roots are DETECTED at runtime, never hard-coded in code. Validated by the schema subset Test-JsonAgainstSchema supports: type / required / properties / items / enum / minimum.",
+  "type": "object",
+  "required": ["schema", "repo_root", "data_root", "machine"],
+  "properties": {
+    "schema": { "type": "string", "enum": ["lifeorch.setup.config/0.1"] },
+    "generated_utc": { "type": ["string", "null"] },
+    "generated_by": { "type": ["string", "null"] },
+    "repo_root": { "type": "string" },
+    "data_root": { "type": ["string", "null"] },
+    "machine": {
+      "type": "object",
+      "required": ["hostname", "username", "gpu"],
+      "properties": {
+        "hostname": { "type": ["string", "null"] },
+        "username": { "type": ["string", "null"] },
+        "os": { "type": ["string", "null"] },
+        "platform": { "type": ["string", "null"] },
+        "is_windows": { "type": ["boolean", "null"] },
+        "gpu": {
+          "type": "object",
+          "required": ["present"],
+          "properties": {
+            "present": { "type": "boolean" },
+            "name": { "type": ["string", "null"] },
+            "vram_total_mib": { "type": ["integer", "null"], "minimum": 0 },
+            "source": { "type": ["string", "null"] }
+          }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "repo_root": { "type": ["string", "null"] },
+        "data_root": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

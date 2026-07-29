@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "lifeorch.model_registry/0.1",
+  "title": "Life Orchestrator model registry (machine-generated variant)",
+  "description": "Structural schema for the machine-specific models.json that setup.ps1 writes to ops/setup/out/models.machine.json. Mirrors the load-bearing shape of modules/07-model-gateway/models.json (schema id lifeorch.model_registry/0.1). Validated by the schema subset Test-JsonAgainstSchema supports: type / required / properties / items / enum / minimum. This schema does NOT replace or touch the live registry; it only validates the generated staging copy.",
+  "type": "object",
+  "required": ["schema", "host", "engines", "defaults", "tiers", "models"],
+  "properties": {
+    "schema": { "type": "string", "enum": ["lifeorch.model_registry/0.1"] },
+    "_comment": { "type": ["string", "null"] },
+    "_generated": { "type": ["object", "null"] },
+    "updated_utc": { "type": ["string", "null"] },
+    "host": { "type": ["string", "null"] },
+    "engine_build": { "type": ["string", "null"] },
+    "engines": { "type": "object" },
+    "defaults": { "type": "object" },
+    "tiers": { "type": "object" },
+    "models": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["model_id", "type", "wired", "engine"],
+        "properties": {
+          "model_id": { "type": "string" },
+          "type": { "type": "string" },
+          "wired": { "type": "boolean" },
+          "name": { "type": ["string", "null"] },
+          "family": { "type": ["string", "null"] },
+          "format": { "type": ["string", "null"] },
+          "quant": { "type": ["string", "null"] },
+          "version": { "type": ["string", "null"] },
+          "path": { "type": ["string", "null"] },
+          "engine": { "type": "string" },
+          "engine_path": { "type": ["string", "null"] },
+          "context": { "type": ["integer", "null"], "minimum": 0 },
+          "gpu_layers": { "type": ["integer", "null"], "minimum": 0 },
+          "params": { "type": ["object", "null"] }
+        }
+      }
+    }
+  }
+}
