@@ -72,7 +72,11 @@ Ok ($null -ne $r1 -and $r1.result.pool.provenance.ok -eq $true) 'P1 provenance c
 $reg1 = ReadWarm; $pidA = if ($null -ne $reg1 -and (Has $reg1 'pid')) { [int]$reg1.pid } else { -1 }
 Ok ($null -ne $reg1 -and (PidAlive $pidA)) 'P1 resident recorded + alive'
 Ok ($null -ne $reg1 -and (Has $reg1 'residency_key_sha') -and ([string]$reg1.residency_key_sha -eq $keyA4096)) 'P1 manifest carries residency_key_sha'
-Ok ($null -ne $reg1 -and (Has $reg1 'schema') -and ([string]$reg1.schema -eq 'lifeorch.model_gateway.warm/0.2')) 'P1 manifest schema 0.2'
+Ok ($null -ne $reg1 -and (Has $reg1 'schema') -and ([string]$reg1.schema -eq 'lifeorch.model_gateway.warm/0.3')) 'P1 manifest schema 0.3 (Stage-1.1)'
+Ok ($null -ne $reg1 -and (Has $reg1 'state') -and ([string]$reg1.state -eq 'RESIDENT')) 'P1 manifest state=RESIDENT (crash-atomic machine)'
+Ok ($null -ne $reg1 -and (Has $reg1 'instance_generation') -and -not [string]::IsNullOrWhiteSpace([string]$reg1.instance_generation)) 'P1 manifest carries instance_generation (fencing nonce)'
+Ok ($null -ne $reg1 -and (Has $reg1 'fence') -and ([int]$reg1.fence -ge 1)) 'P1 manifest carries a fence token'
+Ok ($null -ne $reg1 -and (Has $reg1 'managed_by') -and ([string]$reg1.managed_by -eq 'model.gateway')) 'P1 manifest carries the managed tag (0 orphaned == 0 unmanaged)'
 
 # P2: EnsureResident again, identical config -> ~1ms REUSE (same pid, timer refreshed), no new process
 $reg1LastUsed = if ($null -ne $reg1 -and (Has $reg1 'last_used_utc')) { [string]$reg1.last_used_utc } else { '' }
@@ -123,7 +127,9 @@ $r7 = RunGw @('-Model', 'mock.b', '-Context', '8192', '-CacheTypeK', 'q8_0', '-P
 Ok ($null -ne $r7 -and $r7.status -eq 'ok' -and $r7.result.output.text -eq 'PONG') 'P7 warm generation ok (PONG)'
 Ok ($null -ne $r7 -and $r7.result.server.warm.reused -eq $true) 'P7 warm generation reused the resident'
 $poolT = if ($null -ne $r7 -and (Has $r7.result.server.warm 'pool')) { $r7.result.server.warm.pool } else { $null }
-Ok ($null -ne $poolT -and [int]$poolT.id_slot -eq 0 -and [int]$poolT.parallel -eq 1) 'P7 prefix-reuse plumbing: id_slot=0 + parallel=1'
+# Stage-1.1: same-model prefix reuse is DROPPED; KV isolation is erase-on-checkout/checkin (finding 12).
+Ok ($null -ne $poolT -and [string]$poolT.prefix_reuse -eq 'disabled_stage_1_1' -and [int]$poolT.parallel -eq 1) 'P7 prefix reuse dropped; -np 1 retained'
+Ok ($null -ne $poolT -and [string]$poolT.kv_isolation -eq 'erase_on_checkout_and_checkin') 'P7 KV isolation = erase on checkout AND check-in'
 Ok ($null -ne $poolT -and -not [string]::IsNullOrWhiteSpace([string]$poolT.residency_key_sha)) 'P7 warm generation carries residency_key_sha'
 
 # P8: SweepIdle -- within the window keeps; beyond a 0s window evicts (idle keep-resident policy)

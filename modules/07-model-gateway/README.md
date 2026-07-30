@@ -155,15 +155,60 @@ M0/M1 reuse the same 3B; an escalation does **one** 3B→9B switch and stays on 
 intra-task downshift); default **max one swap per task**; LRU is only a tie-breaker. The gateway records
 `swap_count` per resident lineage so the governor can observe swap-minimisation.
 
-**Same-model prefix reuse (Stage-1).** A pool/warm launch pins **one slot** (`--parallel 1`) and the completion
-request sends an explicit **`-IdSlot`**, so a same-model call reuses the cached prompt prefix (normal prompt
-caching). **`-ClearSlot`** erases the slot at a session boundary. Persistent `--slot-save-path` across an
-eviction is **Stage-2**.
+All pool switches are also settable via `-InputsJson`. Default is **off** → the classic per-call and D-0057 warm
+paths are byte-for-byte unchanged (a non-warm result has no `server.warm.pool` block).
 
-All pool switches are also settable via `-InputsJson` (`ensure_resident`, `pool_status`, `sweep_idle`,
-`cache_type_k`, `cache_type_v`, `flash_attn`, `parallel`, `id_slot`, `clear_slot`, `keep_resident_s`,
-`generation`). Default is **off** → the classic per-call and D-0057 warm paths are byte-for-byte unchanged (a
-non-warm result has no `server.warm.pool` block).
+## Stage-1.1 hardening (D-0067 — the pool may be enabled by default once this passes)
+
+The frontier red-team (WARM_POOL_DESIGN §10) found Stage-1 was a functional-but-unhardened first cut. Stage-1.1
+closes the integrity invariants. The pure core lives in **`lib/PoolManager.psm1`** (no GPU/Windows dependency,
+unit-tested off-machine) and is wired into the live path:
+
+- **Fencing (finding 1).** Residency has a **monotonic fence** (the epoch) + a short **renewable TTL**
+  (`-FenceTtlSeconds` ~120 s, not 1800) held under a **machine-global lock**; the fence bumps on each launch and
+  is stable across reuse. An inference call may carry **`-ExpectGeneration`** (a per-launch nonce) and/or
+  **`-ExpectFence`**; a mismatch is **rejected (`generation_mismatch`) before any completion is issued** — no
+  wrong-generation call ever lands.
+- **GPU-handoff eviction (findings 2/15).** **`-PrepareGpu -RequiredVramMib N`** evicts the resident
+  *before* granting the GPU to another consumer (no blind co-load / OOM), then **confirms VRAM recovery to a
+  target headroom over an async interval** (WDDM frees lazily). `evict-before-release`, never "release and hope".
+- **Crash-atomic state machine + reconcile (finding 3).** The manifest is a durable machine
+  `EMPTY→STOPPING→EMPTY_CONFIRMED→STARTING→RESIDENT` written by **atomic replace**; it is a **claim to VERIFY**.
+  Every startup runs **`-Reconcile`** (also implicit on any pool op) under the machine-global lock: a crashed
+  transition (dead pid / unhealthy / wrong socket owner) is driven to a clean `EMPTY`; a healthy verified
+  resident is **kept** (warmth preserved).
+- **Verified-generation endpoint (finding 4).** Each launch records a **unique nonce + unique port + pid +
+  creation-time + engine-exe hash**, and the **listening socket owner** is verified (Windows `Get-NetTCPConnection`;
+  off-Windows `lsof`/`ss`; undeterminable → advisory) **before publishing RESIDENT**. A `/v1/models` alias is not
+  proof; an explicit owner mismatch is a hard, non-bypassable failure.
+- **Config-hash / generation split (finding 6).** `resident_config_hash` (deterministic, hashes model + engine-exe
+  **contents**, never paths, never the nonce or samplers) is split from `instance_generation` (the per-launch
+  fencing nonce). `-Generation` no longer poisons the hash — use **`-ForceReload`**.
+- **CanServe (findings 7/8/9).** Reuse vs reload is decided by `CanServe(resident, request)`: **exact** on
+  semantic identity (model/sha/engine-exe/KV type/flash/template/mmproj/no_think), **`>=`** on capacity
+  (context, parallel). A 32K resident serves 16K; a resident 9B serves an M0 request (no downshift to honor a
+  floor). Reload only when the resident cannot correctly serve.
+- **Dropped from the correctness path (findings 10/11/12).** **LRU** (meaningless at capacity 1) is removed;
+  **idle eviction** is a policy op (`-SweepIdle` re-reads under the lock so it cannot race a refreshing request),
+  not an autonomous correctness mechanism; **same-model prefix reuse is removed** — the non-bypassable
+  *no-cross-task-KV* invariant is enforced by **erase-on-checkout AND check-in** of the single slot.
+- **Framing.** The pool is an **optional** layer: **`-BypassPoolManager`** forces the classic cold isolated-server
+  path. Integrity invariants (fencing, single-endpoint ownership, verified routing, no cross-task KV, no blind
+  co-load) are **non-bypassable**; the pool still ships **default-OFF** until the live fault-injection pass lands.
+
+**Managed ownership (finding 5) — partial + a named residual.** Every launch is tagged (`managed_by`) so
+"0 orphaned llama-server" means **0 UNMANAGED** servers and never counts the intended warm resident; eviction
+uses a **tree kill** (`taskkill /T`) so llama.cpp children are reaped, and the PID + creation-time identity guard
+refuses to kill a **reused** pid (a foreign process). A durable **Windows Job Object owning the tree across
+separate invocations requires a persistent gateway supervisor process** — the gateway is invoked per-call, so a
+named Job Object created by one invocation is destroyed when that process exits. That supervisor is a
+**follow-on unit**; until then cross-call ownership rests on the managed tag + tree-kill + identity guard.
+
+**Tests.** `tests/Invoke-ModelGatewayPoolCoreTests.ps1` (pure core, 49), `tests/Invoke-ModelGatewayPoolTests.ps1`
+(integration, 48), `tests/Invoke-ModelGatewayFaultInjectionTests.ps1` (the §10 fault-injection gate: crash-at-each-
+transition + reconcile, forced fence/generation expiry mid-request, stale-idle-vs-fresh-request, PID-reuse guard,
+KV isolation, GPU-handoff eviction — 37), plus warm (23) and the live box base (42). All run on the cloud gate
+against the cross-platform mock except base (live GPU).
 
 ## Result shape
 
