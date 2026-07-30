@@ -1,0 +1,40 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "track.objects",
+  "name": "Object Tracking (identity across frames)",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "Associate per-frame object detections (the detect.objects #16 output shape: each detection {class, class_id, score, box{x,y,width,height}}) into stable identity tracks so the same object keeps ONE track_id across a sequence of frames. A DETERMINISTIC, PURE frame-by-frame greedy IoU matcher, PER-CLASS: candidate (track,detection) pairs with IoU >= -IouThreshold are resolved by a total order (IoU descending, tie-broken by detection order then track_id); matched tracks are extended, unmatched detections BIRTH a new monotonic track_id (in detection order), unmatched tracks COAST with a constant-position predictor up to -MaxAge frames then DIE (a later detection births a new id). No model, no CUDA, no loopback port, no randomness -> CPU-only, parallel_safe:true, byte-identical for identical input. The second module of the Phase C video spine (architectural position 20), following media.decompose #32 (position 19). MVP is decoupled from live detection: it reads detections from a JSON file or inline -InputsJson.frames (live composition of #32 keyframes -> #16 -> track.objects is a named follow-on).",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-TrackObjects.ps1",
+    "args_spec": "Named params -InputFile <path> (JSON detection sequence; required unless InputsJson supplies input/frames); -IouThreshold <0..1> (default 0.3); -MaxAge <int >=0> (coast frames before death, default 2); -MinScore <double >=0> (drop detections scored below this, default 0 = keep all); -Classes <name,...> (only track these classes). OR -InputsJson '<json {input, frames, iou_threshold, max_age, min_score, classes}>' where 'frames' is an inline detection sequence (an alternative to a file). Optional -ArtifactRoot, -InvocationId."
+  },
+  "inputs": [
+    { "name": "input", "type": "string", "required": false, "description": "Path to a JSON detection sequence. Accepted shapes: a bare array of frames, {frames:[...]}, {sequence:[...]}, or a single detect.objects result ({detections:[...]}) treated as one frame. Each frame is either a bare array of detections or {frame|index, timestamp_s|timestamp, detections:[...]}. Required unless InputsJson provides 'input' or inline 'frames'." },
+    { "name": "frames", "type": "array", "required": false, "description": "Inline detection sequence (an alternative to a file), passed via -InputsJson. Same per-frame shape as a file's frames." },
+    { "name": "iou_threshold", "type": "double", "required": false, "default": 0.3, "description": "Minimum IoU (0..1) between a track's last box and a detection's box for them to be considered a match." },
+    { "name": "max_age", "type": "int", "required": false, "default": 2, "description": "Maximum number of consecutive missed frames a track may coast (constant-position) before it dies. 0 disables coasting (a single gap ends the track)." },
+    { "name": "min_score", "type": "double", "required": false, "default": 0.0, "description": "Drop detections whose score is present and below this floor before association. 0 keeps everything." },
+    { "name": "classes", "type": "array", "required": false, "description": "Optional class-name filter (e.g. [person, car]); only detections of these classes are tracked. Matching is always per-class regardless of this filter." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ input{source,path,frames}, params{iou_threshold,max_age,min_score,classes}, summary{input_frames,input_detections,tracked_detections,track_count,births,deaths,coast_frames,max_concurrent_tracks,class_summary{class:count}}, tracks[{track_id,class,class_id,frames[{frame,timestamp_s,box{x,y,width,height},score,det_index}],first_frame,last_frame,length,aged_out}] } ordered by track_id. The tracks.json artifact carries the same payload minus volatile fields, so it is byte-identical for identical input."
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4"],
+    "models": [],
+    "libraries": [],
+    "cpu": "any", "gpu": "none", "memory_mb": 128,
+    "network": false, "filesystem": "read-write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 120, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

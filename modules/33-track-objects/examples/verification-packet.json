@@ -1,0 +1,39 @@
+{
+  "schema": "lifeorch.verification.packet/0.1",
+  "packet_id": "vp-track-objects-i17",
+  "title": "Verify track.objects #33 (Phase C video spine, position 20)",
+  "created_by": "claude",
+  "created_at_utc": "2026-07-30T00:00:00.0000000Z",
+  "report_back": "on_all",
+  "intro": "Run the run_module item locally through Invoke-Skill.ps1 (or the Module Launcher). track.objects associates the committed 6-frame fixture's per-frame detect.objects #16 detections into identity tracks. Confirm the checklist against the produced tracks JSON, record an overall verdict + notes, and export the result. It is deterministic + parallel_safe (no model/CUDA/port); re-running yields a byte-identical tracks.json.",
+  "items": [
+    {
+      "id": "track-scenario",
+      "kind": "run_module",
+      "title": "track.objects tracks the committed scenario fixture -> tracks JSON",
+      "skill_id": "track.objects",
+      "skill_dir": "modules/33-track-objects",
+      "inputs_json": { "input": "modules/33-track-objects/tests/fixtures/scenario.json" },
+      "expected": "status ok; a tracks.json + tracks.md artifact. The 6-frame / 19-detection scenario yields 4 tracks (2 car + 2 person), 4 births, 1 death: track 0 & 1 are the two cars crossing (each length 6); track 2 is a person that coasts through a 1-frame occlusion (frames 0,1,3,4,5); track 3 is a person that appears mid-sequence (first_frame 1) and is aged out (aged_out true, last_frame 2). Deterministic: re-running produces a byte-identical tracks.json (same sha256).",
+      "checklist": [
+        { "id": "c1", "text": "status == ok" },
+        { "id": "c2", "text": "summary.track_count == 4, births == 4, deaths == 1" },
+        { "id": "c3", "text": "class_summary is { car: 2, person: 2 }" },
+        { "id": "c4", "text": "track 2 (person) has frames [0,1,3,4,5] -- it coasted through the frame-2 occlusion" },
+        { "id": "c5", "text": "track 3 (person) has aged_out == true and last_frame == 2 (a death)" },
+        "re-running the same input yields a tracks.json with the same sha256 (byte-identical / deterministic)"
+      ]
+    },
+    {
+      "id": "track-determinism",
+      "kind": "human_action",
+      "title": "Confirm determinism + parallel_safe by inspection",
+      "action_text": "Run the item above twice and compare the two runtime/artifacts/<id>/tracks.json files' sha256 (they must match). Confirm the manifest declares parallel_safe:true, gpu:none, models:[] -- there is no CUDA/model/loopback-port binding, so it is safe to run alongside other CPU workers.",
+      "expected": "Two runs -> identical tracks.json sha256. Manifest: parallel_safe true, gpu none, no models, no network.",
+      "checklist": [
+        "the two tracks.json files are byte-identical (same sha256)",
+        "skill.json: parallel_safe == true, requirements.gpu == none, requirements.models == []"
+      ]
+    }
+  ]
+}
