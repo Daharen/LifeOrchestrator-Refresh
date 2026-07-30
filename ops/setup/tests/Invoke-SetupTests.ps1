@@ -20,6 +20,7 @@ $ErrorActionPreference = 'Stop'
 $moduleDir = Split-Path -Parent $PSScriptRoot
 Import-Module (Join-Path $moduleDir 'LifeorchConfig.psm1') -Force -DisableNameChecking
 Import-Module (Join-Path $moduleDir 'LifeorchSetup.psm1') -Force -DisableNameChecking
+Import-Module (Join-Path $moduleDir 'LifeorchStagingConfirm.psm1') -Force -DisableNameChecking
 
 $script:pass = 0
 $script:fail = 0
@@ -249,6 +250,107 @@ foreach ($f in (Get-ChildItem -LiteralPath $moduleDir -Recurse -Include '*.ps1',
 Ok ($astErrs -eq 0) 'ast: all .ps1/.psm1 parse clean'
 
 # ---------------------------------------------------------------------------
+# 14. staging-plan CONFIRM -- parser + guarded HEAD probe + confirm object (mock/offline).
+#     Reuses $plan (the real New-StagingPlan output from section 9); NO network here.
+# ---------------------------------------------------------------------------
+$parsedPlan = ConvertFrom-StagingPlan -Text $plan
+Ok ($parsedPlan.well_formed) 'confirm: plan parses well-formed'
+Ok (@($parsedPlan.entries).Count -ge 6) 'confirm: parses multiple entries'
+Ok (-not [string]::IsNullOrWhiteSpace($parsedPlan.data_root)) 'confirm: data-root header parsed'
+$vlmE = @($parsedPlan.entries | Where-Object { $_.id -eq 'vlm.qwen2p5-vl-3b' -and -not $_.sidecar })
+Ok ($vlmE.Count -ge 1 -and (-not $vlmE[0].url_placeholder) -and ($vlmE[0].url -match '^https://')) 'confirm: VLM entry has a concrete https URL'
+Ok ($vlmE[0].has_sha256) 'confirm: VLM entry carries an expected sha256'
+Ok (@($parsedPlan.entries | Where-Object { $_.kind -eq 'single-file' -and $_.url_placeholder }).Count -ge 1) 'confirm: TODO_CONFIRM urls flagged as placeholder'
+Ok (@($parsedPlan.entries | Where-Object { $_.kind -eq 'single-file' -and -not $_.has_sha256 }).Count -ge 1) 'confirm: missing-sha256 entries detected'
+Ok (@($parsedPlan.entries | Where-Object { $_.kind -eq 'multi-file' }).Count -ge 1) 'confirm: multi-file diffusers entry parsed'
+Ok (@($parsedPlan.entries | Where-Object { $_.kind -eq 'system' }).Count -ge 1) 'confirm: system OCR entry parsed (no download)'
+Ok (@($parsedPlan.entries | Where-Object { $_.kind -eq 'executable' }).Count -ge 1) 'confirm: executable entry parsed'
+Ok (@($parsedPlan.engines).Count -ge 1) 'confirm: engines block parsed'
+
+# guarded HEAD probe judgments (no network: placeholder / mock / offline)
+Eq (Invoke-LoHeadProbe -Url 'TODO_CONFIRM_URL_for_x.gguf').status 'placeholder' 'confirm: TODO url not probed (placeholder)'
+Eq (Invoke-LoHeadProbe -Url 'https://example.invalid/x' -Offline).status 'offline' 'confirm: -Offline probe returns offline (degrade, no throw)'
+$pm = Invoke-LoHeadProbe -Url 'https://h/f.gguf' -MockResults @{ 'https://h/f.gguf' = @{ status_code = 200; content_length = 123 } }
+Ok ($pm.status -eq 'reachable' -and $pm.content_length -eq 123) 'confirm: mock 200 -> reachable + advertised size'
+Eq (Invoke-LoHeadProbe -Url 'https://h/f.gguf' -MockResults @{ 'https://h/f.gguf' = @{ status_code = 404 } }).status 'dead' 'confirm: mock 404 -> dead'
+
+# full confirm object: mock (reachable), dead-link (ok flips), offline (degrades)
+$vlmUrl = $vlmE[0].url
+$cfMock = Confirm-StagingPlan -PlanText $plan -MockResults @{ $vlmUrl = @{ status_code = 200; content_length = 1929000000 } }
+Ok ($cfMock.well_formed -and $cfMock.ok) 'confirm: mock confirm well-formed + ok'
+Ok ($cfMock.summary.url_reachable -ge 1) 'confirm: VLM counted reachable'
+Ok ($cfMock.summary.url_placeholder -ge 1) 'confirm: placeholder urls counted in summary'
+Ok ($cfMock.summary.actionable_now -ge 1) 'confirm: actionable_now computed (real url + sha + reachable)'
+$cfDead = Confirm-StagingPlan -PlanText $plan -MockResults @{ $vlmUrl = @{ status_code = 404 } }
+Ok (-not $cfDead.ok) 'confirm: a dead real URL flips ok=false'
+Ok (@($cfDead.blockers).Count -ge 1) 'confirm: blockers listed'
+$cfOff = Confirm-StagingPlan -PlanText $plan -Offline
+Ok ($cfOff.well_formed -and $cfOff.probe_mode -eq 'offline') 'confirm: offline degrades cleanly (well-formed, mode=offline)'
+Ok ($cfOff.ok) 'confirm: offline does NOT fail ok (degraded-but-valid)'
+Ok ($cfOff.summary.url_offline -ge 1) 'confirm: offline urls counted, nothing thrown'
+
+# ---------------------------------------------------------------------------
+# 15. resolver adoption -- additive Resolve-LifeorchConfig shim wired into a bounded LEAF
+#     batch (14-ocr-layout, 16-detect-objects). Proves: shim present + AST-clean + resolves
+#     byte-identically to the untouched walk-up on this box + a config override genuinely wins.
+# ---------------------------------------------------------------------------
+$repoRootForTest = Split-Path -Parent (Split-Path -Parent $moduleDir)   # ops/setup -> ops -> repo
+$wiredModules = @(
+    (Join-Path $repoRootForTest 'modules/14-ocr-layout/Invoke-OcrLayout.ps1'),
+    (Join-Path $repoRootForTest 'modules/16-detect-objects/Invoke-DetectObjects.ps1')
+)
+function Get-ResolveRepoRootText([string]$path) {
+    $tk = $null; $er = $null
+    $ast = [System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tk, [ref]$er)
+    if ($null -ne $er -and $er.Count -gt 0) { return $null }
+    $fn = $ast.Find({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'Resolve-RepoRoot' }, $true)
+    if ($null -eq $fn) { return $null }
+    return $fn.Extent.Text
+}
+function Invoke-PureWalk([string]$s) {
+    try { $d = Get-Item -LiteralPath $s -ErrorAction Stop; for ($i = 0; $i -lt 8 -and $null -ne $d; $i++) { if (Test-Path -LiteralPath (Join-Path $d.FullName 'core-docs')) { return $d.FullName }; $d = $d.Parent } } catch { }
+    return $null
+}
+foreach ($wf in $wiredModules) {
+    $tag = Split-Path -Leaf (Split-Path -Parent $wf)
+    if (-not (Test-Path -LiteralPath $wf)) { Ok $false "resolver[$tag]: wired module file present"; continue }
+    Ok $true "resolver[$tag]: wired module file present"
+    $tk = $null; $er = $null
+    [void][System.Management.Automation.Language.Parser]::ParseFile($wf, [ref]$tk, [ref]$er)
+    Ok (($null -eq $er) -or ($er.Count -eq 0)) "resolver[$tag]: file AST-parses clean"
+    $src = Get-Content -LiteralPath $wf -Raw
+    Ok ($src -match 'Resolve-LifeorchConfig') "resolver[$tag]: Resolve-LifeorchConfig wired in (not reverted)"
+    Ok ($src -match 'FANOUT_AGENT_002') "resolver[$tag]: additive-shim provenance marker present"
+    $ftext = Get-ResolveRepoRootText $wf
+    Ok ($null -ne $ftext) "resolver[$tag]: Resolve-RepoRoot extractable"
+    if ($null -ne $ftext) {
+        . ([scriptblock]::Create($ftext))
+        $mdir = Split-Path -Parent $wf
+        $resolved = Resolve-RepoRoot $mdir
+        $walk = Invoke-PureWalk $mdir
+        Ok (-not [string]::IsNullOrWhiteSpace($resolved)) "resolver[$tag]: resolves a repo-root"
+        Eq $resolved $walk "resolver[$tag]: resolved == untouched walk-up (byte-identical on this box)"
+        Ok (Test-Path -LiteralPath (Join-Path $resolved 'core-docs')) "resolver[$tag]: resolved root has the core-docs marker"
+    }
+}
+# override proof: a machine config.json pointing at a DIFFERENT real repo WINS over the walk-up
+# (proves Resolve-LifeorchConfig is genuinely consulted -- the portability seam, not dead code).
+$ovr = Join-Path ([System.IO.Path]::GetTempPath()) ('lo-ovr-' + [Guid]::NewGuid().ToString('N'))
+foreach ($r in @('repoA', 'repoB')) {
+    New-Item -ItemType Directory -Force -Path (Join-Path $ovr "$r/core-docs") | Out-Null
+    New-Item -ItemType Directory -Force -Path (Join-Path $ovr "$r/ops/setup") | Out-Null
+    Copy-Item (Join-Path $moduleDir 'LifeorchConfig.psm1') (Join-Path $ovr "$r/ops/setup/LifeorchConfig.psm1")
+}
+New-Item -ItemType Directory -Force -Path (Join-Path $ovr 'repoA/modules/99-x') | Out-Null
+$repoB = (Resolve-Path (Join-Path $ovr 'repoB')).Path
+$cfgJson = ([pscustomobject]@{ schema = 'lifeorch.setup.config/0.1'; repo_root = $repoB; data_root = 'x'; machine = [pscustomobject]@{} } | ConvertTo-Json -Depth 6)
+[System.IO.File]::WriteAllText((Join-Path $ovr 'repoA/ops/setup/config.json'), $cfgJson, [System.Text.UTF8Encoding]::new($false))
+$modA = (Resolve-Path (Join-Path $ovr 'repoA/modules/99-x')).Path
+$ovrResolved = Resolve-RepoRoot $modA   # Resolve-RepoRoot = the shim extracted just above
+Eq $ovrResolved $repoB 'resolver: machine config repo_root OVERRIDES the walk-up (portability seam works)'
+try { Remove-Item -LiteralPath $ovr -Recurse -Force -ErrorAction SilentlyContinue } catch { }
+
+# ---------------------------------------------------------------------------
 # LIVE (on-device) checks
 # ---------------------------------------------------------------------------
 if ($Live) {
@@ -270,6 +372,16 @@ if ($Live) {
     Ok ($lhbs.present -and -not $lhbs.degraded) 'live: executor heartbeat present + not degraded'
     $lv = Invoke-SetupVerify -RepoRoot $liveRepo
     Ok ($lv.ok) 'live: full verify (incl heartbeat) ok'
+
+    # wired resolution == literal on this box: config repo_root == the actual repo location
+    $cfgRepo = [string](Resolve-LifeorchConfig).repo_root
+    Ok ((-not [string]::IsNullOrWhiteSpace($cfgRepo)) -and ((Get-Item -LiteralPath $cfgRepo).FullName -ieq (Get-Item -LiteralPath $repoRootForTest).FullName)) 'live: config repo_root == actual repo location (wired resolution == literal on this box)'
+    # live staging-plan confirm on the emitted out/staging-plan.txt (offline: no multi-GB pulls in-test)
+    $livePlan = Join-Path $repoRootForTest 'ops/setup/out/staging-plan.txt'
+    if (Test-Path -LiteralPath $livePlan) {
+        $cfLive = Confirm-StagingPlan -PlanPath $livePlan -Offline
+        Ok ($cfLive.well_formed) 'live: emitted staging-plan.txt confirms well-formed (offline)'
+    } else { Ok $true 'live: (no out/staging-plan.txt emitted yet -- run setup.ps1 -Action gen)' }
 }
 
 # cleanup
