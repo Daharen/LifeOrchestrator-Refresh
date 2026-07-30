@@ -2,33 +2,35 @@
 
 Owns **reality as it exists now** — not intended architecture, not history. Keep it compact.
 
-History lives elsewhere: **`DECISION_LOG.md`** (rationale — read **`DECISION_LOG_INDEX.md`** first, then pull entries by ID), **git history**, and **`archive/`**
-(byte-exact pre-consolidation snapshots). **Rule: this doc must NEVER grow `[prior]` accretion chains again** —
-replace a stale statement in place, cite `D-####` if the reason matters. A `CURRENT_STATE.json` counterpart is
-planned, not yet created.
+History lives elsewhere: **`DECISION_LOG.md`** (read **`DECISION_LOG_INDEX.md`** first, pull by ID), **git**, and
+**`archive/`**. **Rule: NEVER grow `[prior]` accretion chains** — replace a stale statement in place, cite `D-####`
+if the reason matters. A `CURRENT_STATE.json` counterpart is planned, not yet created.
 
-Owned elsewhere, do not duplicate: `TOOL_MODEL_REGISTRY.md` (tool/model/hardware inventory) ·
-`MODULE_ROADMAP.md` (build order, status, follow-ons) · `REVIEW_QUEUE.md` (queue schema, producers) ·
-`FANOUT_ORCHESTRATOR_HANDOFF.md` (orchestrator ops) · `ADAPTIVE_RESOURCE_GOVERNOR.md` (governor design) ·
-`ARCHITECTURE_MAP.md` (destination).
+Owned elsewhere, don't duplicate: `TOOL_MODEL_REGISTRY.md` (tools/models/hardware) · `MODULE_ROADMAP.md` (build
+order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HANDOFF.md` (orchestrator ops) ·
+`ADAPTIVE_RESOURCE_GOVERNOR.md` (governor) · `ARCHITECTURE_MAP.md` (destination).
 
 ## Phase + active work
 
 - **Phase:** MVP build-out on the D-0029 usable-local-core-first build priority (`MODULE_ROADMAP.md → Build
   priority`). Two tracks: **Modules** (`modules/`) + **Widgets** (`widgets/`, the human-interface layer).
+  **Phase C (the canonical spine) has STARTED** — the video block opened at i16 with module #32 `media.decompose`.
 - **Direction (D-0050):** past MVP the project drives ONE spine — the **OFFLOAD / AUDIT LOOP** under the
   **verify-cost rule**: offload only what is cheaper to VERIFY than to do; deterministic modules are Claude's
   hands, model modules only where machine- or human-checkable.
-- **ACTIVE = the fan-out loop. Iterations 1–15 are DONE** (D-0055..D-0068) via `orchestrate.fanout` #30 over
+- **ACTIVE = the fan-out loop. Iterations 1–16 are DONE** (D-0055..D-0069) via `orchestrate.fanout` #30 over
   `res.lease` #29, workers hand-dispatched into fresh Cowork sessions. Ledger:
-  **`FANOUT_ORCHESTRATOR_HANDOFF.md`**; rationale: **DECISION_LOG D-0055..D-0067**. Do not re-narrate here.
-- **NEXT = iteration 16** (D-0068); iteration 15 (plan `fo-15-27a03513`, 3/3 on-box + a folded frontier model-leads answer) shipped GPU warm-pool Stage-1.1 hardening (pool still default-OFF) + CPU portability follow-ons + coding widget-04 live-GUI confirm+fix. The 4-lane model: **1 GPU worker (HARD-CLAMPED <=1/wave) + 1 CPU +
-  1 broad coding + 1 externalized frontier-GPT review/audit lane**. Validated on-box ceiling `MaxParallel 3`
-  (1 GPU + 2 CPU); the frontier lane is off-box, takes no lease. Wave model, candidate menu + anti-collision
-  rules: **`FANOUT_ORCHESTRATOR_HANDOFF.md`**.
+  **`FANOUT_ORCHESTRATOR_HANDOFF.md`**; rationale: **DECISION_LOG D-0055..D-0069**. Do not re-narrate here.
+- **NEXT = iteration 17** (D-0069); iteration 16 (plan `fo-16-f125365c`, 3/3 on-box, frontier lane skipped) shipped the GPU
+  warm-pool **durable Job-Object gateway supervisor** (finding 5 durable CLOSED; pool still default-OFF) + a CPU
+  portability follow-on (resolver shim into `doc.io` #20 — the last non-model/non-infra leaf) + the NEW module #32
+  `media.decompose`. The 4-lane model: **1 GPU worker (HARD-CLAMPED <=1/wave) + 1 CPU + 1 broad coding + 1
+  externalized frontier-GPT review lane** (any lane may be skipped). Validated on-box ceiling `MaxParallel 3`;
+  the frontier lane is off-box, takes no lease. Wave model, candidate menu + anti-collision rules:
+  **`FANOUT_ORCHESTRATOR_HANDOFF.md`**.
 - **Hard boundary (D-0051, non-negotiable):** the orchestrator NEVER drives another AI session — including the
   frontier lane, a human-couriered pack (`frontier.bridge` #31).
-- Repo HEAD at last mirror: the **i15 close-out docs commit** (D-0068, `master`) — confirm live
+- Repo HEAD at last mirror: the **i16 close-out docs commit** (D-0069, `master`) — confirm live
   with `git log -1` (read-only over the mount is fine).
 
 ## Adaptive Resource Governor (agent.local #21)
@@ -44,18 +46,17 @@ Design + rationale: **`ADAPTIVE_RESOURCE_GOVERNOR.md`**. Runtime facts:
 - Closing: a goal with a **pre-frozen `lifeorch.goal_verification/0.1` success contract** closes on the
   contract; a **contract-less** goal closes via the **D-0046 terminator** (M0 closes once >=1 required
   side-effecting tool succeeds). The D-0061 contract-less loop-to-max_steps regression is FIXED (D-0062).
-- **`-Profile floor` is the reliable end-to-end path** (`frugal|floor|max`). **Open residual: `-Profile max`
-  does NOT land** — at `gen_tier=strong` the 9B arg-gen returns non-JSON (`arg_parse_failed`) every step, so
-  tools never get valid args. A 9B/gateway defect, NOT the terminator (D-0046). *(Measured on the Q4 9B; not
-  re-tested since the Q5_K_M swap, D-0062.)*
+- **`-Profile floor` is the reliable end-to-end path** (`frugal|floor|max`). **Open residual: `-Profile max` does
+  NOT land** — at `gen_tier=strong` the 9B arg-gen returns non-JSON (`arg_parse_failed`) every step (a 9B/gateway
+  defect, NOT the terminator; measured on Q4, not re-tested since Q5_K_M — D-0046/D-0062).
 - Opt-in logprob-entropy soft signal (clean per-token logprobs on BOTH builds b8661 + b10092, D-0060);
   `-AutoRamp` is exposed in the Local Agent Console (widgets/01) as a toggle + trace render.
 
 ## Model stack (full inventory: `TOOL_MODEL_REGISTRY.md`)
 
-- **Strong tier = `llm.strong.qwen3p5-9b` — Qwen3.5-9B Q5_K_M, fully GPU-resident** (~**7.11 GB**, `ngl 99`; **2902 MiB free
-  at ctx 8192** — probe `m10-warmpool-probe-002`) -> **GPU-bound ~68 tok/s** (measured at Q4), clean terse JSON. Q4_K_M -> Q5_K_M for fidelity + KV headroom
-  (D-0062); live S0 6/6 @2048 tok. **Q4 retained `wired:false`** = one-flip rollback.
+- **Strong tier = `llm.strong.qwen3p5-9b` — Qwen3.5-9B Q5_K_M, GPU-resident** (~7.11 GB, `ngl 99`; 2902 MiB free
+  @ctx 8192, probe `m10-warmpool-probe-002`) -> **GPU-bound ~68 tok/s** (at Q4), clean terse JSON. Q4->Q5_K_M for
+  fidelity + KV headroom (D-0062); live S0 6/6 @2048 tok. **Q4 retained `wired:false`** = one-flip rollback.
 - **Engine:** the 9B is a hybrid attention-SSM arch **b8661 cannot load**, so its entry pins `engine_path` to
   a side-by-side **llama.cpp b10092 (CUDA 12.4, self-contained)**; **every other tier stays on b8661**.
 - **`no_think: true`** on the 9B entry -> the gateway appends ` /no_think`; without it the default flags leave
@@ -64,10 +65,10 @@ Design + rationale: **`ADAPTIVE_RESOURCE_GOVERNOR.md`**. Runtime facts:
   confirmed by the couriered frontier report (`core-docs/research/2026-07-28-frontier-local-model-selection.md`).
   Reachable via `-Model` / the X0 rung only; the resident 9B is the effective top rung.
 - **Decision floor = mid (3B)**; strong is GENERATION-only.
-- Warm multi-model pool: Stage-1 BUILT (i14) + **Stage-1.1 hardened i15 (D-0068, `121a0fc`) — still DEFAULT-OFF** (see Known failures): `modules/07-model-gateway/WARM_POOL_DESIGN.md`
-  (mechanism C = a named pool manager; sections 6 + 9; D-0063). Measured: one ~7 GB model fits the GPU at a
-  time; swap is GPU-upload-bound (~1.6 s -> 3B, ~4.1 s -> 9B); same-model reuse ~1 ms; page-cache warmth does
-  NOT cut swap cost; all GGUFs (28.5 GiB) fit the 64 GB RAM.
+- Warm multi-model pool: Stage-1.1 hardened (i15, D-0068) + a **DURABLE gateway supervisor shipped i16 (D-0069,
+  `cc296fc`, skill 0.4.0) — still DEFAULT-OFF** (see Known failures): `WARM_POOL_DESIGN.md` (mechanism C; §6/9/10).
+  Measured: one ~7 GB model fits the GPU at a time; swap GPU-upload-bound (~1.6 s->3B, ~4.1 s->9B); same-model
+  reuse ~1 ms; all GGUFs (28.5 GiB) fit 64 GB RAM.
 
 ## Repo / working dirs
 
@@ -75,8 +76,8 @@ Design + rationale: **`ADAPTIVE_RESOURCE_GOVERNOR.md`**. Runtime facts:
   `modules/<NN>-<name>/` + `widgets/<NN>-<name>/` + `archive/`.
 - **Large-data home:** `F:\My_Programs\...\LifeOrchestrator-Refresh_Large_Data\<NN>-<module>\`; shared
   llama.cpp engines under `_engines\`.
-- **Reference sources (separate, NOT built here):** the earlier assistant codebase `LifeOrchestrator\repo`
-  (fold in later) and the **Project Proteus** game (`Project-Proteus-src`).
+- **Reference sources (NOT built here):** the earlier `LifeOrchestrator\repo` (fold in later) + the **Project
+  Proteus** game (`Project-Proteus-src`).
 - The attached Claude Project **mirrors** `core-docs/`; disk wins on disagreement.
 
 ## Executor status
@@ -90,10 +91,11 @@ Design + rationale: **`ADAPTIVE_RESOURCE_GOVERNOR.md`**. Runtime facts:
 - Crash history: a transient file-lock crash 2026-07-24, now **self-healed in-process** (Known failures);
   and a **wedge** from an orphaned llama-server holding a `running/` file (D-0055/D-0056), closed by iter-3
   hardening + launching persistent servers DETACHED (D-0057).
-- **Model servers: `model.gateway` #7 keeps a DETACHED warm/persistent `llama-server`** with residency-key
-  matching under the `res.lease` **gpu** lease (D-0057; warm reuse ~1 ms vs ~1200 ms cold) — NOT torn down per
-  call. **`image.interpret` #17 is still transient** (multimodal `llama-server` with `--mmproj` per call). Any
-  persistent server MUST launch detached and be reaped before finalize; assert 0 orphans every wave.
+- **Model servers: `model.gateway` #7 keeps a DETACHED warm `llama-server`** (residency-key match under the
+  `res.lease` **gpu** lease; D-0057; warm reuse ~1 ms vs ~1200 ms cold) — not torn down per call. **Optional durable
+  supervisor (i16, D-0069, default-OFF):** `Start-GatewaySupervisor.ps1` owns the tree in a Windows Job Object,
+  surviving across invocations (`-UseSupervisor`). **`image.interpret` #17 is still transient.** Any persistent
+  server launches detached + is reaped before finalize; assert 0 UNMANAGED orphans every wave.
 
 ## Completed modules
 
@@ -104,18 +106,21 @@ registry facts: `TOOL_MODEL_REGISTRY.md`. Roster (all MVP-complete unless noted)
   skill.bootstrap (contract v0.2) · #29 res.lease (gpu/git/doc leases; consumer trio complete) · #30
   orchestrate.fanout · #31 frontier.bridge (`pack` takes `{prompt, files}` — NOT `{task,...}`, D-0057).
 - **Observation/UIA:** #2 fs.observer · #3 proc.observer · #4 uia.inspector · #5 uia.actor · #6 capture.screen.
-- **Model core:** #7 model.gateway (detached warm server D-0057; warm pool Stage-1.1 hardened, default-OFF, D-0068) · #8 classify.batch · #9 review.processor ·
-  #19 logic.escalator · #20 doc.io · #21 agent.local (`-Route`, D-0046 terminator, `-Profile`, `-AutoRamp`;
+- **Model core:** #7 model.gateway (detached warm server D-0057; warm pool Stage-1.1 hardened + durable supervisor default-OFF, D-0068/D-0069) · #8 classify.batch · #9 review.processor ·
+  #19 logic.escalator · #20 doc.io (+ additive portability resolver shim, i16 D-0069) · #21 agent.local (`-Route`, D-0046 terminator, `-Profile`, `-AutoRamp`;
   the closed `tools.json` registry IS the sandbox) · #27 route.tools · #28 fs.manage.
 - **Audio:** #10 audio.ingest · #11 speech.stt · #12 speech.tts · #13 voice.live.
 - **Perception:** #14 ocr.layout · #15 image.util · #16 detect.objects · #17 image.interpret · #18 image.index.
 - **Generators (user track):** #22 gen.audio · #23 gen.image · #24 gen.music · #25 gen.video.
+- **Video spine (Phase C, STARTED i16):** **#32 media.decompose** — deterministic ffmpeg/ffprobe video decompose
+  (meta/audio/keyframes/scenes; composes #10; `parallel_safe:true`; arch position 19, D-0069). Next: positions
+  20-22 (track.objects / video.timeline / video.interpret), Proposed.
 - **NOT built:** #26 agent.coding — designed + DEFERRED (D-0037; no safe code-exec substrate on this box).
 - **Widgets (native + `launch.bat`, D-0038):** 01 Local Agent Console · 02 Module Launcher · 03 Verification
-  Console (**durable verdicts** — results sidecar keyed by `packet_id`; the packet file is never modified, D-0065) · **04 Fan-out Wave Dashboard** (read-only plan/worker/lease view; D-0067; live-GUI confirm DONE i15 D-0068 — an off-screen Refresh defect caught + fixed).
+  Console (**durable verdicts** — results sidecar keyed by `packet_id`; the packet file is never modified, D-0065) · **04 Fan-out Wave Dashboard** (read-only plan/worker/lease view; D-0067; live-GUI confirm DONE i15 D-0068).
 
 **Phase A complete** (0–25 + 00.1; #26 deferred); generator track #22–#25 complete; **Phase B Widgets 01–04
-shipped.**
+shipped; Phase C video spine STARTED (#32).**
 
 ## Installed dependencies (verified on this machine)
 
@@ -139,11 +144,10 @@ shipped.**
   #15 uses the **system python** (CPU-only -> genuinely parallel-safe, not CUDA/venv-bound).
 - **onnxruntime** — system python: onnxruntime-gpu 1.17.1 + onnxruntime-directml 1.17.1 + torch 2.2.1 +
   torchvision 0.17.1. `detect.objects` #16 requests **`CPUExecutionProvider`** by default.
-- **diffusers 0.35.2 in the speech venv** — venv
-  `F:\My_Programs\Local_Computer_Speech_Large_Data\python_env` (torch 2.11+cu128, transformers 4.57.3,
-  accelerate, safetensors, torchvision 0.26, `qwen_tts`); powers `gen.image`/`gen.video`. It added only
-  diffusers + importlib_metadata + zipp (Module 12 safe). The **system python is torch 2.2.1+cpu (no CUDA)** —
-  image/video generation runs under the speech venv only.
+- **diffusers 0.35.2 in the speech venv** (`F:\...Local_Computer_Speech_Large_Data\python_env`: torch 2.11+cu128,
+  transformers 4.57.3, accelerate, safetensors, torchvision 0.26, `qwen_tts`) powers `gen.image`/`gen.video`; added
+  only diffusers+importlib_metadata+zipp (Module 12 safe). The **system python is torch 2.2.1+cpu (no CUDA)** —
+  image/video gen runs under the speech venv only.
 
 ## Installed local models (summary)
 
@@ -185,7 +189,7 @@ Models live in per-owning-module F: homes under `…_Large_Data\` (D-0028); engi
 - **User ops (click-to-run):** `ops/*.bat` — start/stop/restart/status the executor, run tests; output to
   `ops/out/`. **Watchdog:** `ops/start-watchdog.bat` / `stop-watchdog.bat` / `recover-executor.bat [-Force]`,
   or `modules\00.1-exec-watchdog\Watch-Executor.ps1` / `Recover-Executor.ps1`.
-- Examples: `07-model-gateway\Invoke-ModelGateway.ps1 [-Model <id>|-Tier tiny|weak|mid|strong] -Prompt '<s>' [-MaxTokens -Temperature -TopP -TopK -Seed]` · `21-agent-local\Invoke-AgentLocal.ps1 -Goal '<s>' -Route [-Profile frugal|floor|max] [-NoAutoRamp] [-AllowLegacy27B] [-DryRun]` · `06-capture-screen\Invoke-CaptureScreen.ps1 [-Target monitor|window|app|region] [-Monitor index|all|primary] [-Format png|jpg]`.
+- Examples: `07-model-gateway\Invoke-ModelGateway.ps1 [-Model <id>|-Tier tiny|weak|mid|strong] -Prompt '<s>' [-MaxTokens -Temperature -TopP -TopK -Seed]` · `21-agent-local\Invoke-AgentLocal.ps1 -Goal '<s>' -Route [-Profile frugal|floor|max] [-NoAutoRamp] [-AllowLegacy27B] [-DryRun]` · `32-media-decompose\Invoke-MediaDecompose.ps1 -Path <video> [-Audio] [-Keyframes N] [-Scenes] [-SceneThreshold f]` · `06-capture-screen\Invoke-CaptureScreen.ps1 [-Target monitor|window|app|region] [-Monitor index|all|primary] [-Format png|jpg]`.
 
 ## Current tests
 
@@ -207,7 +211,7 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 | #1 / #2 / #3 / #4 | 11/11 · 16/16 · 16/16 · 16/16 | — | 07-24 |
 | #5 uia.actor | 26/26 | `m5-test-001` | 07-24 |
 | #6 capture.screen | 39/39 | `m6-test-001` | 07-24 |
-| #7 model.gateway | live base 42/42; off-machine 157/157 (core49 + warm23 + pool48 + FI37) | `121a0fc` | 07-30 |
+| #7 model.gateway | live base 42/42; off-machine 228/228 (core49 + warm23 + pool48 + FI37 + supCore46 + supFI25) | `cc296fc` | 07-30 |
 | #8 classify.batch | 33/33 | `m8-test-001` | 07-24 |
 | #9 review.processor | 34/34 | `m9-test-003` | 07-24 |
 | #10 audio.ingest | 43/43 | `m10-test-001` | 07-24 |
@@ -220,7 +224,7 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 | #17 image.interpret | 48/48 `-Live` | `m17-test-001/002` | 07-25 |
 | #18 image.index | 41/41 `-Live` (40/40 cloud) | `m18-test-002` | 07-25 |
 | #19 logic.escalator | 28/28 `-Live` (24/24 cloud) | `m19-test-001` | 07-25 |
-| #20 doc.io | 106/106 | `d2a7352` | 07-28 |
+| #20 doc.io | 106/106 (+ portability resolver shim, ops/setup 140/140 `-Live`) | `d2a7352` / `8274b9f` | 07-30 |
 | #21 agent.local | 102/102 (+122/122 off-machine) | `e444851` | 07-28 |
 | #22 gen.audio | 43/43 (41/41 cloud) | `m22-test-001` | 07-25 |
 | #23 gen.image | 32/32 `-Live` (42/42 cloud) | `m23-test-005` | 07-25 |
@@ -232,11 +236,12 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 | #29 res.lease | 41/41 `-Live` (38/38 cloud) | `36d7e0be` | 07-27 |
 | #30 orchestrate.fanout | 71/71 `-Live` | `2afd5de` | 07-28 |
 | #31 frontier.bridge | 65/65 + hardened return-capture | `f52f21d`/`b17a945` | 07-28 |
+| #32 media.decompose | 76/76 cloud + 76/76 `-Live` | `5026e2c` | 07-30 |
 | widgets/01 Agent Console | 91/91 `-Live` (89/89 cloud) | `b1f36f0` | 07-28 |
 | widgets/02 Module Launcher | 75/75 `-Live` (64/64 cloud) | `c509e571` | 07-27 |
 | widgets/03 Verification Console | 173/173 cloud mock + live STA SelfTests (`SELFTEST_VERDICT_PERSIST_OK`, `SELFTEST_AUTOLOAD_OK`) | `f3c1ec7` | 07-29 |
-| ops/setup portability | 119/119 cloud + 131/131 `-Live` | `c0f8be0` | 07-30 |
-| widgets/04 Fan-out Wave Dashboard | 80/80 cloud + 91/91 `-Live` (+SELFTEST_LAYOUT_OK); live-GUI confirm DONE (off-screen Refresh fix) | `8c1da2e` | 07-30 |
+| ops/setup portability | 128/128 cloud + 140/140 `-Live` | `8274b9f` | 07-30 |
+| widgets/04 Fan-out Wave Dashboard | 80/80 cloud + 91/91 `-Live` (+SELFTEST_LAYOUT_OK); live-GUI confirm DONE | `8c1da2e` | 07-30 |
 
 ## Known failures / gotchas
 
@@ -248,8 +253,9 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
   that, or verify by a marker first. **The on-disk repo is canonical** — trust an executor read over a re-stage.
 - **`ffprobe` on PATH is shadowed by a Python shim.** `where.exe ffprobe` returns
   `…\Python310\Scripts\ffprobe.exe` *before* the real `…\WinGet\Links\ffprobe.exe`. Resolve ffprobe as the
-  **sibling of the resolved ffmpeg**, or filter out any `\Python*\Scripts\` source. Also: the Linux mount
-  cannot `stat` the WinGet `Links\*.exe` reparse points, so `ls` shows them absent though Windows resolves them.
+  **sibling of the resolved ffmpeg**, or filter out any `\Python*\Scripts\` source (audio.ingest #10 +
+  media.decompose #32 both do this). Also: the Linux mount cannot `stat` the WinGet `Links\*.exe` reparse
+  points, so `ls` shows them absent though Windows resolves them.
 - **Windows PowerShell 5.1 reads a BOM-less `.ps1` as ANSI, not UTF-8.** Any non-ASCII byte corrupts parsing: a
   UTF-8 em dash in `ocr_worker.ps1` made 5.1 fail ("Unexpected token" / "The hash literal was incomplete") and
   exit 1 with **no output** — and the wrapper discarded stderr, so it only saw "produced no meta". **Rule:**
@@ -271,7 +277,7 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 - **`llama-cli` on build b8661 is interactive-only** — it rejects `-no-cnv` ("use llama-completion instead",
   not built) and decorates stdout with a banner/`>`/timing footer. Script LLMs via **`llama-server`**
   (`/v1/chat/completions` -> clean JSON with `finish_reason`/`usage`/`timings`), as `model.gateway` does.
-- **Child-process pipe deadlock:** reading a child's stdout to end while its stderr pipe fills (llama.cpp logs
+- **Child-process pipe deadlock:** reading a child's stdout to end while its stderr pipe fills (llama.cpp / ffmpeg log
   a lot) deadlocks. Drain both async (`ReadToEndAsync`) or redirect to files, and close the child's stdin.
 - **`capture.screen` uses screen-pixel copy (`CopyFromScreen`):** an **occluded** window captures whatever
   covers it and a **minimized** one returns `window_minimized` — it does **not** raise/activate windows.
@@ -283,7 +289,8 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
   types explicitly (or `json.dump(default=...)`). Fixed in `image_worker.py` (`safe_dpi`).
 - **The dotnet-tool `pwsh` shim reports its process path as `dotnet.exe`** — `(Get-Process -Id $PID).Path` is
   not a reliable pwsh locator; pass explicit `-PwshPath`, resolve via `$PSHOME` in harnesses. The **executor
-  likewise shows as `dotnet.exe`** — trust the heartbeat, not the process list.
+  likewise shows as `dotnet.exe`** — trust the heartbeat, not the process list. (Own warm servers by Job-Object
+  HANDLE, not by process-name matching — the i16 supervisor lesson.)
 - **Skill scripts must write ONLY the JSON envelope to stdout** (diagnostics to stderr); the executor captures
   stdout verbatim into `stdout.txt` and parses it as the envelope.
 - **Bare-local WinForms event handlers lose scope** — a toggle handler threw a null-ref (`'Enabled' on $null`)
@@ -309,13 +316,14 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
   off-screen (widget-04's Refresh went to X=1788, off the 1104 px client; the mock + SelfTest gates missed it,
   D-0068). Register controls, DROP L/R anchors, position from the panel's ACTUAL width in a Resize handler
   (`.GetNewClosure()`) + on Shown; add a SelfTest that shows the form off-screen (`SELFTEST_LAYOUT_OK`).
-- **Warm pool manager is OPT-IN / default-OFF (D-0067/D-0068).** Stage-1.1 hardening SHIPPED i15 (`121a0fc`):
-  fencing + generation-mismatch rejection, GPU-handoff evict-before-grant, crash-atomic transitions + reconcile
-  under a global lock, verified socket-owner publish, per-call Job-Object tree-kill, CanServe, dropped
-  LRU/idle-timer/prefix-reuse; `-BypassPoolManager` escape, integrity invariants non-bypassable. Off-machine
-  157/157 + live (stale-generation call rejected; 3B->9B 4138 ms; 0 orphans). STILL DEFAULT-OFF pending a soak +
-  a PERSISTENT gateway supervisor for DURABLE Job-Object ownership across invocations (per-call covered) + the
-  res.lease fencing wave (findings 13/14). Classic + D-0057 warm paths remain the trusted default.
+- **Warm pool manager is OPT-IN / default-OFF (D-0067/D-0068/D-0069).** Stage-1.1 (`121a0fc`) closed the red-team
+  Criticals (fencing, generation-mismatch rejection, GPU-handoff evict-before-grant, crash-atomic reconcile,
+  verified socket-owner publish, CanServe, KV isolation; `-BypassPoolManager` escape; invariants non-bypassable).
+  i16 (`cc296fc`) added the **DURABLE Job-Object gateway supervisor** (`Start-GatewaySupervisor.ps1` +
+  `lib/Supervisor.psm1`, `-UseSupervisor`): resident + Job-Object tree survive ACROSS invocations — **finding 5
+  durable = CLOSED** (228/228 off-machine + live tree-reap / two-invocation reuse / 3B->9B swap / 0 orphans).
+  DEFAULT-OFF pending a **soak** + the **res.lease fencing wave** (13/14). Classic + D-0057 warm paths are the
+  trusted default. Detail: `WARM_POOL_DESIGN.md` §10.
 
 ## Unresolved questions
 
@@ -330,35 +338,33 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 - **`embedding.qwen3-0p6b` is staged but unwired** — awaits its owning module (artifact.search).
 - **Widget 03 Verification Console `model.gateway` GPU live-GUI pass is still open** (residual first noted
   in D-0060, never closed) — exercised CPU-only + live-GUI so far.
-- **Portability bring-up: Stage-1 (i14) + i15 follow-ons DONE (D-0068).** i15 wired the additive+fallback
-  `Resolve-LifeorchConfig` shim into `modules/14`+`16` (byte-identical on-box) + confirmed the staging-plan URLs
-  (2/2 VLM reachable; 4 LLM + SD1.5 `TODO_CONFIRM`; 2 missing sha). KEY FINDING: repo-root is ALREADY portable
-  (every leaf uses a `$PSScriptRoot` walk-up; the data-root lives in `modules/07/models.json`). Residuals:
-  extend the shim to the remaining walk-up leaf modules (MANY model-bound -> GPU-lane); apply `models.machine.json`
-  under the gpu lease; confirm `TODO_CONFIRM` URLs + add sha; re-gen staging-plan on the real F: target.
+- **Portability (i16, D-0069): `doc.io` #20 wired — the LAST non-model/non-infra walk-up leaf** (pure CPU leaves
+  02/03/04/05/06/10/15/22/28 already `$PSScriptRoot`-portable). Remaining path sites, each its own follow-on wave:
+  the `$PwshPath` default across ~15 model-bound entrypoints + harnesses; core-infra (00.1 + `ops/*.bat`) =
+  single-worker; interpreter paths in #15/#16 = a config-schema extension; model-bound F: literals (#17/#21, #25) =
+  GPU-lane rides. Also pending: apply `models.machine.json` (gpu lease); confirm `TODO_CONFIRM` URLs + sha; re-gen
+  the plan on real F:. Detail: PORT-shim report / D-0069.
 - **Generator model leads for #22–#25: RECEIVED (D-0068, `core-docs/research/2026-07-30-generator-model-leads.md`).**
   image=Z-Image-Turbo Q8, music=ACE-Step 1.5, video=LTX-Video 2B Distilled, audio=Stable Audio 3 Small SFX;
   Diffusers-native starts SD3.5 Medium / Wan2.1 1.3B / Stable Audio Open 1.0. Each upgrade = a follow-on
   GPU-lane wave (most need a new engine/venv); not yet installed.
-- **Warm-pool Stage-1.1 SHIPPED i15; pool still DEFAULT-OFF** -- enable-by-default gate: a persistent gateway
-  supervisor (durable Job-Object ownership across invocations) + a soak + the res.lease fencing wave (findings
-  13/14). Detail: Known failures + `WARM_POOL_DESIGN.md` section 10.
-- **Widget 04 live-GUI confirm DONE i15 (D-0068)** -- a real off-screen layout render + measured bounds + a new
-  `SELFTEST_LAYOUT_OK` guard caught + fixed an off-screen Refresh button. An optional interactive on-screen
-  eyeball remains (an executor-launched form is not composited on the interactive desktop).
+- **Warm-pool default-ON gate (D-0069):** durable supervisor SHIPPED (finding 5 CLOSED); default-ON now awaits only
+  a **soak** + the **res.lease fencing wave** (13/14, single-worker). exec.watchdog #00.1 -> supervisor relaunch is
+  NAMED (not built).
 
 ## Next expected action
 
-**Run iteration 16** per **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4 (which owns the candidate menu): scope
-1 GPU + 1 CPU + 1 coding + 1 frontier -> `plan` at `MaxParallel 3` -> confirm the preflight -> relay prompts +
-the frontier pack as FILES -> `status` -> `handoff` -> fold the answer -> mirror the core-docs under the git lease.
+**Run iteration 17** per **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4 (which owns the candidate menu): scope
+up to 4 lanes (1 GPU + 1 CPU + 1 coding + optional frontier) -> `plan` at `MaxParallel 3` -> confirm the
+preflight -> relay prompts (+ any frontier pack) as FILES -> `status` -> `handoff` -> fold + mirror the
+core-docs under the git lease.
 
-Outstanding: **(1)** enable the warm pool by default (after a durable Job-Object gateway-supervisor + a soak);
-**(2)** widget-03 `model.gateway` GPU live-GUI pass (open since D-0060); **(3)** the res.lease fencing infra
-wave (findings 13/14, single-worker); **(4)** generator upgrades #22–#25 (leads received); **(5)** portability
-residuals.
+Outstanding: **(1)** enable the warm pool by default (supervisor DONE; needs a soak + the res.lease fencing wave);
+**(2)** the res.lease fencing infra wave (13/14, single-worker); **(3)** continue the Phase C video spine (#32 done
+-> 20-22); **(4)** generator upgrades #22–#25 (leads in); **(5)** widget-03 GPU live-GUI pass; **(6)** portability
+follow-ons (pwsh-path / infra / interpreter / model-bound).
 
 ---
 
-**Last updated:** 2026-07-30 — fan-out iteration 15 close-out (D-0068).
+**Last updated:** 2026-07-30 — fan-out iteration 16 close-out (D-0069).
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

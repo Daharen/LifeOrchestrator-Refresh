@@ -3,7 +3,7 @@
 **You are a fresh Claude instance joining Life Orchestrator (near-term "local skills" track).**
 Read this first. It routes you; it does not contain the project's substance.
 
-> **ACTIVE WORK:** the fan-out loop (13 iterations done, D-0055..D-0065). If you are the **fan-out
+> **ACTIVE WORK:** the fan-out loop (16 iterations done, D-0055..D-0069). If you are the **fan-out
 > orchestrator**, read `core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md` -- the ONE live handoff -- and start
 > there. If you are a dispatched **worker**, read the brief you were pointed at
 > (`core-docs/fanout/FANOUT_AGENT_00N.md` / Project `claude/fanout/`) and execute exactly that unit.

@@ -12,6 +12,7 @@ Append one line per addition (path | what it was | why archived | date | D-ref).
 - `2026-07-29-FANOUT_ORCHESTRATOR_HANDOFF-pre-D0066.md` | the pre-consolidation live handoff (iteration-by-iteration prose) | snapshot before the D-0066 rewrite; iteration detail compressed to the ledger | 2026-07-29 | D-0066
 - `2026-07-29-FANOUT_ORCHESTRATOR_HANDOFF-i14.md` | the live handoff snapshotted before the i14 close-out rewrite (HEAD 74d6c86) | snapshot-then-rewrite each orchestrator session (DOC_PROTOCOL s5) | 2026-07-29 | D-0067
 - `2026-07-30-FANOUT_ORCHESTRATOR_HANDOFF-i15.md` | the live handoff snapshotted before the i15 close-out rewrite (HEAD 8c1da2e) | snapshot-then-rewrite each orchestrator session (DOC_PROTOCOL s5) | 2026-07-30 | D-0068
+- `2026-07-30-FANOUT_ORCHESTRATOR_HANDOFF-i16.md` | the live handoff snapshotted before the i16 close-out rewrite (HEAD d106ed7) | snapshot-then-rewrite each orchestrator session (DOC_PROTOCOL s5) | 2026-07-30 | D-0069
 
 ## doc-snapshots/2026-07-29/
 
@@ -35,3 +36,6 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 - `i15-WMP-stage11.md` | the filled GPU-lane brief (warm-pool Stage-1.1 hardening) dispatched in i15 (plan fo-15-27a03513) | used brief archived on wave completion | 2026-07-30 | D-0068
 - `i15-PORT-wire.md` | the filled CPU-lane brief (portability follow-ons: staging-plan confirm + resolver shim) dispatched in i15 | used brief archived on wave completion | 2026-07-30 | D-0068
 - `i15-WAVE-confirm.md` | the filled coding-lane brief (widget-04 live-GUI confirm + polish) dispatched in i15 | used brief archived on wave completion | 2026-07-30 | D-0068
+- `i16-WMP-supervisor.md` | the filled GPU-lane brief (warm-pool durable Job-Object gateway supervisor) dispatched in i16 (plan fo-16-f125365c) | used brief archived on wave completion | 2026-07-30 | D-0069
+- `i16-PORT-shim.md` | the filled CPU-lane brief (portability resolver shim into doc.io #20) dispatched in i16 | used brief archived on wave completion | 2026-07-30 | D-0069
+- `i16-MEDIA-decompose.md` | the filled coding-lane brief (NEW module #32 media.decompose) dispatched in i16 | used brief archived on wave completion | 2026-07-30 | D-0069

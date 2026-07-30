@@ -18,15 +18,15 @@ full text → `archive/`. Per-module params/artifacts → `modules/<NN>-*/README
 
 ## Build priority (2026-07-25 pivot — D-0029)
 
-> **2026-07-30 (D-0068):** Modules 0–31 + 00.1 and Widgets 01–04 are BUILT; fan-out iterations 1–15
-> SHIPPED (D-0055..D-0068). Live status + next action: `CURRENT_STATE.md`. Wave model + candidate menu:
+> **2026-07-30 (D-0069):** Modules 0–32 + 00.1 and Widgets 01–04 are BUILT; fan-out iterations 1–16
+> SHIPPED (D-0055..D-0069). Live status + next action: `CURRENT_STATE.md`. Wave model + candidate menu:
 > `FANOUT_ORCHESTRATOR_HANDOFF.md` (the ONE live handoff). Warm-pool Stage-1.1 hardening SHIPPED (i15,
 > still default-OFF); generator model leads RECEIVED (`research/2026-07-30-generator-model-leads.md`).
-> Next GPU candidates: the durable Job-Object gateway-supervisor + enable-after-soak, or a generator upgrade.
+> Next: continue the Phase C video spine (#32 done -> positions 20-22), enable the warm pool by default (durable supervisor SHIPPED i16; a soak + the res.lease fencing wave remain), a generator upgrade, or the res.lease fencing infra wave.
 
 **The per-module numbers are architectural positions, not a build sequence.** The full 0–49 spine (+ the
 real-time autonomic layer 45–49 and the 6-level operating hierarchy) lives in `ARCHITECTURE_MAP.md`.
-**Modules 0–31 + 00.1 are built; Widgets 01–03 are built.** The near-term order delivers a **locally usable
+**Modules 0–32 + 00.1 are built; Widgets 01–04 are built.** The near-term order delivers a **locally usable
 core** (cost-offload + a human interface) before the deep-research spine.
 
 **Phase A — utility & cost-offload Modules — COMPLETE except the deferred coding agent:**
@@ -52,7 +52,7 @@ Console (D-0039), #2 Module Launcher (D-0049), #3 Verification Console (D-0050/5
 Backlog: **Voice Console · Generator Studio · Document Workspace · System/Executor Monitor** (the old
 "Review / Escalation Dashboard" was reoriented into Widget #3, D-0050). Full list in `widgets/README.md`.
 
-**Phase C — resume the canonical spine (deferred):** video (19–22) → search/routing/orchestration (23–26) →
+**Phase C — canonical spine STARTED (i16, D-0069):** video (19–22; #32 media.decompose DONE) → search/routing/orchestration (23–26) →
 general-screen-perception + self-improving (27–44) → the real-time autonomic layer (45–49).
 
 **Direction (D-0050):** past MVP the project drives ONE spine — the **offload / audit loop** under the
@@ -134,7 +134,7 @@ one virtual-desktop rect → GDI → PNG (or JPG q90). Read-only, Per-Monitor-V2
 `llama-server` (start → `/health` → `/v1/chat/completions` → kill), chosen from `models.json` by `-Model` id
 or `-Tier` alias; `parallel_safe:false`. **Warm/persistent DETACHED server shipped** (Governor Phase 2, D-0057
 `f8c961a`; warm reuse ~1 ms vs ~1200 ms cold); `res.lease` gpu wired (`0c6d5c9`); `-Logprobs` on both engine
-builds (D-0060 `830efcc`). **Follow-ons:** the **warm multi-model pool + router — Stage-1 (mechanism C) SHIPPED opt-in/default-OFF i14 (D-0067, `09a7e71`, skill 0.3.0); Stage-1.1 hardening SHIPPED i15 (D-0068, `121a0fc`, still default-OFF; enable-by-default pending a durable Job-Object supervisor + a soak + the res.lease fencing infra wave); native router still Stage-2+**
+builds (D-0060 `830efcc`). **Follow-ons:** the **warm multi-model pool + router — Stage-1 (mechanism C) SHIPPED opt-in/default-OFF i14 (D-0067, `09a7e71`, skill 0.3.0); Stage-1.1 hardening SHIPPED i15 (D-0068, `121a0fc`, still default-OFF; enable-by-default: the durable Job-Object gateway SUPERVISOR SHIPPED i16 (D-0069, `cc296fc`; `Start-GatewaySupervisor.ps1` + `lib/Supervisor.psm1`, `-UseSupervisor`), closing finding 5; now pending only a soak + the res.lease fencing infra wave); native router still Stage-2+**
 (`WARM_POOL_DESIGN.md`, D-0063 `c07125f`, + a couriered ChatGPT Pro second opinion as §9): Stage-1 =
 **mechanism C** (the detached server becomes a NAMED POOL MANAGER `Ensure-ResidentModel` + residency-key +
 task-affinity swap-minimising policy + whole-task gpu lease + a 90 s keep-resident window); Stage-2+ GATED
@@ -335,6 +335,8 @@ hardened by the iter-2 prompt-template fix (`581f854`) + iter-5 packet-input val
 an escalation pack the human couriers to an off-box frontier model, and reads the answer back — the D-0052
 manual bridge, automated. Hardened iter 4 (`b17a945`); used for the D-0061 model-selection report and the
 D-0063 warm-pool second opinion.
+
+**32 `media.decompose`** — Video Decompose · MVP complete 2026-07-30 (Phase C video spine STARTED; D-0069, `5026e2c`). NEW deterministic ffmpeg/ffprobe module — the video analog of `audio.ingest` #10 / `image.util` #15; `parallel_safe:true` (no CUDA/model/port). Ops: **meta** always (ffprobe show_format+show_streams -> container + per-stream codec/res/fps/pix_fmt/bitrate/channels/sample_rate); **-Audio** (composes #10 -> whisper-ready 16k mono s16 WAV); **-Keyframes N** (scene-preferred else evenly-spaced PNGs + sidecar); **-Scenes** (`{index,start,end,score}` + `-SceneThreshold`). **Gotcha reused:** ffprobe resolved as the ffmpeg SIBLING (the Python `Scripts\ffprobe.exe` shim). Gates 76/76 cloud + 76/76 `-Live`. Arch position 19. **Follow-ons (named, not built):** subtitle-stream extraction (srt/vtt); clip segmentation by scene; low-res proxy transcode; batch/directory; VAD segmentation; contact-sheet; ANY model/VLM frame interpretation (= `video.interpret`, arch #22).
 
 ## Widgets (Phase B, `widgets/`)
 

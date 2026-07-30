@@ -22,7 +22,7 @@ describe NOW and stay ingestable whole; history is never deleted, it moves to la
 |---|---|---|
 | START_HERE.md | routing: what to read, what you may modify, session checklist | 6 KB |
 | FANOUT_ORCHESTRATOR_HANDOFF.md | THE one live handoff: orchestrator ops + current frontier | 22 KB |
-| CURRENT_STATE.md | reality NOW: phase, active work, box, deps, models, tests table, live gotchas | 30 KB |
+| CURRENT_STATE.md | reality NOW: phase, active work, box, deps, models, tests table, live gotchas | 32 KB |
 | DECISION_LOG.md | append-only rationale | no cap (indexed; tool-pull only) |
 | DECISION_LOG_INDEX.md | one row per decision (id, date, state, title) | 12 KB |
 | MODULE_ROADMAP.md | build order, per-module status, deferred follow-ons, portability backlog | 34 KB |
