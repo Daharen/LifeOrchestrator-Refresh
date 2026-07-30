@@ -86,6 +86,15 @@ param(
     [int]$ConfirmTimeoutMs = 3000,          # give up confirming headroom after this
     [switch]$AllowLockOrder,                # override the lock-order-inversion rejection (records a reason)
     [string]$LockOrderReason,               # the recorded reason for an -AllowLockOrder override
+    # ---- v0.3 (R1b) additive surface (all default-off; a plain / v0.2 call supplies NONE of these) ----
+    [string]$OwnerId,                       # three-identity: the stable owner identity asserted on every op (default = Holder)
+    [string]$ResidentGeneration,            # three-identity: the PoolManager-owned resident_generation stamped + asserted (finding 1)
+    [switch]$Transition,                    # engage the single scheduler-owned ATOMIC hand-off transition (evictor OUTSIDE the mutex, txn journal)
+    [int]$DrainTimeoutMs = 2000,            # bounded drain of an ACTIVE exec before cancel -> supervisor tree-kill (in-flight revocation)
+    [int]$HeadroomObservations = 3,         # WDDM: require headroom STABLE across this many observations before granting
+    [int]$HeadroomStableIntervalMs = 250,   # WDDM: spacing between the stable-headroom observations
+    [switch]$Reconcile,                     # reconcile a crashed/stale transition journal (crash in PREPARING/DRAINING/STARTING)
+    [long]$AuthorityEpoch = -1,             # assert-this-epoch CAS for a transition/exec op (-1 = not supplied); side effects ASSERT, never advance
     [string]$LeaseDir,
     [string]$InputsJson,
     [string]$ArtifactRoot = (Join-Path $PSScriptRoot 'runtime/artifacts'),
@@ -95,7 +104,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$SKILL_ID = 'res.lease'; $SKILL_VERSION = '0.2.0'; $CONTRACT = '0.2'
+$SKILL_ID = 'res.lease'; $SKILL_VERSION = '0.3.0'; $CONTRACT = '0.3'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $LEASE_SCHEMA = 'lifeorch.res.lease/0.1'
 $PARTIAL_GRACE_SEC = 15   # an unparseable/empty lease (a partial write) is reclaimable at mtime + this
@@ -107,6 +116,8 @@ if ([string]::IsNullOrWhiteSpace($InvocationId)) { $InvocationId = [Guid]::NewGu
 
 # v0.2 InputsJson engagement flags (set during the merge below)
 $jsonNew = $false; $jsonPriority = $false; $jsonFencing = $false; $jsonAllowLO = $false
+# v0.3 (R1b) InputsJson engagement flags
+$jsonR1b = $false; $jsonTransition = $false; $jsonReconcile = $false; $jsonOwnerId = $false; $jsonResidentGen = $false
 
 function Write-Diag([string]$m) { [Console]::Error.WriteLine("[res.lease] $m") }
 function Has([object]$o, [string]$n) { return ($null -ne $o -and $null -ne $o.PSObject -and ($o.PSObject.Properties.Name -contains $n)) }
@@ -148,7 +159,9 @@ function ConvertTo-Utc($v) {
     }
     $s = [string]$v
     $dt = [DateTime]::MinValue
-    $styles = [System.Globalization.DateTimeStyles]::RoundtripKind -bor [System.Globalization.DateTimeStyles]::AssumeUniversal -bor [System.Globalization.DateTimeStyles]::AdjustToUniversal
+    # RoundtripKind alone: honors a trailing 'Z'/offset (-> Kind=Utc/Local); a no-offset string parses as
+    # Unspecified and is specified UTC below. (RoundtripKind is mutually exclusive with AssumeUniversal/AdjustToUniversal.)
+    $styles = [System.Globalization.DateTimeStyles]::RoundtripKind
     if ([DateTime]::TryParse($s, [System.Globalization.CultureInfo]::InvariantCulture, $styles, [ref]$dt)) {
         if ($dt.Kind -eq [System.DateTimeKind]::Local) { return $dt.ToUniversalTime() }
         if ($dt.Kind -eq [System.DateTimeKind]::Unspecified) { return [System.DateTime]::SpecifyKind($dt, [System.DateTimeKind]::Utc) }
@@ -339,6 +352,98 @@ function Invoke-Evictor([string]$mode, [string]$mockResult, [int]$mockFree, [str
     return [ordered]@{ confirmed = $false; free_vram_mib = 0; evicted = $false; outcome = 'no_evictor'; detail = 'no evictor seam configured (EvictorMode=none)' }
 }
 
+# ============================================================================================================
+# v0.3 (R1b) -- the single scheduler-owned ATOMIC hand-off transition support.
+# Three identities (frontier review section 2): gpu_authority_epoch (= the per-resource fencing_token; bumps
+# ONLY when exclusive GPU authority changes; side effects ASSERT it), resident_generation (PoolManager-owned;
+# supplied via -ResidentGeneration), exec_lease_id (= the exec acquire's lease_id). res.lease stays PURE: the
+# evictor (drain->cancel->tree-kill->confirm) is a SEAM; the transition drives it OUTSIDE the lease mutex and
+# commits the grant only if the reserved authority epoch is STILL current (nobody seized during eviction).
+# ============================================================================================================
+function Get-TxnFileName([string]$resource) {
+    $safe = ($resource -replace '[^A-Za-z0-9._-]', '_')
+    if ($safe.Length -gt 48) { $safe = $safe.Substring(0, 48) }
+    $h = (Get-Sha256Hex $utf8.GetBytes($resource)).Substring(0, 8)
+    return "$safe-$h.txn"
+}
+function Read-Txn([string]$txnPath) {
+    if (-not (Test-Path -LiteralPath $txnPath -PathType Leaf)) { return $null }
+    try {
+        $fs = [System.IO.File]::Open($txnPath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, ([System.IO.FileShare]::ReadWrite -bor [System.IO.FileShare]::Delete))
+        $t = $null
+        try { $sr = New-Object System.IO.StreamReader($fs, $utf8); try { $t = $sr.ReadToEnd() } finally { $sr.Dispose() } } finally { $fs.Dispose() }
+        if ([string]::IsNullOrWhiteSpace($t)) { return $null }
+        return ($t | ConvertFrom-Json)
+    } catch { return $null }
+}
+function Write-Txn([string]$txnPath, [System.Collections.IDictionary]$rec) {
+    $bytes = $utf8.GetBytes(($rec | ConvertTo-Json -Depth 8))
+    return (Grant-LeaseAtomic $txnPath $bytes)   # atomic replace (temp + Move overwrite)
+}
+# Reconcile a crashed/stale transition: a PREPARING/DRAINING/STARTING txn whose owner is gone (stale) OR whose
+# reserved epoch was superseded is rolled to ABORTED (idempotent). Returns a small report or $null if nothing to do.
+function Reconcile-Txn([string]$txnPath, [string]$fencePath, [int]$graceSec) {
+    $t = Read-Txn $txnPath
+    if ($null -eq $t) { return $null }
+    $state = [string](Prop $t 'state' '')
+    # only a crashed IN-PROGRESS transition is reconcilable; terminal states (COMMITTED/ABORTED) are left alone.
+    if (@('RESERVING','PREPARING','DRAINING','STARTING') -notcontains $state) { return $null }
+    $stamp = ConvertTo-Utc (Prop $t 'updated_utc' $null)
+    $age = if ($null -ne $stamp) { ([DateTime]::UtcNow - $stamp).TotalSeconds } else { [double]999999 }
+    $curEpoch = Read-FenceCounter $fencePath
+    $txnEpoch = [long](Prop $t 'authority_epoch' 0)
+    $superseded = ($curEpoch -gt $txnEpoch)
+    if ($age -ge $graceSec -or $superseded) {
+        $r = [ordered]@{}
+        foreach ($p in $t.PSObject.Properties) { $r[$p.Name] = $p.Value }
+        $r['state'] = 'ABORTED'
+        $r['reconciled_utc'] = ([DateTime]::UtcNow.ToString('o'))
+        $r['reconcile_reason'] = if ($superseded) { 'superseded_epoch' } else { 'stale_owner' }
+        [void](Write-Txn $txnPath $r)
+        return [ordered]@{ reconciled=$true; from_state=$state; reason=[string]$r['reconcile_reason']; age_sec=[int]$age }
+    }
+    return [ordered]@{ reconciled=$false; from_state=$state; reason='still_active'; age_sec=[int]$age }
+}
+# The R1b transition evictor: drives the seam, requires the managed tree GONE, and requires headroom STABLE
+# across N observations ~intervalMs apart (WDDM-async discipline). MOCK models the adversarial hardware
+# behaviors; the REAL PoolManager evictor plugs into -EvictorMode command and must return
+# {confirmed, free_vram_mib, evicted, tree_gone, outcome, detail}. Distinct from R1a's Invoke-Evictor
+# (which stays byte-identical for the R1a prepared path).
+function Invoke-TransitionEvictor {
+    param([string]$mode, [string]$mockResult, [int]$mockFree, [string]$cmd, $ctx,
+          [int]$required, [int]$targetHead, [int]$obsCount, [int]$intervalMs, [int]$timeoutMs)
+    $need = $required + $targetHead
+    if ($mode -eq 'command') {
+        $r = Invoke-Evictor 'command' $mockResult $mockFree $cmd $ctx $required $targetHead $intervalMs $timeoutMs
+        $treeGone = $true; try { if (Has $r 'tree_gone') { $treeGone = [bool]$r.tree_gone } } catch { }
+        return [ordered]@{ confirmed=[bool]$r.confirmed; free_vram_mib=[int]$r.free_vram_mib; evicted=[bool]$r.evicted; tree_gone=$treeGone; outcome=[string]$r.outcome; detail=[string]$r.detail; observations=@() }
+    }
+    if ($mode -ne 'mock') {
+        return [ordered]@{ confirmed=$false; free_vram_mib=0; evicted=$false; tree_gone=$false; outcome='no_evictor'; detail='EvictorMode must be mock|command for a transition'; observations=@() }
+    }
+    if ($obsCount -lt 1) { $obsCount = 1 }
+    $obs = New-Object System.Collections.Generic.List[int]
+    $evicted = $true; $treeGone = $true; $outcome = $mockResult
+    switch ($mockResult) {
+        'confirm'           { $evicted=$false; for ($i=0;$i -lt $obsCount;$i++){ $obs.Add($need) } }
+        'needs_evict'       { for ($i=0;$i -lt $obsCount;$i++){ $obs.Add($(if($mockFree -gt 0){$mockFree}else{$need})) } }
+        'late_evict'        { Start-Sleep -Milliseconds ([Math]::Min([Math]::Max(0,$intervalMs*2),400)); for ($i=0;$i -lt $obsCount;$i++){ $obs.Add($need) } }  # eviction completes LATE, then headroom is stable -> we WAITED, confirm
+        'partial_tree_term' { $treeGone=$false; for ($i=0;$i -lt $obsCount;$i++){ $obs.Add($need) } }               # headroom looks fine but a child survived -> NOT gone
+        'headroom_never'    { for ($i=0;$i -lt $obsCount;$i++){ $obs.Add([Math]::Max(0,$need-256)) } }
+        'headroom_fell'     { $obs.Add($need); $obs.Add($need); $obs.Add([Math]::Max(0,$need-256)) }                # reached then fell -> not stable
+        'cancel_during_prepare' { return [ordered]@{ confirmed=$false; free_vram_mib=0; evicted=$false; tree_gone=$false; outcome='cancelled'; detail='cancellation arrived during prepare'; observations=@() } }
+        'timeout'           { Start-Sleep -Milliseconds ([Math]::Min([Math]::Max(0,$timeoutMs),300)); return [ordered]@{ confirmed=$false; free_vram_mib=([Math]::Max(0,$mockFree)); evicted=$true; tree_gone=$true; outcome='timeout'; detail='eviction requested, headroom NOT confirmed within timeout'; observations=@() } }
+    }
+    # spacing between observations (bounded so tests stay fast) -- WDDM async settle
+    for ($i=1;$i -lt $obs.Count;$i++){ Start-Sleep -Milliseconds ([Math]::Min([Math]::Max(0,$intervalMs),300)) }
+    $allStable = ($obs.Count -ge 1)
+    foreach ($o in $obs) { if ($o -lt $need) { $allStable = $false } }
+    $confirmed = ($allStable -and $treeGone)
+    $freeReport = if ($obs.Count -gt 0) { $obs[$obs.Count-1] } else { 0 }
+    $det = if (-not $treeGone) { 'managed tree NOT confirmed gone (partial termination)' } elseif (-not $allStable) { 'headroom not stable across observations' } else { 'tree gone + headroom stable across observations' }
+    return [ordered]@{ confirmed=$confirmed; free_vram_mib=$freeReport; evicted=$evicted; tree_gone=$treeGone; outcome=$outcome; detail=$det; observations=$obs.ToArray() }
+}
+
 $status = 'ok'; $errorObj = $null; $result = $null; $inputsDigest = $null
 $artifacts = @()
 $warnings = New-Object System.Collections.Generic.List[string]
@@ -373,6 +478,15 @@ try {
             if ((Has $p 'confirm_timeout_ms')  -and -not $bound.ContainsKey('ConfirmTimeoutMs'))  { $ConfirmTimeoutMs = [int]$p.confirm_timeout_ms; $jsonNew = $true }
             if ((Has $p 'allow_lock_order')    -and -not $bound.ContainsKey('AllowLockOrder'))    { if ([bool]$p.allow_lock_order) { $jsonAllowLO = $true }; $jsonNew = $true }
             if ((Has $p 'lock_order_reason')   -and -not $bound.ContainsKey('LockOrderReason'))   { $LockOrderReason = [string]$p.lock_order_reason; $jsonNew = $true }
+            # v0.3 (R1b) additive keys
+            if ((Has $p 'owner_id')                     -and -not $bound.ContainsKey('OwnerId'))                  { $OwnerId = [string]$p.owner_id; $jsonNew = $true; $jsonR1b = $true; $jsonOwnerId = $true }
+            if ((Has $p 'resident_generation')          -and -not $bound.ContainsKey('ResidentGeneration'))       { $ResidentGeneration = [string]$p.resident_generation; $jsonNew = $true; $jsonR1b = $true; $jsonResidentGen = $true }
+            if ((Has $p 'transition')                   -and -not $bound.ContainsKey('Transition'))               { if ([bool]$p.transition) { $jsonTransition = $true }; $jsonNew = $true; $jsonR1b = $true }
+            if ((Has $p 'drain_timeout_ms')             -and -not $bound.ContainsKey('DrainTimeoutMs'))           { $DrainTimeoutMs = [int]$p.drain_timeout_ms; $jsonNew = $true; $jsonR1b = $true }
+            if ((Has $p 'headroom_observations')        -and -not $bound.ContainsKey('HeadroomObservations'))     { $HeadroomObservations = [int]$p.headroom_observations; $jsonNew = $true; $jsonR1b = $true }
+            if ((Has $p 'headroom_stable_interval_ms')  -and -not $bound.ContainsKey('HeadroomStableIntervalMs')) { $HeadroomStableIntervalMs = [int]$p.headroom_stable_interval_ms; $jsonNew = $true; $jsonR1b = $true }
+            if ((Has $p 'reconcile')                    -and -not $bound.ContainsKey('Reconcile'))                { if ([bool]$p.reconcile) { $jsonReconcile = $true }; $jsonNew = $true; $jsonR1b = $true }
+            if ((Has $p 'authority_epoch')              -and -not $bound.ContainsKey('AuthorityEpoch'))           { $AuthorityEpoch = [long]$p.authority_epoch; $jsonNew = $true; $jsonR1b = $true }
         }
     }
 
@@ -385,7 +499,8 @@ try {
     # v0.2 value validation (all defaults are valid, so a plain call never trips these)
     if (@('exec','residency_pin') -notcontains $Kind) { throw [PSCustomObject]@{ code='invalid_kind'; message="kind must be exec|residency_pin (got '$Kind')"; retryable=$false } }
     if (@('none','mock','command') -notcontains $EvictorMode) { throw [PSCustomObject]@{ code='invalid_evictor_mode'; message="evictor_mode must be none|mock|command (got '$EvictorMode')"; retryable=$false } }
-    if (@('confirm','needs_evict','timeout') -notcontains $MockEvictorResult) { throw [PSCustomObject]@{ code='invalid_mock_result'; message="mock_evictor_result must be confirm|needs_evict|timeout (got '$MockEvictorResult')"; retryable=$false } }
+    $MOCK_RESULTS = @('confirm','needs_evict','timeout','late_evict','partial_tree_term','headroom_never','headroom_fell','cancel_during_prepare')
+    if ($MOCK_RESULTS -notcontains $MockEvictorResult) { throw [PSCustomObject]@{ code='invalid_mock_result'; message="mock_evictor_result must be one of $($MOCK_RESULTS -join '|') (got '$MockEvictorResult')"; retryable=$false } }
 
     # ---- v0.2 engagement: the new surface is INERT unless the caller supplies >=1 new input (byte-identical default) ----
     $newKeys = @('Kind','Priority','Revocable','FencingToken','RequiredVramMiB','TargetHeadroomMiB','EvictorMode','MockEvictorResult','MockFreeVramMiB','EvictorCommand','ConfirmIntervalMs','ConfirmTimeoutMs','AllowLockOrder','LockOrderReason')
@@ -397,6 +512,17 @@ try {
     $allowLO = $AllowLockOrder.IsPresent -or $jsonAllowLO
     $isPin = ($Kind -eq 'residency_pin')
     $isPrepared = ($Action -eq 'acquire') -and ($RequiredVramMiB -ge 0)
+
+    # ---- v0.3 (R1b) engagement: three-identity fencing + the scheduler-owned atomic transition ----
+    $engagedR1b = $jsonR1b
+    foreach ($k in @('OwnerId','ResidentGeneration','Transition','DrainTimeoutMs','HeadroomObservations','HeadroomStableIntervalMs','Reconcile','AuthorityEpoch')) { if ($bound.ContainsKey($k)) { $engagedR1b = $true; break } }
+    if ($engagedR1b) { $engagedNew = $true }   # R1b implies the engaged (non-byte-identical) surface
+    $doTransition = ($Transition.IsPresent -or $jsonTransition)
+    $doReconcile  = ($Reconcile.IsPresent -or $jsonReconcile)
+    $authorityEpochSupplied = $bound.ContainsKey('AuthorityEpoch') -or ($AuthorityEpoch -ge 0)
+    if ([string]::IsNullOrWhiteSpace($OwnerId)) { $OwnerId = $Holder }
+    # gpu_authority_epoch is the fencing_token under a clearer name; an -AuthorityEpoch assertion is a fencing CAS.
+    if ($authorityEpochSupplied -and -not $fencingTokenSupplied) { $FencingToken = $AuthorityEpoch; $fencingTokenSupplied = $true }
 
     # ---- resolve holder + lease dir ----
     if ([string]::IsNullOrWhiteSpace($Holder)) {
@@ -417,6 +543,104 @@ try {
         'acquire' {
             $leasePath = Join-Path $LeaseDir (Get-LeaseFileName $Resource)
             $fencePath = Join-Path $LeaseDir (Get-FenceFileName $Resource)
+
+            # ===================== v0.3 (R1b): the single scheduler-owned ATOMIC hand-off transition ==============
+            # reserve -> fence old owner off new exec -> drain/cancel active exec -> invalidate publish -> shut down
+            # resident -> confirm tree gone -> confirm STABLE headroom -> grant (start+health-check+publish = the
+            # consumer). No interval where the old owner can reacquire exec; the evictor runs OUTSIDE the mutex and
+            # the grant commits ONLY if the reserved authority epoch is still current.
+            if ($doTransition) {
+                $txnPath = Join-Path $LeaseDir (Get-TxnFileName $Resource)
+                $txnClaimPath = "$txnPath.claim"
+                $txnId = [Guid]::NewGuid().ToString('N')
+                $t0 = [DateTime]::UtcNow
+                $heldBy = $null; $leaseObj = $null
+                $reconcileReport = Reconcile-Txn $txnPath $fencePath $PARTIAL_GRACE_SEC   # crash recovery FIRST
+                $trAcquired=$false; $trReason=$null; $trState='RESERVING'; $newEpoch=$null; $revoked=$null
+                $evConfirmed=$false; $evEvicted=$false; $evTreeGone=$null; $evFree=$null; $evOutcome=$null; $evObs=@(); $superseded=$false
+                $myLid=[Guid]::NewGuid().ToString()
+                # serialize transitions: exactly ONE transition-in-progress per resource (equal-priority single winner)
+                $claimBytes=$utf8.GetBytes("txn=$txnId owner=$OwnerId at=$($t0.ToString('o'))")
+                $gotClaim=$false
+                if (Try-CreateLease $txnClaimPath $claimBytes) { $gotClaim=$true }
+                else {
+                    $cm=[DateTime]::UtcNow; try { $cm=[System.IO.File]::GetLastWriteTimeUtc($txnClaimPath) } catch {}
+                    if ($cm.AddSeconds($PARTIAL_GRACE_SEC) -lt [DateTime]::UtcNow) { Remove-Item -LiteralPath $txnClaimPath -Force -ErrorAction SilentlyContinue; if (Try-CreateLease $txnClaimPath $claimBytes) { $gotClaim=$true } }
+                }
+                if (-not $gotClaim) { $trReason='transition_in_progress' }
+                else {
+                  try {
+                    $read=Read-LeaseFile $leasePath
+                    $nowP=[DateTime]::UtcNow
+                    $priorEpoch=[long](Read-FenceCounter $fencePath)
+                    $residentHolder=$null; $residentKind=$null; $residentPrio=0; $residentGen=$null
+                    $hasResident = ($null -ne $read -and -not $read.partial -and -not (Test-LeaseExpired $read $nowP))
+                    if ($hasResident) {
+                        $residentHolder=[string](Prop $read.lease 'holder' '')
+                        $residentKind=[string](Prop $read.lease 'lease_kind' 'exec')
+                        $residentPrio=[int](Prop $read.lease 'priority' 0)
+                        $residentGen=[string](Prop $read.lease 'resident_generation' '')
+                        if ($residentHolder -eq $Holder) {
+                            $trAcquired=$true; $trState='COMMITTED'; $myLid=[string](Prop $read.lease 'lease_id' $myLid); $newEpoch=[long](Prop $read.lease 'fencing_token' $priorEpoch); $trReason='already_held'; $leaseObj=$read.lease
+                        } elseif (-not ($residentKind -eq 'residency_pin' -and [bool](Prop $read.lease 'revocable' $false) -and $residentPrio -lt $Priority)) {
+                            $trReason='held_incompatible'; $heldBy=$residentHolder   # exec / equal-or-higher pin: cannot preempt
+                        }
+                    }
+                    if (-not $trAcquired -and ($null -eq $trReason)) {
+                        # ---- RESERVE: bump the GPU authority epoch (authority TRANSFERS to us) ----
+                        $newEpoch = Mint-FencingToken $fencePath $priorEpoch
+                        $trState='PREPARING'
+                        $txnRec=[ordered]@{ schema='lifeorch.res.lease.txn/0.1'; txn_id=$txnId; resource=$Resource; owner_id=$OwnerId; holder=$Holder; state=$trState; authority_epoch=$newEpoch; prior_epoch=$priorEpoch; resident_holder=$residentHolder; resident_generation=$residentGen; required_vram_mib=$RequiredVramMiB; target_headroom_mib=$TargetHeadroomMiB; started_utc=$t0.ToString('o'); updated_utc=([DateTime]::UtcNow.ToString('o')) }
+                        [void](Write-Txn $txnPath $txnRec)
+                        # ---- FENCE the old owner off (stamp revoked_by so its old epoch is stale) ----
+                        if ($hasResident -and $residentKind -eq 'residency_pin') {
+                            [void](Set-PinRevoked $leasePath $read $Holder $newEpoch $Priority 'preempted_by_transition')
+                            $revoked=[ordered]@{ holder=$residentHolder; lease_id=[string](Prop $read.lease 'lease_id' ''); prior_fencing_token=[long](Prop $read.lease 'fencing_token' 0); priority=$residentPrio }
+                        }
+                        # ---- DRAINING: the evictor drains->cancels->tree-kills OUTSIDE the lease mutex ----
+                        $trState='DRAINING'; $txnRec['state']=$trState; $txnRec['updated_utc']=[DateTime]::UtcNow.ToString('o'); [void](Write-Txn $txnPath $txnRec)
+                        $evCtx=[ordered]@{ resource=$Resource; lease_dir=$LeaseDir; txn_id=$txnId; owner_id=$OwnerId; authority_epoch=$newEpoch; required_vram_mib=$RequiredVramMiB; target_headroom_mib=$TargetHeadroomMiB; resident_holder=$residentHolder; resident_generation=$residentGen; drain_timeout_ms=$DrainTimeoutMs; state=$(if($hasResident){'occupied'}else{'free'}) }
+                        $ev=Invoke-TransitionEvictor $EvictorMode $MockEvictorResult $MockFreeVramMiB $EvictorCommand $evCtx $RequiredVramMiB $TargetHeadroomMiB $HeadroomObservations $HeadroomStableIntervalMs $ConfirmTimeoutMs
+                        $evConfirmed=[bool]$ev.confirmed; $evEvicted=[bool]$ev.evicted; $evTreeGone=[bool]$ev.tree_gone; $evFree=$ev.free_vram_mib; $evOutcome=[string]$ev.outcome; $evObs=$ev.observations
+                        # ---- COMMIT-IF-EPOCH-CURRENT: grant ONLY if our reserved epoch is still the authority ----
+                        $curEpoch=[long](Read-FenceCounter $fencePath)
+                        if ($curEpoch -ne $newEpoch) { $superseded=$true; $trReason='superseded_during_transition'; $trState='ABORTED' }
+                        elseif ($evConfirmed) {
+                            $nowL=[DateTime]::UtcNow; $expiresAt=$nowL.AddSeconds($TtlSeconds)
+                            $ext=[ordered]@{ fencing_token=$newEpoch; gpu_authority_epoch=$newEpoch; lease_kind=$Kind; priority=$Priority; revocable=$(if($isPin){$true}else{$false}); required_vram_mib=$RequiredVramMiB; resident_generation=$ResidentGeneration; owner_id=$OwnerId; revoked_by=$null }
+                            $cand=New-LeaseObject $Resource $Holder $myLid $nowL $expiresAt $TtlSeconds 0 $Note $ext
+                            $bytes=$utf8.GetBytes(($cand | ConvertTo-Json -Depth 6))
+                            if (Grant-LeaseAtomic $leasePath $bytes) { $trAcquired=$true; $leaseObj=$cand; $trState='STARTING' }
+                            else { $trReason='seize_failed'; $trState='ABORTED' }
+                        } else { $trReason=$(if($evOutcome){"evictor_$evOutcome"}else{'headroom_not_confirmed'}); $trState='ABORTED' }
+                        $txnRec['state']=$trState; $txnRec['updated_utc']=[DateTime]::UtcNow.ToString('o'); $txnRec['evictor_outcome']=$evOutcome; [void](Write-Txn $txnPath $txnRec)
+                    }
+                  } finally { Remove-Item -LiteralPath $txnClaimPath -Force -ErrorAction SilentlyContinue }
+                }
+                $trWaitedMs=[int]([DateTime]::UtcNow - $t0).TotalMilliseconds
+                $result=[ordered]@{
+                    action='acquire'; resource=$Resource; acquired=$trAcquired
+                    lease_id=$(if($trAcquired){$myLid}else{$null}); holder=$Holder
+                    expires_at_utc=$(if($trAcquired -and $null -ne $leaseObj){[string](Prop $leaseObj 'expires_at_utc' '')}else{$null})
+                    ttl_seconds=$TtlSeconds; waited_ms=$trWaitedMs
+                    reclaimed_stale=$false; already_held=$(if($trReason -eq 'already_held'){$true}else{$false})
+                    held_by=$(if($trAcquired){$null}else{$heldBy}); held_expires_at_utc=$null; lease_dir=$LeaseDir
+                    fencing_token=$newEpoch; gpu_authority_epoch=$newEpoch; exec_lease_id=$(if($trAcquired -and $Kind -eq 'exec'){$myLid}else{$null})
+                    resident_generation=$(if([string]::IsNullOrWhiteSpace($ResidentGeneration)){$null}else{$ResidentGeneration}); owner_id=$OwnerId
+                    lease_kind=$Kind; priority=$Priority; revocable=$(if($isPin){$true}else{$false}); revoked_by=$null
+                    transition=$true; transition_id=$txnId; transition_state=$trState
+                    prepared=$trAcquired; required_vram_mib=$RequiredVramMiB; target_headroom_mib=$TargetHeadroomMiB
+                    evict_performed=$evEvicted; tree_gone=$evTreeGone; headroom_confirmed=$evConfirmed
+                    free_vram_mib=$evFree; evictor_mode=$EvictorMode; evictor_outcome=$evOutcome; headroom_observations=$evObs
+                    superseded=$superseded; reason=$trReason
+                }
+                if ($null -ne $revoked) { $result['revocation_signaled']=$true; $result['revoked_pin']=$revoked }
+                if ($null -ne $reconcileReport) { $result['reconciled']=$reconcileReport }
+                $normInputs=[ordered]@{ action='acquire'; resource=$Resource; holder=$Holder; transition=$true; owner_id=$OwnerId }
+                Write-Diag "TRANSITION resource=$Resource acquired=$trAcquired state=$trState epoch=$newEpoch outcome=$evOutcome reason=$trReason waited_ms=$trWaitedMs"
+                break
+            }
+            # ===================== end transition; the R1a/classic acquire paths follow unchanged ================
             $now0 = [DateTime]::UtcNow
             $deadline = $now0.AddSeconds([Math]::Max(0, $WaitSeconds))
             $myLid = [Guid]::NewGuid().ToString()
@@ -591,6 +815,7 @@ try {
                 if ($acquired -and -not $alreadyHeld -and ($engagedNew -or (Test-Path -LiteralPath $fencePath -PathType Leaf))) {
                     $fencingToken = Mint-FencingToken $fencePath 0
                     $ext = [ordered]@{ fencing_token=$fencingToken; lease_kind=$Kind; priority=$Priority; revocable=$(if ($isPin) { $true } else { $false }); required_vram_mib=$(if ($RequiredVramMiB -ge 0) { $RequiredVramMiB } else { 0 }); revoked_by=$null }
+                    if ($engagedR1b) { $ext['gpu_authority_epoch']=$fencingToken; $ext['resident_generation']=$(if([string]::IsNullOrWhiteSpace($ResidentGeneration)){$null}else{$ResidentGeneration}); $ext['owner_id']=$OwnerId }
                     [void](Set-LeaseExt $leasePath $leaseObj $ext)
                 } elseif ($acquired -and $alreadyHeld) {
                     $fencingToken = [long](Prop $leaseObj 'fencing_token' 0)
@@ -628,6 +853,14 @@ try {
                 }
                 if ($null -ne $lockOverride) { $result['lock_order_override'] = $lockOverride }
                 if ($null -ne $acqReason) { $result['reason'] = $acqReason }
+            }
+            if ($engagedR1b) {
+                # three-identity fencing surface (frontier review section 2): gpu_authority_epoch (= fencing_token),
+                # exec_lease_id (= the exec lease_id), resident_generation (consumer-owned), owner_id.
+                $result['gpu_authority_epoch'] = $fencingToken
+                $result['exec_lease_id'] = $(if ($acquired -and $Kind -eq 'exec') { $myLid } else { $null })
+                $result['resident_generation'] = $(if ([string]::IsNullOrWhiteSpace($ResidentGeneration)) { $null } else { $ResidentGeneration })
+                $result['owner_id'] = $OwnerId
             }
             $normInputs = [ordered]@{ action='acquire'; resource=$Resource; holder=$Holder }
             if ($engagedNew) { $normInputs['kind'] = $Kind; if ($prioritySupplied) { $normInputs['priority'] = $Priority } }
@@ -743,13 +976,19 @@ try {
         }
         'check' {
             # v0.2 fencing-validation surface: does the caller's -FencingToken still command this resource?
+            # v0.3: -Reconcile rolls a crashed transition journal to ABORTED (supervisor/watchdog crash recovery).
             $leasePath = Join-Path $LeaseDir (Get-LeaseFileName $Resource)
+            $fencePath = Join-Path $LeaseDir (Get-FenceFileName $Resource)
+            $txnPath = Join-Path $LeaseDir (Get-TxnFileName $Resource)
+            $checkReconcile = $(if ($doReconcile) { Reconcile-Txn $txnPath $fencePath $PARTIAL_GRACE_SEC } else { $null })
             $read = Read-LeaseFile $leasePath
             $nowC = [DateTime]::UtcNow
             if ($null -eq $read) {
                 $result = [ordered]@{ action='check'; resource=$Resource; exists=$false; held=$false; stale=$false; holder=$null; lease_id=$null; fencing_token=$null; lease_kind=$null; revocable=$null; revoked_by=$null; priority=$null; expires_at_utc=$null; seconds_remaining=$null; token_current=$(if ($fencingTokenSupplied) { $false } else { $null }); fence_status='not_held'; lease_dir=$LeaseDir }
+                if ($engagedR1b) { $result['gpu_authority_epoch']=$null; $result['exec_lease_id']=$null; $result['resident_generation']=$null; $result['owner_id']=$null; $result['owner_current']=$false; $result['generation_current']=$false; $result['authority_ok']=$false }
             } elseif ($read.partial) {
                 $result = [ordered]@{ action='check'; resource=$Resource; exists=$true; held=$true; stale=$false; holder='<writing>'; lease_id=$null; fencing_token=$null; lease_kind=$null; revocable=$null; revoked_by=$null; priority=$null; expires_at_utc=$null; seconds_remaining=$null; token_current=$(if ($fencingTokenSupplied) { $false } else { $null }); fence_status='writing'; lease_dir=$LeaseDir }
+                if ($engagedR1b) { $result['gpu_authority_epoch']=$null; $result['exec_lease_id']=$null; $result['resident_generation']=$null; $result['owner_id']=$null; $result['owner_current']=$false; $result['generation_current']=$false; $result['authority_ok']=$false }
             } else {
                 $stale = Test-LeaseExpired $read $nowC
                 $exp = ConvertTo-Utc (Prop $read.lease 'expires_at_utc' $null)
@@ -772,7 +1011,29 @@ try {
                     seconds_remaining=$(if ($null -ne $exp) { [int]($exp - $nowC).TotalSeconds } else { $null })
                     token_current=$tokCur; fence_status=$fenceStatus; lease_dir=$LeaseDir
                 }
+                if ($engagedR1b) {
+                    # ---- three-identity full-tuple assertion: owner_id + gpu_authority_epoch + resident_generation + exec_lease_id ----
+                    $rGen = [string](Prop $read.lease 'resident_generation' '')
+                    $rOwner = [string](Prop $read.lease 'owner_id' '')
+                    $ownerIdSupplied = $bound.ContainsKey('OwnerId') -or $jsonOwnerId
+                    $residentGenSupplied = $bound.ContainsKey('ResidentGeneration') -or $jsonResidentGen
+                    $live = ((-not $stale) -and ($null -eq $revokedBy))
+                    $ownerCur = $(if ($ownerIdSupplied) { ($live -and ($OwnerId -eq $rOwner)) } else { $null })
+                    $genCur   = $(if ($residentGenSupplied) { ($live -and ($ResidentGeneration -eq $rGen)) } else { $null })
+                    $authorityOk = $live
+                    if ($fencingTokenSupplied) { $authorityOk = ($authorityOk -and [bool]$tokCur) }
+                    if ($ownerIdSupplied)      { $authorityOk = ($authorityOk -and [bool]$ownerCur) }
+                    if ($residentGenSupplied)  { $authorityOk = ($authorityOk -and [bool]$genCur) }
+                    $result['gpu_authority_epoch'] = $curToken
+                    $result['exec_lease_id'] = [string](Prop $read.lease 'lease_id' '')
+                    $result['resident_generation'] = $(if ([string]::IsNullOrWhiteSpace($rGen)) { $null } else { $rGen })
+                    $result['owner_id'] = $(if ([string]::IsNullOrWhiteSpace($rOwner)) { $null } else { $rOwner })
+                    $result['owner_current'] = $ownerCur
+                    $result['generation_current'] = $genCur
+                    $result['authority_ok'] = $authorityOk
+                }
             }
+            if ($null -ne $checkReconcile) { $result['reconciled'] = $checkReconcile }
             $normInputs = [ordered]@{ action='check'; resource=$Resource }
             Write-Diag "check resource=$Resource exists=$($result.exists) fence_status=$($result.fence_status)"
         }

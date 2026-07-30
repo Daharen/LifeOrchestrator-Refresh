@@ -95,13 +95,49 @@ new surface is engaged.
   is passed to the seam as JSON; the seam returns `{confirmed, free_vram_mib, evicted, outcome}`.
 - **Lock-order-inversion rejection (finding 14).** See **Build-then-verify** above.
 
-**R1b (a GPU-lane follow-on -- NOT built here).** The consumer adoption + the real evictor + the live-GPU proof:
-`model.gateway` #7 PoolManager holds an `exec` lease only around GPU ops and a revocable `residency_pin` between
-them, honors pin revocation, and rejects per-call generation mismatches; `agent.local` #21 governor takes the pin
-for its model-affine segment and the exec lease only around each LLM call; the **real nvidia-smi/eviction evictor**
-plugs into `-EvictorMode command`; and the live real-model 3B->9B swap + pin-revocation + prepared-eviction proof
-runs on the box. Then a soak + flipping the warm pool default-ON (the orchestrator's call). This wave ships the
-res.lease primitive those consumers build on.
+## v0.3 -- the R1b three-identity + atomic-transition surface (additive, DEFAULT-OFF)
+
+v0.3 is the **res.lease-primitive slice of R1b** (folds the i18 frontier review,
+`core-docs/research/2026-07-30-frontier-review-self-tasking-orchestration.md` sections 2/3/4). Still **additive +
+default-off**: a call supplying none of the v0.2/v0.3 inputs is byte-identical to v0.1, and a v0.2-engaged call is
+unchanged. The primitive the real consumers build on:
+
+- **Three-identity fencing (frontier review section 2).** The single v0.2 `fencing_token` is joined by three
+  explicit identities: **`gpu_authority_epoch`** (= the per-resource fencing token; bumps ONLY when exclusive GPU
+  authority changes -- side effects **assert** it, never advance it; `fencing_token` stays exposed as its alias),
+  **`resident_generation`** (the PoolManager-owned per-launch generation, supplied via `-ResidentGeneration`,
+  stamped + asserted -- res.lease carries + validates it, the PoolManager owns when it increments), and
+  **`exec_lease_id`** (the exec acquire's `lease_id`). `check` reports `owner_current` + `generation_current` +
+  `token_current` and the single **`authority_ok`** full-tuple assertion (`owner_id + gpu_authority_epoch +
+  resident_generation + exec_lease_id`) a consumer polls before publishing. `-AuthorityEpoch <n>` is an alias-CAS
+  on renew/release/check.
+- **The single scheduler-owned ATOMIC transition (`-Transition`, frontier review section 2/3).** One indivisible
+  hand-off, not `revoke -> evict -> grant`: **reserve** (serialized -- exactly one transition per resource; equal
+  priority does NOT preempt) **-> mint a new `gpu_authority_epoch`** (fence the old owner off any new exec)
+  **-> revoke a lower-priority pin -> drive the evictor OUTSIDE the lease mutex** (record intent + txn id in a
+  `<resource>.txn` journal, run the external drain/cancel/tree-kill/headroom work, then re-enter) **-> confirm the
+  managed tree is gone -> confirm headroom STABLE across `-HeadroomObservations` observations** (WDDM discipline)
+  **-> grant ONLY if the reserved epoch is still current** (else `superseded_during_transition` -- fenced out).
+  There is no interval where the old owner can reacquire exec, and none where the new owner holds an ordinary lease
+  while eviction is merely "in progress." A crash in `PREPARING`/`DRAINING`/`STARTING` is **reconciled** from the
+  txn journal (auto on the next transition, or on demand via `check -Reconcile`).
+- **In-flight revocation + the adversarial evictor.** A pin revokes immediately; an ACTIVE exec gets a bounded
+  `-DrainTimeoutMs` drain -> cancel -> supervisor tree-kill, and any result arriving after fencing is DISCARDED (a
+  stale-epoch actor's `authority_ok` is false). The mock evictor is **adversarial**: `late_evict`,
+  `partial_tree_term`, `headroom_never`, `headroom_fell`, `cancel_during_prepare` (+ v0.2 `confirm`/`needs_evict`/
+  `timeout`) -- only `late_evict`/`confirm`/`needs_evict` may grant, and only after tree-gone + stable headroom.
+- **res.lease stays PURE.** It never runs nvidia-smi or kills a server; the real evictor (drain/cancel/tree-kill/
+  headroom-confirm, composing the #7 supervisor Job Object) plugs into `-EvictorMode command -EvictorCommand`.
+
+**R1b consumer adoption + live proof -- NOT built here (the remaining R1b work).** `model.gateway` #7 PoolManager
+holds an `exec` lease only around GPU ops and a revocable `residency_pin` between them, honors pin revocation, and
+rejects per-call generation mismatches; `agent.local` #21 governor takes the pin for its model-affine segment and
+the exec lease only around each LLM call, with **NO single-agent regression** (liveA/liveB byte-identical with the
+split off); the **real nvidia-smi/eviction evictor** plugs into `-EvictorMode command`; and the live real-model
+3B->9B swap + pin-revocation + prepared-eviction proof (plus the two new adversarial live tests: revoke while an
+inference is ACTIVE, and a late old-generation result proven unable to publish/kill) runs on the box. Findings
+1/13/14 close **only after that live proof**; then a soak + flipping the warm pool default-ON (the orchestrator's
+call). This wave ships the res.lease primitive those consumers build on.
 
 ## Not in scope (follow-ons)
 
@@ -121,3 +157,12 @@ acquire/release/renew/status/list, the overwrite/mismatch guards, **TTL expiry -
 STOP, the **prepared handshake** (mock confirm/needs_evict/timeout + the command-mode evictor seam), and the
 **`lock_order_violation`** rejection + `-AllowLockOrder` override. It runs on the cloud pre-ship gate (the evictor is
 mocked; res.lease is pure pwsh + .NET, identical on Linux + Windows) and unchanged live via the executor.
+
+`tests/Invoke-ResLeaseR1bTests.ps1` is the **v0.3 (R1b) adversarial gate** (36 assertions): three-identity fencing
+(`gpu_authority_epoch`/`resident_generation`/`exec_lease_id` + the `authority_ok` full-tuple), the scheduler-owned
+`-Transition` (free-slot grant, lower-priority-pin preemption, `held_incompatible` on exec/equal-priority), every
+adversarial evictor scenario (only `late_evict` grants, after waiting for stable headroom), **commit-if-epoch-current**
+(a command evictor that bumps the fence mid-eviction -> `superseded_during_transition`, no grant), single-winner
+serialization, crash **reconcile** of a stale `PREPARING`/`DRAINING` txn, **result-after-revocation** + **expiry-during-exec**
+(a stale-epoch actor's `authority_ok` is false), and the **additive/default-off guards** (a plain acquire and a v0.2-engaged
+acquire are unchanged). Baseline: v0.1/v0.2 74/74 + v0.3 36/36, both green off-machine on cloud pwsh 7.4.6.
