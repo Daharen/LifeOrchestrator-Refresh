@@ -108,6 +108,9 @@ param(
     [int]$VramSafetyMib = 512,           # finding 15: target-headroom margin over RequiredVramMib
     [int]$VramConfirmTimeoutMs = 5000,   # finding 15: WDDM frees async -- confirm recovery over this interval, not a single sample
     [switch]$Reconcile,                  # finding 3: run crash-recovery reconcile (also runs implicitly on every pool op) and RETURN
+    # --- DURABLE gateway supervisor (WARM_POOL_DESIGN section 10 residual (a); durable finding 5). Default-OFF, additive. ---
+    [switch]$UseSupervisor,              # route residency ops (EnsureResident/PoolStatus/PrepareGpu/EvictWarm/Reconcile) to a RUNNING persistent supervisor so the resident + its Job-Object tree ownership survive across per-call invocations; degrade to the per-call path (with a warning) if no supervisor is live. Inference is NOT routed -- it reuses the supervisor-published resident via the classic warm path (same warm-server.json).
+    [string]$SupervisorRoot,             # supervisor control-dir root (default: runtime/supervisor); must match Start-GatewaySupervisor.ps1
     [switch]$BypassPoolManager           # framing: legacy escape -- force the classic cold isolated-server path even under -Warm (integrity invariants stay non-bypassable)
 )
 Set-StrictMode -Version Latest
@@ -120,7 +123,7 @@ $ProgressPreference = 'SilentlyContinue'
 $script:PoolCoreLoaded = $false
 try { Import-Module (Join-Path $PSScriptRoot 'lib/PoolManager.psm1') -Force -ErrorAction Stop; $script:PoolCoreLoaded = $true } catch { }
 
-$SKILL_ID = 'model.gateway'; $SKILL_VERSION = '0.3.1'; $CONTRACT = '0.1'
+$SKILL_ID = 'model.gateway'; $SKILL_VERSION = '0.4.0'; $CONTRACT = '0.1'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $CONF_THRESHOLD = 0.5
 $utf8 = [System.Text.UTF8Encoding]::new($false)
@@ -449,6 +452,21 @@ function Invoke-PoolReconcile {
     } finally { Exit-PoolLock $lock }
 }
 
+# ---- DURABLE SUPERVISOR client (residual (a)): a per-call gateway ATTACHES to a running persistent supervisor
+# over the file-protocol control channel and asks it to run the residency op, so the resident llama-server +
+# its Job-Object tree ownership persist ACROSS separate invocations. Lazy Supervisor.psm1 import (only under
+# -UseSupervisor). Returns the Send-SupervisorRequest result ({ ok; response; error }); ok=$false -> the caller
+# degrades to the per-call path. ----
+function Invoke-SupervisorClient {
+    param([string]$Op, [hashtable]$Params, [string]$SupRoot, [string]$WarmReg, [string]$ExpectGen, [int]$ExpectFenceArg = -1, [int]$TimeoutMs = 60000)
+    $modPath = Join-Path $PSScriptRoot 'lib/Supervisor.psm1'
+    if (-not (Test-Path -LiteralPath $modPath -PathType Leaf)) { return [ordered]@{ ok = $false; error = [ordered]@{ code = 'supervisor_module_missing'; message = 'lib/Supervisor.psm1 not found' } } }
+    try { Import-Module $modPath -ErrorAction Stop } catch { return [ordered]@{ ok = $false; error = [ordered]@{ code = 'supervisor_import_failed'; message = "$($_.Exception.Message)" } } }
+    $root = if (-not [string]::IsNullOrWhiteSpace($SupRoot)) { $SupRoot } else { Join-Path $PSScriptRoot 'runtime/supervisor' }
+    $paths = Get-SupervisorPaths -Root $root -WarmRegistryPath $WarmReg
+    return (Send-SupervisorRequest -Paths $paths -Op $Op -Params $Params -ExpectGeneration $ExpectGen -ExpectFence $ExpectFenceArg -TimeoutMs $TimeoutMs)
+}
+
 $status = 'ok'; $errorObj = $null; $result = $null; $inputsDigest = $null
 $confidence = $null; $modelProvenance = @()
 $artifacts = @()
@@ -535,14 +553,73 @@ try {
     $doReconcile  = [bool]$Reconcile
     if ($doEnsure) { $Warm = $true }   # a residency op MUST leave the server resident for the next call
 
+    # ---- DURABLE SUPERVISOR routing (residual (a); default-OFF). If -UseSupervisor and a residency op is
+    #      requested, ATTACH to a running persistent supervisor and let IT run the transition (its Job Object
+    #      owns the server tree ACROSS invocations). Degrade to the per-call path (below) with a warning if no
+    #      supervisor is live. Inference is NOT routed -- it reuses the supervisor-published resident via the
+    #      classic warm path (the supervisor publishes to the SAME warm-server.json). ----
+    $supervisorRouted = $false
+    if ($UseSupervisor -and -not $BypassPoolManager -and ($doEnsure -or $doPoolStatus -or $doPrepareGpu -or $doEvictWarm -or $doReconcile)) {
+        $supOp = if ($doReconcile) { 'reconcile' } elseif ($doPrepareGpu) { 'prepare_gpu' } elseif ($doEvictWarm) { 'evict' } elseif ($doPoolStatus) { 'status' } else { 'ensure_resident' }
+        $supParams = @{}
+        if ($doEnsure) {
+            if (-not [string]::IsNullOrWhiteSpace($Model)) { $supParams['model'] = $Model }
+            if (-not [string]::IsNullOrWhiteSpace($Tier))  { $supParams['tier'] = $Tier }
+            if ($GpuLayers -ge 0) { $supParams['gpu_layers'] = $GpuLayers }
+            if ($Context -gt 0)   { $supParams['context'] = $Context }
+            $supParams['cache_type_k'] = $CacheTypeK; $supParams['cache_type_v'] = $CacheTypeV
+            if ($FlashAttn) { $supParams['flash_attn'] = $true }
+            if ($Parallel -gt 0) { $supParams['parallel'] = $Parallel }
+            if (([bool]$ForceReload) -or ($Generation -ge 0)) { $supParams['force_reload'] = $true }
+        }
+        if ($doPrepareGpu) { $supParams['required_vram_mib'] = $RequiredVramMib; $supParams['safety_mib'] = $VramSafetyMib }
+        $supResp = Invoke-SupervisorClient -Op $supOp -Params $supParams -SupRoot $SupervisorRoot -WarmReg $warmRegPath -TimeoutMs ([Math]::Max(60000, ($LoadTimeoutSec * 1000)))
+        if ($null -ne $supResp -and [bool]$supResp.ok) {
+            $supervisorRouted = $true
+            $rr = $supResp.response.result
+            if ($doReconcile) { $result = [ordered]@{ action = 'reconcile'; via_supervisor = $true; reconcile = $rr } }
+            elseif ($doPrepareGpu) { $result = [ordered]@{ action = 'prepare_gpu'; via_supervisor = $true; gpu = $rr } }
+            elseif ($doEvictWarm) { $result = [ordered]@{ action = 'evict_warm'; via_supervisor = $true; warm = $rr } }
+            elseif ($doPoolStatus) { $result = [ordered]@{ action = 'pool_status'; via_supervisor = $true; pool = $rr } }
+            else {
+                $result = [ordered]@{
+                    model = $(if (Has $rr 'model_id') { [string]$rr.model_id } else { $Model }); engine = 'llama-server'; mode = 'ensure_resident'; via_supervisor = $true
+                    pool = [ordered]@{
+                        action = $(if (Has $rr 'action') { [string]$rr.action } else { $null }); reused = $(if (Has $rr 'reused') { [bool]$rr.reused } else { $null }); started_new = $(if (Has $rr 'started_new') { [bool]$rr.started_new } else { $null })
+                        evicted = $(if (Has $rr 'evicted') { [bool]$rr.evicted } else { $null }); evict_confirmed = $(if (Has $rr 'evict_confirmed') { $rr.evict_confirmed } else { $null })
+                        resident_config_hash = $(if (Has $rr 'resident_config_hash') { [string]$rr.resident_config_hash } else { $null }); residency_key_sha = $(if (Has $rr 'resident_config_hash') { [string]$rr.resident_config_hash } else { $null })
+                        instance_generation = $(if (Has $rr 'instance_generation') { [string]$rr.instance_generation } else { $null }); fence = $(if (Has $rr 'fence') { $rr.fence } else { $null }); fence_ttl_seconds = $FenceTtlSeconds
+                        can_serve = $(if (Has $rr 'can_serve') { $rr.can_serve } else { $null }); can_serve_mismatches = $(if (Has $rr 'can_serve_mismatches') { $rr.can_serve_mismatches } else { @() })
+                        socket_owner_verified = $(if (Has $rr 'socket_owner_verified') { $rr.socket_owner_verified } else { $null })
+                        swap_count = $(if (Has $rr 'swap_count') { [int]$rr.swap_count } else { $null }); keep_resident_seconds = $(if (Has $rr 'keep_resident_seconds') { [int]$rr.keep_resident_seconds } else { $KeepResidentSeconds })
+                        load_ms = $(if (Has $rr 'load_ms') { [int]$rr.load_ms } else { $null }); health_ok = $(if (Has $rr 'health_ok') { [bool]$rr.health_ok } else { $null }); job_owned = $(if (Has $rr 'job_owned') { [bool]$rr.job_owned } else { $null })
+                        vram = $(if (Has $rr 'vram') { $rr.vram } else { $null })
+                    }
+                    server = [ordered]@{ port = $(if (Has $rr 'port') { $rr.port } else { $null }); pid = $(if (Has $rr 'pid') { $rr.pid } else { $null })
+                        warm = [ordered]@{ enabled = $true; reused = $(if (Has $rr 'reused') { [bool]$rr.reused } else { $null }); started_new = $(if (Has $rr 'started_new') { [bool]$rr.started_new } else { $null }); registry_path = $warmRegPath; via_supervisor = $true } }
+                }
+            }
+            $status = 'ok'
+            Write-Diag "use_supervisor: routed op=$supOp ok=true action=$(if (Has $rr 'action') { $rr.action } else { $supOp })"
+        } else {
+            $rc = if ($null -ne $supResp -and $null -ne $supResp.error) { [string]$supResp.error.code } else { 'supervisor_unavailable' }
+            $warnings.Add("use_supervisor: no live supervisor ($rc); falling back to the per-call path")
+            Write-Diag "use_supervisor: fallback ($rc)"
+        }
+    }
+
     # #3: reconcile on EVERY startup for any pool-touching path so a crashed transition self-heals before use.
     $reconcileResult = $null
     $poolTouch = ($doEvictWarm -or $doPoolStatus -or $doSweepIdle -or $doEnsure -or $doPrepareGpu -or $doReconcile -or [bool]$Warm)
-    if ($script:PoolCoreLoaded -and $poolTouch) {
+    if ($script:PoolCoreLoaded -and $poolTouch -and -not $supervisorRouted) {
         try { $reconcileResult = Invoke-PoolReconcile -WarmRegPath $warmRegPath -LockPath $lockPath } catch { $warnings.Add("reconcile error: $($_.Exception.Message)") }
     }
 
-    if ($doReconcile) {
+    if ($supervisorRouted) {
+        # residency op already handled by the durable supervisor; result is set above. Fall through to emit.
+        Write-Diag "use_supervisor: op handled by supervisor; skipping per-call residency path"
+    }
+    elseif ($doReconcile) {
         # ---- RECONCILE op: run crash-recovery and RETURN a report (no lease, no model load) ----
         $status = 'ok'
         $result = [ordered]@{ action = 'reconcile'; reconcile = $(if ($null -ne $reconcileResult) { $reconcileResult } else { [ordered]@{ ran = $false; note = 'pool core not loaded' } }) }
@@ -1071,7 +1148,8 @@ try {
             elseif ($warmStartedNew -and -not $healthOk) { $killServer = ($serverPid -gt 0); Clear-WarmServer $warmRegPath }
             if ($killServer -and $serverPid -gt 0) {
                 # kill by PID with /T = the whole child TREE (finding 5: never kill by a bare PID). This reaps
-                # llama.cpp's children; the durable Job-Object owner is a persistent-supervisor follow-on (see README).
+                # llama.cpp's children (per-call ownership). The DURABLE Job-Object owner across invocations is now
+                # the persistent supervisor (Start-GatewaySupervisor.ps1 + lib/Supervisor.psm1; use -UseSupervisor).
                 try { & taskkill /PID $serverPid /T /F 2>$null | Out-Null } catch { }
                 try { $pp = Get-Process -Id $serverPid -ErrorAction SilentlyContinue; if ($null -ne $pp) { $pp.Kill($true) } } catch { }
             }

@@ -196,19 +196,71 @@ unit-tested off-machine) and is wired into the live path:
   path. Integrity invariants (fencing, single-endpoint ownership, verified routing, no cross-task KV, no blind
   co-load) are **non-bypassable**; the pool still ships **default-OFF** until the live fault-injection pass lands.
 
-**Managed ownership (finding 5) — partial + a named residual.** Every launch is tagged (`managed_by`) so
-"0 orphaned llama-server" means **0 UNMANAGED** servers and never counts the intended warm resident; eviction
-uses a **tree kill** (`taskkill /T`) so llama.cpp children are reaped, and the PID + creation-time identity guard
-refuses to kill a **reused** pid (a foreign process). A durable **Windows Job Object owning the tree across
-separate invocations requires a persistent gateway supervisor process** — the gateway is invoked per-call, so a
-named Job Object created by one invocation is destroyed when that process exits. That supervisor is a
-**follow-on unit**; until then cross-call ownership rests on the managed tag + tree-kill + identity guard.
+**Managed ownership (finding 5) — durable form now SHIPPED (see the supervisor section below).** Every launch
+is tagged (`managed_by`) so "0 orphaned llama-server" means **0 UNMANAGED** servers and never counts the intended
+warm resident; eviction uses a **tree kill** (`taskkill /T`) so llama.cpp children are reaped, and the PID +
+creation-time identity guard refuses to kill a **reused** pid (a foreign process). The **per-call** case is covered
+by those guards; the **durable** case — a Windows Job Object owning the tree ACROSS separate invocations — is now
+delivered by the **persistent gateway supervisor** (`Start-GatewaySupervisor.ps1` + `lib/Supervisor.psm1`), since a
+Job Object created by a per-call gateway dies when that process exits.
 
 **Tests.** `tests/Invoke-ModelGatewayPoolCoreTests.ps1` (pure core, 49), `tests/Invoke-ModelGatewayPoolTests.ps1`
 (integration, 48), `tests/Invoke-ModelGatewayFaultInjectionTests.ps1` (the §10 fault-injection gate: crash-at-each-
 transition + reconcile, forced fence/generation expiry mid-request, stale-idle-vs-fresh-request, PID-reuse guard,
-KV isolation, GPU-handoff eviction — 37), plus warm (23) and the live box base (42). All run on the cloud gate
-against the cross-platform mock except base (live GPU).
+KV isolation, GPU-handoff eviction — 37), `tests/Invoke-ModelGatewaySupervisorCoreTests.ps1` (supervisor protocol
++ attach handshake + state machine + reconcile + Job-Object seam — 46), and
+`tests/Invoke-ModelGatewaySupervisorFaultInjectionTests.ps1` (durable reuse across two invocations, generation
+rejection, supervisor-crash tree-reap, restart reconcile, GPU handoff — 25), plus warm (23) and the live box base
+(42). All run on the cloud gate against the cross-platform mock except base (live GPU).
+
+## Durable gateway supervisor (Stage-1.1 residual (a) — durable finding 5)
+
+**`Start-GatewaySupervisor.ps1` + `lib/Supervisor.psm1`.** A **persistent, detached process** that owns the warm
+resident llama-server **across** separate per-call gateway invocations — the last residual gating warm-pool
+default-ON. It is the durable form of the per-call tree-kill above: a per-call Job Object dies with its process,
+so cross-invocation ownership needs a process that outlives the calls.
+
+- **Windows Job Object (P/Invoke).** On start it creates ONE Job Object with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`
+  and assigns every llama-server it launches to it (own by **HANDLE**, never by process-name — `pwsh` and the
+  executor both show as `dotnet.exe`). If the supervisor dies for any reason, the OS reaps the **whole** server
+  tree (0 unmanaged orphans). Off-Windows the Job-Object seam degrades to `supported=false` (never throws) and the
+  reap becomes a live-only guarantee; the supervisor records `job_owned` honestly.
+- **Detached like D-0057.** The supervisor itself is launched via `Win32_Process.Create` so it ESCAPES the
+  launching executor task's job and survives across invocations; the llama-servers are its own children + in its
+  Job Object.
+- **Control channel = a file-protocol control dir** (`runtime/supervisor/control/req|resp/`), chosen over a named
+  pipe / loopback endpoint because it is crash-atomic (tmp+Move), cross-platform testable, and matches the
+  executor/res.lease file idioms. A per-call gateway **ATTACHES** with `-UseSupervisor` and asks the running
+  supervisor to `ensure_resident` / `status` / `prepare_gpu` / `evict` / `reconcile`; the resident is reused
+  (~1 ms, **no respawn**) instead of each call managing its own server. If no supervisor is live the gateway
+  **degrades to the per-call path with a warning** (the pool is an OPTIONAL layer, never the sole authority).
+- **Single owner of the transitions.** The supervisor runs the `lib/PoolManager.psm1` integrity core (fencing +
+  CAS, `CanServe`, the crash-atomic `EMPTY→STOPPING→EMPTY_CONFIRMED→STARTING→RESIDENT` machine, verified
+  socket-owner publish, GPU-handoff planning) — every integrity invariant NON-bypassable; the `-BypassPoolManager`
+  cold-isolated escape is untouched. Inference is NOT proxied through the control channel: the supervisor
+  publishes the resident to the SAME `runtime/warm-server.json`, so a classic `-Warm` completion reuses it.
+- **Lifecycle.** `-Action start | stop | status | reconcile | ping` (and the internal `run` loop). `stop` sends a
+  graceful shutdown (evict the resident + close the Job) then hard-kills if needed; on `start`/restart the
+  supervisor **reconciles the published manifest as a claim to VERIFY** (a crashed/dead resident is driven to
+  `EMPTY`, a healthy one is kept). Idempotent: a second `start` returns `already_running`.
+
+```
+# start the durable supervisor (once per box; detached)
+pwsh -File Start-GatewaySupervisor.ps1 -Action start
+# a per-call gateway attaches + reuses the resident across invocations (no respawn)
+pwsh -File Invoke-ModelGateway.ps1 -EnsureResident -UseSupervisor -Model llm.strong.qwen3p5-9b
+pwsh -File Invoke-ModelGateway.ps1 -Warm -Model llm.strong.qwen3p5-9b -Prompt 'hi'   # classic inference reuses it
+pwsh -File Start-GatewaySupervisor.ps1 -Action status
+pwsh -File Start-GatewaySupervisor.ps1 -Action stop
+```
+
+**Follow-on (named, NOT built this wave): exec.watchdog #00.1 relaunch integration** — have the watchdog restart a
+dead supervisor exactly as it relaunches the executor (a `Recover-Executor`-style check of `supervisor.json`
+liveness + a re-`start`). This makes the supervisor self-healing for an unattended soak.
+
+**Still DEFAULT-OFF.** This wave delivers the durable supervisor (finding 5 durable) but does **not** enable the
+pool by default — that awaits a soak + the res.lease fencing wave (findings 13/14). The classic per-call and
+D-0057 warm paths are byte-for-byte unchanged.
 
 ## Result shape
 
