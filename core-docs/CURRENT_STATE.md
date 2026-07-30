@@ -103,7 +103,7 @@ Detail + follow-ons per module: `MODULE_ROADMAP.md`; producer status: `REVIEW_QU
 registry facts: `TOOL_MODEL_REGISTRY.md`. Roster (all MVP-complete unless noted):
 
 - **Infra:** #0 exec.bootstrap (+ the `dev.ship` job-runner, D-0048) · #00.1 exec.watchdog · #1
-  skill.bootstrap (contract v0.2) · #29 res.lease (gpu/git/doc leases; consumer trio complete) · #30
+  skill.bootstrap (contract v0.2) · #29 res.lease (gpu/git/doc leases; consumer trio complete; **v0.2.0 R1a lease-split keystone i18** -- fencing_token + exec/revocable residency_pin split + prepared-handoff mock-evictor + lock-order rejection; findings 13/14 primitive landed, OPEN pending R1b) · #30
   orchestrate.fanout · #31 frontier.bridge (`pack` takes `{prompt, files}` — NOT `{task,...}`, D-0057).
 - **Observation/UIA:** #2 fs.observer · #3 proc.observer · #4 uia.inspector · #5 uia.actor · #6 capture.screen.
 - **Model core:** #7 model.gateway (detached warm server D-0057; warm pool Stage-1.1 hardened + durable supervisor default-OFF, D-0068/D-0069) · #8 classify.batch · #9 review.processor ·
@@ -244,7 +244,7 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 | #26 agent.coding | not built (designed, D-0037) | — | 07-26 |
 | #27 route.tools | 33/33 | `e444851` | 07-28 |
 | #28 fs.manage | 21/21 off-machine (on-target verify `m29-verify-001` 25/25) | `m29-after-003` | 07-26 |
-| #29 res.lease | 41/41 `-Live` (38/38 cloud) | `36d7e0be` | 07-27 |
+| #29 res.lease | 74/74 `-Live` (v0.2.0 R1a: fencing_token + exec/residency_pin split + prepared/mock-evictor + lock-order) | `e701328` | 07-30 |
 | #30 orchestrate.fanout | 71/71 `-Live` | `2afd5de` | 07-28 |
 | #31 frontier.bridge | 65/65 + hardened return-capture | `f52f21d`/`b17a945` | 07-28 |
 | #32 media.decompose | 76/76 cloud + 76/76 `-Live` | `5026e2c` | 07-30 |
@@ -334,7 +334,7 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
   i16 (`cc296fc`) added the **DURABLE Job-Object gateway supervisor** (`Start-GatewaySupervisor.ps1` +
   `lib/Supervisor.psm1`, `-UseSupervisor`): resident + Job-Object tree survive ACROSS invocations — **finding 5
   durable = CLOSED** (228/228 off-machine + live tree-reap / two-invocation reuse / 3B->9B swap / 0 orphans).
-  DEFAULT-OFF pending a **soak** + the **res.lease fencing wave** (13/14). Classic + D-0057 warm paths are the
+  DEFAULT-OFF. i18 shipped the res.lease fencing PRIMITIVE (R1a `e701328`, v0.2.0); per the folded frontier review findings 13/14 stay OPEN until **R1b** (the PoolManager/governor consumer + the live-GPU swap/eviction proof), THEN a soak. Classic + D-0057 warm paths are the
   trusted default. Detail: `WARM_POOL_DESIGN.md` §10.
 - **SD 3.5 Medium fp16 is NOT a clean 11 GB VRAM fit (i17, D-0070).** With `enable_model_cpu_offload` + VAE tiling the
   torch VRAM peak is ~12.06 GB — the T5-XXL fp16 spike overflows the 11 GB 2080 Ti and leans on the NVIDIA driver
@@ -342,6 +342,8 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
   **sequential-offload OOM ladder** as the guaranteed fallback. `gen.image` default stays `image.sd15` (~2.6 GB);
   SD3.5 is opt-in `-Tier sd35`. The clean-fit image upgrade is Z-Image-Turbo Q8 (needs the stable-diffusion.cpp
   engine — a separate wave).
+
+- **`dev.ship` can FALSE-NEGATIVE the commit (i18, D-0072).** dev.ship shipped res.lease 0.2.0 correctly (`e701328`, 6 files) but reported `committed:false` because a post-commit git check tripped on an untracked `_to_delete/write_probe_tmp` ("nothing added to commit but untracked files present"). **VERIFY the real HEAD via native `git log`/`git show --stat`, not the dev.ship `committed` field.** That path also left a stale 0-byte `.git/index.lock` that blocked the next `git add` (rc=128) -- clear it via an executor task (assert no `git.exe` running) then re-commit.
 
 ## Unresolved questions
 
@@ -380,12 +382,12 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 
 ## Next expected action
 
-**Run iteration 18** per **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4 (which owns the candidate menu): scope
+**Run iteration 19** per **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4 (which owns the candidate menu). i18 shipped **R1a** (res.lease 0.2.0 lease-split keystone); the top follow-on is **R1b** -- wire the split into `model.gateway` #7 PoolManager + `agent.local` #21 governor + the live-GPU swap/eviction proof (findings 13/14 close THERE, not at R1a; frontier hardening in `research/2026-07-30-work-order-gpu-lease-split.md`). Scope
 up to 4 lanes (1 GPU + 1 CPU + 1 coding + optional frontier) -> `plan` at `MaxParallel 3` -> confirm the
 preflight -> relay prompts (+ any frontier pack) as FILES -> `status` -> `handoff` -> fold + mirror the
 core-docs under the git lease.
 
-Outstanding: **(1)** enable the warm pool by default (supervisor DONE; needs a soak + the res.lease fencing wave);
+Outstanding: **(1) R1b** (the res.lease-split consumer wiring in #7/#21 + the live-GPU proof; findings 13/14 close there) then warm-pool default-ON (R1b + a soak); the baton-pass DIRECTION (R1b->ABA proof->soak->R2->#26) is **Nicholas's explicit call** (contradicts the D-0050 spine, trajectory review §7);
 **(2)** the res.lease fencing infra wave (13/14, single-worker); **(3)** continue the Phase C video spine (#32+#33
 done -> video.timeline #21 + video.interpret #22); **(3b)** the `track.objects` #33 refinement wave (folded frontier
 review); **(4)** generator upgrades (SD3.5 image DONE; Z-Image / music / video / audio remain); **(5)** widget-03 GPU
@@ -393,5 +395,5 @@ live-GUI pass; **(6)** portability follow-ons (interpreter #15/#16 DONE; pwsh-pa
 
 ---
 
-**Last updated:** 2026-07-30 — fan-out iteration 17 close-out (D-0070).
+**Last updated:** 2026-07-30 — fan-out iteration 18 close-out (D-0072): R1a res.lease #29 lease-split keystone shipped (v0.2.0, `e701328`) + folded frontier direction review.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

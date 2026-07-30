@@ -12,7 +12,7 @@ human-dispatched, including the frontier lane (a human-couriered pack, not a dri
 
 ## 0. TL;DR
 
-- Read section 2 (orient + verify the box), then run **iteration 19** (section 4). Iterations 1-18 are DONE +
+- Read section 2 (orient + verify the box), then run **iteration 18** (section 4). Iterations 1-17 are DONE +
   live-confirmed (ledger in section 3; rationale D-0055..D-0070). The 4-lane wave model is VALIDATED (up to 1 GPU
   + 1 CPU + 1 coding + 1 off-box frontier at MaxParallel 3; any lane may be skipped -- i17 ran 3 on-box lanes + a
   folded frontier design review).
@@ -82,12 +82,11 @@ Generator leads for #22-#25 are IN; the FIRST upgrade -- SD 3.5 Medium image tie
 - i14-i15 (D-0067/D-0068): the first two 4-lane waves (3/3 on-box + a folded frontier lane each). i14 `fo-14-5ea064b6`: warm-pool Stage-1 (mech C) `09a7e71` + portability bring-up `ops/setup` `821da16` + widget-04 dashboard `333dac6` + a frontier red-team -> the Stage-1.1 backlog. i15 `fo-15-27a03513`: warm-pool Stage-1.1 hardening `121a0fc` (red-team Criticals closed) + portability follow-ons `c0f8be0` (resolver shim into 14/16) + widget-04 live-GUI confirm+fix `8c1da2e` + folded generator model-leads (`research/2026-07-30-generator-model-leads.md`). Full lines: `archive/handoffs/`.
 - i16 `fo-16-f125365c` (D-0069): 3-lane wave. GPU warm-pool **DURABLE Job-Object gateway supervisor** `cc296fc` (owns the server tree in a Job Object ACROSS invocations -> finding 5 durable CLOSED; default-OFF); CPU resolver shim into `doc.io` #20 `8274b9f` (last non-model/non-infra leaf); coding NEW module **#32 `media.decompose`** `5026e2c` (deterministic ffmpeg/ffprobe decompose -> STARTED Phase C video). Full line: `archive/handoffs/`.
 - i17 `fo-17-3a115347` (D-0070): **3-lane wave, 3/3 on-box + a folded frontier DESIGN review.** GPU FIRST generator upgrade -- **SD 3.5 Medium fp16 tier** in `gen.image` #23 `77f1628`+`980dd6d` (`-Tier sd35`; Diffusers-native, SD1.5 kept default; ~12 GB torch peak = NOT a clean 11 GB fit, sequential-offload ladder fallback; 50/50 mock + Module 7 42/42 x2); CPU interpreter-path shim into `image.util` #15 + `detect.objects` #16 `58870fb` (#15 54/54, #16 40/44 live, ops/setup 161/175); coding NEW module **#33 `track.objects`** `3264dd5` (deterministic greedy-IoU tracker, Phase C video #20; 79/79 + 79/79); frontier GPT-5.x tracker DESIGN review (pack `794dbdfe`) -> `research/2026-07-30-track-objects-design-review.md` (greedy-IoU = BASELINE; defines the stable-identity tracker + the #21 schema). MaxParallel 3, 0 conflicts, 0 orphans.
-- i18 `fo-18-c2d73598` (D-0072): a SINGLE-WORKER core-infra wave -- **R1a**, the res.lease #29 GPU-lease-split KEYSTONE at the PRIMITIVE layer (`e701328`, res.lease 0.2.0: a monotonic `fencing_token` + CAS check/validate; the `exec` vs revocable `residency_pin` split with priority-revocation; a prepared-handoff/evict-before-grant PROTOCOL with a `none`/`mock`/`command` evictor seam; lock-order-inversion rejection + `-AllowLockOrder`; additive/default-off; 74/74). The worker built it but a device-bridge collapse cut off its dev.ship+report -> the orchestrator VERIFIED (74/74) + shipped it. Folded off-box frontier direction review (pack `42ad8308` -> `research/2026-07-30-frontier-review-self-tasking-orchestration.md`): R1a-primitive / R1b-consumer split is SOUND but PROVISIONAL -- **findings 1/13/14 close at R1b, NOT R1a**; R1b needs three-identity fencing (gpu_authority_epoch / resident_generation / exec_lease_id) + one atomic scheduler-owned transition + an adversarial mock + WDDM headroom discipline; R4 -> an ABA proof. #7/#21 consumers + the real evictor + the live-GPU proof = **R1b** (deferred).
 
 Runtime paths: plans `.../30-orchestrate-fanout/runtime/plans/<plan_id>/` · artifacts
 `.../runtime/artifacts/<invocation_id>/` · leases `.../29-resource-lease/runtime/leases/`.
 
-Waves + ad-hoc commits share one counter; **the next wave is iteration 19.**
+Waves + ad-hoc commits share one counter; **the next wave is iteration 18.**
 
 ## 4. Current frontier: iteration 18 -- the 4-lane wave (validated at i14-i17, D-0067..D-0070)
 
@@ -247,7 +246,7 @@ F: is reached natively by the Windows executor, not by the session. Machine prer
 the executor process running (`ops/start-executor.bat` or the watchdog), heartbeat fresh + `degraded:false`.
 Computer-use (Task Manager) is only for out-of-band wedge recovery.
 
-## 11. Box state at handoff (2026-07-30, iteration 18 close-out, D-0072)
+## 11. Box state at handoff (2026-07-30, iteration 17 close-out, D-0070)
 
 Iterations done through 17; i17 was a clean 3-lane wave (3/3 on-box) + a folded off-box frontier design review. No
 res.lease held; heartbeat `degraded:false`; post-wave recon confirmed 0 orphaned `llama-server`/python and
