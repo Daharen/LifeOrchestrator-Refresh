@@ -244,7 +244,7 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 | #26 agent.coding | not built (designed, D-0037) | — | 07-26 |
 | #27 route.tools | 33/33 | `e444851` | 07-28 |
 | #28 fs.manage | 21/21 off-machine (on-target verify `m29-verify-001` 25/25) | `m29-after-003` | 07-26 |
-| #29 res.lease | 74/74 `-Live` (v0.2.0 R1a: fencing_token + exec/residency_pin split + prepared/mock-evictor + lock-order) | `e701328` | 07-30 |
+| #29 res.lease | 74/74 baseline + 36/36 v0.3 adversarial `-Live` (v0.3.0 R1b primitive: three-identity fencing + scheduler-owned atomic transition + adversarial mock evictor) | `2d45ffe` | 07-30 |
 | #30 orchestrate.fanout | 71/71 `-Live` | `2afd5de` | 07-28 |
 | #31 frontier.bridge | 65/65 + hardened return-capture | `f52f21d`/`b17a945` | 07-28 |
 | #32 media.decompose | 76/76 cloud + 76/76 `-Live` | `5026e2c` | 07-30 |
@@ -382,7 +382,7 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 
 ## Next expected action
 
-**Run iteration 19** per **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4 (which owns the candidate menu). i18 shipped **R1a** (res.lease 0.2.0 lease-split keystone); the top follow-on is **R1b** -- wire the split into `model.gateway` #7 PoolManager + `agent.local` #21 governor + the live-GPU swap/eviction proof (findings 13/14 close THERE, not at R1a; frontier hardening in `research/2026-07-30-work-order-gpu-lease-split.md`). Scope
+**Run iteration 20 (R1b')** per **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4 (which owns the candidate menu). i18 shipped **R1a** (res.lease 0.2.0 lease-split keystone); the top follow-on is **R1b** -- wire the split into `model.gateway` #7 PoolManager + `agent.local` #21 governor + the live-GPU swap/eviction proof (findings 13/14 close THERE, not at R1a; frontier hardening in `research/2026-07-30-work-order-gpu-lease-split.md`). Scope
 up to 4 lanes (1 GPU + 1 CPU + 1 coding + optional frontier) -> `plan` at `MaxParallel 3` -> confirm the
 preflight -> relay prompts (+ any frontier pack) as FILES -> `status` -> `handoff` -> fold + mirror the
 core-docs under the git lease.
@@ -395,5 +395,5 @@ live-GUI pass; **(6)** portability follow-ons (interpreter #15/#16 DONE; pwsh-pa
 
 ---
 
-**Last updated:** 2026-07-30 — fan-out iteration 18 close-out (D-0072): R1a res.lease #29 lease-split keystone shipped (v0.2.0, `e701328`) + folded frontier direction review.
+**Last updated:** 2026-07-30 — fan-out iteration 19 close-out (D-0073): R1b res.lease #29 GPU-lease-split PRIMITIVE shipped (v0.3.0, `2d45ffe`) + folded frontier concurrency/safety red-team -> i20 = R1b' primitive hardening (findings 1/13/14 stay OPEN).
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*
