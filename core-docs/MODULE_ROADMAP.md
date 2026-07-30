@@ -68,6 +68,8 @@ resource-arbitration layer first: it shipped as `res.lease` #29 + `orchestrate.f
 **Deferred; do when it earns it** (e.g. before a future PC upgrade) — captured now so it is READY to
 execute then. **Goal:** relocate the whole stack to a fresh Windows 11 box in ONE setup pass.
 
+**STATUS (i14, D-0067):** Stage-1 SHIPPED as `ops/setup/` (config layer `LifeorchConfig.psm1` + `setup.ps1`: prereq 5/5, GPU detect, VRAM-sized `models.machine.json` -> staging, an emitted download plan; CPU-verify 6/6 + `VERIFY-RUNBOOK.md`; commit `821da16`, mock 78/78 + live 88/88). RESIDUALS: (1) wire `Resolve-LifeorchConfig` into `modules/*` path resolution; (2) apply `out/models.machine.json` into `modules/07/models.json` (the #7 / GPU-lane owner, under the gpu lease); (3) confirm the `staging-plan.txt` TODO_CONFIRM URLs + actually download; (4) finalize partial-offload `gpu_layers` on a real new box.
+
 - **Already travels:** the repo (modules/widgets/docs — plain pwsh + .NET + JSON, git-tracked) is fully
   portable.
 - **Machine-wired today, must be handled:** (1) the model + engine **DATA on F:** (gitignored, tens of GB —
@@ -133,7 +135,7 @@ one virtual-desktop rect → GDI → PNG (or JPG q90). Read-only, Per-Monitor-V2
 `llama-server` (start → `/health` → `/v1/chat/completions` → kill), chosen from `models.json` by `-Model` id
 or `-Tier` alias; `parallel_safe:false`. **Warm/persistent DETACHED server shipped** (Governor Phase 2, D-0057
 `f8c961a`; warm reuse ~1 ms vs ~1200 ms cold); `res.lease` gpu wired (`0c6d5c9`); `-Logprobs` on both engine
-builds (D-0060 `830efcc`). **Follow-ons:** the **warm multi-model pool + router — DESIGNED, NOT BUILT**
+builds (D-0060 `830efcc`). **Follow-ons:** the **warm multi-model pool + router — Stage-1 (mechanism C) SHIPPED opt-in/default-OFF i14 (D-0067, `09a7e71`, skill 0.3.0); Stage-1.1 hardening backlog in WARM_POOL_DESIGN §10; native router still Stage-2+**
 (`WARM_POOL_DESIGN.md`, D-0063 `c07125f`, + a couriered ChatGPT Pro second opinion as §9): Stage-1 =
 **mechanism C** (the detached server becomes a NAMED POOL MANAGER `Ensure-ResidentModel` + residency-key +
 task-affinity swap-minimising policy + whole-task gpu lease + a 90 s keep-resident window); Stage-2+ GATED
@@ -355,6 +357,7 @@ D-0063 warm-pool second opinion.
   result on open, **the packet file NEVER modified (packet = spec, result = verdicts)** (`f3c1ec7`, D-0065).
   Live-confirmed working. **Residual noted in D-0060, never recorded as closed:** the widget-03
   `model.gateway` **GPU** live-GUI pass (open since D-0060, never closed).
+- **04 Fan-out Wave Dashboard** — MVP shipped 2026-07-29 (D-0067, `333dac6`). Native read-only wave-status surface (WinForms-free core `WaveDashboard.psm1` + thin STA shell + dual-mode tests + `launch.bat`); parses the #30 plan dir + #29 leases dir; zero side effects. Gates: core 80/80 cloud + 90/90 `-Live` (STA SelfTest). **Human live-GUI confirm PENDING** (the D-0049/D-0060/D-0064 rendered-UI lesson).
 - **Backlog:** Voice Console · Generator Studio · Document Workspace · System/Executor Monitor.
 
 ---

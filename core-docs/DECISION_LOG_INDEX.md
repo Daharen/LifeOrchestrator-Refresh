@@ -72,3 +72,4 @@ section 4).
 | D-0064 | 2026-07-29 | locked | Fan-out iteration 11: Verification Console UX (packet discovery + by-kind render) [its iter11-stage1-DRAFT pointer: renumbered to core-docs/fanout/FANOUT_AGENT_001.md by D-0066] |
 | D-0065 | 2026-07-29 | locked | Fan-out iteration 12 (verdict-persistence fix) + iteration-13 follow-on (durable verdicts) [its expanded-handoff pointer: retired to archive by D-0066 -> FANOUT_ORCHESTRATOR_HANDOFF.md §4] |
 | D-0066 | 2026-07-29 | locked | Core-docs consolidation: one live handoff, doc budgets, this index doc, fanout-agent slots, archive/ tree |
+| D-0067 | 2026-07-29 | locked | Fan-out iteration 14 (first 4-lane wave): warm-pool Stage-1 opt-in/default-OFF + portability bring-up (ops/setup) + wave dashboard (widgets/04) + frontier red-team -> Stage-1.1 hardening backlog |

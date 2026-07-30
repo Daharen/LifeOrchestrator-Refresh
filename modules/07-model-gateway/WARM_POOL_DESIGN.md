@@ -309,3 +309,87 @@ Nicholas couriered this design + the probe findings to a ChatGPT Pro session (fr
 - Engine split: test b10092 as the candidate UNIVERSAL build across all five fixtures (0.5B/1.5B/3B/9B-Q5/VLM); the VLM is the GATING test (Qwen2.5-VL has had build-specific regressions). If any fixture regresses, keep per-model engine_path -- which mechanism C handles naturally and a single native router cannot.
 
 Net: Stage-1 = the named pool manager (mechanism C) + task-affinity/epoch policy + whole-task lease + 90 s keep-resident + the expanded residency key + same-model prefix reuse; native router (A), slot save/restore, and any coding specialist are gated to Stage-2+ behind explicit probes/benchmarks. See DECISION_LOG D-0063.
+
+## 10. Stage-1 SHIPPED (iteration 14) + frontier red-team -> the Stage-1.1 hardening backlog
+
+**Status update:** Stage-1 (mechanism C) is BUILT and live-verified -- iteration 14, worker WMP-stage1,
+commit 09a7e71, model.gateway skill 0.2.0->0.3.0, models.json UNCHANGED, **default OFF** (the classic
+per-call + the D-0057 warm paths are byte-for-byte unchanged; a non-warm result carries no
+`server.warm.pool` block). Shipped: `Ensure-ResidentModel(model_id, config_key)` (`-EnsureResident`) + the
+expanded residency key + reuse-on-exact-match (~1 ms) / else evict (confirm exit + VRAM recovery) + reload +
+`/health` + `/v1/models` provenance + a published residency manifest (`lifeorch.model_gateway.warm/0.2`);
+`-PoolStatus`; `-SweepIdle` (90 s keep-resident); whole-task gpu lease held (a caller-held governor lease is
+honored + never released here); same-model prefix reuse (`--parallel 1` + explicit `id_slot`, `-ClearSlot`
+at a session boundary). LIVE-MEASURED through the executor under one whole-task gpu lease: reuse 1 ms, 3B->9B
+4219 ms, 9B->3B 1610 ms, a ctx 4096->8192 same-model mismatch forced evict+reload, ~6678 MiB VRAM recovered
+on evict, 0 orphaned llama-server, lease released. Gates: base 42/42 + warm 23/23 + NEW pool 43/43. Native
+`--models` router, `--slot-save-path`, and any coding specialist remain DEFERRED to Stage-2+.
+
+**Frontier red-team (iteration 14, pack `3edf7218`; Nicholas couriered to GPT-5.x; answer at
+`modules/31-frontier-bridge/runtime/artifacts/3edf7218-.../frontier-pack-i14-redteam-stage1.answer.md`).**
+VERDICT: **mechanism C is the right architecture, but the shipped Stage-1 is a functional-but-unhardened
+first cut** -- safe only because it is default-OFF/additive. It currently conflates five concepts that each
+need a separate invariant: a desired config, a launched-server generation, ownership of an active GPU op,
+permission to stay resident, and a scheduler swap-preference. Before the pool may be ENABLED BY DEFAULT it
+needs the Stage-1.1 hardening below.
+
+**Stage-1.1 hardening backlog (15 ranked findings; * = Critical):**
+1. *Lease TTL is abandonment, NOT fencing -- two "owners" can co-exist. Add a monotonic **fencing token** per
+   acquire; compare-and-swap it on every kill/start/publish/evict; a task whose renewal lapses loses all
+   authority (cancel, stop issuing calls, treat handles invalid). Short renewable TTL (~90-120 s, renew
+   ~30 s), NOT 1800 s. Every inference call carries its expected resident generation + is rejected on
+   mismatch.
+2. *Releasing the lease while the 9B stays resident does NOT free the GPU for another module (~2902 MiB free
+   vs ~6.7 GiB needed -> OOM). Define an enforced `AcquirePreparedGpu(owner, required_vram)` handoff (inspect
+   owner + free VRAM, evict if incompatible, confirm headroom before granting); or evict-before-release.
+3. *Residency transitions are not crash-atomic. Durable state machine
+   EMPTY->STOPPING->EMPTY_CONFIRMED->STARTING->RESIDENT via atomic replace; treat the manifest as a claim to
+   VERIFY; reconcile on every gateway startup under a machine-global named mutex.
+4. *A fixed port + `/health` can validate the WRONG generation. Each launch: a unique nonce + unique port +
+   recorded PID/creation-time + exe/backend hashes; verify the listening socket's owner before publish (a
+   `/v1/models` alias is not proof).
+5. Windows detached-child reaping is not guaranteed by killing the parent PID -- own the whole tree with a
+   **Windows Job Object** held by a persistent gateway supervisor; never kill by PID alone; "0 orphaned
+   llama-server" must mean 0 UNMANAGED servers, and must NOT kill the intended warm resident.
+6. `generation_id` must NOT be in the config fingerprint (a per-launch UUID would defeat all reuse -> the
+   ~1 ms payoff vanishes). Split `resident_config_hash` (deterministic immutable launch config) vs
+   `instance_generation` (per-launch nonce for fencing); rename any registry rev `registry_config_version`.
+7. The key is both incomplete (add LoRA/adapters+order, control vectors, RoPE/YARN, exe+backend-DLL hash, GPU
+   device identity, main-gpu/split/tensor-split, batch/ubatch, cache-reuse mode, server mode, VLM projector,
+   reasoning parser) AND too strict (seed/temp/top-p/top-k/penalties/logit-bias/grammar/stop/max-tokens/
+   per-request no-think/pre-rendered template are REQUEST-scoped). Hash file CONTENTS, not paths.
+8. Replace exact-equality with `CanServe(resident, request)`: exact for semantic-identity fields, `>=` for
+   capacity (a 32K resident serves 16K; a resident 9B serves an M0 request) -- reload only when the resident
+   cannot correctly serve.
+9. "Max one swap per task" is FALSE when a task begins with the 9B resident (9B->3B for the M0 floor, then
+   3B->9B on escalation = 2 swaps). Treat the 3B as a MINIMUM starting capability; run M0/M1 on an
+   already-resident 9B; do not downshift just to honor the floor.
+10. Nothing prevents cross-task thrash (A:3B, B:9B, C:3B, D:9B -> a swap per boundary). Add resident-aware
+    ADMISSION (prefer a queued task compatible with the resident, with aging/fairness). LRU is meaningless at
+    capacity 1 -- REMOVE it from Stage-1.
+11. A fixed 90 s idle unload is inferior to contention-driven eviction (and races a refreshing request).
+    Leave the model resident until an incompatible demand / another GPU owner / explicit shutdown; if a timer
+    is kept it must be a generation-conditional CAS -- a policy, not a correctness mechanism.
+12. "Clear at session boundary" is insufficient for KV safety (a crash/cancel skips it -> cross-task KV
+    bleed). Erase-on-checkout AND on-check-in + a full slot-owner record; or REMOVE prefix reuse from Stage-1
+    (recommended -- it is an incremental optimisation).
+13. A whole-task GPU lease across the entire task starves higher-priority work. Separate a GPU
+    execution/transition lease (held only while loading/unloading/generating) from a revocable residency
+    PIN; or constrain "whole task" to the model-affine LLM segment.
+14. `gpu->git` acquisition can hold the GPU idle waiting for git; the lease service should reject lock-order
+    inversions. Build worker: edit+test under git, release git, take GPU only for live verify.
+15. "Process exit + VRAM recovery" needs a target-headroom invariant + a confirmation interval (WDDM frees
+    async), not a brittle return-to-baseline; on OOM kill the Job Object, drain, leave EMPTY.
+
+**Sound + affirmed:** mechanism C; per-model `engine_path` for the b8661/b10092 split (provided the exe hash
+is in provenance); sampler params request-scoped; the one-active-model invariant; the 27B excluded; `-np 1`
+as a Stage-1 simplification; no claim that RAM page-cache warmth cuts swap cost.
+
+**Recommended Stage-1.1 framing:** a named resident manager that is an OPTIONAL optimised layer, NEVER the
+sole model-execution authority -- keep a legacy `--bypass-pool-manager` / cold isolated-server escape; every
+new guard is override-safe (explain, auto-investigate, recommend, override with a recorded reason, continue
+via a safe degraded path), while integrity invariants (fencing, single-endpoint ownership, verified-model
+routing, no cross-task KV, no blind co-load) are NON-bypassable. Required before "done": a fault-injection
+suite (crash at each transition point then reconcile; forced lease-expiry during a live request; a stale
+idle-callback vs a fresh request; Job-Object tree reap + PID-reuse; KV isolation across crash/cancel; the
+GPU-handoff eviction). See DECISION_LOG D-0067.
