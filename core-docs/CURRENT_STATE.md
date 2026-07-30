@@ -348,6 +348,7 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 ## Unresolved questions
 
 - **Install pwsh system-wide** (winget, needs UAC) vs. keep the per-user dotnet-tool build.
+- **Unattended scheduled orchestrator = IMPOSSIBLE on this build (D-0074):** a scheduled Cowork fire is a fresh session with no device bridge to the box (live gate FAILED 2026-07-30). Dropped; the future home for unattended iterative fan-out is the local baton-pass agent (R4/#26) when strong enough, not the scheduler.
 - **`model.gateway` semantic confidence** — confidence today is a *completeness* heuristic (stop/length/empty),
   not semantic, not calibrated; the same gap exists in every downstream producer.
 - **`-Profile max` 9B arg-gen returns non-JSON** (`arg_parse_failed`) — blocks the max profile end-to-end
