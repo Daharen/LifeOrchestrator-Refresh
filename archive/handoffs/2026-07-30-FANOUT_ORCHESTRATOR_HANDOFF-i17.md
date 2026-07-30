@@ -12,21 +12,18 @@ human-dispatched, including the frontier lane (a human-couriered pack, not a dri
 
 ## 0. TL;DR
 
-- Read section 2 (orient + verify the box), then run **iteration 18** (section 4). Iterations 1-17 are DONE +
-  live-confirmed (ledger in section 3; rationale D-0055..D-0070). The 4-lane wave model is VALIDATED (up to 1 GPU
-  + 1 CPU + 1 coding + 1 off-box frontier at MaxParallel 3; any lane may be skipped -- i17 ran 3 on-box lanes + a
-  folded frontier design review).
-- **i17 (D-0070) shipped:** the FIRST generator upgrade -- an **SD 3.5 Medium fp16 quality tier** in `gen.image`
-  #23 (`77f1628`+`980dd6d`; `image.sd35-medium` / `-Tier sd35`; Diffusers-native, reuses the speech venv 0.35.2, NO
-  new engine; legacy SD1.5 kept the fast default) -- **CAVEAT: NOT a clean 11 GB fit** (torch peaks ~12.06 GB, the
-  T5 fp16 spike leans on the driver system-RAM fallback; a sequential-offload OOM ladder is the guaranteed
-  fallback); the CPU **interpreter-path** portability shim (config-resolvable system python) into `image.util` #15 +
-  `detect.objects` #16 (`58870fb`); and the NEW module **#33 `track.objects`** (`3264dd5`) -- a deterministic
-  per-class greedy-IoU tracker (Phase C video position 20). A folded frontier DESIGN review of the tracker
-  (`research/2026-07-30-track-objects-design-review.md`) judges greedy-IoU a BASELINE and defines the real
-  stable-identity tracker + the track schema `video.timeline` #21 must consume.
+- Read section 2 (orient + verify the box), then run **iteration 17** (section 4). Iterations 1-16 are DONE +
+  live-confirmed (ledger in section 3; rationale D-0055..D-0069). The 4-lane wave model is VALIDATED (up to 1 GPU
+  + 1 CPU + 1 coding + 1 off-box frontier at MaxParallel 3; any lane may be skipped -- i16 ran 3 lanes, frontier
+  skipped).
+- **i16 (D-0069) shipped:** the warm-pool **DURABLE Job-Object gateway supervisor** (`cc296fc`,
+  `Start-GatewaySupervisor.ps1` + `lib/Supervisor.psm1`, `-UseSupervisor`, skill 0.4.0) -- owns the llama-server
+  tree in a Windows Job Object ACROSS per-call invocations, so **red-team finding 5 (durable) = CLOSED**; the CPU
+  portability shim into `doc.io` #20 (`8274b9f`, the LAST non-model/non-infra walk-up leaf); and the NEW module
+  **#32 `media.decompose`** (`5026e2c`) -- deterministic ffmpeg/ffprobe video decompose that **STARTS the Phase C
+  video spine** (arch position 19).
 - **Warm pool is STILL default-OFF.** With the supervisor done, default-ON now awaits ONLY a **soak** + the
-  **res.lease fencing wave** (findings 13/14, single-worker) -- `WARM_POOL_DESIGN.md` section 10. Pick the i18
+  **res.lease fencing wave** (findings 13/14, single-worker) -- `WARM_POOL_DESIGN.md` section 10. Pick the i17
   units with Nicholas from the section-4 menu.
 - Workers use `docs:[]`; YOU mirror the shared core-docs under the `git` lease (section 7). Doc rules --
   budgets, replace-don't-append, archive -- live in `DOC_PROTOCOL.md`; follow them or the docs re-bloat.
@@ -34,7 +31,7 @@ human-dispatched, including the frontier lane (a human-couriered pack, not a dri
   as on-disk GUID paths. Worker briefs ALSO go into the numbered
   `core-docs/fanout/FANOUT_AGENT_00N.md` slots (mirrored to the Project) so Nicholas can dispatch a worker by
   telling a fresh session "read claude/fanout/FANOUT_AGENT_00N.md and execute it" (section 5). The slots were
-  RESET to EMPTY after i17.
+  RESET to EMPTY after i16.
 - Box state at handoff: section 11.
 
 ## 1. Role + hard boundary (non-negotiable)
@@ -66,31 +63,30 @@ section 7).
 
 ## 3. Where things stand
 
-**Now:** modules 0-33 + widgets 01-04 built (one-liners in `CURRENT_STATE.md`); the fan-out loop has run 17
+**Now:** modules 0-32 + widgets 01-04 built (one-liners in `CURRENT_STATE.md`); the fan-out loop has run 16
 iterations; the Verification Console is the trusted audit surface (durable verdicts); the Governor's
 `-AutoRamp` is DEFAULT-ON (M0->M1->S0); the strong tier is Qwen3.5-9B Q5_K_M, GPU-resident on b10092; the 27B
 is validated impractical on 11 GB. **Warm-pool Stage-1.1 + the DURABLE Job-Object gateway supervisor are BUILT
-but the pool stays opt-in / default-OFF (D-0069).** The Phase C video spine is UNDERWAY (#32 media.decompose + #33 track.objects).
-Generator leads for #22-#25 are IN; the FIRST upgrade -- SD 3.5 Medium image tier -- SHIPPED i17
-(`research/2026-07-30-generator-model-leads.md`; tracker design review `research/2026-07-30-track-objects-design-review.md`).
+but the pool stays opt-in / default-OFF (D-0069).** The Phase C video spine has STARTED (#32 media.decompose).
+Generator leads for #22-#25 are IN (`research/2026-07-30-generator-model-leads.md`).
 
 **Iteration ledger** (one line each; detail = the D-entry; commits verifiable in git):
 
 - i1-i5 (D-0055..D-0058): res.lease consumers wired (gpu->#7, git->dev.ship, doc:<path>->#20); frontier.bridge #31 built; worker E WEDGED the executor -> single-worker executor+watchdog hardening `e5b93ab`; Governor Phase 2 DETACHED warm server `f8c961a`; Console audit loop validated + #30 packet-input validation `2afd5de`. (Full lines: `archive/handoffs/`.)
 - i6-i9 (D-0059..D-0062): Governor Phase 3 -- opt-in `-AutoRamp` (i6 `0005e41`) -> X0/27B rung + logprob-entropy + Console toggle (i7 `830efcc`/`b1f36f0`) -> default-on TRIED then REVERTED + 27B quant NEGATIVE (i8) -> contract-less closing FIXED + `-AutoRamp` DEFAULT-ON `e444851` + 9B Q4->Q5_K_M `0bd2733` (i9). Commits in git.
 - i10-i13 (D-0063..D-0065): WARM_POOL_DESIGN.md shipped `c07125f` (mechanism C + a couriered second opinion) -> Verification Console UX `206b2dd` -> verdict save/restore into the WinForms-free core `49f7feb` -> DURABLE verdicts (sidecar keyed by packet_id + auto-load `f3c1ec7`, Console live-confirmed). Full lines: `archive/handoffs/`.
-- i14-i15 (D-0067/D-0068): the first two 4-lane waves (3/3 on-box + a folded frontier lane each). i14 `fo-14-5ea064b6`: warm-pool Stage-1 (mech C) `09a7e71` + portability bring-up `ops/setup` `821da16` + widget-04 dashboard `333dac6` + a frontier red-team -> the Stage-1.1 backlog. i15 `fo-15-27a03513`: warm-pool Stage-1.1 hardening `121a0fc` (red-team Criticals closed) + portability follow-ons `c0f8be0` (resolver shim into 14/16) + widget-04 live-GUI confirm+fix `8c1da2e` + folded generator model-leads (`research/2026-07-30-generator-model-leads.md`). Full lines: `archive/handoffs/`.
-- i16 `fo-16-f125365c` (D-0069): 3-lane wave. GPU warm-pool **DURABLE Job-Object gateway supervisor** `cc296fc` (owns the server tree in a Job Object ACROSS invocations -> finding 5 durable CLOSED; default-OFF); CPU resolver shim into `doc.io` #20 `8274b9f` (last non-model/non-infra leaf); coding NEW module **#32 `media.decompose`** `5026e2c` (deterministic ffmpeg/ffprobe decompose -> STARTED Phase C video). Full line: `archive/handoffs/`.
-- i17 `fo-17-3a115347` (D-0070): **3-lane wave, 3/3 on-box + a folded frontier DESIGN review.** GPU FIRST generator upgrade -- **SD 3.5 Medium fp16 tier** in `gen.image` #23 `77f1628`+`980dd6d` (`-Tier sd35`; Diffusers-native, SD1.5 kept default; ~12 GB torch peak = NOT a clean 11 GB fit, sequential-offload ladder fallback; 50/50 mock + Module 7 42/42 x2); CPU interpreter-path shim into `image.util` #15 + `detect.objects` #16 `58870fb` (#15 54/54, #16 40/44 live, ops/setup 161/175); coding NEW module **#33 `track.objects`** `3264dd5` (deterministic greedy-IoU tracker, Phase C video #20; 79/79 + 79/79); frontier GPT-5.x tracker DESIGN review (pack `794dbdfe`) -> `research/2026-07-30-track-objects-design-review.md` (greedy-IoU = BASELINE; defines the stable-identity tracker + the #21 schema). MaxParallel 3, 0 conflicts, 0 orphans.
+- i14 `fo-14-5ea064b6` (D-0067): FIRST 4-lane wave, 3/3 on-box + a folded frontier red-team. GPU warm-pool Stage-1 (mech C, opt-in) `09a7e71`; CPU portability bring-up `ops/setup` `821da16`; coding wave dashboard `widgets/04` `333dac6`; off-box frontier red-team (pack 3edf7218) -> the Stage-1.1 hardening backlog. MaxParallel 3, 0 conflicts, 0 orphans.
+- i15 `fo-15-27a03513` (D-0068): 4-lane wave, 3/3 on-box + a folded frontier model-leads answer. GPU warm-pool Stage-1.1 hardening `121a0fc` (closed the red-team Criticals; `lib/PoolManager.psm1`; pool default-OFF); CPU portability follow-ons `c0f8be0` (staging-plan confirm + resolver shim into 14/16); coding widget-04 live-GUI confirm+fix `8c1da2e`; frontier generator model leads (pack cc96c95a) -> `research/2026-07-30-generator-model-leads.md`. MaxParallel 3, 0 conflicts, 0 orphans.
+- i16 `fo-16-f125365c` (D-0069): **3-lane wave, 3/3 on-box (frontier skipped).** GPU warm-pool **DURABLE Job-Object gateway supervisor** `cc296fc` (`Start-GatewaySupervisor.ps1` + `lib/Supervisor.psm1`, `-UseSupervisor`, skill 0.4.0; owns the server tree in a Job Object ACROSS invocations -> finding 5 durable CLOSED; default-OFF; 228/228 off-machine + live); CPU resolver shim into `doc.io` #20 `8274b9f` (last non-model/non-infra leaf; 128/128 + 140/140); coding NEW module **#32 `media.decompose`** `5026e2c` (deterministic ffmpeg/ffprobe video decompose -> STARTS Phase C video; 76/76 + 76/76). MaxParallel 3, 0 conflicts, 0 orphans.
 
 Runtime paths: plans `.../30-orchestrate-fanout/runtime/plans/<plan_id>/` · artifacts
 `.../runtime/artifacts/<invocation_id>/` · leases `.../29-resource-lease/runtime/leases/`.
 
-Waves + ad-hoc commits share one counter; **the next wave is iteration 18.**
+Waves + ad-hoc commits share one counter; **the next wave is iteration 17.**
 
-## 4. Current frontier: iteration 18 -- the 4-lane wave (validated at i14-i17, D-0067..D-0070)
+## 4. Current frontier: iteration 17 -- the 4-lane wave (validated at i14/i15/i16, D-0067/D-0068/D-0069)
 
-Nicholas's directive: up to FOUR lanes per wave; any lane may be skipped (i16 skipped frontier; i17 ran all four). Every lane is
+Nicholas's directive: up to FOUR lanes per wave; any lane may be skipped (i16 skipped frontier). Every lane is
 human-dispatched.
 
 - **GPU lane (<=1 per wave -- HARD CLAMP).** One Cowork worker on a GPU-bound unit (any llama-server / CUDA
@@ -111,35 +107,32 @@ contention 0 by design. Wedge risk scales with concurrency: persistent llama-ser
 be reaped before finalize (D-0055/56); reassert the 0-orphan check every wave.
 
 **Wave loop:** scope the lanes you want (distinct modules) + an optional frontier topic -> fill the
-`FANOUT_AGENT_00N` slots (section 5) -> author `workers-i18.json` + `task-plan-i18.ps1` (copy
-`task-plan-i17.ps1`; `-Iteration 18 -MaxParallel 3`; `gpu:true` only on the GPU worker) -> run `plan` via the
+`FANOUT_AGENT_00N` slots (section 5) -> author `workers-i17.json` + `task-plan-i17.ps1` (copy
+`task-plan-i16.ps1`; `-Iteration 17 -MaxParallel 3`; `gpu:true` only on the GPU worker) -> run `plan` via the
 executor; confirm `dispatch_now` <= 3, exactly <=1 gpu, 0 doc contention, clean preflight -> emit any
 frontier pack separately -> relay the check-in + every worker prompt + the pack as FILES + slot docs ->
-workers run + report -> poll `-Action status -PlanId fo-18-<id>` until `ready_for_handoff` -> `-Action
+workers run + report -> poll `-Action status -PlanId fo-17-<id>` until `ready_for_handoff` -> `-Action
 handoff` (emits the Verification Console packet) -> fold any frontier answer, mirror the core-docs under the
 `git` lease, archive the used briefs + reset the slots -> iterate.
 
 **Candidate-unit menu** (pick with Nicholas each wave):
 - GPU: (a) **warm-pool SOAK -> flip default-ON** (supervisor DONE; needs the soak + the res.lease fencing wave
-  first) -- THE standing candidate; (b) **a GENERATOR UPGRADE** #22-#25 (SD 3.5 Medium image tier DONE i17;
-  next Diffusers-native Wan2.1 1.3B video / Stable Audio Open 1.0 audio, or the leads Z-Image-Turbo Q8 / ACE-Step /
-  LTX-Video which need a new engine/venv -- `research/2026-07-30-generator-model-leads.md`); (c) the b10092 universal-engine probe (VLM = the gating test).
+  first) -- THE standing candidate; (b) **a first GENERATOR UPGRADE** #22-#25 (leads in
+  `research/2026-07-30-generator-model-leads.md`; start Diffusers-native SD3.5 Medium / Wan2.1 1.3B / Stable Audio
+  Open 1.0, others need a new engine/venv); (c) the b10092 universal-engine probe (VLM = the gating test).
 - CPU: (a) **the res.lease #29 fencing infra wave** (findings 13/14: a monotonic fencing token + lock-order-inversion
   rejection) -- a SINGLE-worker wave (section 8), the OTHER gate to default-ON; (b) a remaining portability
   follow-on, each its own wave (`$PwshPath` resolution across ~15 model-bound entrypoints + harnesses; core-infra
   paths 00.1 + `ops/*.bat`; an interpreter-path config-schema for #15/#16); (c) a non-model hardening pass (doc.io
   #20 / route.tools #27 / fs.manage #28).
-- Coding: (a) **continue the Phase C video spine** -- **`video.timeline` #21** (arch 21: fuse
-  transcription+scenes+OCR+keyframes+detections+tracks -> searchable timeline; it should CONSUME the frontier-reviewed
-  track schema in `research/2026-07-30-track-objects-design-review.md`) or **`video.interpret` #22**; OR the
-  **`track.objects` #33 refinement wave** (scene-boundary reset + elapsed-time aging + global Hungarian assignment +
-  gated centroid fallback + canonical-JSON determinism, per the folded frontier review); or #32/#33 follow-ons; (b) the
+- Coding: (a) **continue the Phase C video spine** -- the next module (`track.objects` / `video.timeline` /
+  `video.interpret`, arch 20-22) or `media.decompose` #32 follow-ons (subtitles / clips / proxy / batch); (b) the
   widget-03 `model.gateway` GPU live-GUI pass (open since D-0060; needs the GPU, so run it AS the GPU lane, not
   alongside one); (c) Verification Console / widget-04 polish; (d) test-coverage + interface cleanups.
 - Frontier: (a) a **red-team / security review of the shipped durable supervisor** (`lib/Supervisor.psm1` +
   `Start-GatewaySupervisor.ps1`) before default-ON; (b) a generator-upgrade engine sanity check
-  (stable-diffusion.cpp vs ComfyUI vs Diffusers; venv isolation; Turing FP16-only); (c) a design review of `video.timeline` #21 (schema +
-  fusion), building on the i17 tracker review; (d) a second opinion on any risky call.
+  (stable-diffusion.cpp vs ComfyUI vs Diffusers; venv isolation; Turing FP16-only); (c) a design review of the
+  next video module; (d) a second opinion on any risky call.
 
 ## 5. Worker briefs: the FANOUT_AGENT slot system (D-0066)
 
@@ -246,16 +239,14 @@ F: is reached natively by the Windows executor, not by the session. Machine prer
 the executor process running (`ops/start-executor.bat` or the watchdog), heartbeat fresh + `degraded:false`.
 Computer-use (Task Manager) is only for out-of-band wedge recovery.
 
-## 11. Box state at handoff (2026-07-30, iteration 17 close-out, D-0070)
+## 11. Box state at handoff (2026-07-30, iteration 16 close-out, D-0069)
 
-Iterations done through 17; i17 was a clean 3-lane wave (3/3 on-box) + a folded off-box frontier design review. No
-res.lease held; heartbeat `degraded:false`; post-wave recon confirmed 0 orphaned `llama-server`/python and
-`ready_for_handoff=true`. HEAD = the D-0070 i17 close-out docs commit (worker parents `3264dd5` track.objects ->
-`58870fb` interpreter shim -> `77f1628`+`980dd6d` gen.image SD3.5 -> `7d68c58` i17 slots, `master`) -- confirm with
-`git log -1`. **Warm-pool Stage-1.1 + the DURABLE Job-Object supervisor are BUILT but the pool STAYS default-OFF**
--- do NOT enable until a soak + the res.lease fencing wave (13/14) land (`WARM_POOL_DESIGN.md` s10). **finding 5
-durable = CLOSED.** The **Phase C video spine is UNDERWAY** -- #32 `media.decompose` + #33 `track.objects` built
-(next: `video.timeline` #21 + `video.interpret` #22; the i17 frontier review defines the track schema #21 must
-consume + the track.objects refinement roadmap). **First generator upgrade SHIPPED:** SD 3.5 Medium fp16 image tier
-in `gen.image` #23 (opt-in `-Tier sd35`; NOT a clean 11 GB fit, ~12 GB torch peak). PENDING human live-GUI confirm:
-the widget-03 `model.gateway` GPU pass (D-0060). **Start at section 2, then run iteration 18 (section 4).**
+Iterations done through 16; i16 was a clean 3-lane wave (3/3 on-box, frontier skipped). No res.lease held;
+heartbeat `degraded:false`; post-wave recon confirmed 0 orphaned `llama-server`/python and
+`ready_for_handoff=true`. HEAD = the D-0069 i16 close-out docs commit (parents `cc296fc` supervisor -> `5026e2c`
+module 32 -> `8274b9f` doc.io shim -> `fb8b710` i16 slots, `master`) -- confirm with `git log -1`. **Warm-pool
+Stage-1.1 + the DURABLE Job-Object supervisor are BUILT but the pool STAYS default-OFF** -- do NOT enable until a
+soak + the res.lease fencing wave (13/14) land (`WARM_POOL_DESIGN.md` s10). **finding 5 durable = CLOSED.** The
+**Phase C video spine has STARTED** -- #32 `media.decompose` built (next: arch 20-22). Generator leads #22-#25 IN.
+PENDING human live-GUI confirm: the widget-03 `model.gateway` GPU pass (D-0060). **Start at section 2, then run
+iteration 17 (section 4).**

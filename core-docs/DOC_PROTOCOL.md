@@ -21,11 +21,11 @@ describe NOW and stay ingestable whole; history is never deleted, it moves to la
 | doc | owns | budget |
 |---|---|---|
 | START_HERE.md | routing: what to read, what you may modify, session checklist | 6 KB |
-| FANOUT_ORCHESTRATOR_HANDOFF.md | THE one live handoff: orchestrator ops + current frontier | 22 KB |
-| CURRENT_STATE.md | reality NOW: phase, active work, box, deps, models, tests table, live gotchas | 32 KB |
+| FANOUT_ORCHESTRATOR_HANDOFF.md | THE one live handoff: orchestrator ops + current frontier | 24 KB |
+| CURRENT_STATE.md | reality NOW: phase, active work, box, deps, models, tests table, live gotchas | 34 KB |
 | DECISION_LOG.md | append-only rationale | no cap (indexed; tool-pull only) |
 | DECISION_LOG_INDEX.md | one row per decision (id, date, state, title) | 12 KB |
-| MODULE_ROADMAP.md | build order, per-module status, deferred follow-ons, portability backlog | 34 KB |
+| MODULE_ROADMAP.md | build order, per-module status, deferred follow-ons, portability backlog | 37 KB |
 | TOOL_MODEL_REGISTRY.md | tool/model/hardware/storage registry (lookup, not story) | 43 KB |
 | REVIEW_QUEUE.md | queue schema, conventions, producer/consumer table, open design flags | 15 KB |
 | PROJECT_DIRECTION.md | doctrine (stable) | 9 KB |

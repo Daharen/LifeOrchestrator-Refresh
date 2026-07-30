@@ -13,6 +13,7 @@ Append one line per addition (path | what it was | why archived | date | D-ref).
 - `2026-07-29-FANOUT_ORCHESTRATOR_HANDOFF-i14.md` | the live handoff snapshotted before the i14 close-out rewrite (HEAD 74d6c86) | snapshot-then-rewrite each orchestrator session (DOC_PROTOCOL s5) | 2026-07-29 | D-0067
 - `2026-07-30-FANOUT_ORCHESTRATOR_HANDOFF-i15.md` | the live handoff snapshotted before the i15 close-out rewrite (HEAD 8c1da2e) | snapshot-then-rewrite each orchestrator session (DOC_PROTOCOL s5) | 2026-07-30 | D-0068
 - `2026-07-30-FANOUT_ORCHESTRATOR_HANDOFF-i16.md` | the live handoff snapshotted before the i16 close-out rewrite (HEAD d106ed7) | snapshot-then-rewrite each orchestrator session (DOC_PROTOCOL s5) | 2026-07-30 | D-0069
+- `2026-07-30-FANOUT_ORCHESTRATOR_HANDOFF-i17.md` | the live handoff snapshotted before the i17 close-out rewrite (HEAD 980dd6d) | snapshot-then-rewrite each orchestrator session (DOC_PROTOCOL s5) | 2026-07-30 | D-0070
 
 ## doc-snapshots/2026-07-29/
 
@@ -39,3 +40,6 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 - `i16-WMP-supervisor.md` | the filled GPU-lane brief (warm-pool durable Job-Object gateway supervisor) dispatched in i16 (plan fo-16-f125365c) | used brief archived on wave completion | 2026-07-30 | D-0069
 - `i16-PORT-shim.md` | the filled CPU-lane brief (portability resolver shim into doc.io #20) dispatched in i16 | used brief archived on wave completion | 2026-07-30 | D-0069
 - `i16-MEDIA-decompose.md` | the filled coding-lane brief (NEW module #32 media.decompose) dispatched in i16 | used brief archived on wave completion | 2026-07-30 | D-0069
+- `i17-GEN-image-sd35.md` | the filled GPU-lane brief (SD 3.5 Medium fp16 tier for gen.image #23) dispatched in i17 (plan fo-17-3a115347) | used brief archived on wave completion | 2026-07-30 | D-0070
+- `i17-PORT-interp.md` | the filled CPU-lane brief (config-resolvable Python interpreter path for #15/#16) dispatched in i17 | used brief archived on wave completion | 2026-07-30 | D-0070
+- `i17-TRACK-objects.md` | the filled coding-lane brief (NEW module #33 track.objects) dispatched in i17 | used brief archived on wave completion | 2026-07-30 | D-0070

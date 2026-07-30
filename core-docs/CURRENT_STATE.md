@@ -14,23 +14,23 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
 
 - **Phase:** MVP build-out on the D-0029 usable-local-core-first build priority (`MODULE_ROADMAP.md → Build
   priority`). Two tracks: **Modules** (`modules/`) + **Widgets** (`widgets/`, the human-interface layer).
-  **Phase C (the canonical spine) has STARTED** — the video block opened at i16 with module #32 `media.decompose`.
+  **Phase C (the canonical spine) is UNDERWAY** — the video block: #32 `media.decompose` (i16) + #33 `track.objects` (i17).
 - **Direction (D-0050):** past MVP the project drives ONE spine — the **OFFLOAD / AUDIT LOOP** under the
   **verify-cost rule**: offload only what is cheaper to VERIFY than to do; deterministic modules are Claude's
   hands, model modules only where machine- or human-checkable.
-- **ACTIVE = the fan-out loop. Iterations 1–16 are DONE** (D-0055..D-0069) via `orchestrate.fanout` #30 over
+- **ACTIVE = the fan-out loop. Iterations 1–17 are DONE** (D-0055..D-0070) via `orchestrate.fanout` #30 over
   `res.lease` #29, workers hand-dispatched into fresh Cowork sessions. Ledger:
-  **`FANOUT_ORCHESTRATOR_HANDOFF.md`**; rationale: **DECISION_LOG D-0055..D-0069**. Do not re-narrate here.
-- **NEXT = iteration 17** (D-0069); iteration 16 (plan `fo-16-f125365c`, 3/3 on-box, frontier lane skipped) shipped the GPU
-  warm-pool **durable Job-Object gateway supervisor** (finding 5 durable CLOSED; pool still default-OFF) + a CPU
-  portability follow-on (resolver shim into `doc.io` #20 — the last non-model/non-infra leaf) + the NEW module #32
-  `media.decompose`. The 4-lane model: **1 GPU worker (HARD-CLAMPED <=1/wave) + 1 CPU + 1 broad coding + 1
+  **`FANOUT_ORCHESTRATOR_HANDOFF.md`**; rationale: **DECISION_LOG D-0055..D-0070**. Do not re-narrate here.
+- **NEXT = iteration 18** (D-0070); iteration 17 (plan `fo-17-3a115347`, 3/3 on-box + a folded frontier design review)
+  shipped the FIRST generator upgrade — an **SD 3.5 Medium fp16 quality tier** in `gen.image` #23 (legacy SD1.5 kept
+  default) + a CPU portability follow-on (config-resolvable **Python interpreter path** for `image.util` #15 +
+  `detect.objects` #16) + the NEW module #33 `track.objects` (Phase C video position 20). The 4-lane model: **1 GPU worker (HARD-CLAMPED <=1/wave) + 1 CPU + 1 broad coding + 1
   externalized frontier-GPT review lane** (any lane may be skipped). Validated on-box ceiling `MaxParallel 3`;
   the frontier lane is off-box, takes no lease. Wave model, candidate menu + anti-collision rules:
   **`FANOUT_ORCHESTRATOR_HANDOFF.md`**.
 - **Hard boundary (D-0051, non-negotiable):** the orchestrator NEVER drives another AI session — including the
   frontier lane, a human-couriered pack (`frontier.bridge` #31).
-- Repo HEAD at last mirror: the **i16 close-out docs commit** (D-0069, `master`) — confirm live
+- Repo HEAD at last mirror: the **i17 close-out docs commit** (D-0070, `master`) — confirm live
   with `git log -1` (read-only over the mount is fine).
 
 ## Adaptive Resource Governor (agent.local #21)
@@ -111,10 +111,14 @@ registry facts: `TOOL_MODEL_REGISTRY.md`. Roster (all MVP-complete unless noted)
   the closed `tools.json` registry IS the sandbox) · #27 route.tools · #28 fs.manage.
 - **Audio:** #10 audio.ingest · #11 speech.stt · #12 speech.tts · #13 voice.live.
 - **Perception:** #14 ocr.layout · #15 image.util · #16 detect.objects · #17 image.interpret · #18 image.index.
-- **Generators (user track):** #22 gen.audio · #23 gen.image · #24 gen.music · #25 gen.video.
-- **Video spine (Phase C, STARTED i16):** **#32 media.decompose** — deterministic ffmpeg/ffprobe video decompose
-  (meta/audio/keyframes/scenes; composes #10; `parallel_safe:true`; arch position 19, D-0069). Next: positions
-  20-22 (track.objects / video.timeline / video.interpret), Proposed.
+- **Generators (user track):** #22 gen.audio · #23 gen.image (+SD 3.5 Medium fp16 tier, i17) · #24 gen.music · #25 gen.video.
+- **Video spine (Phase C, UNDERWAY):** **#32 media.decompose** (deterministic ffmpeg/ffprobe decompose —
+  meta/audio/keyframes/scenes; composes #10; `parallel_safe:true`; arch 19, D-0069) · **#33 track.objects**
+  (deterministic per-class greedy-IoU tracker over #16-shape detections -> identity tracks, birth/coast/death +
+  monotonic ids; `parallel_safe:true`; MVP on fixtures; arch 20, D-0070). Next: positions 21-22 (video.timeline /
+  video.interpret), Proposed. **track.objects greedy-IoU is a BASELINE** — the folded frontier review
+  (`research/2026-07-30-track-objects-design-review.md`) defines the real stable-identity tracker (scene-bounded,
+  elapsed-time-aged, globally-assigned, gated centroid fallback) + the schema `video.timeline` #21 needs.
 - **NOT built:** #26 agent.coding — designed + DEFERRED (D-0037; no safe code-exec substrate on this box).
 - **Widgets (native + `launch.bat`, D-0038):** 01 Local Agent Console · 02 Module Launcher · 03 Verification
   Console (**durable verdicts** — results sidecar keyed by `packet_id`; the packet file is never modified, D-0065) · **04 Fan-out Wave Dashboard** (read-only plan/worker/lease view; D-0067; live-GUI confirm DONE i15 D-0068).
@@ -147,7 +151,8 @@ shipped; Phase C video spine STARTED (#32).**
 - **diffusers 0.35.2 in the speech venv** (`F:\...Local_Computer_Speech_Large_Data\python_env`: torch 2.11+cu128,
   transformers 4.57.3, accelerate, safetensors, torchvision 0.26, `qwen_tts`) powers `gen.image`/`gen.video`; added
   only diffusers+importlib_metadata+zipp (Module 12 safe). The **system python is torch 2.2.1+cpu (no CUDA)** —
-  image/video gen runs under the speech venv only.
+  image/video gen runs under the speech venv only. **i17 added `sentencepiece` 0.2.2** to the speech venv for the SD 3.5
+  T5 tokenizer (torch/transformers/diffusers/qwen_tts UNCHANGED — Module 12 safe).
 
 ## Installed local models (summary)
 
@@ -163,6 +168,12 @@ Models live in per-owning-module F: homes under `…_Large_Data\` (D-0028); engi
 - Non-LLM models (whisper STT, Qwen3-TTS x2, YOLOX x2, VLM, SD 1.5, MusicGen, AnimateDiff-Lightning,
   embedding) are `wired:false` **for the gateway** by design — each resolved by its owning module
   (D-0020/23/25). The embedding model is staged but **unwired** (awaits artifact.search).
+- **`gen.image` #23 gained an SD 3.5 Medium fp16 QUALITY tier (i17, D-0070)** alongside legacy SD1.5 (default stays
+  `image.sd15`): Diffusers-native `StableDiffusion3Pipeline` on the speech venv 0.35.2 (NO new engine); fp16 + model
+  CPU offload + VAE tiling, T5-XXL CPU-side, seed-reproducible; 15.16 GB on F: (6 safetensors sha256-verified;
+  `image.sd35-medium`, `-Tier sd35`). **CAVEAT: NOT a clean 11 GB fit** — torch VRAM peaks ~12.06 GB (T5 fp16 spike ->
+  NVIDIA driver system-RAM fallback); the sequential-offload OOM ladder is the guaranteed fallback. ~92 s cold / ~43 s
+  warm @768². Paths/sha in `models.json` + `TOOL_MODEL_REGISTRY.md`.
 
 ## Available hardware (measured 2026-07-24)
 
@@ -211,7 +222,7 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 | #1 / #2 / #3 / #4 | 11/11 · 16/16 · 16/16 · 16/16 | — | 07-24 |
 | #5 uia.actor | 26/26 | `m5-test-001` | 07-24 |
 | #6 capture.screen | 39/39 | `m6-test-001` | 07-24 |
-| #7 model.gateway | live base 42/42; off-machine 228/228 (core49 + warm23 + pool48 + FI37 + supCore46 + supFI25) | `cc296fc` | 07-30 |
+| #7 model.gateway | live base 42/42 (re-verified x2 on the i17 models.json image-tier add); off-machine 228/228 | `cc296fc`/`980dd6d` | 07-30 |
 | #8 classify.batch | 33/33 | `m8-test-001` | 07-24 |
 | #9 review.processor | 34/34 | `m9-test-003` | 07-24 |
 | #10 audio.ingest | 43/43 | `m10-test-001` | 07-24 |
@@ -219,15 +230,15 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 | #12 speech.tts | 25/25 | `m12-test-001` | 07-24 |
 | #13 voice.live | 21/21 | `m13-test-001` | 07-24 |
 | #14 ocr.layout | 30/30 | `m14-test-003` | 07-25 |
-| #15 image.util | 48/48 | `m15-test-001` (re-verified `m16-test-001`) | 07-25 |
-| #16 detect.objects | 38/38 | `m16-test-001` | 07-25 |
+| #15 image.util | 54/54 (48 + interpreter-shim) | `58870fb` | 07-30 |
+| #16 detect.objects | 44/44 `-Live` (40 cloud; +interpreter-shim) | `58870fb` | 07-30 |
 | #17 image.interpret | 48/48 `-Live` | `m17-test-001/002` | 07-25 |
 | #18 image.index | 41/41 `-Live` (40/40 cloud) | `m18-test-002` | 07-25 |
 | #19 logic.escalator | 28/28 `-Live` (24/24 cloud) | `m19-test-001` | 07-25 |
 | #20 doc.io | 106/106 (+ portability resolver shim, ops/setup 140/140 `-Live`) | `d2a7352` / `8274b9f` | 07-30 |
 | #21 agent.local | 102/102 (+122/122 off-machine) | `e444851` | 07-28 |
 | #22 gen.audio | 43/43 (41/41 cloud) | `m22-test-001` | 07-25 |
-| #23 gen.image | 32/32 `-Live` (42/42 cloud) | `m23-test-005` | 07-25 |
+| #23 gen.image | 50/50 mock cloud + 50/50 on-device (SD3.5 fp16 + SD1.5 live) | `980dd6d` | 07-30 |
 | #24 gen.music | 42/42 `-Live` (49/49 cloud) | `m24-test-002` | 07-26 |
 | #25 gen.video | 46/46 `-Live` (54/54 cloud) | `m25-test-002` | 07-26 |
 | #26 agent.coding | not built (designed, D-0037) | — | 07-26 |
@@ -237,10 +248,11 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 | #30 orchestrate.fanout | 71/71 `-Live` | `2afd5de` | 07-28 |
 | #31 frontier.bridge | 65/65 + hardened return-capture | `f52f21d`/`b17a945` | 07-28 |
 | #32 media.decompose | 76/76 cloud + 76/76 `-Live` | `5026e2c` | 07-30 |
+| #33 track.objects | 79/79 cloud + 79/79 `-Live` | `3264dd5` | 07-30 |
 | widgets/01 Agent Console | 91/91 `-Live` (89/89 cloud) | `b1f36f0` | 07-28 |
 | widgets/02 Module Launcher | 75/75 `-Live` (64/64 cloud) | `c509e571` | 07-27 |
 | widgets/03 Verification Console | 173/173 cloud mock + live STA SelfTests (`SELFTEST_VERDICT_PERSIST_OK`, `SELFTEST_AUTOLOAD_OK`) | `f3c1ec7` | 07-29 |
-| ops/setup portability | 128/128 cloud + 140/140 `-Live` | `8274b9f` | 07-30 |
+| ops/setup portability | 161/161 cloud + 175/175 `-Live` (+interpreter shim) | `58870fb` | 07-30 |
 | widgets/04 Fan-out Wave Dashboard | 80/80 cloud + 91/91 `-Live` (+SELFTEST_LAYOUT_OK); live-GUI confirm DONE | `8c1da2e` | 07-30 |
 
 ## Known failures / gotchas
@@ -324,6 +336,12 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
   durable = CLOSED** (228/228 off-machine + live tree-reap / two-invocation reuse / 3B->9B swap / 0 orphans).
   DEFAULT-OFF pending a **soak** + the **res.lease fencing wave** (13/14). Classic + D-0057 warm paths are the
   trusted default. Detail: `WARM_POOL_DESIGN.md` §10.
+- **SD 3.5 Medium fp16 is NOT a clean 11 GB VRAM fit (i17, D-0070).** With `enable_model_cpu_offload` + VAE tiling the
+  torch VRAM peak is ~12.06 GB — the T5-XXL fp16 spike overflows the 11 GB 2080 Ti and leans on the NVIDIA driver
+  system-RAM fallback (works, slower, not guaranteed under memory pressure). `gen_image_infer.py` ships a
+  **sequential-offload OOM ladder** as the guaranteed fallback. `gen.image` default stays `image.sd15` (~2.6 GB);
+  SD3.5 is opt-in `-Tier sd35`. The clean-fit image upgrade is Z-Image-Turbo Q8 (needs the stable-diffusion.cpp
+  engine — a separate wave).
 
 ## Unresolved questions
 
@@ -347,24 +365,33 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 - **Generator model leads for #22–#25: RECEIVED (D-0068, `core-docs/research/2026-07-30-generator-model-leads.md`).**
   image=Z-Image-Turbo Q8, music=ACE-Step 1.5, video=LTX-Video 2B Distilled, audio=Stable Audio 3 Small SFX;
   Diffusers-native starts SD3.5 Medium / Wan2.1 1.3B / Stable Audio Open 1.0. Each upgrade = a follow-on
-  GPU-lane wave (most need a new engine/venv); not yet installed.
+  GPU-lane wave (most need a new engine/venv). **FIRST upgrade SHIPPED i17 (D-0070): SD 3.5 Medium fp16 image tier
+  (Diffusers-native runner-up). Remaining: image lead Z-Image-Turbo Q8 (stable-diffusion.cpp), music ACE-Step, video
+  LTX-Video / Wan2.1, audio Stable Audio — each its own GPU-lane wave.**
+- **`track.objects` #33 greedy-IoU MVP is a BASELINE, not the stable-identity tracker (i17, D-0070).** The folded
+  frontier design review (`research/2026-07-30-track-objects-design-review.md`) recommends a scene-bounded,
+  elapsed-time-aged, globally-assigned geometric tracker with a gated centroid fallback + a richer track schema +
+  fixed-point / canonical-JSON determinism. Two follow-ons: (A) a track.objects refinement wave; (B) `video.timeline`
+  #21 should CONSUME that schema. Deepest open Q: sparse `media.decompose` keyframes may lack enough continuity for
+  identity — the eventual design may need a dense low-res tracking stream distinct from sparse semantic keyframes.
 - **Warm-pool default-ON gate (D-0069):** durable supervisor SHIPPED (finding 5 CLOSED); default-ON now awaits only
   a **soak** + the **res.lease fencing wave** (13/14, single-worker). exec.watchdog #00.1 -> supervisor relaunch is
   NAMED (not built).
 
 ## Next expected action
 
-**Run iteration 17** per **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4 (which owns the candidate menu): scope
+**Run iteration 18** per **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4 (which owns the candidate menu): scope
 up to 4 lanes (1 GPU + 1 CPU + 1 coding + optional frontier) -> `plan` at `MaxParallel 3` -> confirm the
 preflight -> relay prompts (+ any frontier pack) as FILES -> `status` -> `handoff` -> fold + mirror the
 core-docs under the git lease.
 
 Outstanding: **(1)** enable the warm pool by default (supervisor DONE; needs a soak + the res.lease fencing wave);
-**(2)** the res.lease fencing infra wave (13/14, single-worker); **(3)** continue the Phase C video spine (#32 done
--> 20-22); **(4)** generator upgrades #22–#25 (leads in); **(5)** widget-03 GPU live-GUI pass; **(6)** portability
-follow-ons (pwsh-path / infra / interpreter / model-bound).
+**(2)** the res.lease fencing infra wave (13/14, single-worker); **(3)** continue the Phase C video spine (#32+#33
+done -> video.timeline #21 + video.interpret #22); **(3b)** the `track.objects` #33 refinement wave (folded frontier
+review); **(4)** generator upgrades (SD3.5 image DONE; Z-Image / music / video / audio remain); **(5)** widget-03 GPU
+live-GUI pass; **(6)** portability follow-ons (interpreter #15/#16 DONE; pwsh-path / infra / model-bound remain).
 
 ---
 
-**Last updated:** 2026-07-30 — fan-out iteration 16 close-out (D-0069).
+**Last updated:** 2026-07-30 — fan-out iteration 17 close-out (D-0070).
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

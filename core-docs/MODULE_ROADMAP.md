@@ -18,15 +18,15 @@ full text → `archive/`. Per-module params/artifacts → `modules/<NN>-*/README
 
 ## Build priority (2026-07-25 pivot — D-0029)
 
-> **2026-07-30 (D-0069):** Modules 0–32 + 00.1 and Widgets 01–04 are BUILT; fan-out iterations 1–16
-> SHIPPED (D-0055..D-0069). Live status + next action: `CURRENT_STATE.md`. Wave model + candidate menu:
+> **2026-07-30 (D-0070):** Modules 0–33 + 00.1 and Widgets 01–04 are BUILT; fan-out iterations 1–17
+> SHIPPED (D-0055..D-0070). Live status + next action: `CURRENT_STATE.md`. Wave model + candidate menu:
 > `FANOUT_ORCHESTRATOR_HANDOFF.md` (the ONE live handoff). Warm-pool Stage-1.1 hardening SHIPPED (i15,
 > still default-OFF); generator model leads RECEIVED (`research/2026-07-30-generator-model-leads.md`).
-> Next: continue the Phase C video spine (#32 done -> positions 20-22), enable the warm pool by default (durable supervisor SHIPPED i16; a soak + the res.lease fencing wave remain), a generator upgrade, or the res.lease fencing infra wave.
+> Next: continue the Phase C video spine (#32 + #33 done -> positions 21-22: video.timeline / video.interpret), the track.objects #33 refinement wave (folded frontier review), a generator upgrade (SD3.5 image DONE; Z-Image / music / video / audio remain), enable the warm pool by default (soak + res.lease fencing wave remain), or the res.lease fencing infra wave.
 
 **The per-module numbers are architectural positions, not a build sequence.** The full 0–49 spine (+ the
 real-time autonomic layer 45–49 and the 6-level operating hierarchy) lives in `ARCHITECTURE_MAP.md`.
-**Modules 0–32 + 00.1 are built; Widgets 01–04 are built.** The near-term order delivers a **locally usable
+**Modules 0–33 + 00.1 are built; Widgets 01–04 are built.** The near-term order delivers a **locally usable
 core** (cost-offload + a human interface) before the deep-research spine.
 
 **Phase A — utility & cost-offload Modules — COMPLETE except the deferred coding agent:**
@@ -42,7 +42,7 @@ core** (cost-offload + a human interface) before the deep-research spine.
 3. **`agent.local`** (D-0032) — a scoped #26: a local model that plans and invokes any Module through the
    escalator; the frontier agent's job, done locally.
 4. **Generators, cheapest-first:** `gen.audio` (D-0033) → `gen.image` (D-0034) → `gen.music` (D-0035) →
-   `gen.video` (D-0036). **Upgrade leads received (D-0068): image=Z-Image-Turbo Q8, music=ACE-Step 1.5, video=LTX-Video 2B Distilled, audio=Stable Audio 3 Small SFX; Diffusers-native starts SD3.5 Medium / Wan2.1 1.3B / Stable Audio Open 1.0 -- `research/2026-07-30-generator-model-leads.md`. Each upgrade is a follow-on GPU-lane wave.**
+   `gen.video` (D-0036). **Upgrade leads received (D-0068): image=Z-Image-Turbo Q8, music=ACE-Step 1.5, video=LTX-Video 2B Distilled, audio=Stable Audio 3 Small SFX; Diffusers-native starts SD3.5 Medium / Wan2.1 1.3B / Stable Audio Open 1.0 -- `research/2026-07-30-generator-model-leads.md`. Each upgrade is a follow-on GPU-lane wave. FIRST upgrade SHIPPED i17 (D-0070): SD 3.5 Medium fp16 quality tier in gen.image #23 (Diffusers-native runner-up); Z-Image-Turbo Q8 lead still needs stable-diffusion.cpp.**
 5. **`agent.coding`** — **DEFERRED (D-0037**, work order authored, not built): last here; the frontier
    already codes well, and the useful slice is exactly the arbitrary-exec capability `agent.local`
    deliberately excluded. See #26.
@@ -52,7 +52,7 @@ Console (D-0039), #2 Module Launcher (D-0049), #3 Verification Console (D-0050/5
 Backlog: **Voice Console · Generator Studio · Document Workspace · System/Executor Monitor** (the old
 "Review / Escalation Dashboard" was reoriented into Widget #3, D-0050). Full list in `widgets/README.md`.
 
-**Phase C — canonical spine STARTED (i16, D-0069):** video (19–22; #32 media.decompose DONE) → search/routing/orchestration (23–26) →
+**Phase C — canonical spine UNDERWAY (D-0070):** video (19–22; #32 media.decompose + #33 track.objects DONE) → search/routing/orchestration (23–26) →
 general-screen-perception + self-improving (27–44) → the real-time autonomic layer (45–49).
 
 **Direction (D-0050):** past MVP the project drives ONE spine — the **offload / audit loop** under the
@@ -67,7 +67,7 @@ resource-arbitration layer first: it shipped as `res.lease` #29 + `orchestrate.f
 **Deferred; do when it earns it** (e.g. before a future PC upgrade) — captured now so it is READY to
 execute then. **Goal:** relocate the whole stack to a fresh Windows 11 box in ONE setup pass.
 
-**STATUS (i15, D-0068):** Stage-1 SHIPPED i14 (`ops/setup/` config layer + `setup.ps1` + CPU-verify + emitted download plan + `VERIFY-RUNBOOK.md`; `821da16`). i15 (`c0f8be0`) added a staging-plan URL/sha CONFIRM (`Confirm-StagingPlan.ps1`; 2/2 VLM reachable, 4 LLM + SD1.5 `TODO_CONFIRM`, 2 missing sha) and wired the additive+fallback `Resolve-LifeorchConfig` shim into `modules/14` + `16` (byte-identical on-box; cloud 119/119 + live 131/131). KEY FINDING: repo-root is ALREADY portable (every leaf uses a `$PSScriptRoot` walk-up; no hard-coded repo-root literal; data-root lives centrally in `modules/07/models.json`). RESIDUALS: (1) extend the shim to the remaining walk-up leaf modules (MANY model/GPU-bound -> non-CPU-lane waves); (2) apply `out/models.machine.json` into `modules/07/models.json` under the gpu lease; (3) confirm the `TODO_CONFIRM` URLs + add sha for the 1.5B/3B; (4) re-run `setup.ps1 -Action gen` on the real F: target (i14 gen used a mock `G:` root) + finalize partial-offload `gpu_layers` on a real new box.
+**STATUS (i15, D-0068):** Stage-1 SHIPPED i14 (`ops/setup/` config layer + `setup.ps1` + CPU-verify + emitted download plan + `VERIFY-RUNBOOK.md`; `821da16`). i15 (`c0f8be0`) added a staging-plan URL/sha CONFIRM (`Confirm-StagingPlan.ps1`; 2/2 VLM reachable, 4 LLM + SD1.5 `TODO_CONFIRM`, 2 missing sha) and wired the additive+fallback `Resolve-LifeorchConfig` shim into `modules/14` + `16` (byte-identical on-box; cloud 119/119 + live 131/131). KEY FINDING: repo-root is ALREADY portable (every leaf uses a `$PSScriptRoot` walk-up; no hard-coded repo-root literal; data-root lives centrally in `modules/07/models.json`). RESIDUALS: (1) extend the shim to the remaining walk-up leaf modules (MANY model/GPU-bound -> non-CPU-lane waves); (2) apply `out/models.machine.json` into `modules/07/models.json` under the gpu lease; (3) confirm the `TODO_CONFIRM` URLs + add sha for the 1.5B/3B; (4) re-run `setup.ps1 -Action gen` on the real F: target (i14 gen used a mock `G:` root) + finalize partial-offload `gpu_layers` on a real new box. **i17 (D-0070): wired the additive+fallback interpreter-path resolver (system python) into `image.util` #15 + `detect.objects` #16 (`58870fb`; + `ops/setup/config.schema.json`); byte-identical on-box. Remaining: `$PwshPath` across model-bound entrypoints; core-infra (single-worker); the speech-venv interpreter (GPU-lane ride).**
 
 - **Already travels:** the repo (modules/widgets/docs — plain pwsh + .NET + JSON, git-tracked) is fully
   portable.
@@ -266,7 +266,7 @@ for `sweep`; a guarded arbitrary-`aevalsrc` expression; stereo panning / binaura
 generator**: prompt → one image via **Stable Diffusion 1.5** (`diffusers`, fp16, CUDA) through a Python
 worker; fixed seed byte-reproducible on this GPU; `parallel_safe:false`. `diffusers` 0.35.2 went into the
 speech venv **gated on a Module 12 safety re-verify**. An early standalone build of the #44 family — the
-architectural "23" (`artifact.search`) is a different, later slot. **Follow-ons:** heavier/faster tiers —
+architectural "23" (`artifact.search`) is a different, later slot. **SHIPPED i17 (D-0070):** an SD 3.5 Medium fp16 quality tier (`-Tier sd35`; Diffusers-native; ~12 GB torch peak w/ offload, NOT a clean 11 GB fit — sequential-offload ladder fallback); SD1.5 kept the fast default. **Follow-ons:** heavier/faster tiers —
 **FLUX.1-schnell** (Apache-2.0; needs offload/quant on 11 GB) and **SDXL / SDXL-Turbo** (non-commercial);
 img2img / inpainting / ControlNet / upscaling / LoRA / DreamBooth; `num_images>1` batch + grids; a
 warm/persistent pipeline worker; calibrated / aesthetic-model confidence; a real prompt-safety pass; more
@@ -338,6 +338,8 @@ D-0063 warm-pool second opinion.
 
 **32 `media.decompose`** — Video Decompose · MVP complete 2026-07-30 (Phase C video spine STARTED; D-0069, `5026e2c`). NEW deterministic ffmpeg/ffprobe module — the video analog of `audio.ingest` #10 / `image.util` #15; `parallel_safe:true` (no CUDA/model/port). Ops: **meta** always (ffprobe show_format+show_streams -> container + per-stream codec/res/fps/pix_fmt/bitrate/channels/sample_rate); **-Audio** (composes #10 -> whisper-ready 16k mono s16 WAV); **-Keyframes N** (scene-preferred else evenly-spaced PNGs + sidecar); **-Scenes** (`{index,start,end,score}` + `-SceneThreshold`). **Gotcha reused:** ffprobe resolved as the ffmpeg SIBLING (the Python `Scripts\ffprobe.exe` shim). Gates 76/76 cloud + 76/76 `-Live`. Arch position 19. **Follow-ons (named, not built):** subtitle-stream extraction (srt/vtt); clip segmentation by scene; low-res proxy transcode; batch/directory; VAD segmentation; contact-sheet; ANY model/VLM frame interpretation (= `video.interpret`, arch #22).
 
+**33 `track.objects`** — Object Tracking · MVP complete 2026-07-30 (Phase C video spine #20; D-0070, `3264dd5`). NEW deterministic module — per-class greedy IoU association over `detect.objects` #16-shape per-frame detections -> identity tracks (birth / coast [constant-position] / death lifecycle, monotonic ids); CPU-only, `parallel_safe:true` (no model/CUDA/port), byte-identical for identical input. MVP runs on JSON fixtures (decoupled — no live #16/#32). Gates 79/79 cloud + 79/79 `-Live`. Arch position 20. **The greedy-IoU MVP is a BASELINE / regression oracle:** the folded frontier design review (`research/2026-07-30-track-objects-design-review.md`, D-0070) defines the real stable-identity tracker — scene-boundary reset, elapsed-TIME aging, deterministic GLOBAL (Hungarian) assignment, a gated normalized-centroid fallback, fixed-point + canonical-JSON determinism, and a richer track schema (sample manifest + gaps-not-coast-boxes + separated detection/association evidence) that `video.timeline` #21 must consume. **Follow-ons (named):** the refinement wave; live `#32 -> #16 -> #33` composition; Kalman/constant-velocity; embedding re-ID; overlay video; batch/directory.
+
 ## Widgets (Phase B, `widgets/`)
 
 - **01 Local Agent Console** — MVP complete 2026-07-26 (D-0039). Native WinForms (D-0038), drives #21;
@@ -367,8 +369,7 @@ D-0063 warm-pool second opinion.
 
 **Architectural positions** (`ARCHITECTURE_MAP.md`), NOT build-order folder numbers — Phase A pulled
 `logic.escalator` into `modules/19-logic-escalator/`. The video block takes its own next-free folder numbers
-when built. **19 `media.decompose`** audio/subs/scenes/keyframes/clips/meta/proxies · **20 `track.objects`**
-identity across frames · **21 `video.timeline`** transcription + scenes + OCR + keyframes + detections +
+when built. **19 `media.decompose`** audio/subs/scenes/keyframes/clips/meta/proxies (**BUILT i16 as `modules/32-media-decompose`, D-0069**) · **20 `track.objects`** identity across frames (**BUILT i17 as `modules/33-track-objects`, D-0070** — greedy-IoU MVP baseline; roadmap in `research/2026-07-30-track-objects-design-review.md`) · **21 `video.timeline`** transcription + scenes + OCR + keyframes + detections +
 tracks → a searchable timeline · **22 `video.interpret`** selective frames/clips → local VLM.
 
 ## Modules 23–26 — Higher integration (provisional, later)

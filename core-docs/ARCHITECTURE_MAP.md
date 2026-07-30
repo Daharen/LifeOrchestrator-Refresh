@@ -56,8 +56,8 @@ local model can back several Modules.
 - **18 `image.index`** — fuse 14-17 into one per-image record. Composition. **BUILT.**
 
 ### Video (19-22) — planned
-- **19 `media.decompose`** — audio / subs / scene cuts / keyframes / clips / proxies. Deterministic (ffmpeg; optional embedded STT/OCR).
-- **20 `track.objects`** — identity across frames. SAM 2 + ByteTrack over a detector (16).
+- **19 `media.decompose`** — audio / subs / scene cuts / keyframes / clips / proxies. Deterministic (ffmpeg; optional embedded STT/OCR). **BUILT MVP i16 (D-0069) as `modules/32-media-decompose`** (meta/audio/keyframes/scenes).
+- **20 `track.objects`** — identity across frames. SAM 2 + ByteTrack over a detector (16). **BUILT MVP i17 (D-0070) as `modules/33-track-objects`** — deterministic per-class greedy-IoU baseline (birth/coast/death, monotonic ids); the SAM2+ByteTrack + frontier-reviewed stable-identity form are follow-ons (`research/2026-07-30-track-objects-design-review.md`).
 - **21 `video.timeline`** — fuse transcription + scenes + OCR + detections + tracks -> searchable timeline. Composition.
 - **22 `video.interpret`** — selective frames/clips -> VLM. Qwen3-VL / InternVL3.5 / MiniCPM-V; InternVideo for action features.
 
