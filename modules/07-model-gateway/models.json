@@ -17,7 +17,8 @@
       "small": "music.musicgen-small"
     },
     "image": {
-      "sd15": "image.sd15"
+      "sd15": "image.sd15",
+      "sd35": "image.sd35-medium"
     },
     "detector": {
       "nano": "detect.yolox.nano",
@@ -226,7 +227,29 @@
       "engine_env": "F:\\My_Programs\\Local_Computer_Speech_Large_Data\\python_env\\Scripts\\python.exe",
       "license": "CreativeML-OpenRAIL-M",
       "params": { "variant": "fp16", "native_resolution": 512, "default_steps": 20, "default_guidance": 7.5, "default_scheduler": "dpm++", "size_bytes": 2134194467, "unet_sha256": "c83908253f9a64d08c25fc90874c9c8aef9a329ce1ca5fb909d73b0c83d1ea21", "vae_sha256": "4fbcf0ebe55a0984f5a5e00d8c4521d52359af7229bb4d81890039d2aa16dd7c", "text_encoder_sha256": "77795e2023adcf39bc29a884661950380bd093cf0750a966d473d1718dc9ef4e" },
-      "notes": "Consumed by gen.image (Module 23), which runs this diffusers folder via the StableDiffusionPipeline (fp16, CUDA) in a Python worker (gen_image_infer.py) under this engine_env (the speech venv; diffusers 0.35.2 + torch 2.11+cu128) and reads its meta file. wired:false for model.gateway on purpose (the gateway runs type=llm only; gen.image reads this entry itself, decoupled from the wired gate like speech.tts/image.interpret). Downloaded from stable-diffusion-v1-5/stable-diffusion-v1-5 (fp16 variant) and staged to F: + load-and-generate verified live 2026-07-25 (m23-probe-002: 512x512 in 2.8 s, VRAM peak 2.61 GB, non-blank). CreativeML OpenRAIL-M. FLUX.1-schnell (Apache-2.0, needs offload on 11 GB) and SDXL/SDXL-Turbo are documented follow-on tiers."
+      "notes": "Consumed by gen.image (Module 23), which runs this diffusers folder via the StableDiffusionPipeline (fp16, CUDA) in a Python worker (gen_image_infer.py) under this engine_env (the speech venv; diffusers 0.35.2 + torch 2.11+cu128) and reads its meta file. wired:false for model.gateway on purpose (the gateway runs type=llm only; gen.image reads this entry itself, decoupled from the wired gate like speech.tts/image.interpret). Downloaded from stable-diffusion-v1-5/stable-diffusion-v1-5 (fp16 variant) and staged to F: + load-and-generate verified live 2026-07-25 (m23-probe-002: 512x512 in 2.8 s, VRAM peak 2.61 GB, non-blank). CreativeML OpenRAIL-M. FLUX.1-schnell (Apache-2.0, needs offload on 11 GB) and SDXL/SDXL-Turbo are documented follow-on tiers. SD 3.5 Medium (image.sd35-medium) is the higher-quality diffusers-native tier alongside this fast legacy default (i17)."
+    },
+    {
+      "model_id": "image.sd35-medium",
+      "type": "image-gen", "wired": false,
+      "name": "Stable Diffusion 3.5 Medium (diffusers fp16)", "family": "stable-diffusion-3", "format": "diffusers", "quant": "fp16",
+      "version": "stable-diffusion-3.5-medium",
+      "path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\23-gen-image\\stable-diffusion-3.5-medium",
+      "engine": "diffusers",
+      "engine_env": "F:\\My_Programs\\Local_Computer_Speech_Large_Data\\python_env\\Scripts\\python.exe",
+      "license": "STABILITY-AI-COMMUNITY (free under $1M annual revenue -- PRESERVE this note)",
+      "params": {
+        "pipeline": "sd3", "offload": "model", "vae_tiling": true, "drop_t5": false,
+        "native_resolution": 1024, "default_steps": 28, "default_guidance": 4.5, "default_scheduler": "flow_match_euler",
+        "size_bytes": 16268454998,
+        "transformer_sha256": "f81eb93a348be218af757dd095cbda45090380d9bbda91049442e0e40bb4cc95",
+        "vae_sha256": "8f53304a79335b55e13ec50f63e5157fee4deb2f30d5fae0654e2b2653c109dc",
+        "text_encoder_sha256": "71e183d11db0c6b6282a4d9e0abb74125edc8692393e89ed8ee5571005f35cb1",
+        "text_encoder_2_sha256": "ec310df2af79c318e24d20511b601a591ca8cd4f1fce1d8dff822a356bcdb1f4",
+        "text_encoder_3_shard1_sha256": "4f2751ceeb2a96edd693e539dc5d6bba0b8d3814f49a9b3798403a0cec4b2e3d",
+        "text_encoder_3_shard2_sha256": "f63154532130422309532ff56f11945fbea8266c958e3133e8e5aef85c6293c7"
+      },
+      "notes": "Consumed by gen.image (Module 23) as the SD 3.5 Medium QUALITY tier alongside the SD 1.5 fast legacy tier (defaults.image stays image.sd15). Diffusers-native StableDiffusion3Pipeline (fp16, CUDA) in gen_image_infer.py under this engine_env (speech venv: diffusers 0.35.2 + torch 2.11+cu128) with a meta-file hand-off; params.pipeline='sd3' selects that branch. Turing RTX 2080 Ti cc7.5 -> FP16 ONLY (no bf16/fp8/nf4). VRAM strategy: enable_model_cpu_offload() + enable_vae_tiling(), T5-XXL text encoder stays CPU-side (offload streams it, never resident); on the 11 GB card the worker's safety ladder retries enable_sequential_cpu_offload() on CUDA OOM. Native FlowMatchEuler scheduler (the SD1.5 dpm++/euler swap does NOT apply to SD3). wired:false for model.gateway on purpose (gateway runs type=llm only; gen.image reads this entry itself, like image.sd15). Staged from the gated stabilityai/stable-diffusion-3.5-medium (Stability Community License) to F: as a diffusers folder: transformer 4.94 GB + T5-XXL fp16 9.52 GB (sharded) + CLIP-G 1.39 GB + CLIP-L 0.25 GB + VAE 0.17 GB ~= 16.27 GB core; the 5.1 GB single-file checkpoint and the ComfyUI text_encoders/ duplicates were NOT staged. LIVE-VERIFY (i17): TODO_FILL measured VRAM + gen time + artifact. Follow-ons: Z-Image-Turbo Q8 (needs stable-diffusion.cpp -- separate wave); img2img/inpaint/ControlNet/upscaling/LoRA; num_images>1 batch/grids; a warm/persistent pipeline worker."
     },
     {
       "model_id": "music.musicgen-small",

@@ -60,19 +60,36 @@ if ($Live) {
     $usePython = $PythonPath   # empty -> wrapper resolves from registry engine_env
     Write-Host ("=== gen.image tests (LIVE) registry=$Registry ===")
 } else {
-    $py = Get-Command python3 -ErrorAction SilentlyContinue; if (-not $py) { $py = Get-Command python -ErrorAction SilentlyContinue }
-    if (-not $py) { throw 'no python3/python on PATH for the mock gate' }
-    $usePython = $py.Source
+    # Resolve a WORKING stdlib python for the mock worker. Prefer an explicit -PythonPath; else probe
+    # python3 then python and pick the first that actually runs -- on Windows `python3` often resolves to
+    # the Microsoft Store App-Execution-Alias stub (WindowsApps\python3.exe) which prints "Python was not
+    # found" and exits non-zero, so a plain Get-Command would pick a non-functional interpreter.
+    $usePython = $PythonPath
+    if ([string]::IsNullOrWhiteSpace($usePython)) {
+        $cands = New-Object System.Collections.Generic.List[string]
+        foreach ($n in @('python3','python')) { $c = Get-Command $n -ErrorAction SilentlyContinue; if ($c) { $cands.Add($c.Source) } }
+        foreach ($cand in $cands) {
+            try {
+                $global:LASTEXITCODE = 0
+                $probe = (& $cand -c 'print(1)' 2>&1 | Out-String).Trim()
+                if ($LASTEXITCODE -eq 0 -and $probe -eq '1') { $usePython = $cand; break }
+            } catch { }
+        }
+        if ([string]::IsNullOrWhiteSpace($usePython)) { throw 'no working python3/python on PATH for the mock gate (Store stub excluded)' }
+    }
     $inferPath = $mockWorker
     $fakeModel = Join-Path $tmpRoot 'model\stable-diffusion-v1-5'
     New-Item -ItemType Directory -Path $fakeModel -Force | Out-Null
+    $fakeModel35 = Join-Path $tmpRoot 'model\stable-diffusion-3.5-medium'
+    New-Item -ItemType Directory -Path $fakeModel35 -Force | Out-Null
     $Registry = Join-Path $tmpRoot 'models.json'
     $regObj = [ordered]@{
         schema='lifeorch.model_registry/0.1'
         defaults=[ordered]@{ image='image.sd15' }
-        tiers=[ordered]@{ image=[ordered]@{ sd15='image.sd15' } }
+        tiers=[ordered]@{ image=[ordered]@{ sd15='image.sd15'; sd35='image.sd35-medium' } }
         models=@(
-            [ordered]@{ model_id='image.sd15'; type='image-gen'; wired=$false; name='SD1.5 (mock)'; family='stable-diffusion'; format='diffusers'; version='sd15-mock'; path=$fakeModel; engine='diffusers'; engine_env=$usePython; license='CreativeML-OpenRAIL-M'; params=[ordered]@{ variant='fp16' } }
+            [ordered]@{ model_id='image.sd15'; type='image-gen'; wired=$false; name='SD1.5 (mock)'; family='stable-diffusion'; format='diffusers'; version='sd15-mock'; path=$fakeModel; engine='diffusers'; engine_env=$usePython; license='CreativeML-OpenRAIL-M'; params=[ordered]@{ variant='fp16' } },
+            [ordered]@{ model_id='image.sd35-medium'; type='image-gen'; wired=$false; name='SD3.5 Medium (mock)'; family='stable-diffusion-3'; format='diffusers'; version='sd35-mock'; path=$fakeModel35; engine='diffusers'; engine_env=$usePython; license='STABILITY-AI-COMMUNITY'; params=[ordered]@{ pipeline='sd3'; offload='model'; vae_tiling=$true; drop_t5=$false } }
         )
     }
     [System.IO.File]::WriteAllText($Registry, ($regObj | ConvertTo-Json -Depth 8), ([System.Text.UTF8Encoding]::new($false)))
@@ -205,6 +222,25 @@ if (-not $Live) {
 
     $e = Invoke-Gen @{ Prompt='tier test'; Tier='sd15' }
     Assert ($e.status -eq 'ok' -and $e.result.model.id -eq 'image.sd15') 'tier.resolves' "model=$($e.result.model.id)"
+
+    # ---- sd3 tier (SD 3.5 Medium): model selection, pipeline-family + offload passthrough (mock) ----
+    $e = Invoke-Gen @{ Prompt='a coastal town at golden hour'; Model='image.sd35-medium'; Steps='28'; Guidance='4.5'; Width='768'; Height='768' }
+    Assert ($e.status -eq 'ok' -and $e.result.model.id -eq 'image.sd35-medium') 'sd3.model_selected' "model=$($e.result.model.id) status=$($e.status)"
+    if ($e -and $e.status -eq 'ok') {
+        Assert ($e.result.model.family -eq 'stable-diffusion-3') 'sd3.family' "family=$($e.result.model.family)"
+        Assert ($e.result.generation.pipeline_family -eq 'sd3') 'sd3.gen_family' "pf=$($e.result.generation.pipeline_family)"
+        Assert (-not [string]::IsNullOrWhiteSpace([string]$e.result.generation.offload)) 'sd3.gen_offload' "offload=$($e.result.generation.offload)"
+        Assert ($e.result.generation.actual_scheduler -eq 'flow_match_euler') 'sd3.gen_sched' "sched=$($e.result.generation.actual_scheduler)"
+        Assert ($e.result.generation.t5 -eq 'cpu_offload') 'sd3.gen_t5' "t5=$($e.result.generation.t5)"
+        $adir = [string]$e.diagnostics.artifact_dir
+        $ga = Join-Path $adir 'gen_args.json'
+        if (Test-Path -LiteralPath $ga) {
+            $gargs = (Get-Content -LiteralPath $ga -Raw) | ConvertFrom-Json
+            Assert ($gargs.pipeline_family -eq 'sd3' -and $gargs.offload -eq 'model' -and $gargs.vae_tiling -eq $true) 'sd3.args_passthrough' "pf=$($gargs.pipeline_family) off=$($gargs.offload) vt=$($gargs.vae_tiling)"
+        } else { Bad 'sd3.args_passthrough' "no gen_args.json at $ga" }
+    }
+    $e = Invoke-Gen @{ Prompt='sd3 via tier alias'; Tier='sd35' }
+    Assert ($e.status -eq 'ok' -and $e.result.model.id -eq 'image.sd35-medium') 'sd3.tier_resolves' "model=$($e.result.model.id)"
 }
 
 # ---- 11. Module 1 wrapper integration ----
@@ -232,6 +268,20 @@ if ($Live) {
         $b = [System.IO.File]::ReadAllBytes([string]$ej.result.image.path)
         Assert ($b[0] -eq 0xFF -and $b[1] -eq 0xD8) 'live.jpg_magic' ("bytes: $($b[0]),$($b[1])")
     } else { Bad 'live.jpg' "status=$($ej.status)" }
+
+    # ---- SD 3.5 Medium quality tier (live): fp16 + CPU offload + VAE tiling; VRAM captured; reproducible ----
+    $s1 = Invoke-Gen @{ Prompt='a small green cactus in a clay pot, studio photo'; Model='image.sd35-medium'; Seed='2024'; Steps='28'; Guidance='4.5'; Width='768'; Height='768' }
+    if ($s1 -and $s1.status -eq 'ok') {
+        Ok 'live.sd3_generated'
+        Assert ([string]$s1.result.model.id -eq 'image.sd35-medium' -and [string]$s1.result.generation.pipeline_family -eq 'sd3') 'live.sd3_family' "id=$($s1.result.model.id) pf=$($s1.result.generation.pipeline_family)"
+        Assert ([double]$s1.result.image.pixel_std -gt 10.0) 'live.sd3_nonblank' "std=$($s1.result.image.pixel_std)"
+        Write-Host ("  INFO  sd3 vram_peak_gb=$($s1.result.generation.vram_peak_gb) load_ms=$($s1.result.generation.load_ms) gen_ms=$($s1.result.generation.gen_ms) offload=$($s1.result.generation.offload) t5=$($s1.result.generation.t5)")
+        $s2 = Invoke-Gen @{ Prompt='a small green cactus in a clay pot, studio photo'; Model='image.sd35-medium'; Seed='2024'; Steps='28'; Guidance='4.5'; Width='768'; Height='768' }
+        if ($s2 -and $s2.status -eq 'ok') {
+            $same = ([string]$s1.result.image.sha256 -eq [string]$s2.result.image.sha256)
+            Write-Host ("  INFO  sd3.same_seed_reproducible=$same (sha1=$($s1.result.image.sha256.Substring(0,12)) sha2=$($s2.result.image.sha256.Substring(0,12)))")
+        }
+    } else { Bad 'live.sd3_generated' "status=$($s1.status) err=$($s1.error.code)" }
 }
 
 Write-Host ('')

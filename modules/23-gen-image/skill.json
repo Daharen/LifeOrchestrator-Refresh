@@ -2,9 +2,9 @@
   "schema": "lifeorch.skill.manifest/0.1",
   "skill_id": "gen.image",
   "name": "Local Image Generation (Stable Diffusion)",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "contract_version": "0.2",
-  "purpose": "Generate one image from a text prompt with a local Stable Diffusion pipeline. Drives the diffusers StableDiffusionPipeline (fp16, CUDA) via a Python worker (gen_image_infer.py) under the speech venv with a meta-file hand-off to a PowerShell wrapper (the D-0021 speech.tts pattern). Resolves the image-gen model from models.json (type=image-gen), decoupled from the gateway wired gate. Binds the CUDA context / VRAM, so parallel_safe:false. Populates confidence (a generation-completeness / non-blank heuristic) + model_provenance and routes failed / blank / low-confidence generations to the review queue (the eighth producer). Default model image.sd15 (Stable Diffusion 1.5 diffusers fp16, CreativeML OpenRAIL-M). The neural generation counterpart of image.interpret (#17, which reads an image) and gen.audio (#22, which synthesizes sound).",
+  "purpose": "Generate one image from a text prompt with a local Stable Diffusion pipeline. Drives a diffusers pipeline (fp16, CUDA) via a Python worker (gen_image_infer.py) under the speech venv with a meta-file hand-off to a PowerShell wrapper (the D-0021 speech.tts pattern). Two model/tier families selected from models.json (type=image-gen, decoupled from the gateway wired gate): the DEFAULT image.sd15 (Stable Diffusion 1.5, StableDiffusionPipeline, ~2.6 GB VRAM -- the fast legacy tier, CreativeML OpenRAIL-M) and image.sd35-medium (Stable Diffusion 3.5 Medium, StableDiffusion3Pipeline, fp16 + model CPU offload + VAE tiling with a sequential-offload OOM fallback, T5-XXL kept CPU-side; the higher-quality tier, Stability Community License). params.pipeline in the model entry selects the family. Binds the CUDA context / VRAM, so parallel_safe:false. Populates confidence (a generation-completeness / non-blank heuristic) + model_provenance and routes failed / blank / low-confidence generations to the review queue (the eighth producer). The neural generation counterpart of image.interpret (#17, which reads an image) and gen.audio (#22, which synthesizes sound).",
   "determinism": "mixed",
   "invocation": {
     "method": "pwsh-file",
@@ -32,9 +32,9 @@
   },
   "requirements": {
     "executables": ["pwsh>=7.4", "python (speech venv) + diffusers 0.35.2"],
-    "models": ["image.sd15 (Stable Diffusion 1.5 diffusers fp16; CreativeML OpenRAIL-M)"],
-    "libraries": ["diffusers", "torch (cu128)", "transformers", "safetensors", "numpy", "Pillow"],
-    "cpu": "any", "gpu": "cuda (RTX 2080 Ti; SD runs on GPU, ~2.6 GB VRAM at 512x512)", "memory_mb": 6144,
+    "models": ["image.sd15 (Stable Diffusion 1.5 diffusers fp16; CreativeML OpenRAIL-M; default fast tier)", "image.sd35-medium (Stable Diffusion 3.5 Medium diffusers fp16; Stability Community License; quality tier, CPU offload + VAE tiling on the 11 GB card)"],
+    "libraries": ["diffusers", "torch (cu128)", "transformers", "safetensors", "numpy", "Pillow", "accelerate (cpu-offload)"],
+    "cpu": "any", "gpu": "cuda (RTX 2080 Ti 11 GB; SD1.5 ~2.6 GB VRAM at 512x512; SD3.5 Medium fp16 with model/sequential CPU offload + VAE tiling)", "memory_mb": 6144,
     "network": false, "filesystem": "read-write", "audio": false, "screen": false, "camera": false
   },
   "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },

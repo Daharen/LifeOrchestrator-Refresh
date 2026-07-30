@@ -59,19 +59,32 @@ def main():
     else:
         pixel_std, pixel_mean, color = 60.0, 100.0, (200, 40, 40)
 
+    # pipeline-family passthrough (mirror the real worker's sd3 meta contract so the cloud gate exercises it)
+    family = str(args.get("pipeline_family", "sd")).lower()
+    if family == "sd3":
+        sched_out = "flow_match_euler"
+        offload_out = str(args.get("offload") or "model")
+        t5_out = "dropped" if bool(args.get("drop_t5", False)) else "cpu_offload"
+        variant_out = None
+    else:
+        sched_out = str(args.get("scheduler", "dpm++"))
+        offload_out = args.get("offload") or None
+        t5_out = None
+        variant_out = args.get("variant")
+
     png_bytes = write_png(out_image, width, height, color)
     write_meta({
         "ok": True, "image_path": out_image, "format": fmt,
         "width": width, "height": height, "mode": "RGB", "image_bytes": png_bytes,
         "seed": seed, "steps": int(args.get("steps", 20)), "guidance": float(args.get("guidance", 7.5)),
-        "scheduler": str(args.get("scheduler", "dpm++")),
+        "scheduler": sched_out, "pipeline_family": family, "offload": offload_out, "t5": t5_out,
         "pixel_std": pixel_std, "pixel_mean": pixel_mean,
-        "dtype": str(args.get("dtype", "float16")), "variant": args.get("variant"),
+        "dtype": str(args.get("dtype", "float16")), "variant": variant_out,
         "device": str(args.get("device", "cuda:0")), "model_path": args.get("model_path"),
         "diffusers": "mock-0", "torch": "mock-0", "vram_peak_gb": 2.6,
         "load_ms": 10, "gen_ms": 20, "runtime_ms": int((time.time() - t0) * 1000),
     })
-    sys.stdout.write("MOCK_OK %dx%d seed=%d std=%.1f\n" % (width, height, seed, pixel_std))
+    sys.stdout.write("MOCK_OK %s %dx%d seed=%d std=%.1f\n" % (family, width, height, seed, pixel_std))
     return 0
 
 

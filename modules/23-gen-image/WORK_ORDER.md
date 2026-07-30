@@ -103,8 +103,20 @@ This week: the **Widget** layer (Phase B) and any agent can call `gen.image -Pro
 ### State updates
 - `CURRENT_STATE.md` (Module 23 complete, diffusers install, model staged, tests, next action) and `MODULE_ROADMAP.md` (Phase A #5 `gen.image` → MVP complete; expand its entry). Log the gen.image decisions (SD 1.5 via diffusers Python-worker+meta; mixed + eighth review producer; probe-driven model choice + neural-vs-cheapest reasoning; venv-install safety for Module 12) in `DECISION_LOG.md` (**D-0034**). Mirror core-docs → the Project.
 
+### i17 addendum — SD 3.5 Medium quality tier (GPU-lane, plan fo-17-3a115347, worker GEN-image-sd35)
+Added `image.sd35-medium` (Stable Diffusion 3.5 Medium, `StableDiffusion3Pipeline`, diffusers-native — no new
+engine/venv; reuses the speech venv's diffusers 0.35.2 / torch 2.11+cu128) as a **second tier alongside the
+unchanged SD 1.5 fast legacy default**. FP16-only (Turing cc7.5); `enable_model_cpu_offload()` +
+`enable_vae_tiling()`, T5‑XXL CPU-side; the worker's VRAM safety ladder retries `enable_sequential_cpu_offload()`
+on CUDA OOM (measured free VRAM at build time ~9.6 GB, so the fit is guarded, not assumed). Native FlowMatchEuler
+scheduler. `gen_image_infer.py` gained an `sd`/`sd3` `pipeline_family` branch; `Invoke-GenImage.ps1` threads
+`pipeline_family/offload/vae_tiling/drop_t5` from the model entry and echoes what actually ran into `generation`;
+`models.json` gained the entry + `tiers.image.sd35` (default `image.sd15` unchanged). Weights staged on-device
+from the gated `stabilityai/stable-diffusion-3.5-medium` (Stability Community License — free under $1M rev).
+
 ### Known follow-on work (defer — not this session)
-- **Heavier/faster tiers:** FLUX.1-schnell (Apache-2.0; needs offload/quant on 11 GB) and SDXL / SDXL-Turbo (non-commercial) as additional `image-gen` tiers.
+- **Heavier/faster tiers:** the frontier *lead* `Z-Image-Turbo Q8` (needs the `stable-diffusion.cpp` engine + a
+  parallel venv — a separate wave), FLUX.1-schnell (Apache-2.0; needs offload/quant on 11 GB) and SDXL / SDXL-Turbo (non-commercial) as additional `image-gen` tiers. The other generator upgrades (#22/#24/#25) each their own GPU-lane wave.
 - img2img / inpainting / ControlNet / upscaling / LoRA / DreamBooth; `num_images>1` grids / batch; a warm/persistent pipeline worker (shared with #7/#8/#12/#17/#19); calibrated/aesthetic-model confidence (vs. the completeness heuristic); a real prompt-safety pass; prompt-weighting / long-prompt (compel); more schedulers / Karras sigmas.
 
 ### STOP conditions

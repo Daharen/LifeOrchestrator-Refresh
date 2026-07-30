@@ -163,6 +163,12 @@ try {
             throw [PSCustomObject]@{ code='model_dir_missing'; message="image-gen model directory not found at '$modelPath'"; retryable=$true }
         }
         $variant = [string](Prop (Prop $m 'params') 'variant' 'fp16')
+        # pipeline family + VRAM strategy (SD 3.5 Medium tier). Absent params -> the SD1.5 legacy path
+        # (pipeline_family 'sd'), so image.sd15 is byte-for-byte unchanged.
+        $pipeFamily = [string](Prop (Prop $m 'params') 'pipeline' 'sd')
+        $offloadMode = [string](Prop (Prop $m 'params') 'offload' '')
+        $vaeTiling = [bool](Prop (Prop $m 'params') 'vae_tiling' $false)
+        $dropT5 = [bool](Prop (Prop $m 'params') 'drop_t5' $false)
 
         # ---- resolve venv python ----
         $python = $PythonPath
@@ -185,6 +191,7 @@ try {
             prompt=$Prompt; negative_prompt=$NegativePrompt; width=$Width; height=$Height; steps=$Steps;
             guidance=$Guidance; seed=$Seed; scheduler=$sch; model_path=$modelPath; device='cuda:0';
             dtype='float16'; variant=$variant; format=$fmt; out_image=$outImage; meta_path=$metaPath
+            pipeline_family=$pipeFamily; offload=$offloadMode; vae_tiling=$vaeTiling; drop_t5=$dropT5
         }
         $argsFile = Join-Path $invDir 'gen_args.json'
         [System.IO.File]::WriteAllText($argsFile, ($argsObj | ConvertTo-Json -Depth 6), $utf8)
@@ -225,6 +232,11 @@ try {
         $diffV = [string](Prop $meta 'diffusers' '')
         $torchV = [string](Prop $meta 'torch' '')
         $vramPeak = Prop $meta 'vram_peak_gb'
+        # what the worker actually ran (SD3 uses a native flow-match scheduler + a CPU-offload mode)
+        $pipeUsed = [string](Prop $meta 'pipeline_family' $pipeFamily)
+        $offloadUsed = [string](Prop $meta 'offload' $offloadMode)
+        $schedUsed = [string](Prop $meta 'scheduler' $sch)
+        $t5Used = [string](Prop $meta 't5' '')
 
         # ---- confidence (generation-completeness / non-blank heuristic; NOT aesthetic quality) ----
         $confReason = 'has_content'
@@ -242,7 +254,7 @@ try {
             image = [ordered]@{ path=(Resolve-Path -LiteralPath $outImage).Path; format=$fmt; width=$imgW; height=$imgH; mode=$imgMode; bytes=$imgBytes.Length; sha256=(Get-Sha256Hex $imgBytes); pixel_std=$pixelStd; pixel_mean=$pixelMean }
             confidence = [ordered]@{ overall=$confidence; reason=$confReason }
             review = [ordered]@{ threshold=$ConfidenceThreshold; flagged=$false; queue_path=$null }
-            generation = [ordered]@{ load_ms=$loadMs; gen_ms=$genMs; runtime_ms=$pyRuntimeMs; vram_peak_gb=$vramPeak; diffusers=$diffV; torch=$torchV }
+            generation = [ordered]@{ load_ms=$loadMs; gen_ms=$genMs; runtime_ms=$pyRuntimeMs; vram_peak_gb=$vramPeak; diffusers=$diffV; torch=$torchV; pipeline_family=$pipeUsed; offload=$offloadUsed; actual_scheduler=$schedUsed; t5=$t5Used }
         }
 
         $modelProvenance = @(

@@ -13,8 +13,16 @@ registry resolution, confidence, review-queue, and artifacts (all PowerShell); t
 sampling + saving the image + reporting `pixel_std`/dims/timings in a meta JSON the wrapper reads (never the
 worker's stdout, so `diffusers`/torch console chatter can't corrupt the parsed result).
 
-- **Model:** `image.sd15` — Stable Diffusion 1.5, diffusers **fp16**, staged on F: (CreativeML OpenRAIL-M),
-  resolved from `models.json` (`type=image-gen`, decoupled from the gateway `wired` gate).
+- **Models / tiers** (resolved from `models.json`, `type=image-gen`, decoupled from the gateway `wired` gate;
+  `-Model <id>` or `-Tier <alias>` selects one, default stays SD 1.5):
+  - `image.sd15` (**default**, `-Tier sd15`) — Stable Diffusion 1.5, `StableDiffusionPipeline`, diffusers **fp16**,
+    ~2.6 GB VRAM at 512×512. The **fast legacy tier** (CreativeML OpenRAIL-M). Unchanged.
+  - `image.sd35-medium` (`-Tier sd35`) — Stable Diffusion 3.5 Medium, `StableDiffusion3Pipeline`, **fp16 +
+    model CPU offload + VAE tiling**, T5‑XXL kept CPU-side (offload streams it, never resident); native
+    FlowMatchEuler scheduler (the SD1.5 `dpm++/euler` swap does **not** apply). The **higher-quality tier**
+    (Stability Community License — free under $1M annual revenue). Turing RTX 2080 Ti is **FP16-only** (no
+    bf16/fp8/nf4); the worker's VRAM safety ladder retries **sequential** CPU offload on CUDA OOM. Selected by
+    `params.pipeline:"sd3"` in the model entry.
 - **determinism:** `mixed` (deterministic orchestration; stochastic sampler, seedable via `-Seed`).
 - **parallel_safe:** `false` (binds the CUDA context / VRAM — run one at a time).
 - **Review producer (the 8th):** a failed / blank / low-confidence generation appends one
@@ -27,6 +35,9 @@ pwsh -NoProfile -File .\Invoke-GenImage.ps1 -Prompt "a cozy reading nook, warm l
 
 # taller image, more steps, JPEG out
 pwsh -NoProfile -File .\Invoke-GenImage.ps1 -Prompt "a lighthouse at dusk" -Width 512 -Height 768 -Steps 25 -Guidance 8 -Format jpg
+
+# SD 3.5 Medium quality tier (1024x1024; lower guidance + more steps suit SD3)
+pwsh -NoProfile -File .\Invoke-GenImage.ps1 -Prompt "a coastal town at golden hour, detailed" -Tier sd35 -Width 1024 -Height 1024 -Steps 28 -Guidance 4.5 -Seed 42
 
 # generic InputsJson (any generic caller / the executor / a router)
 pwsh -NoProfile -File .\Invoke-GenImage.ps1 -InputsJson '{"prompt":"a small green cactus in a clay pot","negative_prompt":"blurry, lowres","steps":20}'
@@ -62,7 +73,16 @@ the image's pixel standard deviation: blank/uniform ≤ 2 → 0.1; very-low-deta
 (stdlib-only; the cloud pre-ship gate, since a GPU diffusion model can't run on the Linux cloud box); `-Live`
 runs the real diffusers worker on the executor (a real SD generation). See the work order for the full list.
 
-## Non-goals (this MVP)
-No img2img / inpainting / ControlNet / upscaling / LoRA; no SDXL / FLUX / Qwen-Image tiers; no batch /
-`num_images>1`; no warm/persistent pipeline worker; no prompt-safety classifier (safety_checker is disabled —
-it blackout-replaces images). Each is a documented follow-on. See `WORK_ORDER.md`.
+## Non-goals / follow-ons
+No img2img / inpainting / ControlNet / upscaling / LoRA; no batch / `num_images>1`; no warm/persistent
+pipeline worker; no prompt-safety classifier (SD1.5's safety_checker is disabled — it blackout-replaces
+images). Each is a documented follow-on. See `WORK_ORDER.md`.
+
+**Named generator follow-ons (each its own GPU-lane wave):**
+
+- **`Z-Image-Turbo Q8`** — the frontier *lead* image pick (bigger quality jump than SD3.5), but it needs the
+  `stable-diffusion.cpp` CUDA engine (Diffusers-native only from 0.36.0), i.e. a **new engine + parallel venv**
+  — a separate wave, not this Diffusers-native one.
+- **SDXL / FLUX.1-schnell** — additional image tiers (FLUX needs offload/quant on 11 GB).
+- The other generator upgrades — **#22 audio** (Stable Audio Open / SFX), **#24 music** (ACE-Step), **#25 video**
+  (LTX-Video / Wan2.1) — each its own later GPU-lane wave (see the generator-model-leads research).
