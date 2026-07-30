@@ -1,0 +1,202 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "media.decompose",
+  "skill_version": "0.1.0",
+  "contract_version": "0.2",
+  "invocation_id": "3f5a1c9e-1b2d-4a7c-9e0f-media-decompose",
+  "status": "ok",
+  "started_at_utc": "2026-07-30T03:39:09.4039373Z",
+  "finished_at_utc": "2026-07-30T03:39:11.1334066Z",
+  "duration_ms": 1725,
+  "inputs_digest": "sha256:ca2bad5597313ea464fe85f8884a6df3ed2de05dbce52756579b58cb26bc1783",
+  "result": {
+    "input": {
+      "path": "C:\\Users\\just_\\Videos\\clip.mp4",
+      "exists": true,
+      "bytes": 149516
+    },
+    "meta": {
+      "container": {
+        "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+        "format_long_name": "QuickTime / MOV",
+        "duration_s": 4.0,
+        "size_bytes": 149516,
+        "bit_rate": 299032,
+        "nb_streams": 2
+      },
+      "streams": [
+        {
+          "index": 0,
+          "codec_type": "video",
+          "codec_name": "mpeg4",
+          "codec_long_name": "MPEG-4 part 2",
+          "width": 160,
+          "height": 120,
+          "pix_fmt": "yuv420p",
+          "r_frame_rate": "15/1",
+          "avg_frame_rate": "15/1",
+          "fps": 15.0,
+          "nb_frames": 60,
+          "bit_rate": 223064,
+          "duration_s": 4.0
+        },
+        {
+          "index": 1,
+          "codec_type": "audio",
+          "codec_name": "aac",
+          "codec_long_name": "AAC (Advanced Audio Coding)",
+          "sample_rate": 44100,
+          "channels": 1,
+          "channel_layout": "mono",
+          "sample_fmt": "fltp",
+          "bit_rate": 69417,
+          "duration_s": 4.0
+        }
+      ],
+      "stream_counts": {
+        "video": 1,
+        "audio": 1,
+        "subtitle": 0,
+        "data": 0,
+        "other": 0,
+        "total": 2
+      },
+      "duration_s": 4.0
+    },
+    "operations": {
+      "audio": true,
+      "keyframes": 3,
+      "scenes": true
+    },
+    "audio": {
+      "requested": true,
+      "extracted": true,
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\32-media-decompose\\runtime\\artifacts\\3f5a1c9e-1b2d-4a7c-9e0f-media-decompose\\audio\\audio.wav",
+      "format": "wav",
+      "codec": "pcm_s16le",
+      "sample_rate": 16000,
+      "channels": 1,
+      "duration_s": 4.017,
+      "bytes": 128590,
+      "sha256": "7ce83615b3b7aac2c565f17e4d561fd710921932a0dc9c5da00a7265ffaa89ee",
+      "composed_skill": "audio.ingest",
+      "composed_invocation_id": "audio",
+      "composed_status": "ok"
+    },
+    "keyframes": {
+      "requested_n": 3,
+      "source": "scene",
+      "count": 3,
+      "threshold": 0.3,
+      "sidecar_path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\32-media-decompose\\runtime\\artifacts\\3f5a1c9e-1b2d-4a7c-9e0f-media-decompose\\keyframes.json",
+      "frames": [
+        {
+          "index": 0,
+          "timestamp_s": 0.666667,
+          "source": "even",
+          "score": null,
+          "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\32-media-decompose\\runtime\\artifacts\\3f5a1c9e-1b2d-4a7c-9e0f-media-decompose\\keyframe_000.png",
+          "bytes": 21333,
+          "sha256": "d307ef08a60d590473aca66263e301120f9b68a2d8f994ee16e92a436574ae60"
+        },
+        {
+          "index": 1,
+          "timestamp_s": 2.0,
+          "source": "scene",
+          "score": 0.737791,
+          "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\32-media-decompose\\runtime\\artifacts\\3f5a1c9e-1b2d-4a7c-9e0f-media-decompose\\keyframe_001.png",
+          "bytes": 3681,
+          "sha256": "d84828087977e9231ca19bdc76f189bbd3c8daddc0f569adbfa73c8c604ae20e"
+        },
+        {
+          "index": 2,
+          "timestamp_s": 3.333333,
+          "source": "even",
+          "score": null,
+          "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\32-media-decompose\\runtime\\artifacts\\3f5a1c9e-1b2d-4a7c-9e0f-media-decompose\\keyframe_002.png",
+          "bytes": 1872,
+          "sha256": "69ae0dcfae03e4ce01ff23724d1faceff836b9dccefd3a972040a30f424c3c2f"
+        }
+      ]
+    },
+    "scenes": {
+      "threshold": 0.3,
+      "count": 1,
+      "duration_s": 4.0,
+      "scenes": [
+        {
+          "index": 0,
+          "start": 2.0,
+          "end": 4.0,
+          "score": 0.737791
+        }
+      ],
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\32-media-decompose\\runtime\\artifacts\\3f5a1c9e-1b2d-4a7c-9e0f-media-decompose\\scenes.json"
+    },
+    "ffmpeg": {
+      "path": "C:\\Users\\just_\\AppData\\Local\\Microsoft\\WinGet\\Links\\ffmpeg.exe",
+      "version": "ffmpeg version 8.1-full_build-www.gyan.dev Copyright (c) 2000-2025 the FFmpeg developers"
+    },
+    "ffprobe": {
+      "path": "C:\\Users\\just_\\AppData\\Local\\Microsoft\\WinGet\\Links\\ffprobe.exe"
+    }
+  },
+  "confidence": null,
+  "artifacts": [
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\32-media-decompose\\runtime\\artifacts\\3f5a1c9e-1b2d-4a7c-9e0f-media-decompose\\meta.json",
+      "kind": "json",
+      "bytes": 1287,
+      "sha256": "f78e47911796335d0a81dc02a444dc2c651f4073403a8211060b54c520feecfb"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\32-media-decompose\\runtime\\artifacts\\3f5a1c9e-1b2d-4a7c-9e0f-media-decompose\\audio\\audio.wav",
+      "kind": "wav",
+      "bytes": 128590,
+      "sha256": "7ce83615b3b7aac2c565f17e4d561fd710921932a0dc9c5da00a7265ffaa89ee"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\32-media-decompose\\runtime\\artifacts\\3f5a1c9e-1b2d-4a7c-9e0f-media-decompose\\scenes.json",
+      "kind": "json",
+      "bytes": 271,
+      "sha256": "f4eb37b3085937bd18763f3aabe01559d4ffbd1ec27f76770aba75ac6413d4fa"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\32-media-decompose\\runtime\\artifacts\\3f5a1c9e-1b2d-4a7c-9e0f-media-decompose\\keyframe_000.png",
+      "kind": "png",
+      "bytes": 21333,
+      "sha256": "d307ef08a60d590473aca66263e301120f9b68a2d8f994ee16e92a436574ae60"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\32-media-decompose\\runtime\\artifacts\\3f5a1c9e-1b2d-4a7c-9e0f-media-decompose\\keyframe_001.png",
+      "kind": "png",
+      "bytes": 3681,
+      "sha256": "d84828087977e9231ca19bdc76f189bbd3c8daddc0f569adbfa73c8c604ae20e"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\32-media-decompose\\runtime\\artifacts\\3f5a1c9e-1b2d-4a7c-9e0f-media-decompose\\keyframe_002.png",
+      "kind": "png",
+      "bytes": 1872,
+      "sha256": "69ae0dcfae03e4ce01ff23724d1faceff836b9dccefd3a972040a30f424c3c2f"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\32-media-decompose\\runtime\\artifacts\\3f5a1c9e-1b2d-4a7c-9e0f-media-decompose\\keyframes.json",
+      "kind": "json",
+      "bytes": 1126,
+      "sha256": "aa0ae82e4b7957ea4db4790cadaf37f43a9939f6cb5883cf26cf59d9c119575c"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\32-media-decompose\\runtime\\artifacts\\3f5a1c9e-1b2d-4a7c-9e0f-media-decompose\\decompose.md",
+      "kind": "markdown",
+      "bytes": 318,
+      "sha256": "68394c1b71248509409100c3f0176448e4daf21592df5f13e375aafef88feaa0"
+    }
+  ],
+  "model_provenance": [],
+  "diagnostics": {
+    "log": "stderr.txt",
+    "artifact_dir": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\32-media-decompose\\runtime\\artifacts\\3f5a1c9e-1b2d-4a7c-9e0f-media-decompose"
+  },
+  "warnings": [],
+  "error": null
+}

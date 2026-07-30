@@ -1,0 +1,46 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "media.decompose",
+  "name": "Media Decompose (Video -> Parts)",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "Decompose one video (or media) file into its constituent parts with ffmpeg/ffprobe. Always returns structured probe metadata (container, per-stream codec/resolution/fps/pixel-format/bitrate/channels/sample-rate, stream counts). Opt-in flags additionally: extract the primary audio track to WAV (composing audio.ingest #10, whisper-ready 16 kHz mono s16 by default), extract up to N representative keyframe PNGs (scene-change preferred, else evenly spaced, with a frame/timestamp sidecar), and detect scene-change boundaries. Deterministic; CPU-only; no model. The video analog of audio.ingest #10 and image.util #15, and the first module of the Phase C video spine (architectural position 19).",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-MediaDecompose.ps1",
+    "args_spec": "Named params -InputFile <path> (required); -Audio (switch, extract primary audio via audio.ingest); -AudioFormat <wav|mp3|flac|opus|ogg|m4a> (default wav); -Loudness <none|peak|ebu> (default none); -Keyframes <N> (extract up to N PNG keyframes; 0=off); -Scenes (switch, scene-change detection); -SceneThreshold <0..1> (default 0.4); -FfmpegPath/-FfprobePath <override>; -AudioIngestPath <override to Invoke-AudioIngest.ps1>; -PwshPath <override for spawning audio.ingest>. OR -InputsJson '<json {input,audio,audio_format,loudness,keyframes,scenes,scene_threshold,ffmpeg_path,ffprobe_path,audio_ingest_path,pwsh_path}>'. Optional -ArtifactRoot, -InvocationId.",
+    "composes": ["audio.ingest"]
+  },
+  "inputs": [
+    { "name": "input", "type": "string", "required": true, "description": "Path to the source video/media file." },
+    { "name": "audio", "type": "bool", "required": false, "default": false, "description": "Extract the primary audio stream to an audio file by composing audio.ingest #10 (whisper-ready 16 kHz mono s16 WAV by default). Reports no_audio_stream cleanly if the input has none." },
+    { "name": "audio_format", "type": "string", "required": false, "default": "wav", "description": "Passthrough to audio.ingest: wav | mp3 | flac | opus | ogg | m4a." },
+    { "name": "loudness", "type": "string", "required": false, "default": "none", "description": "Passthrough to audio.ingest: none | peak | ebu (EBU R128)." },
+    { "name": "keyframes", "type": "int", "required": false, "default": 0, "description": "Extract up to N representative frames as PNGs (scene-change preferred, else evenly spaced). 0 disables." },
+    { "name": "scenes", "type": "bool", "required": false, "default": false, "description": "Run scene-change detection and emit a JSON list of {index,start,end,score}." },
+    { "name": "scene_threshold", "type": "double", "required": false, "default": 0.4, "description": "Scene-change score threshold (0..1) for -Scenes and scene-preferred -Keyframes." },
+    { "name": "ffmpeg_path", "type": "string", "required": false, "description": "Explicit ffmpeg path override (else resolved from PATH / known locations)." },
+    { "name": "ffprobe_path", "type": "string", "required": false, "description": "Explicit ffprobe path override (else the sibling of the resolved ffmpeg)." },
+    { "name": "audio_ingest_path", "type": "string", "required": false, "description": "Explicit path to audio.ingest's Invoke-AudioIngest.ps1 (else ../10-audio-ingest sibling)." },
+    { "name": "pwsh_path", "type": "string", "required": false, "description": "Explicit pwsh path used to spawn audio.ingest (else resolved from $PSHOME / PATH)." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ input{path,exists,bytes}, meta{container{format_name,duration_s,size_bytes,bit_rate,nb_streams}, streams[{index,codec_type,codec_name,...type-specific...}], stream_counts{video,audio,subtitle,data,other,total}, duration_s}, operations{audio,keyframes,scenes}, audio{requested,extracted,path,format,codec,sample_rate,channels,duration_s,bytes,sha256,composed_skill,composed_invocation_id,composed_status} | {requested,extracted:false,reason}, keyframes{requested_n,source,count,threshold,sidecar_path,frames[{index,timestamp_s,source,score,path,bytes,sha256}]} | null, scenes{threshold,count,duration_s,path,scenes[{index,start,end,score}]} | null, ffmpeg{path,version}, ffprobe{path} }"
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4", "ffmpeg>=6", "ffprobe>=6"],
+    "models": [],
+    "libraries": [],
+    "cpu": "any", "gpu": "none", "memory_mb": 256,
+    "network": false, "filesystem": "read-write", "audio": true, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 600, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}
