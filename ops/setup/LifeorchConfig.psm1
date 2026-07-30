@@ -324,6 +324,69 @@ function Resolve-LifeorchConfig {
     }
 }
 
+# ------------------------------------------------------------------------------------------
+# Resolve-LifeorchInterpreter -- a SIBLING resolver on the PYTHON INTERPRETER axis
+# (FANOUT_AGENT_002, i17 plan fo-17-3a115347; MODULE_ROADMAP BACKLOG portability; the D-0068/D-0069
+# residual "interpreter paths in #15/#16 = a config-schema extension"). image.util #15 (Pillow/numpy/cv2)
+# and detect.objects #16 (onnxruntime) invoke a HARD-CODED SYSTEM python; a fresh box may put python
+# elsewhere. This resolves an OPTIONAL per-machine interpreter by ROLE from config.json's
+# `python_interpreters` map, FALLING BACK to the caller's current literal when the section/role/file is
+# absent -- so on-box behavior is byte-identical and nothing breaks if config is absent.
+#
+# PURE + FAIL-CLOSED: it never probes and never throws -- on ANY error it returns the -Fallback -- so all
+# logic gates green in cloud pwsh 7.4.6 on Linux. The MODEL-BOUND speech venv (#12/#23/#24/#25) is OUT OF
+# SCOPE by role (a GPU-lane-ride follow-on); this resolves the SYSTEM python role only. ASCII-only.
+# ------------------------------------------------------------------------------------------
+function Resolve-LifeorchInterpreter {
+    <#
+      Resolve a python interpreter path by ROLE from ops/setup/config.json's OPTIONAL
+      `python_interpreters` map, FALLING BACK to a caller-supplied literal when config is absent,
+      lacks the section/role, or is unreadable.
+
+      -Role       interpreter role key (default 'system'; #15/#16 use 'system').
+      -Fallback   the caller's current hard-coded literal -- returned verbatim when config has no value.
+      -ConfigPath config.json to read (default ops/setup/config.json next to this module).
+      -Config     a PRE-PARSED config object (the mock seam); when supplied, -ConfigPath is ignored.
+
+      Returns [pscustomobject]@{ path; role; source; config_path } where source is one of:
+        'config'              a value was found in python_interpreters.<role>
+        'fallback'            config present + parsed, but no value for <role>
+        'fallback-no-config'  no config file at -ConfigPath (and no -Config supplied)
+        'fallback-error'      config unreadable / bad JSON (fail-closed)
+    #>
+    [CmdletBinding()]
+    param(
+        [string]$Role = 'system',
+        [Parameter(Mandatory)][AllowEmptyString()][string]$Fallback,
+        [string]$ConfigPath,
+        $Config
+    )
+    $moduleRoot = $PSScriptRoot
+    if ([string]::IsNullOrWhiteSpace($ConfigPath)) { $ConfigPath = Join-Path $moduleRoot 'config.json' }
+    try {
+        $cfg = $Config
+        $usedPath = $ConfigPath
+        if ($null -eq $cfg) {
+            if (-not (Test-Path -LiteralPath $ConfigPath -PathType Leaf)) {
+                return [pscustomobject]@{ path = $Fallback; role = $Role; source = 'fallback-no-config'; config_path = $ConfigPath }
+            }
+            $cfg = (Get-Content -LiteralPath $ConfigPath -Raw) | ConvertFrom-Json
+        } else {
+            $usedPath = '(in-memory)'
+        }
+        $interp = LoGetProp $cfg 'python_interpreters'
+        if ($null -ne $interp) {
+            $val = LoGetProp $interp $Role
+            if (-not [string]::IsNullOrWhiteSpace([string]$val)) {
+                return [pscustomobject]@{ path = [string]$val; role = $Role; source = 'config'; config_path = $usedPath }
+            }
+        }
+        return [pscustomobject]@{ path = $Fallback; role = $Role; source = 'fallback'; config_path = $usedPath }
+    } catch {
+        return [pscustomobject]@{ path = $Fallback; role = $Role; source = 'fallback-error'; config_path = $ConfigPath }
+    }
+}
+
 function Test-LifeorchConfig {
     <# Validate a config object (or a path to config.json) against config.schema.json. #>
     [CmdletBinding()]
@@ -359,6 +422,19 @@ function Write-LifeorchConfig {
     $moduleRoot = $PSScriptRoot
     if ([string]::IsNullOrWhiteSpace($OutPath)) { $OutPath = Join-Path $moduleRoot 'config.json' }
 
+    # Carry forward an OPTIONAL `python_interpreters` map from an existing config at OutPath, if present
+    # (additive portability, i17, FANOUT_AGENT_002): -Action detect regenerates roots + machine profile,
+    # but must NOT silently DROP a hand-configured interpreter map. Auto-DETECTION of interpreters in
+    # setup detect is a NAMED follow-on (a Windows-guarded probe), deliberately not done here.
+    $carriedInterp = $null
+    if (Test-Path -LiteralPath $OutPath -PathType Leaf) {
+        try {
+            $existing = (Get-Content -LiteralPath $OutPath -Raw) | ConvertFrom-Json
+            $ci = LoGetProp $existing 'python_interpreters'
+            if ($null -ne $ci) { $carriedInterp = $ci }
+        } catch { $carriedInterp = $null }
+    }
+
     $resolveArgs = @{ Detect = $true }
     if (-not [string]::IsNullOrWhiteSpace($RepoRoot)) { $resolveArgs['RepoRoot'] = $RepoRoot }
     if (-not [string]::IsNullOrWhiteSpace($DataRoot)) { $resolveArgs['DataRoot'] = $DataRoot }
@@ -389,6 +465,15 @@ function Write-LifeorchConfig {
             data_root = $resolved.provenance.data_root
         }
     }
+    if ($null -ne $carriedInterp) {
+        # normalize to an ordered role->string map so ConvertTo-Json round-trips cleanly + schema-validates
+        $pi = [ordered]@{}
+        foreach ($pn in $carriedInterp.PSObject.Properties.Name) {
+            $pv = $carriedInterp.$pn
+            $pi[$pn] = if ($null -eq $pv) { $null } else { [string]$pv }
+        }
+        $config['python_interpreters'] = $pi
+    }
     $chk = Test-LifeorchConfig -Config ([pscustomobject]$config)
     $json = ($config | ConvertTo-Json -Depth 8)
     $dir = Split-Path -Parent $OutPath
@@ -407,6 +492,7 @@ Export-ModuleMember -Function @(
     'Get-LifeorchRepoRoot',
     'Get-LifeorchDataRoot',
     'Resolve-LifeorchConfig',
+    'Resolve-LifeorchInterpreter',
     'Test-LifeorchConfig',
     'Write-LifeorchConfig',
     'Get-LoJsonType'

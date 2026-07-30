@@ -359,6 +359,119 @@ foreach ($fnName in (@($wiredModules | ForEach-Object { $_.fn }) | Select-Object
 try { Remove-Item -LiteralPath $ovr -Recurse -Force -ErrorAction SilentlyContinue } catch { }
 
 # ---------------------------------------------------------------------------
+# 16. interpreter-path resolver -- Resolve-LifeorchInterpreter + the additive shim wired into #15/#16
+#     (FANOUT_AGENT_002, i17 plan fo-17-3a115347; the D-0068/D-0069 residual: "interpreter paths in
+#     #15/#16 = a config-schema extension"). A SIBLING axis to section 15's data/repo-root resolver:
+#     resolves an OPTIONAL python_interpreters.<role> from config.json, FALLING BACK to each module's
+#     current hard-coded literal. Proves fallback + override (mock) + role keying + fail-closed + schema
+#     backward-compat + carry-forward + per-module byte-identical-on-this-box + override-wins.
+# ---------------------------------------------------------------------------
+# Section 15's override test re-imported a COPIED LifeorchConfig.psm1 from a since-deleted temp dir,
+# which rebinds this module's $PSScriptRoot (used to default config.json / config.schema.json paths).
+# Re-import the REAL module so the resolver + schema resolve against the actual ops/setup here.
+Import-Module (Join-Path $moduleDir 'LifeorchConfig.psm1') -Force -DisableNameChecking
+$LIT = 'C:\PY\Python312\python.exe'
+# (a) fallback when the section is absent
+$ri1 = Resolve-LifeorchInterpreter -Role 'system' -Fallback $LIT -Config ([pscustomobject]@{ schema = 'lifeorch.setup.config/0.1' })
+Eq $ri1.path $LIT 'interp-resolver: no python_interpreters -> fallback path (byte-identical)'
+Eq $ri1.source 'fallback' 'interp-resolver: no section -> source=fallback'
+# (b) config override honored (the mock seam)
+$ovrCfgObj = [pscustomobject]@{ python_interpreters = [pscustomobject]@{ system = 'D:\alt\python.exe' } }
+$ri2 = Resolve-LifeorchInterpreter -Role 'system' -Fallback $LIT -Config $ovrCfgObj
+Eq $ri2.path 'D:\alt\python.exe' 'interp-resolver: config override honored (mock)'
+Eq $ri2.source 'config' 'interp-resolver: override -> source=config'
+# (c) role keying: system vs a second role vs an unknown role
+$multiCfg = [pscustomobject]@{ python_interpreters = [pscustomobject]@{ system = 'S.exe'; custom = 'C.exe' } }
+Eq (Resolve-LifeorchInterpreter -Role 'system' -Fallback $LIT -Config $multiCfg).path 'S.exe' 'interp-resolver: role system selected'
+Eq (Resolve-LifeorchInterpreter -Role 'custom' -Fallback $LIT -Config $multiCfg).path 'C.exe' 'interp-resolver: role custom selected'
+Eq (Resolve-LifeorchInterpreter -Role 'nope' -Fallback $LIT -Config $multiCfg).path $LIT 'interp-resolver: unknown role -> fallback'
+# (d) empty-string value treated as absent -> fallback
+Eq (Resolve-LifeorchInterpreter -Role 'system' -Fallback $LIT -Config ([pscustomobject]@{ python_interpreters = [pscustomobject]@{ system = '' } })).source 'fallback' 'interp-resolver: empty value -> fallback'
+# (e) fail-closed: missing config file + bad JSON both degrade to the literal, never throw
+$ri4 = Resolve-LifeorchInterpreter -Role 'system' -Fallback $LIT -ConfigPath (Join-Path $tmp 'no-such-config.json')
+Eq $ri4.source 'fallback-no-config' 'interp-resolver: missing config file -> fallback-no-config'
+Eq $ri4.path $LIT 'interp-resolver: missing config file -> fallback path'
+$badPath = Join-Path $tmp 'bad-config.json'; [System.IO.File]::WriteAllText($badPath, 'not json {', [System.Text.UTF8Encoding]::new($false))
+$ri5 = Resolve-LifeorchInterpreter -Role 'system' -Fallback $LIT -ConfigPath $badPath
+Eq $ri5.source 'fallback-error' 'interp-resolver: bad JSON -> source=fallback-error (fail-closed)'
+Eq $ri5.path $LIT 'interp-resolver: bad JSON -> fallback path'
+# (f) reads the REAL on-box config.json python_interpreters.system (source=config)
+$realCfgPath = Join-Path $moduleDir 'config.json'
+$riReal = Resolve-LifeorchInterpreter -Role 'system' -Fallback $LIT -ConfigPath $realCfgPath
+Ok ($riReal.source -eq 'config' -and -not [string]::IsNullOrWhiteSpace($riReal.path)) 'interp-resolver: real config.json python_interpreters.system read (source=config)'
+
+# (g) schema: python_interpreters is OPTIONAL + backward-compatible
+$cfgSchemaObj = (Get-Content -LiteralPath (Join-Path $moduleDir 'config.schema.json') -Raw) | ConvertFrom-Json
+$withInterp = (Get-Content -LiteralPath (Join-Path $moduleDir 'config.json') -Raw) | ConvertFrom-Json
+Ok ((Test-JsonAgainstSchema -Instance $withInterp -Schema $cfgSchemaObj).valid) 'interp-schema: real config.json (with python_interpreters) is schema-valid'
+$withoutInterp = [pscustomobject]@{ schema = 'lifeorch.setup.config/0.1'; repo_root = 'C:\r'; data_root = 'F:\d'; machine = [pscustomobject]@{ hostname = 'h'; username = 'u'; gpu = [pscustomobject]@{ present = $false } } }
+Ok ((Test-JsonAgainstSchema -Instance $withoutInterp -Schema $cfgSchemaObj).valid) 'interp-schema: config WITHOUT python_interpreters still valid (backward-compatible)'
+$badInterp = [pscustomobject]@{ schema = 'lifeorch.setup.config/0.1'; repo_root = 'C:\r'; data_root = 'F:\d'; machine = [pscustomobject]@{ hostname = 'h'; username = 'u'; gpu = [pscustomobject]@{ present = $false } }; python_interpreters = [pscustomobject]@{ system = 123 } }
+Ok (-not (Test-JsonAgainstSchema -Instance $badInterp -Schema $cfgSchemaObj).valid) 'interp-schema: non-string system value rejected'
+
+# (h) Write-LifeorchConfig carries an existing python_interpreters map forward across a detect-rewrite
+$carryPath = Join-Path $tmp 'carry-config.json'
+$manualCfg = [pscustomobject]@{ schema = 'lifeorch.setup.config/0.1'; repo_root = $fakeRepo; data_root = $fakeData; machine = $mp; python_interpreters = [pscustomobject]@{ system = 'C:\PY\python.exe' } }
+[System.IO.File]::WriteAllText($carryPath, ($manualCfg | ConvertTo-Json -Depth 8), [System.Text.UTF8Encoding]::new($false))
+$w2 = Write-LifeorchConfig -OutPath $carryPath -RepoRoot $fakeRepo -DataRoot $fakeData -MockNvidiaSmiText 'NVIDIA GeForce RTX 2080 Ti, 11264'
+Ok ($w2.valid) 'interp-carry: detect-rewritten config still schema-valid (with carried interpreters)'
+$c2 = (Get-Content -LiteralPath $carryPath -Raw) | ConvertFrom-Json
+Ok (($c2.PSObject.Properties.Name -contains 'python_interpreters') -and ([string]$c2.python_interpreters.system -eq 'C:\PY\python.exe')) 'interp-carry: detect preserves an existing python_interpreters map'
+# a fresh detect (no prior file) does NOT invent a python_interpreters block
+$freshPath = Join-Path $tmp 'fresh-config.json'
+$wf = Write-LifeorchConfig -OutPath $freshPath -RepoRoot $fakeRepo -DataRoot $fakeData -MockNvidiaSmiText 'NVIDIA GeForce RTX 2080 Ti, 11264'
+$cf = (Get-Content -LiteralPath $freshPath -Raw) | ConvertFrom-Json
+Ok (-not ($cf.PSObject.Properties.Name -contains 'python_interpreters')) 'interp-carry: fresh detect emits NO python_interpreters (auto-detect is a named follow-on)'
+
+# (i) per-module: the additive Resolve-SystemPython shim is wired into #15 + #16, AST-clean, resolves
+#     byte-identically to the literal on THIS box, and a config override genuinely wins.
+$sysPyLiteral = 'C:\Users\just_\AppData\Local\Programs\Python\Python312\python.exe'
+$interpModules = @(
+    [pscustomobject]@{ path = (Join-Path $repoRootForTest 'modules/15-image-util/Invoke-ImageUtil.ps1');        tag = '15-image-util' }
+    [pscustomobject]@{ path = (Join-Path $repoRootForTest 'modules/16-detect-objects/Invoke-DetectObjects.ps1'); tag = '16-detect-objects' }
+)
+foreach ($im in $interpModules) {
+    $wfp = $im.path; $tag = $im.tag
+    if (-not (Test-Path -LiteralPath $wfp)) { Ok $false "interp[$tag]: entrypoint present"; continue }
+    Ok $true "interp[$tag]: entrypoint present"
+    $tk = $null; $er = $null
+    [void][System.Management.Automation.Language.Parser]::ParseFile($wfp, [ref]$tk, [ref]$er)
+    Ok (($null -eq $er) -or ($er.Count -eq 0)) "interp[$tag]: file AST-parses clean"
+    $src = Get-Content -LiteralPath $wfp -Raw
+    Ok ($src -match 'Resolve-LifeorchInterpreter') "interp[$tag]: Resolve-LifeorchInterpreter wired in (not reverted)"
+    Ok ($src -match 'FANOUT_AGENT_002') "interp[$tag]: additive-shim provenance marker present"
+    $ftext = Get-RepoRootFnText $wfp 'Resolve-SystemPython'
+    Ok ($null -ne $ftext) "interp[$tag]: Resolve-SystemPython extractable"
+    if ($null -ne $ftext) {
+        . ([scriptblock]::Create($ftext))
+        $mdir = Split-Path -Parent $wfp
+        $resolved = Resolve-SystemPython $sysPyLiteral $mdir
+        Eq $resolved $sysPyLiteral "interp[$tag]: resolves == the current literal (byte-identical on this box)"
+    }
+}
+# override proof: a machine config.json whose python_interpreters.system points at a DIFFERENT existing
+# interpreter WINS over the literal (proves Resolve-LifeorchInterpreter is genuinely consulted by the shim).
+$ovrI = Join-Path ([System.IO.Path]::GetTempPath()) ('lo-interp-' + [Guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Force -Path (Join-Path $ovrI 'ops/setup') | Out-Null
+New-Item -ItemType Directory -Force -Path (Join-Path $ovrI 'modules/99-x') | Out-Null
+Copy-Item (Join-Path $moduleDir 'LifeorchConfig.psm1') (Join-Path $ovrI 'ops/setup/LifeorchConfig.psm1')
+$sentinel = New-TemporaryFile   # a real EXISTING file standing in for the relocated interpreter
+$ovrCfg = [pscustomobject]@{ schema = 'lifeorch.setup.config/0.1'; repo_root = $ovrI; data_root = 'x'; machine = [pscustomobject]@{}; python_interpreters = [pscustomobject]@{ system = $sentinel.FullName } }
+[System.IO.File]::WriteAllText((Join-Path $ovrI 'ops/setup/config.json'), ($ovrCfg | ConvertTo-Json -Depth 6), [System.Text.UTF8Encoding]::new($false))
+$modX = (Resolve-Path (Join-Path $ovrI 'modules/99-x')).Path
+$ovrResolved = Resolve-SystemPython $sysPyLiteral $modX   # last-dot-sourced shim (identical in #15/#16)
+Eq $ovrResolved $sentinel.FullName 'interp: module Resolve-SystemPython honors a config override (portability seam works)'
+# a config value that does NOT exist as a file falls back to the literal (stale-config safety)
+$ovrCfg2 = [pscustomobject]@{ schema = 'lifeorch.setup.config/0.1'; repo_root = $ovrI; data_root = 'x'; machine = [pscustomobject]@{}; python_interpreters = [pscustomobject]@{ system = (Join-Path $ovrI 'no-such-python.exe') } }
+[System.IO.File]::WriteAllText((Join-Path $ovrI 'ops/setup/config.json'), ($ovrCfg2 | ConvertTo-Json -Depth 6), [System.Text.UTF8Encoding]::new($false))
+Eq (Resolve-SystemPython $sysPyLiteral $modX) $sysPyLiteral 'interp: non-existent configured interpreter falls back to the literal (stale-config safe)'
+try { Remove-Item -LiteralPath $sentinel.FullName -Force -ErrorAction SilentlyContinue } catch { }
+try { Remove-Item -LiteralPath $ovrI -Recurse -Force -ErrorAction SilentlyContinue } catch { }
+# the override test above re-imported a copied module from $ovrI (now deleted); restore the REAL binding
+# so the LIVE section's resolver/verify/schema calls resolve against the actual ops/setup here.
+Import-Module (Join-Path $moduleDir 'LifeorchConfig.psm1') -Force -DisableNameChecking
+
+# ---------------------------------------------------------------------------
 # LIVE (on-device) checks
 # ---------------------------------------------------------------------------
 if ($Live) {
@@ -384,6 +497,12 @@ if ($Live) {
     # wired resolution == literal on this box: config repo_root == the actual repo location
     $cfgRepo = [string](Resolve-LifeorchConfig).repo_root
     Ok ((-not [string]::IsNullOrWhiteSpace($cfgRepo)) -and ((Get-Item -LiteralPath $cfgRepo).FullName -ieq (Get-Item -LiteralPath $repoRootForTest).FullName)) 'live: config repo_root == actual repo location (wired resolution == literal on this box)'
+    # interpreter resolver (i17): the real config.json python_interpreters.system resolves via config and
+    # equals the wired system-python literal (byte-identical on this box); it points at a real interpreter.
+    $litSysLive = 'C:\Users\just_\AppData\Local\Programs\Python\Python312\python.exe'
+    $riLive = Resolve-LifeorchInterpreter -Role 'system' -Fallback $litSysLive -ConfigPath (Join-Path $repoRootForTest 'ops/setup/config.json')
+    Ok ($riLive.source -eq 'config' -and ($riLive.path -eq $litSysLive)) 'live: config python_interpreters.system == the wired system-python literal (byte-identical)'
+    Ok (Test-Path -LiteralPath $riLive.path -PathType Leaf) 'live: configured system interpreter exists on this box'
     # live staging-plan confirm on the emitted out/staging-plan.txt (offline: no multi-GB pulls in-test)
     $livePlan = Join-Path $repoRootForTest 'ops/setup/out/staging-plan.txt'
     if (Test-Path -LiteralPath $livePlan) {

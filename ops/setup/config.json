@@ -17,6 +17,9 @@
       "source": "nvidia-smi"
     }
   },
+  "python_interpreters": {
+    "system": "C:\\Users\\just_\\AppData\\Local\\Programs\\Python\\Python312\\python.exe"
+  },
   "provenance": {
     "repo_root": "hint",
     "data_root": "hint"

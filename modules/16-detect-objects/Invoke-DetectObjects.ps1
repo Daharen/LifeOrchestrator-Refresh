@@ -110,6 +110,32 @@ function Resolve-RepoRoot([string]$start) {
     } catch { }
     return $wu
 }
+function Resolve-SystemPython([string]$FallbackLiteral, [string]$StartDir = $PSScriptRoot) {
+    # ADDITIVE portability seam (FANOUT_AGENT_002, i17 plan fo-17-3a115347): a machine config
+    # (ops\setup\config.json -> python_interpreters.system, resolved via Resolve-LifeorchInterpreter) MAY
+    # relocate the SYSTEM python on a fresh box. Return the CONFIGURED interpreter ONLY when it (a) came
+    # from config, (b) DIFFERS from the literal, and (c) exists as a file; otherwise return the literal
+    # UNCHANGED -- so on-box behavior is byte-identical and nothing breaks if config is absent. Fail-closed
+    # to the literal on ANY error. Pure lookup (no probe), ASCII-only. The model-bound SPEECH venv is out
+    # of scope (role 'system' only).
+    try {
+        $p = Get-Item -LiteralPath $StartDir -ErrorAction Stop
+        for ($k = 0; $k -lt 8 -and $null -ne $p; $k++) {
+            $cfgMod = Join-Path $p.FullName 'ops\setup\LifeorchConfig.psm1'
+            if (Test-Path -LiteralPath $cfgMod -PathType Leaf) {
+                Import-Module $cfgMod -DisableNameChecking -Force -ErrorAction Stop
+                $res = Resolve-LifeorchInterpreter -Role 'system' -Fallback $FallbackLiteral
+                $cand = [string]$res.path
+                if ($res.source -eq 'config' -and -not [string]::IsNullOrWhiteSpace($cand) -and ($cand -ne $FallbackLiteral) -and (Test-Path -LiteralPath $cand -PathType Leaf)) {
+                    return $cand
+                }
+                break
+            }
+            $p = $p.Parent
+        }
+    } catch { }
+    return $FallbackLiteral
+}
 function Test-Python([string]$exe) {
     if ([string]::IsNullOrWhiteSpace($exe)) { return $false }
     try {
@@ -324,7 +350,12 @@ try {
     if (-not [string]::IsNullOrWhiteSpace($PythonPath)) { $cands.Add($PythonPath) }
     $regEnv = [string](Prop $m 'engine_env' '')
     if (-not [string]::IsNullOrWhiteSpace($regEnv)) { $cands.Add($regEnv) }
-    $cands.Add('C:\Users\just_\AppData\Local\Programs\Python\Python312\python.exe')
+    # ADDITIVE portability seam (FANOUT_AGENT_002, i17): prepend a machine-configured SYSTEM python
+    # (config.json python_interpreters.system) BEFORE the literal, ONLY when it differs + exists; adds
+    # nothing when config is absent or == the literal (byte-identical on this box). Fail-closed.
+    $sysPyLiteral = 'C:\Users\just_\AppData\Local\Programs\Python\Python312\python.exe'
+    try { $cfgPy = Resolve-SystemPython $sysPyLiteral; if ($cfgPy -ne $sysPyLiteral) { $cands.Add($cfgPy) } } catch { }
+    $cands.Add($sysPyLiteral)
     $cands.Add('F:\My_Programs\Local_Computer_Speech_Large_Data\python_env\Scripts\python.exe')
     foreach ($n in @('python','python3','py')) {
         try {

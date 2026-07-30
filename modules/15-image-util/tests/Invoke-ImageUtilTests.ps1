@@ -127,6 +127,46 @@ Check 'manifest parallel_safe=true' ($man.parallel_safe -eq $true)
 Check 'manifest batch=false & streaming=false' (($man.batch -eq $false) -and ($man.streaming -eq $false))
 Check 'manifest skill_id=image.util' ($man.skill_id -eq 'image.util')
 
+# ---------- 1b) interpreter portability shim (i17, FANOUT_AGENT_002) ----------
+# ADDITIVE config-resolvable SYSTEM python with FALLBACK to the literal. Pure logic (no python needed).
+# Proves: shim wired + AST-clean + resolves BYTE-IDENTICALLY to the literal on THIS box + a config
+# override genuinely wins (mock). Model-bound speech venv is out of scope (role 'system' only).
+$entrySrc = Get-Content -LiteralPath $entry -Raw
+Check 'interp: Resolve-LifeorchInterpreter wired into entrypoint' ($entrySrc -match 'Resolve-LifeorchInterpreter')
+Check 'interp: additive-shim provenance marker present' ($entrySrc -match 'FANOUT_AGENT_002')
+$tk0 = $null; $er0 = $null
+$ast0 = [System.Management.Automation.Language.Parser]::ParseFile($entry, [ref]$tk0, [ref]$er0)
+Check 'interp: entrypoint AST-parses clean' (($null -eq $er0) -or ($er0.Count -eq 0)) (($er0 | ForEach-Object { $_.Message }) -join '; ')
+$fnAst = $null
+if ($null -ne $ast0) { $fnAst = $ast0.FindAll({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'Resolve-SystemPython' }, $true) | Select-Object -First 1 }
+Check 'interp: Resolve-SystemPython extractable' ($null -ne $fnAst)
+$sysLit = 'C:\Users\just_\AppData\Local\Programs\Python\Python312\python.exe'
+if ($null -ne $fnAst) {
+    . ([scriptblock]::Create($fnAst.Extent.Text))
+    # byte-identical: the real config.json system == the literal (or is absent) -> literal returned unchanged
+    $resolvedHere = Resolve-SystemPython $sysLit $SkillDir
+    Check 'interp: resolves == the current literal on THIS box (byte-identical)' ($resolvedHere -eq $sysLit) "got=$resolvedHere"
+    # override honored (mock): a temp repo config.json pointing python_interpreters.system at a DIFFERENT
+    # existing interpreter -> the shim returns that path (proves config is genuinely consulted)
+    $cfgMod = Join-Path $SkillDir '..\..\ops\setup\LifeorchConfig.psm1'
+    if (Test-Path -LiteralPath $cfgMod) {
+        $ovrI = Join-Path ([IO.Path]::GetTempPath()) ('m15-interp-' + [Guid]::NewGuid().ToString('N').Substring(0,8))
+        New-Item -ItemType Directory -Force -Path (Join-Path $ovrI 'ops/setup') | Out-Null
+        New-Item -ItemType Directory -Force -Path (Join-Path $ovrI 'modules/99-x') | Out-Null
+        Copy-Item (Resolve-Path -LiteralPath $cfgMod).Path (Join-Path $ovrI 'ops/setup/LifeorchConfig.psm1')
+        $sentinel = New-TemporaryFile
+        $ovrCfg = [pscustomobject]@{ schema='lifeorch.setup.config/0.1'; repo_root=$ovrI; data_root='x'; machine=[pscustomobject]@{}; python_interpreters=[pscustomobject]@{ system=$sentinel.FullName } }
+        [System.IO.File]::WriteAllText((Join-Path $ovrI 'ops/setup/config.json'), ($ovrCfg | ConvertTo-Json -Depth 6), [System.Text.UTF8Encoding]::new($false))
+        $modX = (Resolve-Path (Join-Path $ovrI 'modules/99-x')).Path
+        $ovrResolved = Resolve-SystemPython $sysLit $modX
+        Check 'interp: config override honored (mock)' ($ovrResolved -eq $sentinel.FullName) "got=$ovrResolved"
+        try { Remove-Item -LiteralPath $sentinel.FullName -Force -ErrorAction SilentlyContinue } catch {}
+        try { Remove-Item -LiteralPath $ovrI -Recurse -Force -ErrorAction SilentlyContinue } catch {}
+    } else {
+        Check 'interp: config override honored (mock) [skipped: ops/setup not in test tree]' $true
+    }
+}
+
 # ---------- 2) meta + hashes ----------
 $r = Run-Img @{ input = $fixture; op = 'meta' }
 Check 'meta: exit 0' ($r.exit -eq 0) "exit=$($r.exit) err=$($r.err)"
