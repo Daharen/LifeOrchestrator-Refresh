@@ -33,7 +33,7 @@
   "requirements": {
     "executables": ["pwsh>=7.4", "python (speech venv) + diffusers 0.35.2"],
     "models": ["image.sd15 (Stable Diffusion 1.5 diffusers fp16; CreativeML OpenRAIL-M; default fast tier)", "image.sd35-medium (Stable Diffusion 3.5 Medium diffusers fp16; Stability Community License; quality tier, CPU offload + VAE tiling on the 11 GB card)"],
-    "libraries": ["diffusers", "torch (cu128)", "transformers", "safetensors", "numpy", "Pillow", "accelerate (cpu-offload)"],
+    "libraries": ["diffusers", "torch (cu128)", "transformers", "safetensors", "numpy", "Pillow", "accelerate (cpu-offload)", "sentencepiece (T5 tokenizer for SD3.5)"],
     "cpu": "any", "gpu": "cuda (RTX 2080 Ti 11 GB; SD1.5 ~2.6 GB VRAM at 512x512; SD3.5 Medium fp16 with model/sequential CPU offload + VAE tiling)", "memory_mb": 6144,
     "network": false, "filesystem": "read-write", "audio": false, "screen": false, "camera": false
   },
