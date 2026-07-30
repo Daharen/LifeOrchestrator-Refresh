@@ -131,3 +131,15 @@ general planner — so the whole direction is de-risked before investing in the 
 - If a **safe relinquish + reacquire cannot be demonstrated** → stop, report; R1 needs rework.
 - Scope beyond the fixed 3-stage chain → stop; write it to the roadmap.
 - MVP acceptance met → stop.
+
+---
+
+## Frontier revision folded (i18, 2026-07-30 — pack `42ad8308`): make the proof an ABA chain, not A→B→C
+
+The i18 frontier review (full answer: `research/2026-07-30-frontier-review-self-tasking-orchestration.md`) says the proposed `strong preflight → gen.image → fs.manage` chain proves only that the FIRST model can LEAVE — it does not prove the orchestrator model can **RETURN and resume**, which is the actual architectural hinge. Revise the R4 MVP to a minimal **ABA** chain (still fixed, still opt-in):
+
+- **A1 — 9B planner/preflight (resident):** produce a fixed-schema stage plan, pick the image tool + params, write a compact CHECKPOINT, commit the plan + stage idempotency keys, release the exec lease + residency pin. (Use a constrained/partially-fixed plan schema for the MVP, not arbitrary autonomous decomposition.)
+- **B — image generation:** acquire a PREPARED GPU for the generator, prove the old 9B generation is FENCED, load the generator, produce exactly one artifact under an idempotency key, write an authoritative result manifest (path, hash, params, status, attempt), release the generator pin.
+- **A2 — 9B resume + verify:** reacquire a prepared GPU, reload the SAME 9B config, restore compatible same-model state OR ingest the compact checkpoint, validate B's manifest, invoke deterministic `fs.manage` placement, mark complete. **Then deliberately kill the coordinator after B and prove it resumes A2 from disk** without regenerating/duplicating the image.
+- **Acceptance additions:** observed resident sequence `9B gen N → generator gen M → 9B gen N+1`; no overlap between managed heavyweight residents; a stale A1 request rejected after B receives authority; stable headroom before both loads; exactly-once artifact placement; crash-recovery between stages; NO human courier step.
+- **Architecture notes:** a CPU-resident deterministic **coordinator** (NOT the LLM) owns the stage journal, lease/fencing credentials, idempotency keys, and the compact returning-context — the LLM relinquishes GPU RESIDENCY, not system control. "Distinct agents" need not mean distinct processes (same-model logical contexts share one resident server). Persist decision-relevant structured state (goal, plan, completed-stage summaries, artifact refs+hashes, open questions, next-stage instruction), NOT hidden reasoning; **checkpoint compaction from the first proof** (unbounded transcript re-ingest is ~quadratic). Benchmark `--slot-save-path` before assuming it helps (same-model returns only; may be larger than a re-ingest). **HARD prereq unchanged: R1b** (not just R1a) — the live GPU hand-off must be proven at the consumer layer first.
