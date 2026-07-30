@@ -18,12 +18,11 @@ full text → `archive/`. Per-module params/artifacts → `modules/<NN>-*/README
 
 ## Build priority (2026-07-25 pivot — D-0029)
 
-> **2026-07-29 (D-0066):** Modules 0–31 + 00.1 and Widgets 01–03 are BUILT; fan-out iterations 1–13
-> SHIPPED (D-0055..D-0065). Live status + next action: `CURRENT_STATE.md`. Wave model + candidate menu +
-> the iteration-14 spec: `FANOUT_ORCHESTRATOR_HANDOFF.md` (the ONE live handoff). Standing GPU-lane
-> candidate: warm-pool Stage-1 (mechanism C) per `modules/07-model-gateway/WARM_POOL_DESIGN.md` §6+§9
-> (D-0063; brief `core-docs/fanout/FANOUT_AGENT_001.md`). Outstanding frontier ask: the audio/image/video
-> model leads (generators #22–#25).
+> **2026-07-30 (D-0068):** Modules 0–31 + 00.1 and Widgets 01–04 are BUILT; fan-out iterations 1–15
+> SHIPPED (D-0055..D-0068). Live status + next action: `CURRENT_STATE.md`. Wave model + candidate menu:
+> `FANOUT_ORCHESTRATOR_HANDOFF.md` (the ONE live handoff). Warm-pool Stage-1.1 hardening SHIPPED (i15,
+> still default-OFF); generator model leads RECEIVED (`research/2026-07-30-generator-model-leads.md`).
+> Next GPU candidates: the durable Job-Object gateway-supervisor + enable-after-soak, or a generator upgrade.
 
 **The per-module numbers are architectural positions, not a build sequence.** The full 0–49 spine (+ the
 real-time autonomic layer 45–49 and the 6-level operating hierarchy) lives in `ARCHITECTURE_MAP.md`.
@@ -43,7 +42,7 @@ core** (cost-offload + a human interface) before the deep-research spine.
 3. **`agent.local`** (D-0032) — a scoped #26: a local model that plans and invokes any Module through the
    escalator; the frontier agent's job, done locally.
 4. **Generators, cheapest-first:** `gen.audio` (D-0033) → `gen.image` (D-0034) → `gen.music` (D-0035) →
-   `gen.video` (D-0036).
+   `gen.video` (D-0036). **Upgrade leads received (D-0068): image=Z-Image-Turbo Q8, music=ACE-Step 1.5, video=LTX-Video 2B Distilled, audio=Stable Audio 3 Small SFX; Diffusers-native starts SD3.5 Medium / Wan2.1 1.3B / Stable Audio Open 1.0 -- `research/2026-07-30-generator-model-leads.md`. Each upgrade is a follow-on GPU-lane wave.**
 5. **`agent.coding`** — **DEFERRED (D-0037**, work order authored, not built): last here; the frontier
    already codes well, and the useful slice is exactly the arbitrary-exec capability `agent.local`
    deliberately excluded. See #26.
@@ -68,7 +67,7 @@ resource-arbitration layer first: it shipped as `res.lease` #29 + `orchestrate.f
 **Deferred; do when it earns it** (e.g. before a future PC upgrade) — captured now so it is READY to
 execute then. **Goal:** relocate the whole stack to a fresh Windows 11 box in ONE setup pass.
 
-**STATUS (i14, D-0067):** Stage-1 SHIPPED as `ops/setup/` (config layer `LifeorchConfig.psm1` + `setup.ps1`: prereq 5/5, GPU detect, VRAM-sized `models.machine.json` -> staging, an emitted download plan; CPU-verify 6/6 + `VERIFY-RUNBOOK.md`; commit `821da16`, mock 78/78 + live 88/88). RESIDUALS: (1) wire `Resolve-LifeorchConfig` into `modules/*` path resolution; (2) apply `out/models.machine.json` into `modules/07/models.json` (the #7 / GPU-lane owner, under the gpu lease); (3) confirm the `staging-plan.txt` TODO_CONFIRM URLs + actually download; (4) finalize partial-offload `gpu_layers` on a real new box.
+**STATUS (i15, D-0068):** Stage-1 SHIPPED i14 (`ops/setup/` config layer + `setup.ps1` + CPU-verify + emitted download plan + `VERIFY-RUNBOOK.md`; `821da16`). i15 (`c0f8be0`) added a staging-plan URL/sha CONFIRM (`Confirm-StagingPlan.ps1`; 2/2 VLM reachable, 4 LLM + SD1.5 `TODO_CONFIRM`, 2 missing sha) and wired the additive+fallback `Resolve-LifeorchConfig` shim into `modules/14` + `16` (byte-identical on-box; cloud 119/119 + live 131/131). KEY FINDING: repo-root is ALREADY portable (every leaf uses a `$PSScriptRoot` walk-up; no hard-coded repo-root literal; data-root lives centrally in `modules/07/models.json`). RESIDUALS: (1) extend the shim to the remaining walk-up leaf modules (MANY model/GPU-bound -> non-CPU-lane waves); (2) apply `out/models.machine.json` into `modules/07/models.json` under the gpu lease; (3) confirm the `TODO_CONFIRM` URLs + add sha for the 1.5B/3B; (4) re-run `setup.ps1 -Action gen` on the real F: target (i14 gen used a mock `G:` root) + finalize partial-offload `gpu_layers` on a real new box.
 
 - **Already travels:** the repo (modules/widgets/docs — plain pwsh + .NET + JSON, git-tracked) is fully
   portable.
@@ -135,7 +134,7 @@ one virtual-desktop rect → GDI → PNG (or JPG q90). Read-only, Per-Monitor-V2
 `llama-server` (start → `/health` → `/v1/chat/completions` → kill), chosen from `models.json` by `-Model` id
 or `-Tier` alias; `parallel_safe:false`. **Warm/persistent DETACHED server shipped** (Governor Phase 2, D-0057
 `f8c961a`; warm reuse ~1 ms vs ~1200 ms cold); `res.lease` gpu wired (`0c6d5c9`); `-Logprobs` on both engine
-builds (D-0060 `830efcc`). **Follow-ons:** the **warm multi-model pool + router — Stage-1 (mechanism C) SHIPPED opt-in/default-OFF i14 (D-0067, `09a7e71`, skill 0.3.0); Stage-1.1 hardening backlog in WARM_POOL_DESIGN §10; native router still Stage-2+**
+builds (D-0060 `830efcc`). **Follow-ons:** the **warm multi-model pool + router — Stage-1 (mechanism C) SHIPPED opt-in/default-OFF i14 (D-0067, `09a7e71`, skill 0.3.0); Stage-1.1 hardening SHIPPED i15 (D-0068, `121a0fc`, still default-OFF; enable-by-default pending a durable Job-Object supervisor + a soak + the res.lease fencing infra wave); native router still Stage-2+**
 (`WARM_POOL_DESIGN.md`, D-0063 `c07125f`, + a couriered ChatGPT Pro second opinion as §9): Stage-1 =
 **mechanism C** (the detached server becomes a NAMED POOL MANAGER `Ensure-ResidentModel` + residency-key +
 task-affinity swap-minimising policy + whole-task gpu lease + a 90 s keep-resident window); Stage-2+ GATED

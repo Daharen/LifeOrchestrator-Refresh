@@ -11,6 +11,7 @@ Append one line per addition (path | what it was | why archived | date | D-ref).
 - `2026-07-29-HANDOFF-go-forward-map.md` | the enduring `core-docs/HANDOFF.md` "go-forward map" | absorbed: locations + job-runner -> FANOUT_ORCHESTRATOR_HANDOFF sections 6-7; disclaimers/known-issues -> CURRENT_STATE; portability spec -> MODULE_ROADMAP | 2026-07-29 | D-0066
 - `2026-07-29-FANOUT_ORCHESTRATOR_HANDOFF-pre-D0066.md` | the pre-consolidation live handoff (iteration-by-iteration prose) | snapshot before the D-0066 rewrite; iteration detail compressed to the ledger | 2026-07-29 | D-0066
 - `2026-07-29-FANOUT_ORCHESTRATOR_HANDOFF-i14.md` | the live handoff snapshotted before the i14 close-out rewrite (HEAD 74d6c86) | snapshot-then-rewrite each orchestrator session (DOC_PROTOCOL s5) | 2026-07-29 | D-0067
+- `2026-07-30-FANOUT_ORCHESTRATOR_HANDOFF-i15.md` | the live handoff snapshotted before the i15 close-out rewrite (HEAD 8c1da2e) | snapshot-then-rewrite each orchestrator session (DOC_PROTOCOL s5) | 2026-07-30 | D-0068
 
 ## doc-snapshots/2026-07-29/
 
@@ -31,3 +32,6 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 - `i14-WMP-stage1.md` | the filled GPU-lane brief (warm-pool Stage-1, mechanism C) dispatched in i14 (plan fo-14-5ea064b6) | used brief archived on wave completion | 2026-07-29 | D-0067
 - `i14-PORT-setup.md` | the filled CPU-lane brief (portability / new-machine bring-up) dispatched in i14 | used brief archived on wave completion | 2026-07-29 | D-0067
 - `i14-WAVE-dash.md` | the filled coding-lane brief (fan-out wave dashboard, widgets/04) dispatched in i14 | used brief archived on wave completion | 2026-07-29 | D-0067
+- `i15-WMP-stage11.md` | the filled GPU-lane brief (warm-pool Stage-1.1 hardening) dispatched in i15 (plan fo-15-27a03513) | used brief archived on wave completion | 2026-07-30 | D-0068
+- `i15-PORT-wire.md` | the filled CPU-lane brief (portability follow-ons: staging-plan confirm + resolver shim) dispatched in i15 | used brief archived on wave completion | 2026-07-30 | D-0068
+- `i15-WAVE-confirm.md` | the filled coding-lane brief (widget-04 live-GUI confirm + polish) dispatched in i15 | used brief archived on wave completion | 2026-07-30 | D-0068

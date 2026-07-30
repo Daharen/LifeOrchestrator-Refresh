@@ -393,3 +393,22 @@ routing, no cross-task KV, no blind co-load) are NON-bypassable. Required before
 suite (crash at each transition point then reconcile; forced lease-expiry during a live request; a stale
 idle-callback vs a fresh request; Job-Object tree reap + PID-reuse; KV isolation across crash/cancel; the
 GPU-handoff eviction). See DECISION_LOG D-0067.
+**Stage-1.1 SHIPPED (iteration 15, D-0068, commit `121a0fc`; integrity core `lib/PoolManager.psm1`).** Closed the
+Criticals + enabling fixes: a monotonic fencing token + short renewable TTL + CAS + inference generation-mismatch
+REJECTION (1); GPU-handoff evict-before-grant + a target-headroom/WDDM-async confirmation (2/15); a crash-atomic
+state machine EMPTY->STOPPING->EMPTY_CONFIRMED->STARTING->RESIDENT + reconcile-on-startup under a machine-global
+lock (3); a verified socket-owner publish gate, not a /v1/models alias (4); resident_config_hash (hashes file
+CONTENTS) split from instance_generation (6); CanServe() exact-identity + >=capacity (7/8/9); dropped LRU +
+timed-idle-as-correctness + same-model prefix-reuse from the correctness path, KV isolation = erase-on-checkout +
+on-check-in (10/11/12); a -BypassPoolManager escape with the integrity invariants non-bypassable. Off-machine
+157/157 (core 49 + warm 23 + pool 48 + fault-injection 37); LIVE on the box: base 42/42, 3B->9B 4138 ms (2276 MiB
+recovered), 9B reuse 1 ms, socket_owner verified TRUE on the real llama-server, a stale-generation inference
+REJECTED (generation_mismatch) while the current call passed, 0 orphaned llama-server, whole-task gpu lease
+held+released. models.json UNCHANGED; the pool ships DEFAULT-OFF.
+
+**Stage-1.1 RESIDUALS (before the pool may be enabled by default).** (a) DURABLE Windows Job-Object ownership of
+the server tree ACROSS separate invocations needs a PERSISTENT gateway supervisor process (the gateway is invoked
+per-call, so a per-call named Job Object dies on process exit); the per-call case is covered now by the managed
+tag + taskkill /T tree-kill + a PID/creation-time identity guard (finding 5, partially closed). (b) the res.lease
+fencing integration (findings 13/14) is a separate single-worker infra wave. (c) enabling the pool BY DEFAULT is
+the orchestrator's call after a soak. Findings 5 (durable Job-Object) + 13/14 remain the gate to default-ON.

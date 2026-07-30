@@ -19,16 +19,16 @@ Owned elsewhere, do not duplicate: `TOOL_MODEL_REGISTRY.md` (tool/model/hardware
 - **Direction (D-0050):** past MVP the project drives ONE spine — the **OFFLOAD / AUDIT LOOP** under the
   **verify-cost rule**: offload only what is cheaper to VERIFY than to do; deterministic modules are Claude's
   hands, model modules only where machine- or human-checkable.
-- **ACTIVE = the fan-out loop. Iterations 1–14 are DONE** (D-0055..D-0067) via `orchestrate.fanout` #30 over
+- **ACTIVE = the fan-out loop. Iterations 1–15 are DONE** (D-0055..D-0068) via `orchestrate.fanout` #30 over
   `res.lease` #29, workers hand-dispatched into fresh Cowork sessions. Ledger:
   **`FANOUT_ORCHESTRATOR_HANDOFF.md`**; rationale: **DECISION_LOG D-0055..D-0067**. Do not re-narrate here.
-- **NEXT = iteration 15** (D-0067); the first 4-lane wave (i14) shipped 3/3 on-box + a folded frontier red-team: **1 GPU worker (HARD-CLAMPED <=1/wave) + 1 CPU +
+- **NEXT = iteration 16** (D-0068); iteration 15 (plan `fo-15-27a03513`, 3/3 on-box + a folded frontier model-leads answer) shipped GPU warm-pool Stage-1.1 hardening (pool still default-OFF) + CPU portability follow-ons + coding widget-04 live-GUI confirm+fix. The 4-lane model: **1 GPU worker (HARD-CLAMPED <=1/wave) + 1 CPU +
   1 broad coding + 1 externalized frontier-GPT review/audit lane**. Validated on-box ceiling `MaxParallel 3`
   (1 GPU + 2 CPU); the frontier lane is off-box, takes no lease. Wave model, candidate menu + anti-collision
   rules: **`FANOUT_ORCHESTRATOR_HANDOFF.md`**.
 - **Hard boundary (D-0051, non-negotiable):** the orchestrator NEVER drives another AI session — including the
   frontier lane, a human-couriered pack (`frontier.bridge` #31).
-- Repo HEAD at last mirror: the **i14 close-out docs commit** (D-0067, `master`) — confirm live
+- Repo HEAD at last mirror: the **i15 close-out docs commit** (D-0068, `master`) — confirm live
   with `git log -1` (read-only over the mount is fine).
 
 ## Adaptive Resource Governor (agent.local #21)
@@ -64,7 +64,7 @@ Design + rationale: **`ADAPTIVE_RESOURCE_GOVERNOR.md`**. Runtime facts:
   confirmed by the couriered frontier report (`core-docs/research/2026-07-28-frontier-local-model-selection.md`).
   Reachable via `-Model` / the X0 rung only; the resident 9B is the effective top rung.
 - **Decision floor = mid (3B)**; strong is GENERATION-only.
-- Warm multi-model pool Stage-1 (mechanism C) is BUILT opt-in/default-OFF (D-0067, i14; skill 0.3.0), Stage-1.1 hardening pending (WARM_POOL_DESIGN §10): `modules/07-model-gateway/WARM_POOL_DESIGN.md`
+- Warm multi-model pool: Stage-1 BUILT (i14) + **Stage-1.1 hardened i15 (D-0068, `121a0fc`) — still DEFAULT-OFF** (see Known failures): `modules/07-model-gateway/WARM_POOL_DESIGN.md`
   (mechanism C = a named pool manager; sections 6 + 9; D-0063). Measured: one ~7 GB model fits the GPU at a
   time; swap is GPU-upload-bound (~1.6 s -> 3B, ~4.1 s -> 9B); same-model reuse ~1 ms; page-cache warmth does
   NOT cut swap cost; all GGUFs (28.5 GiB) fit the 64 GB RAM.
@@ -104,7 +104,7 @@ registry facts: `TOOL_MODEL_REGISTRY.md`. Roster (all MVP-complete unless noted)
   skill.bootstrap (contract v0.2) · #29 res.lease (gpu/git/doc leases; consumer trio complete) · #30
   orchestrate.fanout · #31 frontier.bridge (`pack` takes `{prompt, files}` — NOT `{task,...}`, D-0057).
 - **Observation/UIA:** #2 fs.observer · #3 proc.observer · #4 uia.inspector · #5 uia.actor · #6 capture.screen.
-- **Model core:** #7 model.gateway (detached warm server, D-0057) · #8 classify.batch · #9 review.processor ·
+- **Model core:** #7 model.gateway (detached warm server D-0057; warm pool Stage-1.1 hardened, default-OFF, D-0068) · #8 classify.batch · #9 review.processor ·
   #19 logic.escalator · #20 doc.io · #21 agent.local (`-Route`, D-0046 terminator, `-Profile`, `-AutoRamp`;
   the closed `tools.json` registry IS the sandbox) · #27 route.tools · #28 fs.manage.
 - **Audio:** #10 audio.ingest · #11 speech.stt · #12 speech.tts · #13 voice.live.
@@ -112,7 +112,7 @@ registry facts: `TOOL_MODEL_REGISTRY.md`. Roster (all MVP-complete unless noted)
 - **Generators (user track):** #22 gen.audio · #23 gen.image · #24 gen.music · #25 gen.video.
 - **NOT built:** #26 agent.coding — designed + DEFERRED (D-0037; no safe code-exec substrate on this box).
 - **Widgets (native + `launch.bat`, D-0038):** 01 Local Agent Console · 02 Module Launcher · 03 Verification
-  Console (**durable verdicts** — results sidecar keyed by `packet_id`; the packet file is never modified, D-0065) · **04 Fan-out Wave Dashboard** (read-only plan/worker/lease view; NEW i14 D-0067 — human live-GUI confirm pending).
+  Console (**durable verdicts** — results sidecar keyed by `packet_id`; the packet file is never modified, D-0065) · **04 Fan-out Wave Dashboard** (read-only plan/worker/lease view; D-0067; live-GUI confirm DONE i15 D-0068 — an off-screen Refresh defect caught + fixed).
 
 **Phase A complete** (0–25 + 00.1; #26 deferred); generator track #22–#25 complete; **Phase B Widgets 01–04
 shipped.**
@@ -207,7 +207,7 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 | #1 / #2 / #3 / #4 | 11/11 · 16/16 · 16/16 · 16/16 | — | 07-24 |
 | #5 uia.actor | 26/26 | `m5-test-001` | 07-24 |
 | #6 capture.screen | 39/39 | `m6-test-001` | 07-24 |
-| #7 model.gateway | 42/42 + warm 23/23 + pool 43/43 | `0c6d5c9`/`f8c961a`/`09a7e71` | 07-29 |
+| #7 model.gateway | live base 42/42; off-machine 157/157 (core49 + warm23 + pool48 + FI37) | `121a0fc` | 07-30 |
 | #8 classify.batch | 33/33 | `m8-test-001` | 07-24 |
 | #9 review.processor | 34/34 | `m9-test-003` | 07-24 |
 | #10 audio.ingest | 43/43 | `m10-test-001` | 07-24 |
@@ -235,8 +235,8 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 | widgets/01 Agent Console | 91/91 `-Live` (89/89 cloud) | `b1f36f0` | 07-28 |
 | widgets/02 Module Launcher | 75/75 `-Live` (64/64 cloud) | `c509e571` | 07-27 |
 | widgets/03 Verification Console | 173/173 cloud mock + live STA SelfTests (`SELFTEST_VERDICT_PERSIST_OK`, `SELFTEST_AUTOLOAD_OK`) | `f3c1ec7` | 07-29 |
-| ops/setup portability | 78/78 cloud + 88/88 `-Live` | `821da16` | 07-29 |
-| widgets/04 Fan-out Wave Dashboard | 80/80 cloud + 90/90 `-Live` (STA SelfTest); live-GUI confirm PENDING | `333dac6` | 07-29 |
+| ops/setup portability | 119/119 cloud + 131/131 `-Live` | `c0f8be0` | 07-30 |
+| widgets/04 Fan-out Wave Dashboard | 80/80 cloud + 91/91 `-Live` (+SELFTEST_LAYOUT_OK); live-GUI confirm DONE (off-screen Refresh fix) | `8c1da2e` | 07-30 |
 
 ## Known failures / gotchas
 
@@ -304,7 +304,18 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
   is a Linux VM and cannot run Windows pwsh (everything goes through `exec-job.sh`); `project_write local_path`
   must be under the working dir, not `/tmp`; deliver prompts/packets/packs as FILES; core-docs are CRLF, edit
   fail-closed and commit only named files under the `git` lease. Owned by **`FANOUT_ORCHESTRATOR_HANDOFF.md`**.
-- **Warm pool manager is OPT-IN / default-OFF (D-0067).** Stage-1 shipped, but the frontier red-team found 4 Critical hardening gaps (TTL-is-not-fencing; releasing the lease does NOT free VRAM for another module; non-crash-atomic transitions; port+`/health` can validate the WRONG generation). Do NOT enable the pool by default until Stage-1.1 closes them (WARM_POOL_DESIGN §10); the classic + D-0057 warm paths remain the trusted default.
+- **WinForms: lay out a `Dock=Top` toolbar's children only AFTER the panel is sized.** Children added while
+  the panel still has its default ~200 px width anchor against the wrong width -- a Right-anchored button lands
+  off-screen (widget-04's Refresh went to X=1788, off the 1104 px client; the mock + SelfTest gates missed it,
+  D-0068). Register controls, DROP L/R anchors, position from the panel's ACTUAL width in a Resize handler
+  (`.GetNewClosure()`) + on Shown; add a SelfTest that shows the form off-screen (`SELFTEST_LAYOUT_OK`).
+- **Warm pool manager is OPT-IN / default-OFF (D-0067/D-0068).** Stage-1.1 hardening SHIPPED i15 (`121a0fc`):
+  fencing + generation-mismatch rejection, GPU-handoff evict-before-grant, crash-atomic transitions + reconcile
+  under a global lock, verified socket-owner publish, per-call Job-Object tree-kill, CanServe, dropped
+  LRU/idle-timer/prefix-reuse; `-BypassPoolManager` escape, integrity invariants non-bypassable. Off-machine
+  157/157 + live (stale-generation call rejected; 3B->9B 4138 ms; 0 orphans). STILL DEFAULT-OFF pending a soak +
+  a PERSISTENT gateway supervisor for DURABLE Job-Object ownership across invocations (per-call covered) + the
+  res.lease fencing wave (findings 13/14). Classic + D-0057 warm paths remain the trusted default.
 
 ## Unresolved questions
 
@@ -319,27 +330,35 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 - **`embedding.qwen3-0p6b` is staged but unwired** — awaits its owning module (artifact.search).
 - **Widget 03 Verification Console `model.gateway` GPU live-GUI pass is still open** (residual first noted
   in D-0060, never closed) — exercised CPU-only + live-GUI so far.
-- **Portability / new-machine bring-up: Stage-1 SHIPPED (i14, `ops/setup/`, D-0067); residuals open** (a config-driven `setup.ps1`: repo-root + data-root, prereq
-  check, model/engine staging, GPU detect, machine-specific `models.json`, a verify pass) — wanted **before** a
-  hardware upgrade.
-- **Frontier audio/image/video MODEL LEADS for generators #22–#25 are outstanding** — upgrades blocked on them.
-- **Warm-pool Stage-1.1 hardening REQUIRED before enabling the pool by default** — the frontier red-team's 15 findings (4 Critical: fencing token vs TTL, crash-atomic transitions + reconciliation, enforced GPU-handoff eviction, Job-Object process ownership) + `CanServe()` + dropping prefix-reuse/LRU/timed-eviction from the correctness path (WARM_POOL_DESIGN §10, D-0067).
-- **Widget 04 (Fan-out Wave Dashboard) needs a human live-GUI confirm** — shipped i14 (mock + SelfTest green), rendered-UI unverified (D-0067).
+- **Portability bring-up: Stage-1 (i14) + i15 follow-ons DONE (D-0068).** i15 wired the additive+fallback
+  `Resolve-LifeorchConfig` shim into `modules/14`+`16` (byte-identical on-box) + confirmed the staging-plan URLs
+  (2/2 VLM reachable; 4 LLM + SD1.5 `TODO_CONFIRM`; 2 missing sha). KEY FINDING: repo-root is ALREADY portable
+  (every leaf uses a `$PSScriptRoot` walk-up; the data-root lives in `modules/07/models.json`). Residuals:
+  extend the shim to the remaining walk-up leaf modules (MANY model-bound -> GPU-lane); apply `models.machine.json`
+  under the gpu lease; confirm `TODO_CONFIRM` URLs + add sha; re-gen staging-plan on the real F: target.
+- **Generator model leads for #22–#25: RECEIVED (D-0068, `core-docs/research/2026-07-30-generator-model-leads.md`).**
+  image=Z-Image-Turbo Q8, music=ACE-Step 1.5, video=LTX-Video 2B Distilled, audio=Stable Audio 3 Small SFX;
+  Diffusers-native starts SD3.5 Medium / Wan2.1 1.3B / Stable Audio Open 1.0. Each upgrade = a follow-on
+  GPU-lane wave (most need a new engine/venv); not yet installed.
+- **Warm-pool Stage-1.1 SHIPPED i15; pool still DEFAULT-OFF** -- enable-by-default gate: a persistent gateway
+  supervisor (durable Job-Object ownership across invocations) + a soak + the res.lease fencing wave (findings
+  13/14). Detail: Known failures + `WARM_POOL_DESIGN.md` section 10.
+- **Widget 04 live-GUI confirm DONE i15 (D-0068)** -- a real off-screen layout render + measured bounds + a new
+  `SELFTEST_LAYOUT_OK` guard caught + fixed an off-screen Refresh button. An optional interactive on-screen
+  eyeball remains (an executor-launched form is not composited on the interactive desktop).
 
 ## Next expected action
 
-**Run iteration 15** per **`FANOUT_ORCHESTRATOR_HANDOFF.md`**: scope 1 GPU + 1 CPU
-+ 1 coding unit from its candidate menu + 1 frontier review/audit topic -> `plan` at `MaxParallel 3` -> confirm
-`dispatch_now <= 3`, <=1 gpu, 0 doc contention, clean preflight -> relay every worker prompt + the frontier
-pack as FILES -> `status` until `ready_for_handoff` -> `handoff` -> fold the answer -> mirror the core-docs
-under the `git` lease. Standing GPU-lane candidate: **warm-pool Stage-1.1 HARDENING** (the frontier red-team's Critical blockers) per
-`WARM_POOL_DESIGN.md` section 10 — the FANOUT_AGENT_001 brief must be RE-AUTHORED for Stage-1.1 (the Stage-1 brief is archived).
+**Run iteration 16** per **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4 (which owns the candidate menu): scope
+1 GPU + 1 CPU + 1 coding + 1 frontier -> `plan` at `MaxParallel 3` -> confirm the preflight -> relay prompts +
+the frontier pack as FILES -> `status` -> `handoff` -> fold the answer -> mirror the core-docs under the git lease.
 
-Outstanding asks, open until closed: **(1)** frontier audio/image/video **model leads** to unblock generators
-#22–#25; **(2)** the **widget-03 GPU Console pass** (open since D-0060); **(3)** the **portability / new-machine bring-up**
-unit. NEW: warm-pool Stage-1.1 hardening (WARM_POOL_DESIGN §10) + a widget-04 live-GUI confirm; portability Stage-1 shipped i14 (residuals open).
+Outstanding: **(1)** enable the warm pool by default (after a durable Job-Object gateway-supervisor + a soak);
+**(2)** widget-03 `model.gateway` GPU live-GUI pass (open since D-0060); **(3)** the res.lease fencing infra
+wave (findings 13/14, single-worker); **(4)** generator upgrades #22–#25 (leads received); **(5)** portability
+residuals.
 
 ---
 
-**Last updated:** 2026-07-29 — fan-out iteration 14 close-out (D-0067).
+**Last updated:** 2026-07-30 — fan-out iteration 15 close-out (D-0068).
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

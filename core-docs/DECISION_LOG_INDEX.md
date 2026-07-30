@@ -73,3 +73,4 @@ section 4).
 | D-0065 | 2026-07-29 | locked | Fan-out iteration 12 (verdict-persistence fix) + iteration-13 follow-on (durable verdicts) [its expanded-handoff pointer: retired to archive by D-0066 -> FANOUT_ORCHESTRATOR_HANDOFF.md §4] |
 | D-0066 | 2026-07-29 | locked | Core-docs consolidation: one live handoff, doc budgets, this index doc, fanout-agent slots, archive/ tree |
 | D-0067 | 2026-07-29 | locked | Fan-out iteration 14 (first 4-lane wave): warm-pool Stage-1 opt-in/default-OFF + portability bring-up (ops/setup) + wave dashboard (widgets/04) + frontier red-team -> Stage-1.1 hardening backlog |
+| D-0068 | 2026-07-30 | locked | Fan-out iteration 15 (4-lane wave): warm-pool Stage-1.1 hardening (Criticals closed, pool still default-OFF) + portability follow-ons (staging-plan confirm + additive resolver shim; repo-root already portable) + widget-04 live-GUI confirm+fix + folded frontier generator model leads |
