@@ -262,14 +262,42 @@ function Get-PwshExe([string]$override) {
     return 'pwsh'
 }
 function Resolve-RepoRootDoc([string]$start) {
+    # ORIGINAL core-docs walk-up (unchanged) -- the trusted, byte-identical result on this box.
+    $wu = $null
     try {
         $d = Get-Item -LiteralPath $start
         for ($i = 0; $i -lt 8 -and $null -ne $d; $i++) {
-            if (Test-Path -LiteralPath (Join-Path $d.FullName 'core-docs')) { return $d.FullName }
+            if (Test-Path -LiteralPath (Join-Path $d.FullName 'core-docs')) { $wu = $d.FullName; break }
             $d = $d.Parent
         }
     } catch { }
-    return $null
+    # ADDITIVE portability seam (FANOUT_AGENT_002, i16 plan fo-16-f125365c; the same additive+fallback
+    # shim wired into modules/14 + 16 at i15): let a machine config / env override -- ops/setup/config.json
+    # or $env:LIFEORCH_REPO_ROOT, resolved via Resolve-LifeorchConfig -- WIN only when it points at a real,
+    # DIFFERENT repo (a relocated checkout on a new box). Otherwise keep the walk-up. Byte-identical here
+    # (config repo_root == the walk-up), reversible, and fail-closed to the walk-up on ANY error. ASCII-only.
+    try {
+        $probe = if ($null -ne $wu) { $wu } else { $start }
+        $p = Get-Item -LiteralPath $probe -ErrorAction Stop
+        for ($k = 0; $k -lt 8 -and $null -ne $p; $k++) {
+            $cfgMod = Join-Path $p.FullName 'ops\setup\LifeorchConfig.psm1'
+            if (Test-Path -LiteralPath $cfgMod -PathType Leaf) {
+                Import-Module $cfgMod -DisableNameChecking -Force -ErrorAction Stop
+                $rr = [string](Resolve-LifeorchConfig).repo_root
+                $rrValid = $false
+                if (-not [string]::IsNullOrWhiteSpace($rr)) {
+                    try { $rrValid = [bool](Test-Path -LiteralPath ([System.IO.Path]::Combine($rr, 'core-docs')) -ErrorAction Stop) } catch { $rrValid = $false }
+                }
+                if ($rrValid) {
+                    $rrn = (Get-Item -LiteralPath $rr).FullName
+                    if ($null -eq $wu -or $rrn -ne $wu) { return $rrn }
+                }
+                break
+            }
+            $p = $p.Parent
+        }
+    } catch { }
+    return $wu
 }
 function Resolve-ResLeaseScript([string]$override) {
     if (-not [string]::IsNullOrWhiteSpace($override)) {

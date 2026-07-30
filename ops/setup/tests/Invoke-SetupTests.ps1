@@ -291,19 +291,22 @@ Ok ($cfOff.summary.url_offline -ge 1) 'confirm: offline urls counted, nothing th
 
 # ---------------------------------------------------------------------------
 # 15. resolver adoption -- additive Resolve-LifeorchConfig shim wired into a bounded LEAF
-#     batch (14-ocr-layout, 16-detect-objects). Proves: shim present + AST-clean + resolves
-#     byte-identically to the untouched walk-up on this box + a config override genuinely wins.
+#     batch (14-ocr-layout + 16-detect-objects at i15; 20-doc-io added at i16). Proves, per
+#     module: shim present + AST-clean + resolves byte-identically to the untouched walk-up on
+#     this box + a config override genuinely wins. Each module names its own walk-up function.
 # ---------------------------------------------------------------------------
 $repoRootForTest = Split-Path -Parent (Split-Path -Parent $moduleDir)   # ops/setup -> ops -> repo
 $wiredModules = @(
-    (Join-Path $repoRootForTest 'modules/14-ocr-layout/Invoke-OcrLayout.ps1'),
-    (Join-Path $repoRootForTest 'modules/16-detect-objects/Invoke-DetectObjects.ps1')
+    [pscustomobject]@{ path = (Join-Path $repoRootForTest 'modules/14-ocr-layout/Invoke-OcrLayout.ps1');         fn = 'Resolve-RepoRoot' }
+    [pscustomobject]@{ path = (Join-Path $repoRootForTest 'modules/16-detect-objects/Invoke-DetectObjects.ps1'); fn = 'Resolve-RepoRoot' }
+    [pscustomobject]@{ path = (Join-Path $repoRootForTest 'modules/20-doc-io/Invoke-DocIo.ps1');                 fn = 'Resolve-RepoRootDoc' }
 )
-function Get-ResolveRepoRootText([string]$path) {
+function Get-RepoRootFnText([string]$path, [string]$fnName) {
     $tk = $null; $er = $null
     $ast = [System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tk, [ref]$er)
     if ($null -ne $er -and $er.Count -gt 0) { return $null }
-    $fn = $ast.Find({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'Resolve-RepoRoot' }, $true)
+    $fns = $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true)
+    $fn = $fns | Where-Object { $_.Name -eq $fnName } | Select-Object -First 1
     if ($null -eq $fn) { return $null }
     return $fn.Extent.Text
 }
@@ -311,7 +314,8 @@ function Invoke-PureWalk([string]$s) {
     try { $d = Get-Item -LiteralPath $s -ErrorAction Stop; for ($i = 0; $i -lt 8 -and $null -ne $d; $i++) { if (Test-Path -LiteralPath (Join-Path $d.FullName 'core-docs')) { return $d.FullName }; $d = $d.Parent } } catch { }
     return $null
 }
-foreach ($wf in $wiredModules) {
+foreach ($wm in $wiredModules) {
+    $wf = $wm.path
     $tag = Split-Path -Leaf (Split-Path -Parent $wf)
     if (-not (Test-Path -LiteralPath $wf)) { Ok $false "resolver[$tag]: wired module file present"; continue }
     Ok $true "resolver[$tag]: wired module file present"
@@ -321,12 +325,12 @@ foreach ($wf in $wiredModules) {
     $src = Get-Content -LiteralPath $wf -Raw
     Ok ($src -match 'Resolve-LifeorchConfig') "resolver[$tag]: Resolve-LifeorchConfig wired in (not reverted)"
     Ok ($src -match 'FANOUT_AGENT_002') "resolver[$tag]: additive-shim provenance marker present"
-    $ftext = Get-ResolveRepoRootText $wf
-    Ok ($null -ne $ftext) "resolver[$tag]: Resolve-RepoRoot extractable"
+    $ftext = Get-RepoRootFnText $wf $wm.fn
+    Ok ($null -ne $ftext) "resolver[$tag]: $($wm.fn) extractable"
     if ($null -ne $ftext) {
         . ([scriptblock]::Create($ftext))
         $mdir = Split-Path -Parent $wf
-        $resolved = Resolve-RepoRoot $mdir
+        $resolved = & $wm.fn $mdir
         $walk = Invoke-PureWalk $mdir
         Ok (-not [string]::IsNullOrWhiteSpace($resolved)) "resolver[$tag]: resolves a repo-root"
         Eq $resolved $walk "resolver[$tag]: resolved == untouched walk-up (byte-identical on this box)"
@@ -346,8 +350,12 @@ $repoB = (Resolve-Path (Join-Path $ovr 'repoB')).Path
 $cfgJson = ([pscustomobject]@{ schema = 'lifeorch.setup.config/0.1'; repo_root = $repoB; data_root = 'x'; machine = [pscustomobject]@{} } | ConvertTo-Json -Depth 6)
 [System.IO.File]::WriteAllText((Join-Path $ovr 'repoA/ops/setup/config.json'), $cfgJson, [System.Text.UTF8Encoding]::new($false))
 $modA = (Resolve-Path (Join-Path $ovr 'repoA/modules/99-x')).Path
-$ovrResolved = Resolve-RepoRoot $modA   # Resolve-RepoRoot = the shim extracted just above
-Eq $ovrResolved $repoB 'resolver: machine config repo_root OVERRIDES the walk-up (portability seam works)'
+# prove the override for EACH distinct walk-up function name (all dot-sourced in the loop above),
+# so both the i15 shim (Resolve-RepoRoot in 14/16) and the i16 shim (Resolve-RepoRootDoc in 20) are covered.
+foreach ($fnName in (@($wiredModules | ForEach-Object { $_.fn }) | Select-Object -Unique)) {
+    $ovrResolved = & $fnName $modA
+    Eq $ovrResolved $repoB "resolver: $fnName -- machine config repo_root OVERRIDES the walk-up (portability seam works)"
+}
 try { Remove-Item -LiteralPath $ovr -Recurse -Force -ErrorAction SilentlyContinue } catch { }
 
 # ---------------------------------------------------------------------------
