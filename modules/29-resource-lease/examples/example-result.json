@@ -1,7 +1,7 @@
 {
   "schema": "lifeorch.skill.result/0.1",
   "skill_id": "res.lease",
-  "skill_version": "0.1.0",
+  "skill_version": "0.2.0",
   "contract_version": "0.2",
   "invocation_id": "b1e7c0a2-4f3d-4a11-9c2e-3d5f7a8b1c22",
   "status": "ok",
