@@ -54,6 +54,31 @@ function Resolve-WaveDirs {
     if (-not $s.leaseDir) { $s.leaseDir = $p.LeaseDir }
 }
 
+function Update-WaveToolbarLayout {
+    # Position the plan combo + Refresh button from the toolbar's CURRENT width (wired to the toolbar Resize
+    # + called from Add_Shown). Robust to WHEN the real width arrives -- unlike Left/Right anchoring, which
+    # baselines against the Panel's default 200px width when the children are added before the Panel is
+    # docked/sized (that put Refresh off the right edge + overran the combo). Touches only $script:WState.
+    $s = $script:WState
+    # StrictMode-safe: ContainsKey never throws on an absent key (a bare $s.toolbar would, if the toolbar
+    # Resize fires during construction before the keys are registered). Both guards -> robust under any mode.
+    if ($null -eq $s) { return }
+    if (-not ($s.ContainsKey('toolbar') -and $s.ContainsKey('planCombo') -and $s.ContainsKey('refreshBtn'))) { return }
+    if ($null -eq $s.toolbar -or $null -eq $s.planCombo -or $null -eq $s.refreshBtn) { return }
+    $margin = 8; $gap = 12; $minCombo = 160
+    $w = [int]$s.toolbar.ClientSize.Width
+    if ($w -le 0) { return }
+    $btnLeft = $w - $s.refreshBtn.Width - $margin
+    $minLeft = $s.planCombo.Left + $minCombo + $gap
+    if ($btnLeft -lt $minLeft) { $btnLeft = $minLeft }
+    $s.refreshBtn.Top = 8
+    $s.refreshBtn.Left = $btnLeft
+    $s.planCombo.Left = 52
+    $comboW = $s.refreshBtn.Left - $s.planCombo.Left - $gap
+    if ($comboW -lt $minCombo) { $comboW = $minCombo }
+    $s.planCombo.Width = $comboW
+}
+
 function New-WaveForm {
     $mono = [System.Drawing.Font]::new('Consolas', 9.5)
 
@@ -80,14 +105,25 @@ function New-WaveForm {
     $planCombo.DropDownStyle = 'DropDownList'
     $planCombo.Location = [System.Drawing.Point]::new(52, 9)
     $planCombo.Size = [System.Drawing.Size]::new(820, 26)
-    $planCombo.Anchor = 'Top,Left,Right'
+    $planCombo.Anchor = 'Top,Left'
     $planCombo.Font = $mono
     $refreshBtn = [System.Windows.Forms.Button]::new()
     $refreshBtn.Text = 'Refresh'
     $refreshBtn.Size = [System.Drawing.Size]::new(96, 27)
     $refreshBtn.Location = [System.Drawing.Point]::new(884, 8)
-    $refreshBtn.Anchor = 'Top,Right'
+    $refreshBtn.Anchor = 'Top,Left'
     $toolbar.Controls.AddRange(@($lblPlan, $planCombo, $refreshBtn))
+    # Register the toolbar controls in $script:WState NOW, before the toolbar is docked into the form below:
+    # docking a Dock=Top panel fires Resize, which invokes Update-WaveToolbarLayout -- and StrictMode Latest
+    # throws on a missing hashtable key, so these keys must already exist when that first Resize fires.
+    $script:WState.toolbar = $toolbar
+    $script:WState.planCombo = $planCombo
+    $script:WState.refreshBtn = $refreshBtn
+    # A Dock=Top Panel is only sized to the form's client width AFTER the form is shown, so anchoring the
+    # combo/Refresh before that baselines them against the Panel's default 200px width -- which threw the
+    # Refresh button off the right edge and overran the combo (a rendered-UI defect the build-only SelfTest
+    # missed; D-0049/D-0060/D-0064). Lay them out from the toolbar's ACTUAL width on every Resize instead.
+    $toolbar.Add_Resize({ Update-WaveToolbarLayout }.GetNewClosure())
 
     # ===== header (plan / iteration / title / counts / ready) =====
     $headerBox = [System.Windows.Forms.RichTextBox]::new()
@@ -155,6 +191,7 @@ function New-WaveForm {
 
     $s = $script:WState
     $s.form = $form
+    $s.toolbar = $toolbar
     $s.planCombo = $planCombo
     $s.refreshBtn = $refreshBtn
     $s.headerBox = $headerBox
@@ -172,6 +209,7 @@ function New-WaveForm {
     $planCombo.Add_SelectedIndexChanged({ if (-not $script:WState.suspendPickerEvents) { Show-SelectedPlan } }.GetNewClosure())
     $form.Add_Shown({
             try { $script:WState.split.SplitterDistance = [int]($script:WState.split.Height * 0.55) } catch { }
+            Update-WaveToolbarLayout
             Initialize-WaveView
         }.GetNewClosure())
 
@@ -284,6 +322,15 @@ if ($SelfTest) {
         $s.leaseDir = Join-Path $fixtures 'leases'
         $s.pendingPlanDir = $null
 
+        # Show the form OFF-SCREEN so a REAL layout pass runs (the Dock=Top toolbar gets its true width and
+        # the combo/Refresh layout is exercised) -- the build-only SelfTest never showed the form and so
+        # missed the anchored-toolbar defect (D-0049/D-0060/D-0064). Invisible: off-screen + no taskbar.
+        $form.StartPosition = 'Manual'
+        $form.Location = [System.Drawing.Point]::new(-4000, -4000)
+        $form.ShowInTaskbar = $false
+        $form.Show()
+        [System.Windows.Forms.Application]::DoEvents()
+
         Initialize-WaveView   # loads the plan picker (newest first) + renders the default (newest) wave
 
         $pickerOk = ($s.planCombo.Items.Count -ge 2)
@@ -319,6 +366,18 @@ if ($SelfTest) {
         Invoke-WaveRefresh
         if ([string]$s.planCombo.Text -like 'fo-98-oldwave*') { Write-Output 'SELFTEST_REFRESH_OK' }
         else { Write-Output ('SELFTEST_REFRESH_FAIL: sel=' + [string]$s.planCombo.Text) }
+
+        # LAYOUT guard (D-0049/D-0060/D-0064): the Refresh button must sit FULLY inside the toolbar and the
+        # plan combo must not overrun it -- the rendered-UI defect the old build-only SelfTest missed.
+        Update-WaveToolbarLayout
+        [System.Windows.Forms.Application]::DoEvents()
+        $tbw = [int]$s.toolbar.ClientSize.Width
+        $cbR = [int]$s.planCombo.Bounds.Right
+        $btnL = [int]$s.refreshBtn.Bounds.Left
+        $btnR = [int]$s.refreshBtn.Bounds.Right
+        $layoutOk = ($tbw -gt 0) -and ($btnR -le $tbw) -and ($btnL -ge 0) -and ($cbR -le $btnL) -and [bool]$s.refreshBtn.Visible
+        if ($layoutOk) { Write-Output 'SELFTEST_LAYOUT_OK' }
+        else { Write-Output ('SELFTEST_LAYOUT_FAIL: toolbarW=' + $tbw + ' combo.Right=' + $cbR + ' refresh=' + $s.refreshBtn.Bounds.ToString()) }
     }
     catch { Write-Output ('SELFTEST_RENDER_FAIL: ' + $_.Exception.Message) }
     $form.Dispose()

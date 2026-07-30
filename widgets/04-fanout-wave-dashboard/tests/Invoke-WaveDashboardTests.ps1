@@ -248,7 +248,7 @@ if ($Live) {
         $out = & $PwshPath -NoProfile -STA -File $show -SelfTest 2>&1 | Out-String
         Write-Host "  --- self-test child output ---"
         foreach ($ln in ($out -split "`r?`n")) { if ($ln.Trim()) { Write-Host "    $ln" } }
-        foreach ($marker in 'SELFTEST_FORM_OK', 'SELFTEST_PICKER_OK', 'SELFTEST_RENDER_OK', 'SELFTEST_READY_OK', 'SELFTEST_REFRESH_OK') {
+        foreach ($marker in 'SELFTEST_FORM_OK', 'SELFTEST_PICKER_OK', 'SELFTEST_RENDER_OK', 'SELFTEST_READY_OK', 'SELFTEST_REFRESH_OK', 'SELFTEST_LAYOUT_OK') {
             Ok "live: self-test emitted $marker" ($out -match $marker)
         }
         Ok "live: self-test has no FAIL marker" (-not ($out -match 'SELFTEST_\w+_FAIL'))
