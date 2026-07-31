@@ -1,0 +1,127 @@
+{
+  "media": {
+    "id": "fixture-fused-001",
+    "source_media_sha256": "a3f1c2e4b5d60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+    "meta": {
+      "schema": "lifeorch.media.meta/0.1",
+      "meta": {
+        "container": { "format_name": "mov,mp4,m4a,3gp,3g2,mj2", "duration_s": 12.0, "size_bytes": 100000, "nb_streams": 2 },
+        "streams": [
+          { "index": 0, "codec_type": "video", "codec_name": "h264", "width": 640, "height": 360, "fps": 30.0, "duration_s": 12.0 },
+          { "index": 1, "codec_type": "audio", "codec_name": "aac", "sample_rate": 44100, "channels": 1, "duration_s": 12.0 }
+        ],
+        "stream_counts": { "video": 1, "audio": 1, "subtitle": 0, "data": 0, "other": 0, "total": 2 },
+        "duration_s": 12.0
+      }
+    }
+  },
+  "scenes": {
+    "schema": "lifeorch.media.scenes/0.1",
+    "threshold": 0.3,
+    "count": 2,
+    "scenes": [
+      { "index": 0, "start": 0.5, "end": 6.0, "score": 0.41 },
+      { "index": 1, "start": 6.0, "end": 11.6667, "score": 0.83 }
+    ]
+  },
+  "samples": [
+    { "sample_index": 0, "frame_index": 15, "timestamp_ms": 500, "scene_index": 0, "detection_count": 1 },
+    { "sample_index": 1, "frame_index": 45, "timestamp_ms": 1500, "scene_index": 0, "detection_count": 2 },
+    { "sample_index": 2, "frame_index": 75, "timestamp_ms": 2500, "scene_index": 0, "detection_count": 2 },
+    { "sample_index": 3, "frame_index": 105, "timestamp_ms": 3500, "scene_index": 0, "detection_count": 0 },
+    { "sample_index": 4, "frame_index": 135, "timestamp_ms": 4500, "scene_index": 0, "detection_count": 1 },
+    { "sample_index": 5, "frame_index": 195, "timestamp_ms": 6500, "scene_index": 1, "detection_count": 1 },
+    { "sample_index": 6, "frame_index": 255, "timestamp_ms": 8500, "scene_index": 1, "detection_count": 1 },
+    { "sample_index": 7, "frame_index": 315, "timestamp_ms": 10500, "scene_index": 1, "detection_count": 2 }
+  ],
+  "tracks": {
+    "schema": "lifeorch.track.objects/0.2-review",
+    "tracker_version": "0.2.0-fixture",
+    "algorithm": "deterministic-geometric-association",
+    "identity_scope": "source_media+scene+tracker_invocation",
+    "timestamp_unit": "ms",
+    "frame_width": 640,
+    "frame_height": 360,
+    "source_media_sha256": "a3f1c2e4b5d60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+    "tracks": [
+      {
+        "track_id": 0,
+        "scene_index": 0,
+        "class": "person",
+        "class_id": 0,
+        "observation_count": 4,
+        "gap_count": 1,
+        "observations": [
+          { "sample_index": 0, "frame_index": 15, "timestamp_ms": 500, "detection_index": 0, "detection_score": 0.91, "low_confidence": false, "association": { "kind": "birth", "previous_frame_index": null, "gap_ms": null, "missed_samples": null, "iou_q": null } },
+          { "sample_index": 1, "frame_index": 45, "timestamp_ms": 1500, "detection_index": 0, "detection_score": 0.88, "low_confidence": false, "association": { "kind": "iou", "previous_frame_index": 15, "gap_ms": 1000, "missed_samples": 0, "iou_q": 620000 } },
+          { "sample_index": 2, "frame_index": 75, "timestamp_ms": 2500, "detection_index": 0, "detection_score": 0.85, "low_confidence": false, "association": { "kind": "iou", "previous_frame_index": 45, "gap_ms": 1000, "missed_samples": 0, "iou_q": 550000 } },
+          { "sample_index": 4, "frame_index": 135, "timestamp_ms": 4500, "detection_index": 0, "detection_score": 0.44, "low_confidence": true, "association": { "kind": "centroid", "previous_frame_index": 75, "gap_ms": 2000, "missed_samples": 1, "iou_q": null, "normalized_center_distance_q": 180000, "area_ratio_q": 1120000 } }
+        ],
+        "gaps": [
+          { "after_sample_index": 2, "before_sample_index": 4, "start_ms": 2500, "end_ms": 4500, "elapsed_ms": 2000, "missed_samples": 1, "reacquired_by": "centroid" }
+        ],
+        "termination": { "reason": "scene_boundary", "last_observed_ms": 4500, "terminated_at_ms": 6000, "missed_samples_at_termination": 0 }
+      },
+      {
+        "track_id": 1,
+        "scene_index": 0,
+        "class": "car",
+        "class_id": 2,
+        "observation_count": 2,
+        "gap_count": 0,
+        "observations": [
+          { "sample_index": 1, "frame_index": 45, "timestamp_ms": 1500, "detection_index": 1, "detection_score": 0.95, "low_confidence": false, "association": { "kind": "birth", "previous_frame_index": null, "gap_ms": null, "missed_samples": null, "iou_q": null } },
+          { "sample_index": 2, "frame_index": 75, "timestamp_ms": 2500, "detection_index": 1, "detection_score": 0.93, "low_confidence": false, "association": { "kind": "iou", "previous_frame_index": 45, "gap_ms": 1000, "missed_samples": 0, "iou_q": 700000 } }
+        ],
+        "gaps": [],
+        "termination": { "reason": "max_missed_samples", "last_observed_ms": 2500, "terminated_at_ms": 4500, "missed_samples_at_termination": 2 }
+      },
+      {
+        "track_id": 2,
+        "scene_index": 1,
+        "class": "person",
+        "class_id": 0,
+        "observation_count": 3,
+        "gap_count": 0,
+        "observations": [
+          { "sample_index": 5, "frame_index": 195, "timestamp_ms": 6500, "detection_index": 0, "detection_score": 0.81, "low_confidence": false, "association": { "kind": "birth", "previous_frame_index": null, "gap_ms": null, "missed_samples": null, "iou_q": null } },
+          { "sample_index": 6, "frame_index": 255, "timestamp_ms": 8500, "detection_index": 0, "detection_score": 0.79, "low_confidence": false, "association": { "kind": "iou", "previous_frame_index": 195, "gap_ms": 2000, "missed_samples": 0, "iou_q": 480000 } },
+          { "sample_index": 7, "frame_index": 315, "timestamp_ms": 10500, "detection_index": 0, "detection_score": 0.77, "low_confidence": false, "association": { "kind": "iou", "previous_frame_index": 255, "gap_ms": 2000, "missed_samples": 0, "iou_q": 510000 } }
+        ],
+        "gaps": [],
+        "termination": { "reason": "end_of_input", "last_observed_ms": 10500, "terminated_at_ms": 10500, "missed_samples_at_termination": 0 }
+      },
+      {
+        "track_id": 3,
+        "scene_index": 1,
+        "class": "car",
+        "class_id": 2,
+        "observation_count": 1,
+        "gap_count": 0,
+        "observations": [
+          { "sample_index": 7, "frame_index": 315, "timestamp_ms": 10500, "detection_index": 1, "detection_score": 0.81, "low_confidence": false, "association": { "kind": "birth", "previous_frame_index": null, "gap_ms": null, "missed_samples": null, "iou_q": null } }
+        ],
+        "gaps": [],
+        "termination": { "reason": "end_of_input", "last_observed_ms": 10500, "terminated_at_ms": 10500, "missed_samples_at_termination": 0 }
+      }
+    ],
+    "summary": { "track_count": 4 }
+  },
+  "transcript": {
+    "schema": "lifeorch.stt.transcript/0.1",
+    "segments": [
+      { "index": 0, "t0_ms": 600, "t1_ms": 2400, "text": "hello from scene one" },
+      { "index": 1, "t0_ms": 7000, "t1_ms": 9500, "text": "now in scene two" }
+    ]
+  },
+  "ocr": [
+    { "timestamp_ms": 2500, "lines": [ { "index": 0, "text": "EXIT" }, { "index": 1, "text": "STAGE LEFT" } ] },
+    { "frame_index": 255, "lines": [ { "index": 0, "text": "SCENE TWO SIGN" } ] }
+  ],
+  "detections": [
+    { "timestamp_ms": 500, "sample_index": 0, "detections": [ { "class": "person", "class_id": 0, "score": 0.91, "box": { "x": 100, "y": 80, "width": 60, "height": 140 } } ] },
+    { "timestamp_ms": 1500, "sample_index": 1, "detections": [ { "class": "person", "class_id": 0, "score": 0.88, "box": { "x": 120, "y": 82, "width": 60, "height": 140 } }, { "class": "car", "class_id": 2, "score": 0.95, "box": { "x": 380, "y": 200, "width": 160, "height": 90 } } ] },
+    { "timestamp_ms": 3500, "sample_index": 3, "detections": [] },
+    { "timestamp_ms": 10500, "sample_index": 7, "detections": [ { "class": "person", "class_id": 0, "score": 0.77, "box": { "x": 300, "y": 90, "width": 55, "height": 130 } }, { "class": "car", "class_id": 2, "score": 0.81, "box": { "x": 60, "y": 210, "width": 170, "height": 85 } } ] }
+  ]
+}

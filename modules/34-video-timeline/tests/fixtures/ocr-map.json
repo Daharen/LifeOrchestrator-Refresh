@@ -1,0 +1,14 @@
+{
+  "media": {
+    "id": "fixture-ocrmap-001",
+    "meta": { "frame_width": 640, "frame_height": 360, "duration_ms": 10000 }
+  },
+  "samples": [
+    { "sample_index": 0, "frame_index": 30, "timestamp_ms": 1000, "scene_index": 0, "detection_count": 0 },
+    { "sample_index": 1, "frame_index": 210, "timestamp_ms": 7000, "scene_index": 0, "detection_count": 0 }
+  ],
+  "ocr": [
+    { "frame_index": 30, "lines": [ { "text": "OPENING TITLE" } ] },
+    { "frame_index": 210, "lines": [ { "text": "CHAPTER TWO" }, { "text": "the journey continues" } ] }
+  ]
+}

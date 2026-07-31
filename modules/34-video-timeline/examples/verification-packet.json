@@ -1,0 +1,40 @@
+{
+  "schema": "lifeorch.verification.packet/0.1",
+  "packet_id": "vp-video-timeline-i22",
+  "title": "Verify video.timeline #34 (Phase C video spine, position 21)",
+  "created_by": "claude",
+  "created_at_utc": "2026-07-31T00:00:00.0000000Z",
+  "report_back": "on_all",
+  "intro": "Run the run_module item locally through Invoke-Skill.ps1 (or the Module Launcher). video.timeline fuses the committed full fixture (media meta + scenes + sample manifest + reviewed-schema tracks + transcript + OCR + detections) into ONE canonical timeline.json. Confirm the checklist against the produced timeline, record an overall verdict + notes, and export the result. It is deterministic + parallel_safe (no model/CUDA/port); re-running yields byte-identical canonical output.",
+  "items": [
+    {
+      "id": "timeline-fused",
+      "kind": "run_module",
+      "title": "video.timeline fuses the committed full fixture -> canonical timeline.json",
+      "skill_id": "video.timeline",
+      "skill_dir": "modules/34-video-timeline",
+      "inputs_json": { "input": "modules/34-video-timeline/tests/fixtures/fused.json" },
+      "expected": "status ok; a timeline.json + timeline.md artifact. The timeline has 2 scenes, coverage sampled (8 samples, span 500..10500 ms), 6 intervals (5 track_presence + 1 track_gap), 10 events (2 speech + 2 ocr_text + 4 detection_sample + 2 scene_cut), a by_class/by_track/by_scene/by_kind index, and summary {track_count 4, span_count 5}. Track 0 (person) is SPLIT at its recorded gap into [500,2500] and [4500,4500] with the gap [2500,4500] emitted as its own track_gap interval (elapsed 2000 ms, 1 missed sample, reacquired_by centroid) -- never merged into one continuous span. identity_scope reads 'source_media+scene+tracker_invocation' verbatim. The canonical bytes contain NO field named 'confidence', no absolute paths, and no invocation id. Deterministic: re-running produces the same timeline.json sha256.",
+      "checklist": [
+        { "id": "c1", "text": "status == ok; timeline.json + timeline.md artifacts present" },
+        { "id": "c2", "text": "summary: track_count 4, span_count 5, interval_counts {track_presence 5, track_gap 1}, event_counts {speech 2, ocr_text 2, detection_sample 4, scene_cut 2}" },
+        { "id": "c3", "text": "track 0 is split at the recorded gap: presence [500,2500] + track_gap [2500,4500] (reacquired_by centroid) + presence [4500,4500] -- NOT one merged span" },
+        { "id": "c4", "text": "coverage.status == sampled, sample_count 8; sample 3 shows detection_count 0 (sampled-with-no-detection stays distinguishable)" },
+        { "id": "c5", "text": "the OCR entry keyed by frame_index 255 appears as an ocr_text event at 8500 ms (mapped through the sample manifest)" },
+        { "id": "c6", "text": "identity_scope == 'source_media+scene+tracker_invocation'; searching the timeline.json bytes for '\"confidence\"' finds nothing" },
+        "re-running the same input yields a timeline.json with the same sha256 (byte-identical / deterministic)"
+      ]
+    },
+    {
+      "id": "timeline-degradation",
+      "kind": "human_action",
+      "title": "Confirm the honest degradation + refusal behavior by inspection",
+      "action_text": "Run the module twice more: once with modules/34-video-timeline/tests/fixtures/tracks-nosamples.json (expect status partial, coverage.status unknown, presence_semantics downgraded_no_sample_manifest, and a warning naming the downgrade -- the gap is still split, never merged) and once with modules/34-video-timeline/tests/fixtures/ocr-refuse.json (expect status error, code input_validation_failed, result.violations[0] naming ocr[0].frame_index with 'timestamps are never invented', and NO timeline.json artifact).",
+      "expected": "Degraded modes are explicit (coverage unknown + downgraded semantics + warning), and unmappable frame-index OCR is refused fail-closed rather than guessed.",
+      "checklist": [
+        "tracks-nosamples: status partial; coverage.status unknown; the downgrade warning is present; the track is still split at its recorded gap",
+        "ocr-refuse: status error with result.violations enumerating ocr[0]; no timeline.json artifact"
+      ]
+    }
+  ]
+}

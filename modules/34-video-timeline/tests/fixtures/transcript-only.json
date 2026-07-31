@@ -1,0 +1,13 @@
+{
+  "media": {
+    "id": "fixture-transcript-001",
+    "meta": { "duration_ms": 30000 }
+  },
+  "transcript": {
+    "segments": [
+      { "index": 0, "t0_ms": 0, "t1_ms": 4200, "text": "and so we begin" },
+      { "index": 1, "t0_ms": 4200, "t1_ms": 9800, "text": "the middle part" },
+      { "index": 2, "t0_ms": 21000, "t1_ms": 29500, "text": "and that is the end" }
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "media": {
+    "id": "fixture-gapheavy-001",
+    "meta": { "frame_width": 640, "frame_height": 360, "duration_ms": 20000 }
+  },
+  "samples": [
+    { "sample_index": 0, "frame_index": 0, "timestamp_ms": 0, "scene_index": 0, "detection_count": 1 },
+    { "sample_index": 1, "frame_index": 30, "timestamp_ms": 1000, "scene_index": 0, "detection_count": 0 },
+    { "sample_index": 2, "frame_index": 60, "timestamp_ms": 2000, "scene_index": 0, "detection_count": 1 },
+    { "sample_index": 3, "frame_index": 90, "timestamp_ms": 3000, "scene_index": 0, "detection_count": 0 },
+    { "sample_index": 4, "frame_index": 120, "timestamp_ms": 4000, "scene_index": 0, "detection_count": 0 },
+    { "sample_index": 5, "frame_index": 150, "timestamp_ms": 5000, "scene_index": 0, "detection_count": 1 },
+    { "sample_index": 6, "frame_index": 180, "timestamp_ms": 6000, "scene_index": 0, "detection_count": 0 },
+    { "sample_index": 7, "frame_index": 210, "timestamp_ms": 7000, "scene_index": 0, "detection_count": 1 },
+    { "sample_index": 8, "frame_index": 240, "timestamp_ms": 8000, "scene_index": 0, "detection_count": 1 }
+  ],
+  "tracks": {
+    "schema": "lifeorch.track.objects/0.2-review",
+    "identity_scope": "source_media+scene+tracker_invocation",
+    "timestamp_unit": "ms",
+    "tracks": [
+      {
+        "track_id": 7,
+        "scene_index": 0,
+        "class": "cat",
+        "observations": [
+          { "sample_index": 0, "frame_index": 0, "timestamp_ms": 0, "detection_score": 0.8, "association": { "kind": "birth", "iou_q": null, "gap_ms": null } },
+          { "sample_index": 2, "frame_index": 60, "timestamp_ms": 2000, "detection_score": 0.75, "association": { "kind": "centroid", "iou_q": null, "gap_ms": 2000, "missed_samples": 1 } },
+          { "sample_index": 5, "frame_index": 150, "timestamp_ms": 5000, "detection_score": 0.72, "association": { "kind": "centroid", "iou_q": null, "gap_ms": 3000, "missed_samples": 2 } },
+          { "sample_index": 7, "frame_index": 210, "timestamp_ms": 7000, "detection_score": 0.78, "low_confidence": true, "association": { "kind": "iou", "iou_q": 350000, "gap_ms": 2000, "missed_samples": 1 } },
+          { "sample_index": 8, "frame_index": 240, "timestamp_ms": 8000, "detection_score": 0.83, "association": { "kind": "iou", "iou_q": 640000, "gap_ms": 1000, "missed_samples": 0 } }
+        ],
+        "gaps": [
+          { "after_sample_index": 0, "before_sample_index": 2, "start_ms": 0, "end_ms": 2000, "elapsed_ms": 2000, "missed_samples": 1, "reacquired_by": "centroid" },
+          { "after_sample_index": 2, "before_sample_index": 5, "start_ms": 2000, "end_ms": 5000, "elapsed_ms": 3000, "missed_samples": 2, "reacquired_by": "centroid" },
+          { "after_sample_index": 5, "before_sample_index": 7, "start_ms": 5000, "end_ms": 7000, "elapsed_ms": 2000, "missed_samples": 1, "reacquired_by": "iou" }
+        ]
+      }
+    ]
+  }
+}

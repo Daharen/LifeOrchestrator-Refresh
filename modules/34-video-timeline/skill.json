@@ -1,0 +1,44 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "video.timeline",
+  "name": "Video Timeline (fuse per-source artifacts into one searchable timeline)",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "Fuse the per-source video artifacts of the Phase C spine -- media meta (#32), scenes (#32), the reviewed sample manifest, reviewed-schema identity tracks (#33 upgrade), transcript segments (#11), OCR lines (#14), and per-sample detections (#16) -- into ONE canonical, deterministic, searchable timeline JSON (lifeorch.video_timeline/0.1). Input is a per-source artifact MANIFEST; only media meta is required and every other input is optional (the timeline DEGRADES HONESTLY: meta-only; tracks-without-samples marks coverage unknown and explicitly downgrades presence semantics; transcript-only; OCR keyed by frame_index maps through the sample manifest or is REFUSED -- timestamps are never invented). Every provided input is validated STRICTLY; violations produce a fail-closed error envelope enumerating each one. The timeline carries coverage (the sample manifest -- 'sampled with no detection' vs 'not sampled' stay distinguishable), normalized scenes, per-track APPEARANCE SEGMENTATION intervals (contiguous observed spans split at recorded gaps with separated detection/association evidence; gaps are first-class track_gap intervals; spans are NEVER merged across a gap), events (speech/ocr_text/detection_sample/scene_cut, content-canonically sorted), an index (by_class/by_track/by_scene/by_kind with stable positional refs), and a summary. identity_scope is carried verbatim; NO field named 'confidence' appears in the canonical output. Canonical bytes are UTF-8 no BOM, sorted keys, compact, integer ms, no NaN/Inf, and free of absolute paths / invocation ids / wall-clock times; re-running on identical input is byte-identical across machines. Fixture-driven MVP: live composition of #32/#16/#33/#11/#14 is a named follow-on; no model, no CUDA, no network -> CPU-only, parallel_safe:true.",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-VideoTimeline.ps1",
+    "args_spec": "Named params -InputFile <path> (the manifest JSON; required unless InputsJson supplies input/manifest/an inline manifest). OR -InputsJson '<json {input | manifest | the manifest object itself (recognized by its media key)}>'. Optional -ArtifactRoot, -InvocationId. Precedence: -InputFile > InputsJson.input > InputsJson.manifest > InputsJson-as-manifest.",
+    "args_note": "The manifest's tracks value may be a path (resolved relative to the manifest file) or an inline reviewed-schema track object; every other section is inline."
+  },
+  "inputs": [
+    { "name": "input", "type": "string", "required": false, "description": "Path to the per-source artifact manifest JSON: {media{id?, path?, source_media_sha256?, meta}, scenes?, samples?, tracks?, transcript?, ocr?, detections?}. media.meta is the #32 meta shape (wrapped or inner) or inline {frame_width?, frame_height?, duration_ms}. Required unless a manifest is passed inline." },
+    { "name": "manifest", "type": "object", "required": false, "description": "The manifest passed inline via -InputsJson (an alternative to a file). InputsJson itself is treated as the manifest when it carries a media key." },
+    { "name": "media", "type": "object", "required": true, "description": "(manifest section, REQUIRED) {id?, path?, source_media_sha256?, meta: #32 meta | inline dims+duration}. path is diagnostics-only and never enters the canonical output." },
+    { "name": "scenes", "type": "object", "required": false, "description": "(manifest section) #32 scenes shape ({scenes:[{index,start,end,score}]} or a bare array); seconds are converted to integer ms by non-negative round-half-up." },
+    { "name": "samples", "type": "array", "required": false, "description": "(manifest section) the reviewed sample manifest [{sample_index, frame_index, timestamp_ms, scene_index?, detection_count?}]. When absent, the track file's own samples list is used; when neither exists, coverage is 'unknown' and presence semantics are explicitly downgraded." },
+    { "name": "tracks", "type": "object", "required": false, "description": "(manifest section) a reviewed-schema track file (path string or inline object): {schema, identity_scope?, timestamp_unit?='ms', frame_width?, frame_height?, source_media_sha256?, samples?, tracks:[{track_id, class, scene_index?, observations:[{sample_index, timestamp_ms, frame_index?, detection_score?, low_confidence?, association{kind: birth|iou|centroid, iou_q?, gap_ms?}}], gaps:[{after_sample_index?, before_sample_index?, start_ms, end_ms, elapsed_ms?, missed_samples?, reacquired_by?}]}]}." },
+    { "name": "transcript", "type": "object", "required": false, "description": "(manifest section) #11-shape segments ({segments:[{t0_ms,t1_ms,text}]} or a bare array; start_ms/end_ms accepted as aliases)." },
+    { "name": "ocr", "type": "array", "required": false, "description": "(manifest section) per-keyframe entries [{timestamp_ms | frame_index, lines:[{text,...}]}]. frame_index-keyed entries are mapped through the sample manifest, else REFUSED with a violation (timestamps are never invented)." },
+    { "name": "detections", "type": "array", "required": false, "description": "(manifest section) per-sample entries [{timestamp_ms, sample_index?, detections:[{class, class_id?, score?, box{x,y,width,height}}]}] (the #16 detection shape)." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ input{source,path,provided{...}}, schema, timeline{path,sha256,bytes}, input_digest, identity_scope, coverage_status, presence_semantics, summary, violations[] }. The canonical artifact is timeline.json (lifeorch.video_timeline/0.1): {coverage, events[], generator, identity_scope, index, input_digest, intervals[], scenes[], schema, source, summary, timestamp_unit} -- canonical bytes (sorted keys, compact, one trailing LF, integer ms, no volatile fields), byte-identical for identical input across machines. On a validation failure the envelope is status=error with result.violations[{path,why}] enumerating every violation and NO timeline is written."
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4"],
+    "models": [],
+    "libraries": [],
+    "cpu": "any", "gpu": "none", "memory_mb": 256,
+    "network": false, "filesystem": "read-write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 120, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

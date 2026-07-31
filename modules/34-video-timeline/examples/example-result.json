@@ -1,0 +1,81 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "video.timeline",
+  "skill_version": "0.1.0",
+  "contract_version": "0.2",
+  "invocation_id": "b8245006-148f-4332-9099-b1681af3aeb6",
+  "status": "ok",
+  "started_at_utc": "2026-07-31T07:54:38.7232327Z",
+  "finished_at_utc": "2026-07-31T07:54:39.3110705Z",
+  "duration_ms": 562,
+  "inputs_digest": "sha256:2d7d2407fcd1771ef654584d467bbdbf1099cbf3887dbd4bfc8b688ab671d1ef",
+  "result": {
+    "input": {
+      "source": "file",
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\34-video-timeline\\tests\\fixtures\\fused.json",
+      "provided": {
+        "detections": true,
+        "media": true,
+        "ocr": true,
+        "samples": true,
+        "scenes": true,
+        "tracks": true,
+        "transcript": true
+      }
+    },
+    "schema": "lifeorch.video_timeline/0.1",
+    "timeline": {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\34-video-timeline\\runtime\\artifacts\\b8245006-148f-4332-9099-b1681af3aeb6\\timeline.json",
+      "sha256": "7b7e8b3bb95960d6609f15fd9d786f6941732e0faf28d8dc24be80b95ebefd54",
+      "bytes": 5382
+    },
+    "input_digest": "sha256:2d7d2407fcd1771ef654584d467bbdbf1099cbf3887dbd4bfc8b688ab671d1ef",
+    "identity_scope": "source_media+scene+tracker_invocation",
+    "coverage_status": "sampled",
+    "presence_semantics": "observed_vs_unsampled_distinguishable",
+    "summary": {
+      "class_track_counts": {
+        "car": 2,
+        "person": 2
+      },
+      "coverage_ms": 10000,
+      "event_counts": {
+        "detection_sample": 4,
+        "ocr_text": 2,
+        "scene_cut": 2,
+        "speech": 2
+      },
+      "interval_counts": {
+        "track_gap": 1,
+        "track_presence": 5
+      },
+      "scene_count": 2,
+      "span_count": 5,
+      "track_count": 4
+    },
+    "violations": []
+  },
+  "confidence": null,
+  "artifacts": [
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\34-video-timeline\\runtime\\artifacts\\b8245006-148f-4332-9099-b1681af3aeb6\\timeline.json",
+      "kind": "json",
+      "bytes": 5382,
+      "sha256": "7b7e8b3bb95960d6609f15fd9d786f6941732e0faf28d8dc24be80b95ebefd54"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\34-video-timeline\\runtime\\artifacts\\b8245006-148f-4332-9099-b1681af3aeb6\\timeline.md",
+      "kind": "markdown",
+      "bytes": 408,
+      "sha256": "102fec517e2e67a2df74f96c5b44a20ff2fc407d3c1b48722e5d445b39fff8c0"
+    }
+  ],
+  "model_provenance": [],
+  "diagnostics": {
+    "log": "stderr.txt",
+    "artifact_dir": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\34-video-timeline\\runtime\\artifacts\\b8245006-148f-4332-9099-b1681af3aeb6",
+    "tracks_schema": "lifeorch.track.objects/0.2-review"
+  },
+  "warnings": [],
+  "error": null
+}

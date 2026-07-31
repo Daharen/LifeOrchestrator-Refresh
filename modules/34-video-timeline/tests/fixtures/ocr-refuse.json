@@ -1,0 +1,9 @@
+{
+  "media": {
+    "id": "fixture-ocrrefuse-001",
+    "meta": { "frame_width": 640, "frame_height": 360, "duration_ms": 10000 }
+  },
+  "ocr": [
+    { "frame_index": 30, "lines": [ { "text": "NO SAMPLE MANIFEST TO MAP ME" } ] }
+  ]
+}
