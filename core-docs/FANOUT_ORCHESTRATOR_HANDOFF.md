@@ -16,7 +16,7 @@ including the frontier lane (a human-couriered pack, not a driven session).
   Nicholas's directive the project pivots to the memory / retrieval / context / skill-activation substrate;
   supervisor/warm-pool hardening (D-0079 GATE-NO), generators, `video.interpret`, real-time perception + broad
   training are FROZEN. **NEXT = Wave 1** (section 4): embedding adapter + `artifact.search` MVP + retrieval-eval
-  harness (+ optional memory red-team) -- **workers NOT yet dispatched; HELD for Nicholas's approval.** Directive:
+  harness (+ optional memory red-team) -- **DISPATCHED (i25, plan fo-25-3b718a13): slots 001/002/003 FILLED+READY; awaiting worker reports + the D-0077 fold smoke.** Directive:
   `research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md`.
 - Read section 2 (orient + verify the box), then run **iteration 24**. Iterations 1-23 are DONE +
   live-confirmed (ledger in section 3; rationale D-0055..D-0078). The 4-lane wave model is VALIDATED (up to 1 GPU
@@ -45,7 +45,7 @@ including the frontier lane (a human-couriered pack, not a driven session).
 - Deliver worker prompts + verification packets + frontier packs to Nicholas as FILES (SendUserFile). Worker
   briefs ALSO go into `core-docs/fanout/FANOUT_AGENT_00N.md` (mirrored to the Project) so Nicholas dispatches
   by telling a fresh session "read `claude/fanout/FANOUT_AGENT_00N.md` and execute it" (section 5). The slots
-  were RESET to EMPTY after i23.
+  were RESET to EMPTY after i23; now FILLED+READY for i25 (001/002/003, plan fo-25-3b718a13).
 - Box state at handoff: section 11.
 
 ## 1. Role + hard boundary (non-negotiable)
@@ -312,8 +312,8 @@ reprioritization. HEAD = the D-0080 doc-reset commit (`master`; chain ... D-0079
 siblings persist by design -- NOT a held lease); heartbeat `degraded:false`; 0 UNMANAGED `llama-server`/python.
 
 **Direction = the Collective Agent (cognitive virtual memory), D-0080.** NEXT = **Wave 1** (section 4): embedding
-adapter + `artifact.search` MVP + retrieval-eval harness + optional memory red-team -- **workers NOT yet
-dispatched; HELD for Nicholas's approval;** fill the `FANOUT_AGENT_00N` slots only then. **Warm pool + durable
+adapter + `artifact.search` MVP + retrieval-eval harness + optional memory red-team -- **DISPATCHED (i25, plan
+fo-25-3b718a13): slots 001/002/003 FILLED+READY (docs:[]; 3 dispatch_now, <=1 GPU, 0 doc contention); awaiting worker reports, then the D-0077 embedding->artifact.search->benchmark fold smoke.** **Warm pool + durable
 supervisor stay DEFAULT-OFF and FROZEN** (D-0079 GATE-NO stands; classic detached-warm is the trusted default;
 resume hardening only if a defect threatens the baseline or it blocks the memory work). Also frozen: generators,
 `video.interpret` + live composition, real-time perception (arch 27-49), broad training. **FOLDED (i25, D-0081):**

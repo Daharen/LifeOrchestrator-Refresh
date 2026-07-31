@@ -22,7 +22,7 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
 - **Direction (extends D-0050):** the offload / verify-cost AUDIT LOOP still holds -- offload only what is
   cheaper to VERIFY than to do; deterministic modules are Claude's hands, model modules only where machine- or
   human-checkable. D-0080 adds the memory/retrieval/context substrate that makes it cumulative.
-- **NEXT = Wave 1 (memory + retrieval substrate); workers NOT yet dispatched -- HELD for Nicholas's approval.**
+- **Wave 1 (memory + retrieval substrate) DISPATCHED (i25, plan fo-25-3b718a13); slots 001/002/003 FILLED+READY; awaiting worker reports + the D-0077 fold smoke.**
   GPU = embedding adapter; coding = `artifact.search` deterministic MVP (SQLite + FTS + Markdown chunking +
   provenance); CPU = retrieval-evaluation harness; optional frontier = memory-architecture red-team.
   Orchestrator fold = a REAL embedding->artifact.search->benchmark producer/consumer smoke. Work orders:
@@ -398,7 +398,7 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 
 ## Next expected action
 
-**Direction reset complete (D-0080); Wave 1 scoped; workers NOT yet dispatched -- HELD for Nicholas's review.**
+**Direction reset complete (D-0080); Wave 1 DISPATCHED (i25, plan fo-25-3b718a13) -- slots 001/002/003 FILLED+READY, workers hand-dispatched by Nicholas.**
 The project now builds the Collective Agent memory/retrieval substrate. Wave 1 lanes + work orders live in
 **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4: GPU = embedding adapter; coding = `artifact.search` deterministic
 MVP; CPU = retrieval-evaluation harness; optional frontier = memory-architecture red-team (non-blocking). At
@@ -406,8 +406,7 @@ fold the orchestrator runs the REAL embedding->artifact.search->benchmark produc
 dispatch: fill the `FANOUT_AGENT_00N` slots from section 4, `plan` at `MaxParallel <=3`, confirm preflight,
 relay prompts as FILES, `status` -> `handoff` -> fold + mirror under the git lease.
 
-Outstanding: **(1)** dispatch Wave 1 (embedding adapter + `artifact.search` MVP + retrieval-eval harness) once
-Nicholas approves; **(2)** the whole-project-direction frontier pack answer (`817e52e9`) is FOLDED (i25, D-0081) -- captured
+Outstanding: **(1)** Wave 1 is DISPATCHED (i25, plan fo-25-3b718a13) -- poll -Action status -PlanId fo-25-3b718a13, then -Action handoff, then the D-0077 fold smoke + fold/mirror under the git lease; **(2)** the whole-project-direction frontier pack answer (`817e52e9`) is FOLDED (i25, D-0081) -- captured
 (read-return valid), it RATIFIES D-0080 with no course change; **(3) FROZEN/deferred (D-0080):** further supervisor/warm-pool hardening (D-0079 GATE-NO stands;
 classic detached-warm is the trusted default), generator upgrades, `video.interpret` + live composition, deep
 real-time perception, broad training; **(4)** the widget-03 `model.gateway` GPU live-GUI pass (open since
@@ -416,5 +415,5 @@ after the D-0080 edits) are over budget -- a hot-doc slim pass is a named unit (
 
 ---
 
-**Last updated:** 2026-07-31 -- i25 (D-0081): the whole-project-direction frontier pack (817e52e9) RETURNED and was captured (read-return valid) -- it RATIFIES the D-0080 direction reset (the answer IS the directive doc research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md; no course change); 817e52e9 PENDING flags cleared. D-0080 stands: pivot to the Collective Agent (cognitive virtual memory); supervisor/warm-pool hardening, generators, video.interpret, real-time perception, broad training frozen; Wave 1 (embedding adapter + artifact.search MVP + retrieval-eval harness) scoped -- workers NOT yet dispatched (held for review).
+**Last updated:** 2026-07-31 -- i25 (D-0081): the whole-project-direction frontier pack (817e52e9) RETURNED and was captured (read-return valid) -- it RATIFIES the D-0080 direction reset (the answer IS the directive doc research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md; no course change); 817e52e9 PENDING flags cleared. D-0080 stands: pivot to the Collective Agent (cognitive virtual memory); supervisor/warm-pool hardening, generators, video.interpret, real-time perception, broad training frozen; Wave 1 DISPATCHED (i25, plan fo-25-3b718a13): slots 001/002/003 FILLED+READY, workers hand-dispatched; the orchestrator runs the D-0077 fold smoke at fold.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*
