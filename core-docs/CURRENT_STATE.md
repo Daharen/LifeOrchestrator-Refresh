@@ -21,16 +21,10 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
 - **ACTIVE = the fan-out loop. Iterations 1–17 are DONE** (D-0055..D-0070) via `orchestrate.fanout` #30 over
   `res.lease` #29, workers hand-dispatched into fresh Cowork sessions. Ledger:
   **`FANOUT_ORCHESTRATOR_HANDOFF.md`**; rationale: **DECISION_LOG D-0055..D-0070**. Do not re-narrate here.
-- **NEXT = iteration 21** (the R1b CONSUMER wave; D-0075. Iterations 1-20 DONE, D-0055..D-0075); iteration 17 (plan `fo-17-3a115347`, 3/3 on-box + a folded frontier design review)
-  shipped the FIRST generator upgrade — an **SD 3.5 Medium fp16 quality tier** in `gen.image` #23 (legacy SD1.5 kept
-  default) + a CPU portability follow-on (config-resolvable **Python interpreter path** for `image.util` #15 +
-  `detect.objects` #16) + the NEW module #33 `track.objects` (Phase C video position 20). The 4-lane model: **1 GPU worker (HARD-CLAMPED <=1/wave) + 1 CPU + 1 broad coding + 1
-  externalized frontier-GPT review lane** (any lane may be skipped). Validated on-box ceiling `MaxParallel 3`;
-  the frontier lane is off-box, takes no lease. Wave model, candidate menu + anti-collision rules:
-  **`FANOUT_ORCHESTRATOR_HANDOFF.md`**.
+- **NEXT = iteration 22** (iterations 1-21 DONE, D-0055..D-0076). i21 (plan `fo-21-61c7597b`) shipped the **R1b CONSUMER wave**: model.gateway #7 0.5.0 (`-UsePoolLeaseSplit` + the real supervisor-routed evictor `lib/PoolEvictor.ps1`) + agent.local #21 autoramp 0.2.0 (`-SplitLease`) + res.lease #29 0.4.1, all default-off + a full live-GPU proof (findings 1/13/14 CLOSE-ELIGIBLE at the lease/consumer layer). A parallel frontier SECURITY red-team of the durable supervisor + real evictor (pack `5cbe8913`) returned NO with 7 must-fixes (verified vs HEAD `00e5912`) -> warm-pool default-ON now gates on a SUPERVISOR-HARDENING wave + an in-proc res.lease client + a GROWN soak (NOT soak-only). The 4-lane model holds: **1 GPU worker (HARD-CLAMPED <=1/wave) + 1 CPU + 1 broad coding + 1 externalized frontier-GPT review lane** (any lane may be skipped); validated ceiling `MaxParallel 3`. Wave model, candidate menu + anti-collision rules: **`FANOUT_ORCHESTRATOR_HANDOFF.md`**.
 - **Hard boundary (D-0051, non-negotiable):** the orchestrator NEVER drives another AI session — including the
   frontier lane, a human-couriered pack (`frontier.bridge` #31).
-- Repo HEAD at last mirror: the **i20 close-out docs commit** (D-0075, `master`) — confirm live
+- Repo HEAD at last mirror: the **i21 close-out docs commit** (D-0076, `master`) — confirm live
   with `git log -1` (read-only over the mount is fine).
 
 ## Adaptive Resource Governor (agent.local #21)
@@ -222,7 +216,7 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 | #1 / #2 / #3 / #4 | 11/11 · 16/16 · 16/16 · 16/16 | — | 07-24 |
 | #5 uia.actor | 26/26 | `m5-test-001` | 07-24 |
 | #6 capture.screen | 39/39 | `m6-test-001` | 07-24 |
-| #7 model.gateway | live base 42/42 (re-verified x2 on the i17 models.json image-tier add); off-machine 228/228 | `cc296fc`/`980dd6d` | 07-30 |
+| #7 model.gateway | base 42/42 + warm 23/23 + pool 43/43 + off-machine 228/228 + **lease-split 63/63** + live split proof (i21, 0.5.0 `-UsePoolLeaseSplit`) | `0877c70`/`00e5912` | 07-31 |
 | #8 classify.batch | 33/33 | `m8-test-001` | 07-24 |
 | #9 review.processor | 34/34 | `m9-test-003` | 07-24 |
 | #10 audio.ingest | 43/43 | `m10-test-001` | 07-24 |
@@ -236,7 +230,7 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 | #18 image.index | 41/41 `-Live` (40/40 cloud) | `m18-test-002` | 07-25 |
 | #19 logic.escalator | 28/28 `-Live` (24/24 cloud) | `m19-test-001` | 07-25 |
 | #20 doc.io | 106/106 (+ portability resolver shim, ops/setup 140/140 `-Live`) | `d2a7352` / `8274b9f` | 07-30 |
-| #21 agent.local | 102/102 (+122/122 off-machine) | `e444851` | 07-28 |
+| #21 agent.local | 102/102 + AutoRamp 122/122 + **autoramp-split 22/22** (`-SplitLease`, i21, autoramp 0.2.0) | `0877c70` | 07-31 |
 | #22 gen.audio | 43/43 (41/41 cloud) | `m22-test-001` | 07-25 |
 | #23 gen.image | 50/50 mock cloud + 50/50 on-device (SD3.5 fp16 + SD1.5 live) | `980dd6d` | 07-30 |
 | #24 gen.music | 42/42 `-Live` (49/49 cloud) | `m24-test-002` | 07-26 |
@@ -244,7 +238,7 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 | #26 agent.coding | not built (designed, D-0037) | — | 07-26 |
 | #27 route.tools | 33/33 | `e444851` | 07-28 |
 | #28 fs.manage | 21/21 off-machine (on-target verify `m29-verify-001` 25/25) | `m29-after-003` | 07-26 |
-| #29 res.lease | 74/74 baseline + 36/36 v0.3 + 45/45 v0.4 adversarial `-Live` (v0.4.0 R1b' primitive hardening: incarnation ids + exec_lease UUID + two-phase transition-capability + target-fenced `fence-op` + idempotent saga journal + oplock renew + durable state_version; 0 regression) | `f6df675` | 07-31 |
+| #29 res.lease | 74/74 + 36/36 v0.3 + 45/45 v0.4 `-Live` (0.4.1 i21: command-evictor `tree_gone` passthrough to the transition result + txn journal; behavioral assertions unchanged) | `0877c70` | 07-31 |
 | #30 orchestrate.fanout | 71/71 `-Live` | `2afd5de` | 07-28 |
 | #31 frontier.bridge | 65/65 + hardened return-capture | `f52f21d`/`b17a945` | 07-28 |
 | #32 media.decompose | 76/76 cloud + 76/76 `-Live` | `5026e2c` | 07-30 |
@@ -334,8 +328,7 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
   i16 (`cc296fc`) added the **DURABLE Job-Object gateway supervisor** (`Start-GatewaySupervisor.ps1` +
   `lib/Supervisor.psm1`, `-UseSupervisor`): resident + Job-Object tree survive ACROSS invocations — **finding 5
   durable = CLOSED** (228/228 off-machine + live tree-reap / two-invocation reuse / 3B->9B swap / 0 orphans).
-  DEFAULT-OFF. the res.lease fencing PRIMITIVE shipped + HARDENED across R1a `e701328` v0.2.0 (i18) -> R1b `2d45ffe` v0.3.0 (i19) -> R1b' `f6df675` v0.4.0 (i20, red-team-driven: incarnation ids + two-phase transition-capability + target-fenced side effects + idempotent saga journal; 45/45 adversarial); per the folded frontier reviews findings 1/13/14 stay OPEN until the **R1b CONSUMER wave** (#7 PoolManager + #21 governor adoption + the real evictor + the live-GPU swap/eviction proof), THEN a soak. Classic + D-0057 warm paths are the
-  trusted default. Detail: `WARM_POOL_DESIGN.md` §10.
+  DEFAULT-OFF. the res.lease GPU-lease split is shipped + HARDENED (R1a 0.2.0 i18 -> R1b 0.3.0 i19 -> R1b' 0.4.0 i20) AND consumer-adopted + LIVE-PROVEN (R1b CONSUMER wave i21, D-0076: model.gateway 0.5.0 `-UsePoolLeaseSplit` + the real evictor `lib/PoolEvictor.ps1` + agent.local 0.2.0 `-SplitLease` + res.lease 0.4.1; findings 1/13/14 CLOSE-ELIGIBLE at the lease/consumer layer). **BUT warm-pool default-ON is NOT soak-only:** a parallel i21 frontier SECURITY red-team of the durable supervisor + real evictor (pack `5cbe8913`, verified vs HEAD `00e5912`; digest `research/2026-07-31-frontier-supervisor-redteam.md`) returned NO with 7 structural must-fixes (spawn-before-Job-assign; one supervisor-wide Job Object; unauthenticated/optional-target IPC; pool-lock 60s steal + nonce-less release; fail-open EnsureResident; wedged-supervisor + fallback split-brain; provenance-by-timestamp) -> default-ON now gates on a SUPERVISOR-HARDENING wave + an in-proc res.lease client + a GROWN soak; finding 5 (durable Job-Object custody) RE-OPENED. Classic + D-0057 warm paths are the trusted default. Detail: `WARM_POOL_DESIGN.md` §10 + `research/2026-07-31-frontier-supervisor-redteam.md`.
 - **SD 3.5 Medium fp16 is NOT a clean 11 GB VRAM fit (i17, D-0070).** With `enable_model_cpu_offload` + VAE tiling the
   torch VRAM peak is ~12.06 GB — the T5-XXL fp16 spike overflows the 11 GB 2080 Ti and leans on the NVIDIA driver
   system-RAM fallback (works, slower, not guaranteed under memory pressure). `gen_image_infer.py` ships a
@@ -344,6 +337,10 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
   engine — a separate wave).
 
 - **`dev.ship` can FALSE-NEGATIVE the commit (i18, D-0072).** dev.ship shipped res.lease 0.2.0 correctly (`e701328`, 6 files) but reported `committed:false` because a post-commit git check tripped on an untracked `_to_delete/write_probe_tmp` ("nothing added to commit but untracked files present"). **VERIFY the real HEAD via native `git log`/`git show --stat`, not the dev.ship `committed` field.** That path also left a stale 0-byte `.git/index.lock` that blocked the next `git add` (rc=128) -- clear it via an executor task (assert no `git.exe` running) then re-commit.
+
+- **A long-running warm-pool supervisor keeps the OLD module code (i21).** After shipping any supervisor-side change (`lib/Supervisor.psm1` / `Start-GatewaySupervisor.ps1`), RESTART the supervisor before the live check -- the first i21 proof rerun failed on the stale in-memory module. Also: consumer identity params must pin BOTH `resident_instance_id` AND `instance_generation` through the supervisor launch (`00e5912`), or the post-commit full-tuple gate rejects every supervisor-routed swap (`authority_mismatch`).
+- **Driver 591.74 SPILLS a too-big model to system RAM instead of a hard CUDA OOM (i21).** The 9B @ctx131072 and even the 27B @ngl99 went RESIDENT (free 249 / 329 MiB) rather than failing to load -- "it loaded" != "it fits". The measured-PEAK `required_vram` + stable-headroom gate is the ONLY real admission control on this box; never treat a successful load as proof of fit.
+- **The res.lease split adds ~6-9 child-pwsh spawns per call (~0.9-1.3 s each) (i21).** A split reuse-generate is ~6.6-7.2 s wall vs ~1-2 s classic; the pwsh-spawn cost dominates, NOT the protocol. An **in-process res.lease client** (batched ops) is a NAMED follow-on before any warm-pool default-ON. `[Console]::Out` bypasses in-process pipeline capture -- emit via `Write-Output`, capture via child-process redirection.
 
 ## Unresolved questions
 
@@ -377,24 +374,15 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
   fixed-point / canonical-JSON determinism. Two follow-ons: (A) a track.objects refinement wave; (B) `video.timeline`
   #21 should CONSUME that schema. Deepest open Q: sparse `media.decompose` keyframes may lack enough continuity for
   identity — the eventual design may need a dense low-res tracking stream distinct from sparse semantic keyframes.
-- **Warm-pool default-ON gate (D-0069):** durable supervisor SHIPPED (finding 5 CLOSED); default-ON now awaits only
-  the **R1b CONSUMER wave** (#7/#21 + the real evictor + the live-GPU proof; the res.lease primitive is HARDENED through R1b' 0.4.0 i20) + a **soak**. exec.watchdog #00.1 -> supervisor relaunch is
-  NAMED (not built).
+- **Warm-pool default-ON gate (D-0069/D-0076):** the res.lease split is shipped + hardened + consumer-adopted + live-proven (i21; findings 1/13/14 CLOSE-ELIGIBLE at the lease/consumer layer). But the i21 frontier SECURITY red-team of the durable supervisor + real evictor (`research/2026-07-31-frontier-supervisor-redteam.md`, verified vs HEAD `00e5912`) returned NO with 7 structural must-fixes -> default-ON now gates on (1) a SUPERVISOR-HARDENING wave (per-resident suspended-create Job custody + assignment-fatal; lifetime singleton; authenticated exact-target IPC; no-launch-after-failed/partial-evict-or-CAS; pool-lock nonce + no stale-age steal; hard probe deadlines; heartbeat-stale watchdog recovery; kill/reload restart reconcile; real exe/model verification), (2) an in-proc res.lease client, (3) a GROWN soak. **Finding 5 (durable Job-Object custody) is RE-OPENED.** exec.watchdog #00.1 -> supervisor relaunch is part of must-fix (8), still NAMED (not built).
 
 ## Next expected action
 
-**Run iteration 21 (the R1b CONSUMER wave)** per **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4 (which owns the candidate menu). The res.lease #29 primitive is now shipped + hardened (R1a 0.2.0 i18 -> R1b 0.3.0 i19 -> R1b' 0.4.0 i20, red-team-driven; 74/74 + 36/36 + 45/45). The top follow-on is the **R1b CONSUMER wave** (GPU, single-worker) -- wire the split into `model.gateway` #7 PoolManager + `agent.local` #21 governor (behind `-UsePoolLeaseSplit`/`-SplitLease`, default-off) + the real nvidia-smi evictor (`-EvictorMode command`) + the live-GPU 3B<->9B swap / pin-revocation / prepared-eviction proof + the live-only tests; ONLY THERE do findings 1/13/14 CLOSE (then a soak, then warm-pool default-ON). Scope
-up to 4 lanes (1 GPU + 1 CPU + 1 coding + optional frontier) -> `plan` at `MaxParallel 3` -> confirm the
-preflight -> relay prompts (+ any frontier pack) as FILES -> `status` -> `handoff` -> fold + mirror the
-core-docs under the git lease.
+**Run iteration 22** per **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4 (which owns the candidate menu). The R1b GPU-lease split is now shipped + hardened + consumer-adopted + LIVE-PROVEN (i18-i21); findings 1/13/14 are CLOSE-ELIGIBLE at the lease/consumer layer. The TOP candidate is the **SUPERVISOR-HARDENING wave** -- fold the i21 frontier red-team's 10 must-fixes (`research/2026-07-31-frontier-supervisor-redteam.md`) into the durable supervisor + real evictor; it is the hard gate to warm-pool default-ON (single-worker; mostly off-machine-provable, custody + fault-injection needs the GPU). Scope up to 4 lanes -> `plan` at `MaxParallel <=3` -> confirm the preflight -> relay prompts (+ any frontier pack) as FILES -> `status` -> `handoff` -> fold + mirror the core-docs under the git lease.
 
-Outstanding: **(1) the R1b CONSUMER wave** (the res.lease-split consumer wiring in #7/#21 + the real evictor + the live-GPU proof; findings 1/13/14 close there -- the primitive is hardened through R1b' 0.4.0) then warm-pool default-ON (+ a soak); the baton-pass DIRECTION (R1b->ABA proof->soak->R2->#26) is **Nicholas's explicit call** (contradicts the D-0050 spine, trajectory review §7);
-**(2)** the res.lease fencing infra wave (13/14, single-worker); **(3)** continue the Phase C video spine (#32+#33
-done -> video.timeline #21 + video.interpret #22); **(3b)** the `track.objects` #33 refinement wave (folded frontier
-review); **(4)** generator upgrades (SD3.5 image DONE; Z-Image / music / video / audio remain); **(5)** widget-03 GPU
-live-GUI pass; **(6)** portability follow-ons (interpreter #15/#16 DONE; pwsh-path / infra / model-bound remain).
+Outstanding: **(1) the SUPERVISOR-HARDENING wave** (the gate to warm-pool default-ON) + an **in-proc res.lease client** (the i21 split-overhead finding) + a **GROWN soak** -> THEN default-ON; the baton-pass DIRECTION (R1b->ABA proof->soak->R2->#26) is **Nicholas's explicit call**; **(2)** continue the Phase C video spine (#32+#33 done -> video.timeline #21 + video.interpret #22); **(2b)** the `track.objects` #33 refinement wave; **(3)** generator upgrades (SD3.5 image DONE; Z-Image / music / video / audio remain); **(4)** widget-03 GPU live-GUI pass; **(5)** portability follow-ons (interpreter #15/#16 DONE; pwsh-path / infra / model-bound remain).
 
 ---
 
-**Last updated:** 2026-07-30 — fan-out iteration 20 close-out (D-0075): R1b' res.lease #29 primitive hardening SHIPPED (v0.4.0, `f6df675`; red-team-driven: incarnation ids + two-phase transition-capability + target-fenced side effects + idempotent saga journal + adversarial matrix A-K 45/45; 0 regression). findings 1/13/14 STAY OPEN -> the R1b CONSUMER wave (#7/#21 + real evictor + live-GPU proof) closes them.
+**Last updated:** 2026-07-31 — fan-out iteration 21 close-out (D-0076): the R1b CONSUMER wave SHIPPED + LIVE-PROVEN (model.gateway #7 0.5.0 `-UsePoolLeaseSplit` + real evictor `lib/PoolEvictor.ps1` + agent.local #21 autoramp 0.2.0 `-SplitLease` + res.lease #29 0.4.1; 0 regression + full live-GPU proof). Findings 1/13/14 CLOSE-ELIGIBLE at the lease/consumer layer. A parallel frontier supervisor+evictor SECURITY red-team (pack `5cbe8913`, verified vs HEAD `00e5912`) returned 7 must-fixes -> warm-pool default-ON now gates on a SUPERVISOR-HARDENING wave + an in-proc lease client + a GROWN soak (NOT soak-only); finding 5 RE-OPENED.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

@@ -43,3 +43,5 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 - `i17-GEN-image-sd35.md` | the filled GPU-lane brief (SD 3.5 Medium fp16 tier for gen.image #23) dispatched in i17 (plan fo-17-3a115347) | used brief archived on wave completion | 2026-07-30 | D-0070
 - `i17-PORT-interp.md` | the filled CPU-lane brief (config-resolvable Python interpreter path for #15/#16) dispatched in i17 | used brief archived on wave completion | 2026-07-30 | D-0070
 - `i17-TRACK-objects.md` | the filled coding-lane brief (NEW module #33 track.objects) dispatched in i17 | used brief archived on wave completion | 2026-07-30 | D-0070
+- `i21-RESLEASE-R1b-consumers-live.md` | the filled GPU-lane brief (R1b CONSUMER wave: lease-split adoption + real evictor + live-GPU proof) dispatched in i21 (plan fo-21-61c7597b) | used brief archived on wave completion | 2026-07-31 | D-0076
+- `2026-07-31-FANOUT_ORCHESTRATOR_HANDOFF-i21.md` | snapshot of the FANOUT_ORCHESTRATOR_HANDOFF at the i21 close-out (before the i22 rewrite) | handoff snapshot per DOC_PROTOCOL section 5 | 2026-07-31 | D-0076
