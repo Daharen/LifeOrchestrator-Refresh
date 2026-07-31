@@ -313,15 +313,17 @@ function Invoke-SupervisorRun {
         }
         $ml = Resolve-ModelLaunch -Reg $reg -P $p
         $forceReload = ($p.ContainsKey('force_reload') -and [bool]$p['force_reload'])
-        # v0.4 (i21): a caller-pinned resident_instance_id (the res.lease grant identity) stamps the manifest
-        # so the lease's destructive-op target and the actual server tree agree. Absent => minted inside.
+        # v0.4 (i21): a caller-pinned resident_instance_id + instance_generation (the res.lease transition
+        # capability identities) stamp the manifest so the lease's destructive-op target / generation binding
+        # and the actual server tree agree. Absent => minted inside.
         $reqInstId = if ($p.ContainsKey('resident_instance_id')) { [string]$p['resident_instance_id'] } else { $null }
+        $reqInstGen = if ($p.ContainsKey('instance_generation')) { [string]$p['instance_generation'] } else { $null }
         $launcher = New-RealLauncher -ML $ml -Job $job -Pwsh $pwshExe -LogDir (Join-Path $paths.root 'servers')
         $meta = @{ model_id = $ml.model_id; host = '127.0.0.1'; port_hint = 0; managed_by = 'model.gateway.supervisor'; keep_resident_seconds = $KeepResidentSeconds }
         $res = Invoke-SupervisorEnsureResident -WarmRegPath $paths.warm_registry -LockPath $paths.warm_lock `
             -ReqConfig $ml.req_config -ModelMeta $meta -Launcher $launcher `
             -HealthProbe $HealthProbe -StopProbe $StopProbe -SocketOwnerProbe $SocketOwnerProbe -StartTicksProbe $StartTicksProbe -VramProbe $VramProbe `
-            -FenceHolder 'model.gateway.supervisor' -FenceTtlSeconds $FenceTtlSeconds -LoadTimeoutSec $LoadTimeoutSec -ForceReload:$forceReload -ResidentInstanceId $reqInstId
+            -FenceHolder 'model.gateway.supervisor' -FenceTtlSeconds $FenceTtlSeconds -LoadTimeoutSec $LoadTimeoutSec -ForceReload:$forceReload -ResidentInstanceId $reqInstId -InstanceGeneration $reqInstGen
         return $res
     }.GetNewClosure()
     $statusHandler = { param($Request) return (Get-SupervisorResidencyStatus -WarmRegPath $paths.warm_registry -StartTicksProbe $StartTicksProbe -HealthProbe $HealthProbe -KeepResidentSeconds $KeepResidentSeconds) }.GetNewClosure()

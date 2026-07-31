@@ -474,7 +474,8 @@ function Invoke-SupervisorEnsureResident {
         [scriptblock]$SocketOwnerProbe = $null, [scriptblock]$StartTicksProbe = $null, [scriptblock]$VramProbe = $null,
         [string]$FenceHolder = 'gateway.supervisor', [int]$FenceTtlSeconds = 120,
         [switch]$ForceReload, [int]$LoadTimeoutSec = 120,
-        [string]$ResidentInstanceId   # v0.4 (i21): caller-pinned per-server-tree instance id stamped into the manifest (the target of every destructive op); omitted => minted here
+        [string]$ResidentInstanceId,  # v0.4 (i21): caller-pinned per-server-tree instance id stamped into the manifest (the target of every destructive op); omitted => minted here
+        [string]$InstanceGeneration   # v0.4 (i21): caller-pinned per-launch generation nonce -- the split pre-mints it and stamps it into the transition capability, so the manifest MUST carry the same value (resident_generation binding); omitted => the launcher's mint
     )
     if (-not $script:SupPoolCoreLoaded) { throw [PSCustomObject]@{ code = 'pool_core_absent'; message = 'PoolManager.psm1 not loaded' } }
     $reqHash = Get-ResidentConfigHash $ReqConfig
@@ -568,7 +569,9 @@ function Invoke-SupervisorEnsureResident {
         $serverPid = [int]$launch.pid
         $usePort = if (Test-SupHasProp $launch 'port') { [int]$launch.port } else { $portHint }
         $startTicks = if (Test-SupHasProp $launch 'start_ticks') { [long]$launch.start_ticks } else { 0 }
-        $instanceGen = if (Test-SupHasProp $launch 'instance_generation') { [string]$launch.instance_generation } else { (New-InstanceGeneration) }
+        $instanceGen = if (-not [string]::IsNullOrWhiteSpace($InstanceGeneration)) { $InstanceGeneration }
+                       elseif (Test-SupHasProp $launch 'instance_generation') { [string]$launch.instance_generation }
+                       else { (New-InstanceGeneration) }
         $jobOwned = if (Test-SupHasProp $launch 'job_owned') { [bool]$launch.job_owned } else { $false }
         # v0.4 (i21): the per-server-tree resident_instance_id -- the TARGET of every destructive op (never
         # generation/config-key alone). Caller-pinned (so the res.lease grant and the manifest agree) or minted.
