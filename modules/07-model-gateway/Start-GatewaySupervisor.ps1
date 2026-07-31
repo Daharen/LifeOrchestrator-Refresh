@@ -313,16 +313,27 @@ function Invoke-SupervisorRun {
         }
         $ml = Resolve-ModelLaunch -Reg $reg -P $p
         $forceReload = ($p.ContainsKey('force_reload') -and [bool]$p['force_reload'])
+        # v0.4 (i21): a caller-pinned resident_instance_id (the res.lease grant identity) stamps the manifest
+        # so the lease's destructive-op target and the actual server tree agree. Absent => minted inside.
+        $reqInstId = if ($p.ContainsKey('resident_instance_id')) { [string]$p['resident_instance_id'] } else { $null }
         $launcher = New-RealLauncher -ML $ml -Job $job -Pwsh $pwshExe -LogDir (Join-Path $paths.root 'servers')
         $meta = @{ model_id = $ml.model_id; host = '127.0.0.1'; port_hint = 0; managed_by = 'model.gateway.supervisor'; keep_resident_seconds = $KeepResidentSeconds }
         $res = Invoke-SupervisorEnsureResident -WarmRegPath $paths.warm_registry -LockPath $paths.warm_lock `
             -ReqConfig $ml.req_config -ModelMeta $meta -Launcher $launcher `
             -HealthProbe $HealthProbe -StopProbe $StopProbe -SocketOwnerProbe $SocketOwnerProbe -StartTicksProbe $StartTicksProbe -VramProbe $VramProbe `
-            -FenceHolder 'model.gateway.supervisor' -FenceTtlSeconds $FenceTtlSeconds -LoadTimeoutSec $LoadTimeoutSec -ForceReload:$forceReload
+            -FenceHolder 'model.gateway.supervisor' -FenceTtlSeconds $FenceTtlSeconds -LoadTimeoutSec $LoadTimeoutSec -ForceReload:$forceReload -ResidentInstanceId $reqInstId
         return $res
     }.GetNewClosure()
     $statusHandler = { param($Request) return (Get-SupervisorResidencyStatus -WarmRegPath $paths.warm_registry -StartTicksProbe $StartTicksProbe -HealthProbe $HealthProbe -KeepResidentSeconds $KeepResidentSeconds) }.GetNewClosure()
-    $evictHandler  = { param($Request) return (Invoke-SupervisorEvict -WarmRegPath $paths.warm_registry -LockPath $paths.warm_lock -StopProbe $StopProbe -StartTicksProbe $StartTicksProbe -VramProbe $VramProbe) }.GetNewClosure()
+    $evictHandler  = {
+        param($Request)
+        # v0.4 (i21): an optional target_resident_instance_id makes this a TARGET-FENCED stop -- the supervisor
+        # itself refuses a stop naming a stale/mismatched instance (red-team blockers 4/8). No target => legacy.
+        $p = @{}
+        if ($null -ne $Request -and ($Request.PSObject.Properties.Name -contains 'params') -and $null -ne $Request.params) { foreach ($pp in $Request.params.PSObject.Properties) { $p[$pp.Name] = $pp.Value } }
+        $tgt = if ($p.ContainsKey('target_resident_instance_id')) { [string]$p['target_resident_instance_id'] } else { $null }
+        return (Invoke-SupervisorEvict -WarmRegPath $paths.warm_registry -LockPath $paths.warm_lock -StopProbe $StopProbe -StartTicksProbe $StartTicksProbe -VramProbe $VramProbe -TargetResidentInstanceId $tgt)
+    }.GetNewClosure()
     $reconcileHandler = { param($Request) return (Invoke-SupervisorReconcile -WarmRegPath $paths.warm_registry -LockPath $paths.warm_lock -StartTicksProbe $StartTicksProbe -SocketOwnerProbe $SocketOwnerProbe -HealthProbe $HealthProbe -StopProbe $StopProbe) }.GetNewClosure()
     $prepareHandler = {
         param($Request)

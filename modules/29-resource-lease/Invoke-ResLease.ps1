@@ -120,7 +120,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$SKILL_ID = 'res.lease'; $SKILL_VERSION = '0.4.0'; $CONTRACT = '0.4'
+$SKILL_ID = 'res.lease'; $SKILL_VERSION = '0.4.1'; $CONTRACT = '0.4'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $LEASE_SCHEMA = 'lifeorch.res.lease/0.1'
 $PARTIAL_GRACE_SEC = 15   # an unparseable/empty lease (a partial write) is reclaimable at mtime + this
@@ -374,7 +374,13 @@ function Invoke-Evictor([string]$mode, [string]$mockResult, [int]$mockFree, [str
             $raw = (& $cmd -ContextJson $ctxJson 2>$null | Out-String).Trim()
             $r = $null; try { $r = $raw | ConvertFrom-Json } catch { }
             if ($null -eq $r) { return [ordered]@{ confirmed = $false; free_vram_mib = 0; evicted = $false; outcome = 'command_error'; detail = 'evictor command produced no JSON result' } }
-            return [ordered]@{ confirmed = [bool](Prop $r 'confirmed' $false); free_vram_mib = [int](Prop $r 'free_vram_mib' 0); evicted = [bool](Prop $r 'evicted' $false); outcome = [string](Prop $r 'outcome' 'command'); detail = [string](Prop $r 'detail' '') }
+            $out = [ordered]@{ confirmed = [bool](Prop $r 'confirmed' $false); free_vram_mib = [int](Prop $r 'free_vram_mib' 0); evicted = [bool](Prop $r 'evicted' $false); outcome = [string](Prop $r 'outcome' 'command'); detail = [string](Prop $r 'detail' '') }
+            # 0.4.1 (i21 consumer wave): pass the REAL evictor's tree_gone through instead of silently dropping
+            # it -- a transition/journal must never report tree_gone:true on a partial-tree abort. Additive: a
+            # v0.2-shape command evictor without the field behaves exactly as before (the transition's legacy
+            # default applies); the grant decision itself was already fail-closed on `confirmed`.
+            if (Has $r 'tree_gone') { $out['tree_gone'] = [bool]$r.tree_gone }
+            return $out
         } catch { return [ordered]@{ confirmed = $false; free_vram_mib = 0; evicted = $false; outcome = 'command_error'; detail = "evictor command failed: $($_.Exception.Message)" } }
     }
     return [ordered]@{ confirmed = $false; free_vram_mib = 0; evicted = $false; outcome = 'no_evictor'; detail = 'no evictor seam configured (EvictorMode=none)' }
@@ -445,7 +451,13 @@ function Invoke-TransitionEvictor {
     $need = $required + $targetHead
     if ($mode -eq 'command') {
         $r = Invoke-Evictor 'command' $mockResult $mockFree $cmd $ctx $required $targetHead $intervalMs $timeoutMs
-        $treeGone = $true; try { if (Has $r 'tree_gone') { $treeGone = [bool]$r.tree_gone } } catch { }
+        # 0.4.1: Invoke-Evictor returns an [ordered] dictionary -- read tree_gone IDictionary-aware (PSObject
+        # property probing on a dictionary enumerates CLR members, not entries; the known pwsh 7.4.6 trap).
+        $treeGone = $true
+        try {
+            if ($r -is [System.Collections.IDictionary]) { if ($r.Contains('tree_gone')) { $treeGone = [bool]$r['tree_gone'] } }
+            elseif (Has $r 'tree_gone') { $treeGone = [bool]$r.tree_gone }
+        } catch { }
         return [ordered]@{ confirmed=[bool]$r.confirmed; free_vram_mib=[int]$r.free_vram_mib; evicted=[bool]$r.evicted; tree_gone=$treeGone; outcome=[string]$r.outcome; detail=[string]$r.detail; observations=@() }
     }
     if ($mode -ne 'mock') {

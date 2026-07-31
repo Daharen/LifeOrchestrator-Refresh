@@ -2,7 +2,7 @@
   "schema": "lifeorch.skill.manifest/0.1",
   "skill_id": "res.lease",
   "name": "Resource Lease / Lock",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "contract_version": "0.4",
   "purpose": "A filesystem lease/lock so several processes on this one machine arbitrate contended resources: acquire/release/renew/status/list/check/commit/fence-op a named lease with a TTL. Atomic (CreateNew = open O_CREAT|O_EXCL), race-safe stale reclaim, holder identity + a lease_id token, blocking or non-blocking acquire. Conventional resources: gpu (one model run at a time), git (commit lock), doc:<path> (doc-ownership). v0.2 adds an ADDITIVE, DEFAULT-OFF fencing/handoff surface (a plain acquire is byte-identical to v0.1): a monotonic per-resource fencing token + CAS guard (finding 1), two lease kinds exec|residency_pin with fencing-backed priority revocation (finding 13), a prepared/evict-before-grant handoff over a pluggable evictor seam (findings 2/15), and lock-order-inversion rejection (finding 14). v0.3 (R1b) adds, still ADDITIVE + DEFAULT-OFF: THREE-IDENTITY fencing (gpu_authority_epoch = the per-resource fencing token, bumped only when exclusive GPU authority changes; resident_generation = the PoolManager-owned per-launch generation; exec_lease_id = the exec acquire's lease_id) with a full-tuple authority_ok assertion on check; the single scheduler-owned ATOMIC hand-off -Transition; an ADVERSARIAL mock evictor; and crash reconcile. v0.4 (R1b') folds the i19 red-team's BLOCKING primitive changes, still ADDITIVE + DEFAULT-OFF (a plain / v0.2 / v0.3 call is byte-identical): (1) ABA-closing INCARNATION identities -- owner_incarnation_id (random per owning-process RESTART) + resident_instance_id (random per server process TREE, the target of every destructive op, never resident_generation alone) -- folded into authority_ok so a restarted owner or a stale-instance callback is fenced out; (2) a TWO-PHASE transition (-TwoPhaseCommit then -Action commit) that issues a NON-USABLE transition capability and publishes the first USABLE exec lease only AFTER health -- no ordinary exec authority before the resident is healthy + published (blocker 1); (3) -Action fence-op, the TARGET-FENCED side-effect gate an external stop/kill/publish/release must pass (it MUST name an exact resident_instance_id -- 'stop whatever serves this resource' is impossible); (4) an idempotent, red-team-field txn journal + request_id COMMIT-RESPONSE idempotency (a retry returns the SAME grant, never a 2nd epoch/lease/resident); (5) an oplock-serialized renew so a renewal can NEVER resurrect a revoked lease; (6) a durable per-resource state_version for waiter sequencing. res.lease stays PURE (never inspects VRAM / kills a server); the real supervisor + health + the LIVE proof are the later #7 consumer wave. The multi-instance coordination primitive.",
   "determinism": "deterministic",
@@ -12,60 +12,294 @@
     "args_spec": "-Action acquire|release|renew|status|list|check|commit|fence-op -Resource <name> [-Holder <id>] [-TtlSeconds <n>] [-WaitSeconds <n>] [-LeaseId <id>] [-Note <s>] [-Kind exec|residency_pin] [-Priority <n>] [-FencingToken <n>] [-RequiredVramMiB <n>] [-TargetHeadroomMiB <n>] [-EvictorMode none|mock|command] [-MockEvictorResult confirm|needs_evict|timeout|late_evict|partial_tree_term|headroom_never|headroom_fell|cancel_during_prepare] [-MockFreeVramMiB <n>] [-EvictorCommand <path>] [-ConfirmIntervalMs <n>] [-ConfirmTimeoutMs <n>] [-AllowLockOrder] [-LockOrderReason <s>] [-OwnerId <id>] [-ResidentGeneration <s>] [-Transition] [-DrainTimeoutMs <n>] [-HeadroomObservations <n>] [-HeadroomStableIntervalMs <n>] [-Reconcile] [-AuthorityEpoch <n>] [-OwnerIncarnationId <id>] [-ResidentInstanceId <id>] [-RequestId <key>] [-TwoPhaseCommit] [-HealthOk] [-HealthFailed] [-TransitionId <id>] [-HealthReceipt <s>] [-OpKind stop|result_publish|manifest_write|lease_release|lease_renew|health_fail|idle_evict|complete] [-StateVersion <n>] [-LeaseDir <dir>] | -InputsJson '<json>'"
   },
   "inputs": [
-    {"name": "action", "type": "string", "required": true, "description": "acquire | release | renew | status | list | check | commit | fence-op (one per invocation). commit + fence-op are v0.4 (R1b')."},
-    {"name": "resource", "type": "string", "required": false, "description": "The resource name (required for all but list). Conventional: gpu, git, doc:<path>; any string works."},
-    {"name": "holder", "type": "string", "required": false, "description": "Stable identity of the caller. Default: $env:LIFEORCH_INSTANCE, else <host>:<pid>:<guid8>. Set a stable holder per instance so re-attach + release-by-holder work."},
-    {"name": "ttl_seconds", "type": "int", "required": false, "default": 120, "description": "acquire/renew: the lease lifetime; an expired lease is reclaimable. Renew before it expires."},
-    {"name": "wait_seconds", "type": "number", "required": false, "default": 0, "description": "acquire: block/poll up to this long for the resource to free. 0 = try once (non-blocking)."},
-    {"name": "lease_id", "type": "string", "required": false, "description": "release/renew: the token returned by acquire (proves you hold this exact lease)."},
-    {"name": "note", "type": "string", "required": false, "description": "Free text stored in the lease (e.g. what the holder is doing)."},
-    {"name": "kind", "type": "string", "required": false, "default": "exec", "description": "v0.2. exec (default = today's short execution/transition lease) | residency_pin (the REVOCABLE right to stay resident between exec ops). A pin is ALWAYS revocable; a higher-priority acquire revokes a lower-priority pin. Supplying -Kind (or any v0.2 input) engages the additive surface (returns fencing fields); omitting all of them is byte-identical to v0.1."},
-    {"name": "priority", "type": "int", "required": false, "default": 0, "description": "v0.2. Higher wins. An acquire whose priority exceeds a resident revocable pin's priority REVOKES that pin (writes revoked_by + the new fencing_token into it) so the pinned holder learns on its next renew/check it has lost authority."},
-    {"name": "revocable", "type": "bool", "required": false, "default": true, "description": "v0.2. A residency_pin is ALWAYS revocable; -Kind residency_pin with revocable=false is a hard STOP (error non_revocable_pin_forbidden)."},
-    {"name": "fencing_token", "type": "int", "required": false, "description": "v0.2. renew/release/check CAS guard: if supplied and it is not the resource's CURRENT token, the op is refused (reason/fence_status:fence_stale) -- a superseded holder is FENCED OUT."},
-    {"name": "required_vram_mib", "type": "int", "required": false, "description": "v0.2 acquire. >=0 engages the PREPARED / evict-before-grant handoff (AcquirePreparedGpu-style): detect an incompatible/lower-priority resident pin, drive its revocation, and grant only AFTER the evictor seam confirms free headroom >= required_vram_mib + target_headroom_mib."},
-    {"name": "target_headroom_mib", "type": "int", "required": false, "default": 512, "description": "v0.2 prepared. Extra free VRAM the evictor seam must confirm beyond required_vram_mib (the target-headroom invariant, finding 15)."},
-    {"name": "evictor_mode", "type": "string", "required": false, "default": "none", "description": "v0.2 prepared. none (no evictor -- grant only if the slot is already free) | mock (the built-in test evictor) | command (invoke -EvictorCommand as the pluggable seam -- the R1b PoolManager integration point). res.lease stays PURE: it never inspects VRAM or kills a server; the seam does."},
-    {"name": "mock_evictor_result", "type": "string", "required": false, "default": "confirm", "description": "v0.2 prepared / v0.3 transition, mock evictor. v0.2: confirm | needs_evict | timeout. v0.3 adversarial additions (transition): late_evict (eviction completes late, then headroom stable -> grants: proves we WAIT for confirmation), partial_tree_term (headroom looks fine but the managed tree did NOT fully exit -> do NOT grant), headroom_never (target headroom never reached), headroom_fell (reached then fell -> not stable), cancel_during_prepare (a cancellation arrives mid-prepare -> abort, no grant)."},
-    {"name": "mock_free_vram_mib", "type": "int", "required": false, "default": 0, "description": "v0.2 prepared, mock evictor: the free VRAM it reports (0 = auto = just-enough to meet required+headroom)."},
-    {"name": "evictor_command", "type": "string", "required": false, "description": "v0.2 prepared, command mode: a pwsh script invoked as `& <script> -ContextJson <json>` that must emit a JSON {confirmed, free_vram_mib, evicted, outcome} result. The real PoolManager evictor (R1b) plugs in here."},
-    {"name": "confirm_interval_ms", "type": "int", "required": false, "default": 200, "description": "v0.2 prepared. The WDDM-async headroom-confirmation interval passed to the evictor seam (VRAM frees asynchronously after an evict)."},
-    {"name": "confirm_timeout_ms", "type": "int", "required": false, "default": 3000, "description": "v0.2 prepared. Give up confirming headroom after this (-> reason:headroom_timeout, no grant)."},
-    {"name": "allow_lock_order", "type": "bool", "required": false, "default": false, "description": "v0.2 acquire. Override the lock-order-inversion rejection (finding 14) with a recorded reason. Without it, acquiring a later/cheaper-ranked resource (git/doc:<path>) while THIS holder already holds an earlier-ranked one (gpu, then git) is rejected fail-closed (error lock_order_violation)."},
-    {"name": "lock_order_reason", "type": "string", "required": false, "description": "v0.2 acquire. The recorded reason for an allow_lock_order override (stored in the result's lock_order_override)."},
-    {"name": "owner_id", "type": "string", "required": false, "description": "v0.3 (R1b). The stable owner identity asserted on every op (defaults to holder). Part of the three-identity tuple owner_id + gpu_authority_epoch + resident_generation + exec_lease_id; check reports owner_current + authority_ok."},
-    {"name": "resident_generation", "type": "string", "required": false, "description": "v0.3 (R1b). The PoolManager-owned per-launch generation, stamped into the lease and asserted on check (generation_current). res.lease carries + validates it; the PoolManager owns when it increments (server start/replace/invalidate)."},
-    {"name": "transition", "type": "bool", "required": false, "default": false, "description": "v0.3 (R1b) acquire. Engage the single scheduler-owned ATOMIC hand-off: reserve -> mint a new gpu_authority_epoch (fence the old owner) -> revoke a lower-priority pin -> drive the evictor OUTSIDE the lease mutex (drain/cancel/tree-kill/confirm-tree-gone/confirm-STABLE-headroom) under a crash-reconcilable txn journal -> grant ONLY if the reserved epoch is still current (else superseded_during_transition). Serialized: exactly one transition per resource at a time (equal priority does NOT preempt)."},
-    {"name": "drain_timeout_ms", "type": "int", "required": false, "default": 2000, "description": "v0.3 (R1b) transition. Bounded drain of an ACTIVE exec before cancel -> supervisor tree-kill (in-flight revocation). Passed to the evictor seam."},
-    {"name": "headroom_observations", "type": "int", "required": false, "default": 3, "description": "v0.3 (R1b) transition. WDDM discipline: headroom must be STABLE across this many observations (all >= required + target) before a grant."},
-    {"name": "headroom_stable_interval_ms", "type": "int", "required": false, "default": 250, "description": "v0.3 (R1b) transition. Spacing between the stable-headroom observations."},
-    {"name": "reconcile", "type": "bool", "required": false, "default": false, "description": "v0.3 (R1b). On check: roll a crashed IN-PROGRESS transition journal (PREPARING/DRAINING/STARTING) whose owner is stale or whose epoch was superseded to ABORTED (idempotent). A transition also auto-reconciles on entry."},
-    {"name": "authority_epoch", "type": "int", "required": false, "description": "v0.3 (R1b). Assert-this-epoch: an alias of fencing_token for renew/release/check CAS (a superseded actor is FENCED OUT). Side effects ASSERT the epoch; they never advance it."},
-    {"name": "owner_incarnation_id", "type": "string", "required": false, "description": "v0.4 (R1b'). ABA close (finding 1, blocker 3): a random identity minted per owning-process/supervisor-client RESTART. A stale owner restarting with the SAME logical owner_id gets a NEW incarnation and does NOT regain authority (check.owner_incarnation_current + authority_ok assert it when supplied). Auto-minted when the v0.4 surface is engaged and not supplied."},
-    {"name": "resident_instance_id", "type": "string", "required": false, "description": "v0.4 (R1b'). ABA close (finding 1, blocker 2): a random identity per ACTUAL server process tree, NEVER reused. It is the TARGET of every destructive op (stop/kill/publish) -- never resident_generation or config_key alone. A fresh grant / transition mints one unless the caller pins it; check + fence-op assert it (resident_instance_current)."},
-    {"name": "request_id", "type": "string", "required": false, "description": "v0.4 (R1b'). Acquisition idempotency key (blocker 5). A transition/commit retry on the SAME request_id returns the SAME committed grant -- never a second epoch/lease/resident (recovers a lost commit response). Recorded in the txn journal."},
-    {"name": "two_phase_commit", "type": "bool", "required": false, "default": false, "description": "v0.4 (R1b') acquire+transition. Blocker 1: issue a NON-USABLE transition capability (the new server starts under scheduler authority, usable=false) instead of an ordinary exec lease; the first USABLE exec lease is published only by the phase-2 commit AFTER health. Default single-shot -Transition (collapsed form) stays byte-compatible with v0.3."},
-    {"name": "health_ok", "type": "bool", "required": false, "default": false, "description": "v0.4 (R1b') -Action commit. The consumer reports the started resident passed health/peak-memory admission -> publish the resident + issue the first usable exec lease atomically (HEALTHY_UNPUBLISHED -> COMMITTED)."},
-    {"name": "health_failed", "type": "bool", "required": false, "default": false, "description": "v0.4 (R1b') -Action commit. The started resident failed health / partial-load OOM -> terminate the EXACT tentative resident_instance_id, publish/grant NOTHING, leave the GPU empty (fail-closed; the old resident is NOT silently restored -- a new scheduled acquisition is required)."},
-    {"name": "transition_id", "type": "string", "required": false, "description": "v0.4 (R1b') commit / fence-op. The txn_id of the capability being committed (a mismatch is refused), or the transition a fenced side effect was dispatched under."},
-    {"name": "health_receipt", "type": "string", "required": false, "description": "v0.4 (R1b') -Action commit. An opaque health receipt tied to the exact resident_instance_id + transition; recorded on the committed lease + journal."},
-    {"name": "op_kind", "type": "string", "required": false, "default": "stop", "description": "v0.4 (R1b') -Action fence-op. The captured side-effect kind being validated: stop | result_publish | manifest_write | lease_release | lease_renew | health_fail | idle_evict | complete. The op MUST also name an exact -ResidentInstanceId."},
-    {"name": "state_version", "type": "int", "required": false, "description": "v0.4 (R1b') fence-op / check CAS. The durable per-resource state_version captured at dispatch. A side effect asserts it; a bumped version (grant/renew/revoke/release changed the state) fences the captured op out (state_version_stale) -- waiters re-read a durable version, never a one-shot signal (finding 14 / test K)."},
-    {"name": "lease_dir", "type": "string", "required": false, "description": "Override the shared lease directory (default $env:LIFEORCH_LEASE_DIR, else runtime/leases). All processes MUST resolve the same dir. The durable per-resource fencing counter (<resource>.fence), transition journal (<resource>.txn), state_version (<resource>.state) + renew/revoke oplock (<resource>.lease.oplock) live here too."}
+    {
+      "name": "action",
+      "type": "string",
+      "required": true,
+      "description": "acquire | release | renew | status | list | check | commit | fence-op (one per invocation). commit + fence-op are v0.4 (R1b')."
+    },
+    {
+      "name": "resource",
+      "type": "string",
+      "required": false,
+      "description": "The resource name (required for all but list). Conventional: gpu, git, doc:<path>; any string works."
+    },
+    {
+      "name": "holder",
+      "type": "string",
+      "required": false,
+      "description": "Stable identity of the caller. Default: $env:LIFEORCH_INSTANCE, else <host>:<pid>:<guid8>. Set a stable holder per instance so re-attach + release-by-holder work."
+    },
+    {
+      "name": "ttl_seconds",
+      "type": "int",
+      "required": false,
+      "default": 120,
+      "description": "acquire/renew: the lease lifetime; an expired lease is reclaimable. Renew before it expires."
+    },
+    {
+      "name": "wait_seconds",
+      "type": "number",
+      "required": false,
+      "default": 0,
+      "description": "acquire: block/poll up to this long for the resource to free. 0 = try once (non-blocking)."
+    },
+    {
+      "name": "lease_id",
+      "type": "string",
+      "required": false,
+      "description": "release/renew: the token returned by acquire (proves you hold this exact lease)."
+    },
+    {
+      "name": "note",
+      "type": "string",
+      "required": false,
+      "description": "Free text stored in the lease (e.g. what the holder is doing)."
+    },
+    {
+      "name": "kind",
+      "type": "string",
+      "required": false,
+      "default": "exec",
+      "description": "v0.2. exec (default = today's short execution/transition lease) | residency_pin (the REVOCABLE right to stay resident between exec ops). A pin is ALWAYS revocable; a higher-priority acquire revokes a lower-priority pin. Supplying -Kind (or any v0.2 input) engages the additive surface (returns fencing fields); omitting all of them is byte-identical to v0.1."
+    },
+    {
+      "name": "priority",
+      "type": "int",
+      "required": false,
+      "default": 0,
+      "description": "v0.2. Higher wins. An acquire whose priority exceeds a resident revocable pin's priority REVOKES that pin (writes revoked_by + the new fencing_token into it) so the pinned holder learns on its next renew/check it has lost authority."
+    },
+    {
+      "name": "revocable",
+      "type": "bool",
+      "required": false,
+      "default": true,
+      "description": "v0.2. A residency_pin is ALWAYS revocable; -Kind residency_pin with revocable=false is a hard STOP (error non_revocable_pin_forbidden)."
+    },
+    {
+      "name": "fencing_token",
+      "type": "int",
+      "required": false,
+      "description": "v0.2. renew/release/check CAS guard: if supplied and it is not the resource's CURRENT token, the op is refused (reason/fence_status:fence_stale) -- a superseded holder is FENCED OUT."
+    },
+    {
+      "name": "required_vram_mib",
+      "type": "int",
+      "required": false,
+      "description": "v0.2 acquire. >=0 engages the PREPARED / evict-before-grant handoff (AcquirePreparedGpu-style): detect an incompatible/lower-priority resident pin, drive its revocation, and grant only AFTER the evictor seam confirms free headroom >= required_vram_mib + target_headroom_mib."
+    },
+    {
+      "name": "target_headroom_mib",
+      "type": "int",
+      "required": false,
+      "default": 512,
+      "description": "v0.2 prepared. Extra free VRAM the evictor seam must confirm beyond required_vram_mib (the target-headroom invariant, finding 15)."
+    },
+    {
+      "name": "evictor_mode",
+      "type": "string",
+      "required": false,
+      "default": "none",
+      "description": "v0.2 prepared. none (no evictor -- grant only if the slot is already free) | mock (the built-in test evictor) | command (invoke -EvictorCommand as the pluggable seam -- the R1b PoolManager integration point). res.lease stays PURE: it never inspects VRAM or kills a server; the seam does."
+    },
+    {
+      "name": "mock_evictor_result",
+      "type": "string",
+      "required": false,
+      "default": "confirm",
+      "description": "v0.2 prepared / v0.3 transition, mock evictor. v0.2: confirm | needs_evict | timeout. v0.3 adversarial additions (transition): late_evict (eviction completes late, then headroom stable -> grants: proves we WAIT for confirmation), partial_tree_term (headroom looks fine but the managed tree did NOT fully exit -> do NOT grant), headroom_never (target headroom never reached), headroom_fell (reached then fell -> not stable), cancel_during_prepare (a cancellation arrives mid-prepare -> abort, no grant)."
+    },
+    {
+      "name": "mock_free_vram_mib",
+      "type": "int",
+      "required": false,
+      "default": 0,
+      "description": "v0.2 prepared, mock evictor: the free VRAM it reports (0 = auto = just-enough to meet required+headroom)."
+    },
+    {
+      "name": "evictor_command",
+      "type": "string",
+      "required": false,
+      "description": "v0.2 prepared, command mode: a pwsh script invoked as `& <script> -ContextJson <json>` that must emit a JSON {confirmed, free_vram_mib, evicted, outcome} result. The real PoolManager evictor (R1b) plugs in here."
+    },
+    {
+      "name": "confirm_interval_ms",
+      "type": "int",
+      "required": false,
+      "default": 200,
+      "description": "v0.2 prepared. The WDDM-async headroom-confirmation interval passed to the evictor seam (VRAM frees asynchronously after an evict)."
+    },
+    {
+      "name": "confirm_timeout_ms",
+      "type": "int",
+      "required": false,
+      "default": 3000,
+      "description": "v0.2 prepared. Give up confirming headroom after this (-> reason:headroom_timeout, no grant)."
+    },
+    {
+      "name": "allow_lock_order",
+      "type": "bool",
+      "required": false,
+      "default": false,
+      "description": "v0.2 acquire. Override the lock-order-inversion rejection (finding 14) with a recorded reason. Without it, acquiring a later/cheaper-ranked resource (git/doc:<path>) while THIS holder already holds an earlier-ranked one (gpu, then git) is rejected fail-closed (error lock_order_violation)."
+    },
+    {
+      "name": "lock_order_reason",
+      "type": "string",
+      "required": false,
+      "description": "v0.2 acquire. The recorded reason for an allow_lock_order override (stored in the result's lock_order_override)."
+    },
+    {
+      "name": "owner_id",
+      "type": "string",
+      "required": false,
+      "description": "v0.3 (R1b). The stable owner identity asserted on every op (defaults to holder). Part of the three-identity tuple owner_id + gpu_authority_epoch + resident_generation + exec_lease_id; check reports owner_current + authority_ok."
+    },
+    {
+      "name": "resident_generation",
+      "type": "string",
+      "required": false,
+      "description": "v0.3 (R1b). The PoolManager-owned per-launch generation, stamped into the lease and asserted on check (generation_current). res.lease carries + validates it; the PoolManager owns when it increments (server start/replace/invalidate)."
+    },
+    {
+      "name": "transition",
+      "type": "bool",
+      "required": false,
+      "default": false,
+      "description": "v0.3 (R1b) acquire. Engage the single scheduler-owned ATOMIC hand-off: reserve -> mint a new gpu_authority_epoch (fence the old owner) -> revoke a lower-priority pin -> drive the evictor OUTSIDE the lease mutex (drain/cancel/tree-kill/confirm-tree-gone/confirm-STABLE-headroom) under a crash-reconcilable txn journal -> grant ONLY if the reserved epoch is still current (else superseded_during_transition). Serialized: exactly one transition per resource at a time (equal priority does NOT preempt)."
+    },
+    {
+      "name": "drain_timeout_ms",
+      "type": "int",
+      "required": false,
+      "default": 2000,
+      "description": "v0.3 (R1b) transition. Bounded drain of an ACTIVE exec before cancel -> supervisor tree-kill (in-flight revocation). Passed to the evictor seam."
+    },
+    {
+      "name": "headroom_observations",
+      "type": "int",
+      "required": false,
+      "default": 3,
+      "description": "v0.3 (R1b) transition. WDDM discipline: headroom must be STABLE across this many observations (all >= required + target) before a grant."
+    },
+    {
+      "name": "headroom_stable_interval_ms",
+      "type": "int",
+      "required": false,
+      "default": 250,
+      "description": "v0.3 (R1b) transition. Spacing between the stable-headroom observations."
+    },
+    {
+      "name": "reconcile",
+      "type": "bool",
+      "required": false,
+      "default": false,
+      "description": "v0.3 (R1b). On check: roll a crashed IN-PROGRESS transition journal (PREPARING/DRAINING/STARTING) whose owner is stale or whose epoch was superseded to ABORTED (idempotent). A transition also auto-reconciles on entry."
+    },
+    {
+      "name": "authority_epoch",
+      "type": "int",
+      "required": false,
+      "description": "v0.3 (R1b). Assert-this-epoch: an alias of fencing_token for renew/release/check CAS (a superseded actor is FENCED OUT). Side effects ASSERT the epoch; they never advance it."
+    },
+    {
+      "name": "owner_incarnation_id",
+      "type": "string",
+      "required": false,
+      "description": "v0.4 (R1b'). ABA close (finding 1, blocker 3): a random identity minted per owning-process/supervisor-client RESTART. A stale owner restarting with the SAME logical owner_id gets a NEW incarnation and does NOT regain authority (check.owner_incarnation_current + authority_ok assert it when supplied). Auto-minted when the v0.4 surface is engaged and not supplied."
+    },
+    {
+      "name": "resident_instance_id",
+      "type": "string",
+      "required": false,
+      "description": "v0.4 (R1b'). ABA close (finding 1, blocker 2): a random identity per ACTUAL server process tree, NEVER reused. It is the TARGET of every destructive op (stop/kill/publish) -- never resident_generation or config_key alone. A fresh grant / transition mints one unless the caller pins it; check + fence-op assert it (resident_instance_current)."
+    },
+    {
+      "name": "request_id",
+      "type": "string",
+      "required": false,
+      "description": "v0.4 (R1b'). Acquisition idempotency key (blocker 5). A transition/commit retry on the SAME request_id returns the SAME committed grant -- never a second epoch/lease/resident (recovers a lost commit response). Recorded in the txn journal."
+    },
+    {
+      "name": "two_phase_commit",
+      "type": "bool",
+      "required": false,
+      "default": false,
+      "description": "v0.4 (R1b') acquire+transition. Blocker 1: issue a NON-USABLE transition capability (the new server starts under scheduler authority, usable=false) instead of an ordinary exec lease; the first USABLE exec lease is published only by the phase-2 commit AFTER health. Default single-shot -Transition (collapsed form) stays byte-compatible with v0.3."
+    },
+    {
+      "name": "health_ok",
+      "type": "bool",
+      "required": false,
+      "default": false,
+      "description": "v0.4 (R1b') -Action commit. The consumer reports the started resident passed health/peak-memory admission -> publish the resident + issue the first usable exec lease atomically (HEALTHY_UNPUBLISHED -> COMMITTED)."
+    },
+    {
+      "name": "health_failed",
+      "type": "bool",
+      "required": false,
+      "default": false,
+      "description": "v0.4 (R1b') -Action commit. The started resident failed health / partial-load OOM -> terminate the EXACT tentative resident_instance_id, publish/grant NOTHING, leave the GPU empty (fail-closed; the old resident is NOT silently restored -- a new scheduled acquisition is required)."
+    },
+    {
+      "name": "transition_id",
+      "type": "string",
+      "required": false,
+      "description": "v0.4 (R1b') commit / fence-op. The txn_id of the capability being committed (a mismatch is refused), or the transition a fenced side effect was dispatched under."
+    },
+    {
+      "name": "health_receipt",
+      "type": "string",
+      "required": false,
+      "description": "v0.4 (R1b') -Action commit. An opaque health receipt tied to the exact resident_instance_id + transition; recorded on the committed lease + journal."
+    },
+    {
+      "name": "op_kind",
+      "type": "string",
+      "required": false,
+      "default": "stop",
+      "description": "v0.4 (R1b') -Action fence-op. The captured side-effect kind being validated: stop | result_publish | manifest_write | lease_release | lease_renew | health_fail | idle_evict | complete. The op MUST also name an exact -ResidentInstanceId."
+    },
+    {
+      "name": "state_version",
+      "type": "int",
+      "required": false,
+      "description": "v0.4 (R1b') fence-op / check CAS. The durable per-resource state_version captured at dispatch. A side effect asserts it; a bumped version (grant/renew/revoke/release changed the state) fences the captured op out (state_version_stale) -- waiters re-read a durable version, never a one-shot signal (finding 14 / test K)."
+    },
+    {
+      "name": "lease_dir",
+      "type": "string",
+      "required": false,
+      "description": "Override the shared lease directory (default $env:LIFEORCH_LEASE_DIR, else runtime/leases). All processes MUST resolve the same dir. The durable per-resource fencing counter (<resource>.fence), transition journal (<resource>.txn), state_version (<resource>.state) + renew/revoke oplock (<resource>.lease.oplock) live here too."
+    }
   ],
   "outputs": {
     "result_shape": "object",
     "description": "acquire: {acquired, lease_id, holder, expires_at_utc, ttl_seconds, waited_ms, reclaimed_stale, already_held, held_by}; +v0.2 when engaged: {fencing_token, lease_kind, priority, revocable, revoked_by, revocation_signaled?, revoked_pin?, prepared?, required_vram_mib?, target_headroom_mib?, free_vram_mib?, evict_performed?, headroom_confirmed?, evictor_mode?, evictor_outcome?, lock_order_override?, reason?}; +v0.3 when engaged: {gpu_authority_epoch, exec_lease_id, resident_generation, owner_id}; +v0.3 transition: {transition, transition_id, transition_state (RESERVING|RESERVED_FENCED|DRAINING|TERMINATING|TREE_GONE|HEADROOM_CONFIRMED|STARTING|HEALTHY_UNPUBLISHED|COMMITTED|ABORTING|ABORTED), tree_gone, headroom_observations, superseded, reconciled?}; +v0.4 when engaged: {owner_incarnation_id, resident_instance_id, state_version, usable, request_id}; +v0.4 transition: {two_phase, capability_only, idempotent_replay, old_resident_instance_id}. commit (v0.4, two-phase phase 2): {committed, transition_state (COMMITTED|ABORTED), reason (committed|idempotent_replay|health_failed|superseded_during_transition|capability_lost|capability_superseded|transition_id_mismatch|already_usable|...), lease_id, exec_lease_id, usable, gpu_authority_epoch, resident_instance_id, transition_id}. fence-op (v0.4, target-fenced side-effect gate): {op_kind, fenced_op_ok, reason (current|target_instance_required|target_instance_mismatch|epoch_stale|exec_lease_mismatch|state_version_stale|resident_expired|authority_revoked|no_live_resident), target_resident_instance_id, current_resident_instance_id, current_epoch, current_state_version, held, stale, revoked}. release: {released, reason, held_by} (+fence_stale on a stale -FencingToken/-AuthorityEpoch). renew: {renewed, lease_id, expires_at_utc, renew_count, reason} (+fencing_token/revoked_by; reason fence_stale|revoked|renew_contended). status: {exists, held, stale, holder, lease_id, expires_at_utc, seconds_remaining} (+v0.2 fields when engaged). check: {exists, held, stale, holder, lease_id, fencing_token, lease_kind, revocable, revoked_by, priority, expires_at_utc, seconds_remaining, token_current, fence_status} (+v0.3 when engaged: gpu_authority_epoch, exec_lease_id, resident_generation, owner_id, owner_current, generation_current, authority_ok, reconciled?) (+v0.4 when engaged: owner_incarnation_id, resident_instance_id, owner_incarnation_current, resident_instance_current, state_version, current_state_version, state_version_current, usable -- all folded into authority_ok). list: {count, leases:[...]}. A plain (no-v0.2/v0.3/v0.4-input) acquire/release/renew/status/list is BYTE-IDENTICAL to v0.1; a v0.3-engaged call is unchanged from v0.3 (v0.4 fields appear only when a v0.4 input is supplied or -Action commit|fence-op)."
   },
   "requirements": {
-    "executables": ["pwsh>=7.4"],
+    "executables": [
+      "pwsh>=7.4"
+    ],
     "models": [],
     "libraries": [],
-    "cpu": "any", "gpu": "none", "memory_mb": 128,
-    "network": false, "filesystem": "write", "audio": false, "screen": false, "camera": false
+    "cpu": "any",
+    "gpu": "none",
+    "memory_mb": 128,
+    "network": false,
+    "filesystem": "write",
+    "audio": false,
+    "screen": false,
+    "camera": false
   },
-  "artifacts": {"root": "runtime/artifacts/<invocation_id>/"},
-  "timeout": {"default_seconds": 120, "on_timeout": "kill_tree_and_report"},
+  "artifacts": {
+    "root": "runtime/artifacts/<invocation_id>/"
+  },
+  "timeout": {
+    "default_seconds": 120,
+    "on_timeout": "kill_tree_and_report"
+  },
   "batch": false,
   "streaming": false,
   "parallel_safe": true,

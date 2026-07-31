@@ -51,9 +51,9 @@ Write-Output "===================================="
 $manifestPath = Join-Path (Split-Path -Parent $SkillPath) 'skill.json'
 $mani = $null; if (Test-Path $manifestPath) { $mani = Get-Content -Raw $manifestPath | ConvertFrom-Json }
 # version pin tracks the res.lease version bump; the 36 BEHAVIORAL assertions below are unchanged (0-regression).
-Ok ($null -ne $mani -and $mani.version -eq '0.4.0' -and $mani.contract_version -eq '0.4') 'T0 skill.json reports version 0.4.0 / contract 0.4'
+Ok ($null -ne $mani -and $mani.version -eq '0.4.1' -and $mani.contract_version -eq '0.4') 'T0 skill.json reports version 0.4.1 / contract 0.4'
 $r = Run-Res @{ action='acquire'; resource='probe'; holder='p'; owner_id='p' }
-Ok ($null -ne $r.env -and $r.env.skill_version -eq '0.4.0') 'T0 envelope skill_version 0.4.0'
+Ok ($null -ne $r.env -and $r.env.skill_version -eq '0.4.1') 'T0 envelope skill_version 0.4.1'
 
 # ---------- T1: three-identity fencing ----------
 Write-Output "T1 three-identity fencing:"

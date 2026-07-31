@@ -473,7 +473,8 @@ function Invoke-SupervisorEnsureResident {
         [scriptblock]$HealthProbe = $null, [scriptblock]$StopProbe = $null,
         [scriptblock]$SocketOwnerProbe = $null, [scriptblock]$StartTicksProbe = $null, [scriptblock]$VramProbe = $null,
         [string]$FenceHolder = 'gateway.supervisor', [int]$FenceTtlSeconds = 120,
-        [switch]$ForceReload, [int]$LoadTimeoutSec = 120
+        [switch]$ForceReload, [int]$LoadTimeoutSec = 120,
+        [string]$ResidentInstanceId   # v0.4 (i21): caller-pinned per-server-tree instance id stamped into the manifest (the target of every destructive op); omitted => minted here
     )
     if (-not $script:SupPoolCoreLoaded) { throw [PSCustomObject]@{ code = 'pool_core_absent'; message = 'PoolManager.psm1 not loaded' } }
     $reqHash = Get-ResidentConfigHash $ReqConfig
@@ -488,6 +489,7 @@ function Invoke-SupervisorEnsureResident {
         can_serve = $null; can_serve_mismatches = @(); socket_owner_verified = $null
         swap_count = 0; keep_resident_seconds = $keepSec; port = $null; pid = $null
         load_ms = 0; health_ok = $false; job_owned = $false
+        resident_instance_id = $null
         vram = [ordered]@{ free_mib_before = $null; free_mib_after = $null; recovered_mib = $null }
     }
     $lock = Enter-PoolLock -LockPath $LockPath -TimeoutMs 15000
@@ -526,6 +528,7 @@ function Invoke-SupervisorEnsureResident {
             if ($healthy -and $canServe -and $identOk) {
                 # ~1 ms REUSE across invocations: keep the epoch fence, renew TTL, refresh keep-resident timer
                 $out.action = 'reuse'; $out.reused = $true; $out.swap_count = $prevSwaps; $out.fence = $prevFence
+                $out.resident_instance_id = if (Test-SupHasProp $reg 'resident_instance_id') { [string]$reg.resident_instance_id } else { $null }
                 $out.instance_generation = if (Test-SupHasProp $reg 'instance_generation') { [string]$reg.instance_generation } else { $null }
                 $out.port = $port; $out.pid = [int]$reg.pid; $out.health_ok = $true
                 $out.socket_owner_verified = $sockOwner
@@ -567,12 +570,17 @@ function Invoke-SupervisorEnsureResident {
         $startTicks = if (Test-SupHasProp $launch 'start_ticks') { [long]$launch.start_ticks } else { 0 }
         $instanceGen = if (Test-SupHasProp $launch 'instance_generation') { [string]$launch.instance_generation } else { (New-InstanceGeneration) }
         $jobOwned = if (Test-SupHasProp $launch 'job_owned') { [bool]$launch.job_owned } else { $false }
+        # v0.4 (i21): the per-server-tree resident_instance_id -- the TARGET of every destructive op (never
+        # generation/config-key alone). Caller-pinned (so the res.lease grant and the manifest agree) or minted.
+        $resInstId = if (-not [string]::IsNullOrWhiteSpace($ResidentInstanceId)) { $ResidentInstanceId } else { ('ri' + [Guid]::NewGuid().ToString('N')) }
         $out.started_new = $true; $out.pid = $serverPid; $out.port = $usePort; $out.instance_generation = $instanceGen; $out.fence = $myFence; $out.job_owned = $jobOwned
+        $out.resident_instance_id = $resInstId
 
         $nowUtc = ConvertTo-SupUtcString (Get-SupNowUtc)
         $manifest = [ordered]@{
             schema = 'lifeorch.model_gateway.warm/0.3'; state = 'STARTING'
             pid = $serverPid; start_ticks = $startTicks; instance_generation = $instanceGen
+            resident_instance_id = $resInstId
             host = $host127; port = $usePort; model_id = $modelId
             resident_config = $ReqConfig; resident_config_hash = $reqHash; residency_key_sha = $reqHash
             ngl = $(if (Test-SupHasProp $ReqConfig 'gpu_layers') { $ReqConfig.gpu_layers } else { $null })
@@ -619,9 +627,15 @@ function Invoke-SupervisorEnsureResident {
 }
 
 # Evict the resident under the lock (returns a report). Idempotent when there is no resident.
+# v0.4 (R1b consumer wave, i21): an OPTIONAL -TargetResidentInstanceId makes the stop TARGET-FENCED at the
+# supervisor itself (red-team blockers 4/8): when supplied, the manifest's resident_instance_id must match
+# EXACTLY or the stop is REFUSED (reason target_instance_mismatch; a manifest without the field refuses too,
+# manifest_instance_unknown -- fail-closed, never "stop whatever currently serves"). No target => unchanged
+# legacy behavior (back-compatible).
 function Invoke-SupervisorEvict {
     param([Parameter(Mandatory)][string]$WarmRegPath, [Parameter(Mandatory)][string]$LockPath,
-          [scriptblock]$StopProbe = $null, [scriptblock]$StartTicksProbe = $null, [scriptblock]$VramProbe = $null)
+          [scriptblock]$StopProbe = $null, [scriptblock]$StartTicksProbe = $null, [scriptblock]$VramProbe = $null,
+          [string]$TargetResidentInstanceId)
     $out = [ordered]@{ action = 'evict'; had_resident = $false; evicted = $false; resident_pid = $null; reason = 'no_resident'; vram = [ordered]@{ free_mib_before = $null; free_mib_after = $null; recovered_mib = $null } }
     if (-not $script:SupPoolCoreLoaded) { return $out }
     $lock = Enter-PoolLock -LockPath $LockPath -TimeoutMs 8000
@@ -629,6 +643,11 @@ function Invoke-SupervisorEvict {
         $reg = Read-PoolManifest $WarmRegPath
         if ($null -eq $reg -or -not (Test-SupHasProp $reg 'pid') -or ([int]$reg.pid -le 0)) { return $out }
         $out.had_resident = $true; $out.resident_pid = [int]$reg.pid
+        if (-not [string]::IsNullOrWhiteSpace($TargetResidentInstanceId)) {
+            $curInst = if (Test-SupHasProp $reg 'resident_instance_id') { [string]$reg.resident_instance_id } else { '' }
+            if ([string]::IsNullOrWhiteSpace($curInst)) { $out.reason = 'manifest_instance_unknown'; $out['target_resident_instance_id'] = $TargetResidentInstanceId; return $out }
+            if ($curInst -ne $TargetResidentInstanceId) { $out.reason = 'target_instance_mismatch'; $out['target_resident_instance_id'] = $TargetResidentInstanceId; $out['current_resident_instance_id'] = $curInst; return $out }
+        }
         $ident = Test-ResidentIdentity $reg $StartTicksProbe
         if ($null -ne $VramProbe) { try { $out.vram.free_mib_before = & $VramProbe } catch { } }
         [void](Set-ManifestCas -Path $WarmRegPath -Fence ([long](Get-ManifestFence $reg)) -Updates @{ state = 'STOPPING' })

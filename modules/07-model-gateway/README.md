@@ -262,6 +262,46 @@ liveness + a re-`start`). This makes the supervisor self-healing for an unattend
 pool by default — that awaits a soak + the res.lease fencing wave (findings 13/14). The classic per-call and
 D-0057 warm paths are byte-for-byte unchanged.
 
+## GPU-lease split (i21, the R1b CONSUMER wave — v0.5.0, DEFAULT-OFF)
+
+`-UsePoolLeaseSplit` replaces the whole-task/per-call `gpu` lease on the pool paths (`-Warm` /
+`-EnsureResident`) with the res.lease 0.4.x split. OFF == the classic + D-0057 warm + Stage-1.1 pool +
+supervisor paths **byte-for-byte** (no new result keys anywhere). When ON:
+
+- **Between calls** the gateway holds a revocable **`residency_pin`** (priority = the tier: tiny 10 / weak 20 /
+  mid 30 / strong 40; `-SplitPriority` overrides). Revocation is honored **on entry**: a pin found
+  revoked/preempted stops serving (`gpu_pin_revoked` / `gpu_split_contended`, retryable) so the preempting
+  transition can evict cleanly.
+- **A same-model reuse** takes a plain short **exec** re-attach (~ms-class residency decision) — the
+  `exec_lease_id` leg of the tuple — and the pin persists.
+- **Every swap/load** goes through the v0.4 **TWO-PHASE transition**: `-Transition -TwoPhaseCommit
+  -RequiredVramMiB <measured peak> -EvictorMode command -EvictorCommand lib/PoolEvictor.ps1` issues a
+  NON-usable capability; the new server starts under it (via the DURABLE SUPERVISOR when `-UseSupervisor` and
+  one is live, else the per-call managed launch); `-Action commit -HealthOk` AFTER health publishes + issues
+  the first usable exec lease; on failure `-Action commit -HealthFailed` drops the exact tentative instance
+  and leaves the GPU EMPTY. The transition runs as a scheduler sub-identity (`<holder>!sched`) that strictly
+  outranks only OUR OWN stored pin (a cross-owner preempt keeps the real priority — finding 13 preserved).
+- **`lib/PoolEvictor.ps1`** is the REAL evictor behind the seam: exact-target discipline
+  (`target_resident_instance_id` required; "stop whatever serves this resource" is impossible), a res.lease
+  `fence-op` consult BEFORE every destructive step (a stale target is refused), bounded drain -> cancel ->
+  **supervisor-routed Job-Object tree-kill** (never a PID kill; no live supervisor => fail-closed
+  `supervisor_unavailable`), tree-gone confirm, then nvidia-smi headroom STABLE across 3 observations
+  ~250 ms apart + a final re-check. Off-Windows / nvidia-smi absent => `vram_unknown`, a normal failed
+  prepare. Each run writes a receipt under `runtime/evictor/`. Test seams: `$env:LIFEORCH_POOLEVICTOR_SEAMS`.
+- **Every inference asserts the FULL v0.4 tuple** (`owner_id + owner_incarnation_id + gpu_authority_epoch +
+  resident_generation + resident_instance_id + exec_lease_id`) via res.lease `check` BEFORE the completion
+  (the Test-GenerationMatch manifest gate + the authority gate) and **re-asserts it AFTER** — a stale
+  in-flight result is **DISCARDED** (`stale_result_discarded`, with the `fence-op result_publish` refusal as
+  evidence). The manifest now stamps a per-tree `resident_instance_id` at every launch, and the supervisor's
+  `evict` op refuses a targeted stop whose instance does not match (`target_instance_mismatch`).
+- Result surface: `result.server.gpu_lease.split` (pin/transition/commit/active-tuple/discard bookkeeping) —
+  present ONLY when the split is engaged.
+
+Off-machine gate: `tests/Invoke-ModelGatewayLeaseSplitTests.ps1` (mock supervisor/nvidia-smi seams + the real
+res.lease + mock llama-server). The live-GPU proof (real 3B<->9B swap under pin+exec, pin revocation +
+prepared eviction, revoke-during-ACTIVE-inference, late-stale-result refusal) runs via the executor with the
+REAL supervisor + nvidia-smi.
+
 ## Result shape
 
 `result = { model, engine, mode, selected_from, request{messages,sampling}, output{role,text},

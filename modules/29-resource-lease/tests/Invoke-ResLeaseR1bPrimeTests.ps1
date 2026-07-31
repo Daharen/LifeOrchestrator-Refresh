@@ -94,7 +94,7 @@ Write-Output "======================================"
 # ---------- T0: manifest + envelope report v0.4 ----------
 $manifestPath = Join-Path (Split-Path -Parent $SkillPath) 'skill.json'
 $mani = $null; if (Test-Path $manifestPath) { $mani = Get-Content -Raw $manifestPath | ConvertFrom-Json }
-Ok ($null -ne $mani -and $mani.version -eq '0.4.0' -and $mani.contract_version -eq '0.4') 'T0 skill.json reports version 0.4.0 / contract 0.4'
+Ok ($null -ne $mani -and $mani.version -eq '0.4.1' -and $mani.contract_version -eq '0.4') 'T0 skill.json reports version 0.4.1 / contract 0.4'
 $probe = Res @{ action='acquire'; resource='probe'; holder='p'; owner_id='p'; owner_incarnation_id='i0' }
 Ok ($null -ne $probe -and $probe.owner_incarnation_id -eq 'i0' -and -not [string]::IsNullOrWhiteSpace($probe.resident_instance_id)) 'T0 v0.4 engaged acquire carries owner_incarnation_id + resident_instance_id'
 

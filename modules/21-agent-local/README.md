@@ -132,7 +132,23 @@ returns `completed_unverified`; with an un-checkable one, `human_verification_re
 matches the **whole** residency key (model_id + sha256 + engine build + gpu_layers + context + no_think + server
 generation) and reuses **only** on an exact match, else it evicts + reloads. The **gpu lease is acquired once for
 the whole ramped task** and renewed ~30 s (gateway calls re-attach under the same holder, so it is never released
-mid-task). **Triggers:** hard failures (empty/malformed/out-of-set/length-truncated decision, finish-but-contract-fails,
+mid-task).
+
+**GPU-lease split (i21, the R1b CONSUMER wave -- `-SplitLease`, DEFAULT-OFF).** The whole-task lease starves
+higher-priority GPU work while a task sits idle between calls (WARM_POOL_DESIGN finding 13). `-SplitLease`
+(InputsJson `split_lease`; agent.local forwards `-InputsJson` to the ramp, so `{"split_lease":true}` works
+end-to-end) adopts the res.lease 0.4.x split instead: the **model-affine segment** holds a revocable
+**`residency_pin`** (priority = tier; `-SplitPriority`, default 30 = the mid decision floor; the renew path
+RE-ATTACHES across the pin-id churn its own child gateway's swaps produce; release is by holder at segment
+end), and the **exec lease is taken only around each LLM call by the gateway** -- every child call carries
+`use_pool_lease_split + split_priority + a per-run owner_incarnation_id` (the v0.4 ABA identity, minted once
+per run and exported as `$env:LIFEORCH_OWNER_INCARNATION`), and a resident mismatch DEFERS its eviction to the
+gateway's two-phase transition instead of the inline `evict_warm`. A revoked pin means a higher-priority owner
+is taking the GPU: the affected gateway call reports it (`gpu_pin_revoked`) and the run degrades gracefully.
+**OFF == byte-for-byte**, including the `$env:LIFEORCH_INSTANCE` stable-holder re-attach; with it ON the
+single-agent path produces identical epochs/completions/swap counts (gate: `tests/Invoke-AutoRampSplitTests.ps1`).
+
+**Triggers:** hard failures (empty/malformed/out-of-set/length-truncated decision, finish-but-contract-fails,
 repeat-identical-action-no-state-change, stale/wrong resident) escalate immediately to S0; a `>=2`-strike-in-3-steps
 soft accumulator uses M1 once before the reload. A **task-scoped idempotency key** (hash of tool id + normalized args)
 refuses exact-duplicate mutations and **resumes from the last authoritative state** across epochs (side-effects are

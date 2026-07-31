@@ -193,6 +193,13 @@ findings 1/13/14 -- it makes the primitive *safe to build on* for the later cons
   exact `resident_instance_id`) and the mock supervisor seam **enforces target-fenced stop**. The real launcher
   chain is the later consumer wave -- not built here.
 
+**v0.4.1 (i21, the R1b consumer wave):** one truthful-telemetry fix surfaced by wiring the REAL evictor
+(`modules/07-model-gateway/lib/PoolEvictor.ps1`): the command-mode evictor's `tree_gone` is now passed through
+to the transition result + txn journal instead of silently defaulting to `true` (a partial-tree ABORT must
+never be journaled as `tree_gone:true`). Additive: a v0.2-shape command evictor without the field behaves
+exactly as before, and the grant decision was already fail-closed on `confirmed`. Behavior otherwise unchanged
+(74/74 + 36/36 + 45/45 re-verified; T0 version pins track 0.4.1).
+
 **Still-open + DEFERRED (NOT faked here).** Findings **1/13/14 stay OPEN** -- they close only after the later
 consumer wave (#7 PoolManager + #21 governor adoption + the real nvidia-smi/eviction evictor + the live-GPU
 3B<->9B swap / pin-revocation / prepared-eviction proof). The **live-only** red-team cases -- real GPU OOM on a

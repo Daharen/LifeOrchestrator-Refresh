@@ -111,7 +111,23 @@ param(
     # --- DURABLE gateway supervisor (WARM_POOL_DESIGN section 10 residual (a); durable finding 5). Default-OFF, additive. ---
     [switch]$UseSupervisor,              # route residency ops (EnsureResident/PoolStatus/PrepareGpu/EvictWarm/Reconcile) to a RUNNING persistent supervisor so the resident + its Job-Object tree ownership survive across per-call invocations; degrade to the per-call path (with a warning) if no supervisor is live. Inference is NOT routed -- it reuses the supervisor-published resident via the classic warm path (same warm-server.json).
     [string]$SupervisorRoot,             # supervisor control-dir root (default: runtime/supervisor); must match Start-GatewaySupervisor.ps1
-    [switch]$BypassPoolManager           # framing: legacy escape -- force the classic cold isolated-server path even under -Warm (integrity invariants stay non-bypassable)
+    [switch]$BypassPoolManager,          # framing: legacy escape -- force the classic cold isolated-server path even under -Warm (integrity invariants stay non-bypassable)
+    # --- R1b CONSUMER wave (i21): GPU-lease-split adoption of res.lease 0.4.0. ALL DEFAULT-OFF; with the flag
+    #     off every path above is byte-for-byte unchanged. When ON (-Warm/-EnsureResident pool paths only):
+    #     a revocable residency_pin is held BETWEEN calls (priority = the task's tier); a same-model reuse takes
+    #     a plain short exec re-attach (~1 ms-class residency decision); a swap/eviction goes through the v0.4
+    #     TWO-PHASE transition (-Transition -TwoPhaseCommit -> capability -> start -> '-Action commit -HealthOk')
+    #     with the REAL evictor lib/PoolEvictor.ps1 (-EvictorMode command, supervisor-routed, fence-op-gated);
+    #     every inference asserts the FULL v0.4 tuple (owner_id + owner_incarnation_id + gpu_authority_epoch +
+    #     resident_generation + resident_instance_id + exec_lease_id) via res.lease '-Action check' and a late
+    #     stale result is DISCARDED. ---
+    [switch]$UsePoolLeaseSplit,          # engage the split (default-OFF; OFF == today's D-0057 warm + Stage-1.1 pool byte-for-byte)
+    [int]$SplitPriority = 0,             # residency-pin priority (0 = derive from the tier: tiny 10 / weak 20 / mid 30 / strong 40)
+    [string]$OwnerIncarnationId,         # v0.4 ABA identity minted per owning-process RESTART (default: $env:LIFEORCH_OWNER_INCARNATION else minted per invocation)
+    [int]$SplitRequiredVramMib = 0,      # transition required_vram_mib = the measured PEAK for the config (0 = derive: size_mib + max(512, 10%))
+    [int]$SplitExecTtlSeconds = 120,     # TTL of the short exec/transition lease
+    [int]$SplitPinTtlSeconds = 600,      # TTL of the between-calls residency pin (renewed by re-attach on each call)
+    [int]$SplitDrainTimeoutMs = 2000     # bounded drain of an ACTIVE inference before cancel -> supervisor tree-kill
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -123,7 +139,7 @@ $ProgressPreference = 'SilentlyContinue'
 $script:PoolCoreLoaded = $false
 try { Import-Module (Join-Path $PSScriptRoot 'lib/PoolManager.psm1') -Force -ErrorAction Stop; $script:PoolCoreLoaded = $true } catch { }
 
-$SKILL_ID = 'model.gateway'; $SKILL_VERSION = '0.4.0'; $CONTRACT = '0.1'
+$SKILL_ID = 'model.gateway'; $SKILL_VERSION = '0.5.0'; $CONTRACT = '0.1'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $CONF_THRESHOLD = 0.5
 $utf8 = [System.Text.UTF8Encoding]::new($false)
@@ -214,6 +230,43 @@ function Invoke-GpuLeaseAction {
         Write-Diag "res.lease $LeaseAction invocation error: $($_.Exception.Message)"
         return $null
     } finally { $ErrorActionPreference = $prev }
+}
+# i21 split: run ONE res.lease action with the FULL v0.3/v0.4 surface via -InputsJson (a separate pwsh process;
+# its `exit 0` must not terminate this script). Returns the parsed .result object, or $null on any failure.
+function Invoke-ResLeaseJson {
+    param([Parameter(Mandatory)][hashtable]$LeaseInputs, [string]$RlPath, [string]$PwshExe)
+    if ([string]::IsNullOrWhiteSpace($RlPath) -or [string]::IsNullOrWhiteSpace($PwshExe)) { return $null }
+    if (-not [string]::IsNullOrWhiteSpace($LeaseDir) -and -not $LeaseInputs.ContainsKey('lease_dir')) { $LeaseInputs['lease_dir'] = $LeaseDir }
+    $json = ($LeaseInputs | ConvertTo-Json -Compress -Depth 6)
+    $a = @('-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File', $RlPath, '-InputsJson', $json)
+    $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+    try {
+        $out = & $PwshExe @a 2>$null
+        $txt = ([string]($out | Out-String)).Trim()
+        if ([string]::IsNullOrWhiteSpace($txt)) { return $null }
+        $envObj = $txt | ConvertFrom-Json
+        if ($null -ne $envObj -and (Has $envObj 'result') -and $null -ne $envObj.result) { return $envObj.result }
+        return $null
+    } catch {
+        Write-Diag "res.lease json action '$($LeaseInputs['action'])' invocation error: $($_.Exception.Message)"
+        return $null
+    } finally { $ErrorActionPreference = $prev }
+}
+# i21 split: residency-pin priority = the task's tier (explicit -SplitPriority wins).
+function Get-SplitTierPriority {
+    param([string]$TierName, [string]$ModelId, $Reg)
+    if ($SplitPriority -gt 0) { return $SplitPriority }
+    $t = $TierName
+    if ([string]::IsNullOrWhiteSpace($t) -and $null -ne $Reg -and (Has $Reg 'tiers') -and (Has $Reg.tiers 'llm')) {
+        foreach ($tp in $Reg.tiers.llm.PSObject.Properties) { if ([string]$tp.Value -eq $ModelId) { $t = [string]$tp.Name; break } }
+    }
+    switch (("$t").ToLowerInvariant()) {
+        'tiny'   { return 10 }
+        'weak'   { return 20 }
+        'mid'    { return 30 }
+        'strong' { return 40 }
+        default  { return 20 }
+    }
 }
 
 # ---- warm/persistent server (Governor Phase 2): a single cross-invocation resident llama-server ----
@@ -533,6 +586,13 @@ try {
             if (Has $p 'vram_confirm_timeout_ms') { $VramConfirmTimeoutMs = [int]$p.vram_confirm_timeout_ms }
             if (Has $p 'reconcile')        { $Reconcile = [bool]$p.reconcile }
             if (Has $p 'bypass_pool_manager') { $BypassPoolManager = [bool]$p.bypass_pool_manager }
+            if (Has $p 'use_pool_lease_split')    { $UsePoolLeaseSplit = [bool]$p.use_pool_lease_split }
+            if (Has $p 'split_priority')          { $SplitPriority = [int]$p.split_priority }
+            if (Has $p 'owner_incarnation_id')    { $OwnerIncarnationId = [string]$p.owner_incarnation_id }
+            if (Has $p 'split_required_vram_mib') { $SplitRequiredVramMib = [int]$p.split_required_vram_mib }
+            if (Has $p 'split_exec_ttl_s')        { $SplitExecTtlSeconds = [int]$p.split_exec_ttl_s }
+            if (Has $p 'split_pin_ttl_s')         { $SplitPinTtlSeconds = [int]$p.split_pin_ttl_s }
+            if (Has $p 'split_drain_timeout_ms')  { $SplitDrainTimeoutMs = [int]$p.split_drain_timeout_ms }
         }
     }
     New-Item -ItemType Directory -Path $invDir -Force | Out-Null
@@ -544,6 +604,7 @@ try {
     if ($BypassPoolManager) {
         if ($Warm -or $EnsureResident -or $PoolStatus -or $SweepIdle -or $PrepareGpu) { $warnings.Add('bypass_pool_manager: pool layer disabled for this call; classic cold isolated-server path') }
         $Warm = $false; $EnsureResident = $false; $PoolStatus = $false; $SweepIdle = $false; $PrepareGpu = $false; $Reconcile = $false
+        if ($UsePoolLeaseSplit) { $warnings.Add('bypass_pool_manager: use_pool_lease_split disabled (classic path takes the plain per-call gpu lease)'); $UsePoolLeaseSplit = $false }
     }
     $doEvictWarm  = [bool]$EvictWarm
     $doPoolStatus = [bool]$PoolStatus
@@ -559,7 +620,10 @@ try {
     #      supervisor is live. Inference is NOT routed -- it reuses the supervisor-published resident via the
     #      classic warm path (the supervisor publishes to the SAME warm-server.json). ----
     $supervisorRouted = $false
-    if ($UseSupervisor -and -not $BypassPoolManager -and ($doEnsure -or $doPoolStatus -or $doPrepareGpu -or $doEvictWarm -or $doReconcile)) {
+    # i21 split: an -EnsureResident under -UsePoolLeaseSplit is NOT short-circuit-routed -- the v0.4 two-phase
+    # transition must WRAP the supervisor launch (the split residency path below still routes the actual server
+    # start/stop through the supervisor; only the orchestration moves into the transition).
+    if ($UseSupervisor -and -not $BypassPoolManager -and (($doEnsure -and -not $UsePoolLeaseSplit) -or $doPoolStatus -or $doPrepareGpu -or $doEvictWarm -or $doReconcile)) {
         $supOp = if ($doReconcile) { 'reconcile' } elseif ($doPrepareGpu) { 'prepare_gpu' } elseif ($doEvictWarm) { 'evict' } elseif ($doPoolStatus) { 'status' } else { 'ensure_resident' }
         $supParams = @{}
         if ($doEnsure) {
@@ -887,9 +951,100 @@ try {
     }
     $sp = $null; $serverPid = 0; $healthOk = $false; $healthMs = $null; $loadStart = $null
     $resp = $null
+    # ---- i21 GPU-lease-split state (ALL inert when -UsePoolLeaseSplit is off) ----
+    $splitOn = $false
+    $splitState = $null
+    if ($UsePoolLeaseSplit) {
+        if (-not $poolMode -and -not $doEnsure) { $warnings.Add('use_pool_lease_split requires the pool (-Warm / -EnsureResident); flag ignored for this classic call') }
+        elseif (-not $script:PoolCoreLoaded)    { $warnings.Add('use_pool_lease_split requires lib/PoolManager.psm1; flag ignored') }
+        elseif ($glMode -eq 'off')              { $warnings.Add('use_pool_lease_split requires the gpu lease (-GpuLease off given); flag ignored') }
+        else {
+            $rlProbe = Resolve-ResLeasePath
+            if ($null -eq $rlProbe) { throw [PSCustomObject]@{ code = 'res_lease_required_for_split'; message = 'use_pool_lease_split requires modules/29-resource-lease/Invoke-ResLease.ps1 (not found); the split is fail-closed, not gracefully degraded'; retryable = $false } }
+            $splitOn = $true
+            $splitInc = if (-not [string]::IsNullOrWhiteSpace($OwnerIncarnationId)) { $OwnerIncarnationId }
+                        elseif (-not [string]::IsNullOrWhiteSpace($env:LIFEORCH_OWNER_INCARNATION)) { $env:LIFEORCH_OWNER_INCARNATION }
+                        else { 'inc' + [Guid]::NewGuid().ToString('N') }
+            $splitPrio = Get-SplitTierPriority $Tier $m.model_id $reg
+            $splitStoredPinPrio = $splitPrio   # the STORED pin priority (re-read from check; a re-attach keeps the original)
+            $splitState = [ordered]@{
+                on = $true; priority = $splitPrio; owner_incarnation_id = $splitInc
+                pin = $null; pin_contended = $false; revocation = $null
+                transition = $null; commit = $null; exec_released = $null; repinned = $null
+                active = $null; pending_txn_id = $null; swap_committed = $false; discard_check = $null
+                required_vram_mib = 0; evictor = 'lib/PoolEvictor.ps1'
+            }
+        }
+    }
     try {
+        # -- i21 SPLIT: acquire/re-attach the revocable residency PIN (held BETWEEN calls; priority = tier);
+        #    honor revocation on entry (a revoked pin means a higher-priority transition wants the GPU ->
+        #    STOP SERVING and let it evict cleanly). The plain per-call lease branch below is byte-for-byte
+        #    unchanged when the split is off. --
+        if ($glMode -ne 'off' -and $splitOn) {
+            $rlPath = Resolve-ResLeasePath
+            $leaseState.available = $true
+            $glWait = if ($glMode -eq 'auto') { 0 } else { $GpuLeaseWaitSeconds }
+            $curManifest = Read-WarmServer $warmRegPath
+            $pinIn = @{ action='acquire'; resource='gpu'; holder=$glHolder; kind='residency_pin'; priority=$splitPrio
+                        ttl_seconds=$SplitPinTtlSeconds; wait_seconds=$glWait; owner_id=$glHolder
+                        owner_incarnation_id=$splitInc; note='model.gateway split residency pin' }
+            if ($null -ne $curManifest) {
+                if (Has $curManifest 'instance_generation')   { $pinIn['resident_generation']  = [string]$curManifest.instance_generation }
+                if (Has $curManifest 'resident_instance_id')  { $pinIn['resident_instance_id'] = [string]$curManifest.resident_instance_id }
+            }
+            $pinAcq = Invoke-ResLeaseJson -LeaseInputs $pinIn -RlPath $rlPath -PwshExe (Get-PwshExe)
+            if ($null -eq $pinAcq) { throw [PSCustomObject]@{ code = 'gpu_split_lease_error'; message = 'res.lease pin acquire invocation failed (split is fail-closed)'; retryable = $true } }
+            if ([bool]$pinAcq.acquired) {
+                $leaseState.acquired = $true
+                $leaseState.lease_id = [string]$pinAcq.lease_id
+                $leaseState.already_held = [bool]$pinAcq.already_held
+                $leaseState.reclaimed_stale = [bool]$pinAcq.reclaimed_stale
+                $leaseState.owned = $false   # the PIN persists between calls BY DESIGN; never released by the classic finally
+                $leaseState.note = 'split: residency pin persists between calls'
+                $splitState.pin = [ordered]@{
+                    lease_id = [string]$pinAcq.lease_id; already_held = [bool]$pinAcq.already_held
+                    gpu_authority_epoch = $(if (Has $pinAcq 'gpu_authority_epoch') { [long]$pinAcq.gpu_authority_epoch } else { $null })
+                    resident_generation = $(if (Has $pinAcq 'resident_generation') { $pinAcq.resident_generation } else { $null })
+                    resident_instance_id = $(if (Has $pinAcq 'resident_instance_id') { $pinAcq.resident_instance_id } else { $null })
+                    priority = $splitPrio; ttl_seconds = $SplitPinTtlSeconds
+                }
+                # re-attach does not extend the TTL -> explicit renew keeps the pin alive across long tasks
+                if ([bool]$pinAcq.already_held) {
+                    $null = Invoke-ResLeaseJson -LeaseInputs @{ action='renew'; resource='gpu'; holder=$glHolder; lease_id=[string]$pinAcq.lease_id; ttl_seconds=$SplitPinTtlSeconds } -RlPath $rlPath -PwshExe (Get-PwshExe)
+                }
+                # honor revocation on entry: a revoked pin => a higher-priority owner is taking the GPU.
+                # (owner_incarnation_id engages the v0.4 check surface so the result REPORTS the pin's STORED
+                # incarnation -- the continuity adoption below needs it; the *_current comparison is not used here.)
+                $chk = Invoke-ResLeaseJson -LeaseInputs @{ action='check'; resource='gpu'; owner_id=$glHolder; owner_incarnation_id=$splitInc } -RlPath $rlPath -PwshExe (Get-PwshExe)
+                if ($null -ne $chk -and (Has $chk 'priority') -and $null -ne $chk.priority) { $splitStoredPinPrio = [int]$chk.priority }
+                # incarnation CONTINUITY on re-attach: the same logical owner re-attaching to its live pin is the
+                # SAME incarnation (v0.4: a NEW incarnation is minted on owner RESTART = pin lost/expired). An
+                # EXPLICIT -OwnerIncarnationId / $env:LIFEORCH_OWNER_INCARNATION (the governor's) always wins.
+                $incExplicit = (-not [string]::IsNullOrWhiteSpace($OwnerIncarnationId)) -or (-not [string]::IsNullOrWhiteSpace($env:LIFEORCH_OWNER_INCARNATION))
+                if (-not $incExplicit -and [bool]$pinAcq.already_held -and $null -ne $chk -and (Has $chk 'owner_incarnation_id') -and -not [string]::IsNullOrWhiteSpace([string]$chk.owner_incarnation_id)) {
+                    $splitInc = [string]$chk.owner_incarnation_id
+                    $splitState.owner_incarnation_id = $splitInc
+                }
+                if ($null -ne $chk) {
+                    $splitState.revocation = [ordered]@{ fence_status = $(if (Has $chk 'fence_status') { [string]$chk.fence_status } else { $null }); revoked_by = $(if (Has $chk 'revoked_by') { $chk.revoked_by } else { $null }) }
+                    $isRevoked = ((Has $chk 'revoked_by') -and $null -ne $chk.revoked_by) -or ((Has $chk 'fence_status') -and ([string]$chk.fence_status -eq 'revoked'))
+                    if ($isRevoked) {
+                        throw [PSCustomObject]@{ code = 'gpu_pin_revoked'; message = "split residency pin was REVOKED (revoked_by=$($chk.revoked_by)); stopping serving so the preempting transition can evict cleanly"; retryable = $true }
+                    }
+                }
+                Write-Diag "split pin acquired lease_id=$($leaseState.lease_id) already_held=$($leaseState.already_held) prio=$splitPrio epoch=$($splitState.pin.gpu_authority_epoch)"
+            } else {
+                $splitState.pin_contended = $true
+                $leaseState.held_by = [string]$pinAcq.held_by
+                if ($glMode -eq 'require') {
+                    throw [PSCustomObject]@{ code = 'gpu_lease_unavailable'; message = "gpu residency pin held by '$($pinAcq.held_by)'; -GpuLease require did not acquire within $glWait s"; retryable = $true }
+                }
+                Write-Diag "split pin contended held_by=$($pinAcq.held_by); a swap may still preempt via the transition (priority $splitPrio)"
+            }
+        }
         # -- acquire the gpu lease (graceful fallback: log + proceed if res.lease is absent; wait|proceed|require per the switch) --
-        if ($glMode -ne 'off') {
+        elseif ($glMode -ne 'off') {
             $rlPath = Resolve-ResLeasePath
             if ($null -eq $rlPath) {
                 $leaseState.available = $false
@@ -980,6 +1135,16 @@ try {
                 # cannot serve / unhealthy / non-warm / forced -> EVICT (state STOPPING; confirm exit + VRAM) then reload
                 $myFence = $prevFence + 1   # new residency epoch (monotonic across the swap chain)
                 if ($poolMode -and $script:PoolCoreLoaded -and $null -ne $poolLock -and (Has $resident 'fence')) { [void](Set-ManifestCas -Path $warmRegPath -Fence $prevFence -Updates @{ state = 'STOPPING' }) }
+                if ($splitOn) {
+                    # i21 SPLIT: the eviction is NOT performed inline here -- the v0.4 two-phase transition below
+                    # drives lib/PoolEvictor.ps1 (fence-op-gated, supervisor-routed drain->cancel->tree-kill->
+                    # headroom-confirm). The manifest is left in place so the evictor can verify the EXACT
+                    # target_resident_instance_id; the supervisor clears it on the targeted stop.
+                    if ($warmOn -and -not $canServe) { $swapCount = $prevSwaps + 1 } else { $swapCount = $prevSwaps }
+                    $residencyAction = if ($warmOn) { 'evict_reload' } else { 'cold_start' }
+                    Write-Diag "split: deferring eviction of pid=$($resident.pid) to the two-phase transition (target=$(if (Has $resident 'resident_instance_id') { $resident.resident_instance_id } else { '<no-instance-id>' }))"
+                    $resident = $null
+                } else {
                 if ($rl.alive) {
                     $vramBefore = Get-GpuFreeMib
                     if (Stop-ResidentServer $resident $rl) {
@@ -997,13 +1162,132 @@ try {
                 $residencyAction = if ($warmOn) { 'evict_reload' } else { 'cold_start' }
                 Clear-WarmServer $warmRegPath
                 $resident = $null
+                }
+            }
+        }
+
+        # ================= i21 SPLIT: any LOAD (swap or cold start) goes through the v0.4 TWO-PHASE TRANSITION ====
+        # -Transition -TwoPhaseCommit -RequiredVramMiB <peak> -EvictorMode command -EvictorCommand lib/PoolEvictor.ps1
+        # => a NON-usable transition_capability (the new server starts under scheduler authority, NOT an ordinary
+        # exec lease); '-Action commit -HealthOk' AFTER health publishes + issues the first USABLE exec lease; on
+        # failure '-Action commit -HealthFailed' drops the exact tentative instance and leaves the GPU EMPTY.
+        # The transition runs as a SCHEDULER sub-identity ("<holder>!sched", priority pin+1) so it can preempt +
+        # revoke our own (or the governor's) residency pin and target the exact old resident_instance_id.
+        $splitSupLaunched = $false
+        if ($splitOn -and -not $warmReused) {
+            # never hold the gateway pool lock across the transition: the evictor -> supervisor stop takes the
+            # SAME machine-global lock (a guaranteed self-deadlock otherwise). res.lease's txn claim + fence
+            # serialize transitions; the supervisor's own lock serializes manifest mutation.
+            if ($null -ne $poolLock) { Exit-PoolLock $poolLock; $poolLock = $null }
+            $rlPath2 = Resolve-ResLeasePath
+            $splitNewInstId = 'ri' + [Guid]::NewGuid().ToString('N')
+            $splitNewGen = if ($script:PoolCoreLoaded) { New-InstanceGeneration } else { [Guid]::NewGuid().ToString('N') }
+            $reqVram = $SplitRequiredVramMib
+            if ($reqVram -le 0) {
+                $szB = if ((Has $m 'params') -and (Has $m.params 'size_bytes')) { [long]$m.params.size_bytes } else { 0 }
+                $szMib = [int][Math]::Ceiling($szB / 1048576.0)
+                $reqVram = $szMib + [Math]::Max(512, [int][Math]::Ceiling($szMib * 0.10))   # measured-PEAK policy: weights + max(512 MiB, 10%) initial margin (NOT the GGUF size alone)
+            }
+            $splitState.required_vram_mib = $reqVram
+            $splitSchedHolder = "$glHolder!sched"
+            $evictorPath = Join-Path $PSScriptRoot 'lib/PoolEvictor.ps1'
+            # our OWN pin (held by this holder): the scheduler sub-identity must strictly outrank the STORED pin
+            # priority to preempt it (a swap of our own resident). A pin held by ANOTHER owner keeps our REAL
+            # priority -- res.lease only revokes a strictly-lower-priority revocable pin (finding 13 preserved).
+            $splitTransPrio = if ($leaseState.acquired -and -not $splitState.pin_contended) { [Math]::Max($splitPrio, $splitStoredPinPrio) + 1 } else { $splitPrio }
+            $trIn = @{ action='acquire'; resource='gpu'; holder=$splitSchedHolder; kind='exec'; priority=$splitTransPrio
+                       ttl_seconds=$SplitExecTtlSeconds; transition=$true; two_phase_commit=$true
+                       required_vram_mib=$reqVram; target_headroom_mib=$VramSafetyMib
+                       evictor_mode='command'; evictor_command=$evictorPath; drain_timeout_ms=$SplitDrainTimeoutMs
+                       confirm_timeout_ms=$VramConfirmTimeoutMs
+                       owner_id=$glHolder; owner_incarnation_id=$splitInc
+                       resident_generation=$splitNewGen; resident_instance_id=$splitNewInstId
+                       request_id=("split-" + $InvocationId) }
+            $tr = Invoke-ResLeaseJson -LeaseInputs $trIn -RlPath $rlPath2 -PwshExe (Get-PwshExe)
+            if ($null -eq $tr) { throw [PSCustomObject]@{ code = 'gpu_split_lease_error'; message = 'res.lease transition invocation failed (split is fail-closed)'; retryable = $true } }
+            $splitState.transition = [ordered]@{
+                transition_id = $(if (Has $tr 'transition_id') { [string]$tr.transition_id } else { $null })
+                transition_state = $(if (Has $tr 'transition_state') { [string]$tr.transition_state } else { $null })
+                acquired = [bool]$tr.acquired
+                capability_only = $(if (Has $tr 'capability_only') { [bool]$tr.capability_only } else { $false })
+                usable = $(if (Has $tr 'usable') { [bool]$tr.usable } else { $null })
+                gpu_authority_epoch = $(if (Has $tr 'gpu_authority_epoch') { $tr.gpu_authority_epoch } else { $null })
+                old_resident_instance_id = $(if (Has $tr 'old_resident_instance_id') { $tr.old_resident_instance_id } else { $null })
+                resident_instance_id = $(if (Has $tr 'resident_instance_id') { $tr.resident_instance_id } else { $null })
+                evict_performed = $(if (Has $tr 'evict_performed') { [bool]$tr.evict_performed } else { $false })
+                tree_gone = $(if (Has $tr 'tree_gone') { $tr.tree_gone } else { $null })
+                headroom_confirmed = $(if (Has $tr 'headroom_confirmed') { [bool]$tr.headroom_confirmed } else { $false })
+                free_vram_mib = $(if (Has $tr 'free_vram_mib') { $tr.free_vram_mib } else { $null })
+                evictor_outcome = $(if (Has $tr 'evictor_outcome') { $tr.evictor_outcome } else { $null })
+                reason = $(if (Has $tr 'reason') { $tr.reason } else { $null })
+                idempotent_replay = $(if (Has $tr 'idempotent_replay') { [bool]$tr.idempotent_replay } else { $false })
+                revoked_pin = $(if (Has $tr 'revoked_pin') { $tr.revoked_pin } else { $null })
+            }
+            if (-not [bool]$tr.acquired) {
+                $trReason = if (Has $tr 'reason') { [string]$tr.reason } else { 'unknown' }
+                $code = if ($trReason -eq 'held_incompatible') { 'gpu_split_contended' } else { 'gpu_split_transition_failed' }
+                throw [PSCustomObject]@{ code = $code; message = "two-phase transition did not grant (reason=$trReason evictor=$($splitState.transition.evictor_outcome) state=$($splitState.transition.transition_state)); fail-closed, nothing evicted beyond the transition's own receipts"; retryable = $true }
+            }
+            if (-not [bool]$splitState.transition.capability_only) {
+                # a same-holder short-circuit (already_held) means the resource already belongs to this holder --
+                # legal for res.lease but NOT a two-phase capability; treat as a fail-closed contention signal.
+                throw [PSCustomObject]@{ code = 'gpu_split_transition_failed'; message = "transition returned a non-capability grant (reason=$($splitState.transition.reason)); expected a two-phase capability (usable:false)"; retryable = $true }
+            }
+            $splitState.pending_txn_id = [string]$splitState.transition.transition_id
+            $warmEvicted = [bool]$splitState.transition.evict_performed
+            $evictConfirmed = $(if ($warmEvicted) { [bool]$splitState.transition.headroom_confirmed } else { $null })
+            $vramAfter = $splitState.transition.free_vram_mib
+            Write-Diag "split transition: capability txn=$($splitState.pending_txn_id) epoch=$($splitState.transition.gpu_authority_epoch) old_inst=$($splitState.transition.old_resident_instance_id) new_inst=$splitNewInstId evicted=$warmEvicted evictor=$($splitState.transition.evictor_outcome)"
+
+            # ---- start the new server UNDER the capability: via the DURABLE SUPERVISOR when available ----
+            if ($UseSupervisor) {
+                $supParams2 = @{ resident_instance_id = $splitNewInstId; instance_generation = $splitNewGen }
+                if (-not [string]::IsNullOrWhiteSpace($Model)) { $supParams2['model'] = $Model }
+                if (-not [string]::IsNullOrWhiteSpace($Tier))  { $supParams2['tier'] = $Tier }
+                if ($GpuLayers -ge 0) { $supParams2['gpu_layers'] = $GpuLayers }
+                if ($Context -gt 0)   { $supParams2['context'] = $Context }
+                $supParams2['cache_type_k'] = $CacheTypeK; $supParams2['cache_type_v'] = $CacheTypeV
+                if ($FlashAttn) { $supParams2['flash_attn'] = $true }
+                if ($Parallel -gt 0) { $supParams2['parallel'] = $Parallel }
+                $supResp2 = Invoke-SupervisorClient -Op 'ensure_resident' -Params $supParams2 -SupRoot $SupervisorRoot -WarmReg $warmRegPath -TimeoutMs ([Math]::Max(60000, ($LoadTimeoutSec * 1000)))
+                if ($null -ne $supResp2 -and [bool]$supResp2.ok) {
+                    $rr2 = $supResp2.response.result
+                    $splitSupLaunched = $true
+                    $warmStartedNew = $true
+                    $serverPid = $(if (Has $rr2 'pid') { [int]$rr2.pid } else { 0 })
+                    $usePort = $(if (Has $rr2 'port') { [int]$rr2.port } else { $usePort })
+                    $healthOk = $(if (Has $rr2 'health_ok') { [bool]$rr2.health_ok } else { $false })
+                    $healthMs = $(if (Has $rr2 'load_ms') { [int]$rr2.load_ms } else { $null })
+                    $instanceGen = $(if ((Has $rr2 'instance_generation') -and -not [string]::IsNullOrWhiteSpace([string]$rr2.instance_generation)) { [string]$rr2.instance_generation } else { $splitNewGen })
+                    $socketOwnerVerified = $(if (Has $rr2 'socket_owner_verified') { $rr2.socket_owner_verified } else { $null })
+                    $poolProvenance = [ordered]@{ ok = $healthOk; source = 'supervisor'; reported = @([string]$m.model_id) }
+                    Write-Diag "split launch via supervisor: pid=$serverPid port=$usePort health_ok=$healthOk load_ms=$healthMs inst=$splitNewInstId"
+                } else {
+                    $rc2 = if ($null -ne $supResp2 -and $null -ne $supResp2.error) { [string]$supResp2.error.code } else { 'supervisor_unavailable' }
+                    $warnings.Add("split: no live supervisor for the capability launch ($rc2); falling back to the per-call managed launch")
+                    Write-Diag "split launch: supervisor fallback ($rc2)"
+                }
+            }
+            if (-not $splitSupLaunched) {
+                # per-call managed launch (the existing path below); re-take the pool lock for the manifest writes
+                if ($poolMode -and $script:PoolCoreLoaded -and $null -eq $poolLock) {
+                    $poolLock = Enter-PoolLock -LockPath $lockPath -TimeoutMs 15000
+                    if (-not $poolLock.acquired) { $warnings.Add('split: pool lock not re-acquired for the launch; proceeding unserialized'); $poolLock = $null }
+                }
             }
         }
 
         Write-Diag "server: reuse=$warmReused warm=$warmOn port=$usePort model=$($m.model_id) ngl=$ngl ctx=$ctx"
         $loadStart = [System.Diagnostics.Stopwatch]::StartNew()
         try {
-            if (-not $warmReused) {
+            if ($splitSupLaunched) {
+                # i21 split: the server was started by the DURABLE SUPERVISOR under the transition capability;
+                # adopt its result (health/socket-owner/publish ran inside the supervisor).
+                $loadStart.Stop()
+                if ($null -eq $healthMs) { $healthMs = [int]$loadStart.Elapsed.TotalMilliseconds }
+                if (-not $healthOk) { throw [PSCustomObject]@{ code = 'health_timeout'; message = "supervisor-launched server did not become healthy (split capability launch)"; retryable = $true } }
+            }
+            elseif (-not $warmReused) {
                 # start a fresh server. Cross-platform launch; a .ps1 engine_path is run under pwsh (mock/test seam).
                 if ($enginePath -match '\.ps1$') {
                     $spFile = (Get-PwshExe)
@@ -1035,7 +1319,9 @@ try {
                 }
                 $warmStartedNew = $true
                 # finding 4: per-launch verified-generation identity -- a fresh nonce + this pid + creation-time.
-                $instanceGen = if ($script:PoolCoreLoaded) { New-InstanceGeneration } else { [Guid]::NewGuid().ToString('N') }
+                # (i21 split: the generation + per-tree resident_instance_id were PRE-MINTED and stamped into the
+                #  transition capability, so the res.lease identity and the manifest identity agree.)
+                $instanceGen = if ($splitOn) { $splitNewGen } elseif ($script:PoolCoreLoaded) { New-InstanceGeneration } else { [Guid]::NewGuid().ToString('N') }
                 # start-ticks (identity): re-read the pid -- WMI returns no process handle, and Start-Process
                 # StartTime is re-readable too; a REUSED pid would differ by seconds, so this still rejects impostors.
                 $startTicks = 0
@@ -1050,6 +1336,7 @@ try {
                     $manifest = [ordered]@{
                         schema = 'lifeorch.model_gateway.warm/0.3'; state = 'STARTING'
                         pid = $serverPid; start_ticks = $startTicks; instance_generation = $instanceGen
+                        resident_instance_id = $(if ($splitOn) { $splitNewInstId } else { 'ri' + [Guid]::NewGuid().ToString('N') })
                         host = '127.0.0.1'; port = $usePort; model_id = $m.model_id; model_path = $modelPath
                         engine_path = $enginePath; engine_exe_hash = $engineExeHash; ngl = $ngl; ctx = $ctx
                         resident_config = $residencyKey; resident_config_hash = $residencyKeySha; residency_key_sha = $residencyKeySha
@@ -1112,6 +1399,79 @@ try {
                 }
             }
 
+            # ============ i21 SPLIT: phase-2 COMMIT (after health) + the FULL v0.4 authority tuple ============
+            if ($splitOn) {
+                $rlPath3 = Resolve-ResLeasePath
+                if (-not [string]::IsNullOrWhiteSpace([string]$splitState.pending_txn_id)) {
+                    # '-Action commit -HealthOk': publish the started resident + issue the FIRST usable exec lease
+                    # ONLY now that health passed (STARTING -> HEALTHY_UNPUBLISHED -> COMMITTED; no grant-before-ready).
+                    $cm = Invoke-ResLeaseJson -LeaseInputs @{ action='commit'; resource='gpu'; holder="$glHolder!sched"; owner_id=$glHolder
+                                                              ttl_seconds=$SplitExecTtlSeconds; transition_id=[string]$splitState.pending_txn_id
+                                                              resident_instance_id=$splitNewInstId; health_ok=$true
+                                                              health_receipt=("health200 pid=$serverPid port=$usePort gen=$instanceGen")
+                                                              request_id=("split-" + $InvocationId) } -RlPath $rlPath3 -PwshExe (Get-PwshExe)
+                    $cmOk = ($null -ne $cm -and [bool]$cm.committed)
+                    $splitState.commit = [ordered]@{
+                        committed = $cmOk
+                        reason = $(if ($null -ne $cm -and (Has $cm 'reason')) { [string]$cm.reason } else { 'invoke_failed' })
+                        exec_lease_id = $(if ($null -ne $cm -and (Has $cm 'exec_lease_id')) { $cm.exec_lease_id } else { $null })
+                        gpu_authority_epoch = $(if ($null -ne $cm -and (Has $cm 'gpu_authority_epoch')) { $cm.gpu_authority_epoch } else { $null })
+                        transition_state = $(if ($null -ne $cm -and (Has $cm 'transition_state')) { [string]$cm.transition_state } else { $null })
+                    }
+                    if (-not $cmOk) {
+                        throw [PSCustomObject]@{ code = 'gpu_split_commit_failed'; message = "phase-2 commit did not publish (reason=$($splitState.commit.reason)); the tentative instance is dropped fail-closed"; retryable = $true }
+                    }
+                    $splitState.pending_txn_id = $null
+                    $splitState.swap_committed = $true
+                    $splitState.active = [ordered]@{
+                        holder = "$glHolder!sched"; owner_id = $glHolder; owner_incarnation_id = $splitInc
+                        gpu_authority_epoch = $splitState.commit.gpu_authority_epoch
+                        resident_generation = $instanceGen; resident_instance_id = $splitNewInstId
+                        exec_lease_id = $splitState.commit.exec_lease_id
+                    }
+                    Write-Diag "split commit: COMMITTED epoch=$($splitState.active.gpu_authority_epoch) exec_lease=$($splitState.active.exec_lease_id) inst=$splitNewInstId"
+                } else {
+                    # same-model REUSE: a plain short exec acquire (re-attaches to our residency pin ~instantly)
+                    # supplies the exec_lease_id leg of the tuple; the pin itself stays resident between calls.
+                    $liveReg2 = Read-WarmServer $warmRegPath
+                    $curGen  = if ($null -ne $liveReg2 -and (Has $liveReg2 'instance_generation'))  { [string]$liveReg2.instance_generation } else { $instanceGen }
+                    $curInst = if ($null -ne $liveReg2 -and (Has $liveReg2 'resident_instance_id')) { [string]$liveReg2.resident_instance_id } else { $null }
+                    $exIn = @{ action='acquire'; resource='gpu'; holder=$glHolder; kind='exec'; priority=$splitPrio
+                               ttl_seconds=$SplitExecTtlSeconds; owner_id=$glHolder; owner_incarnation_id=$splitInc }
+                    if (-not [string]::IsNullOrWhiteSpace($curGen))  { $exIn['resident_generation']  = $curGen }
+                    if (-not [string]::IsNullOrWhiteSpace($curInst)) { $exIn['resident_instance_id'] = $curInst }
+                    $exAcq = Invoke-ResLeaseJson -LeaseInputs $exIn -RlPath $rlPath3 -PwshExe (Get-PwshExe)
+                    if ($null -eq $exAcq -or -not [bool]$exAcq.acquired) {
+                        $hb = if ($null -ne $exAcq -and (Has $exAcq 'held_by')) { [string]$exAcq.held_by } else { '<unknown>' }
+                        throw [PSCustomObject]@{ code = 'gpu_split_contended'; message = "split exec re-attach did not acquire (held_by=$hb); cannot serve without exec authority"; retryable = $true }
+                    }
+                    $splitState.active = [ordered]@{
+                        holder = $glHolder; owner_id = $glHolder; owner_incarnation_id = $splitInc
+                        gpu_authority_epoch = $(if (Has $exAcq 'gpu_authority_epoch') { $exAcq.gpu_authority_epoch } else { $null })
+                        resident_generation = $curGen; resident_instance_id = $curInst
+                        exec_lease_id = [string]$exAcq.lease_id
+                    }
+                }
+                # ---- the PRE-GENERATION gate: Test-GenerationMatch EXTENDED with the res.lease authority check --
+                #      a generation/epoch/incarnation/instance mismatch is rejected BEFORE any completion. ----
+                $gateReg = Read-WarmServer $warmRegPath
+                $gm2 = Test-GenerationMatch $gateReg ([string]$splitState.active.resident_generation) -1
+                if (-not $gm2.match) {
+                    throw [PSCustomObject]@{ code = 'generation_mismatch'; message = "split pre-generation gate: manifest generation mismatch (reason=$($gm2.reason) resident=$($gm2.resident_generation) expected=$($splitState.active.resident_generation)); call rejected"; retryable = $true }
+                }
+                $chkIn = @{ action='check'; resource='gpu'; owner_id=$glHolder; owner_incarnation_id=$splitInc }
+                if ($null -ne $splitState.active.gpu_authority_epoch) { $chkIn['authority_epoch'] = [long]$splitState.active.gpu_authority_epoch }
+                if (-not [string]::IsNullOrWhiteSpace([string]$splitState.active.resident_generation)) { $chkIn['resident_generation'] = [string]$splitState.active.resident_generation }
+                if (-not [string]::IsNullOrWhiteSpace([string]$splitState.active.resident_instance_id)) { $chkIn['resident_instance_id'] = [string]$splitState.active.resident_instance_id }
+                $preChk = Invoke-ResLeaseJson -LeaseInputs $chkIn -RlPath $rlPath3 -PwshExe (Get-PwshExe)
+                $preOk = ($null -ne $preChk -and (Has $preChk 'authority_ok') -and [bool]$preChk.authority_ok)
+                if (-not $preOk) {
+                    $fr = if ($null -ne $preChk -and (Has $preChk 'fence_status')) { [string]$preChk.fence_status } else { 'check_failed' }
+                    throw [PSCustomObject]@{ code = 'authority_mismatch'; message = "split pre-generation gate: res.lease authority_ok=false (fence_status=$fr); the full tuple (owner+incarnation+epoch+generation+instance+exec) is not current; call rejected BEFORE any completion"; retryable = $true }
+                }
+                Write-Diag "split authority gate OK: epoch=$($splitState.active.gpu_authority_epoch) gen=$($splitState.active.resident_generation) inst=$($splitState.active.resident_instance_id) exec=$($splitState.active.exec_lease_id)"
+            }
+
             if ($doEnsure) {
                 # -EnsureResident: the requested model is resident + provenance-confirmed under the held gpu lease.
                 # RETURN without generating (the governor's Ensure-ResidentModel(model_id, config_key)).
@@ -1137,6 +1497,61 @@ try {
                 $genSw.Stop()
                 # finding 12: erase-on-check-in as well -> the slot never carries this task's KV to the next task
                 if ($poolMode) { try { Invoke-RestMethod -Uri "http://127.0.0.1:$usePort/slots/0?action=erase" -Method Post -TimeoutSec 10 | Out-Null } catch { } }
+
+                # ---- i21 SPLIT: the POST-GENERATION discard gate. Re-assert the FULL tuple AFTER the completion
+                #      returned; a stale-epoch/instance actor's authority_ok is FALSE and the in-flight result is
+                #      DISCARDED (never surfaced, never published) -- live adversarial tests A/B ride this gate. ----
+                if ($splitOn) {
+                    $rlPath4 = Resolve-ResLeasePath
+                    $chkIn2 = @{ action='check'; resource='gpu'; owner_id=$glHolder; owner_incarnation_id=$splitInc }
+                    if ($null -ne $splitState.active.gpu_authority_epoch) { $chkIn2['authority_epoch'] = [long]$splitState.active.gpu_authority_epoch }
+                    if (-not [string]::IsNullOrWhiteSpace([string]$splitState.active.resident_generation)) { $chkIn2['resident_generation'] = [string]$splitState.active.resident_generation }
+                    if (-not [string]::IsNullOrWhiteSpace([string]$splitState.active.resident_instance_id)) { $chkIn2['resident_instance_id'] = [string]$splitState.active.resident_instance_id }
+                    $postChk = Invoke-ResLeaseJson -LeaseInputs $chkIn2 -RlPath $rlPath4 -PwshExe (Get-PwshExe)
+                    $postOk = ($null -ne $postChk -and (Has $postChk 'authority_ok') -and [bool]$postChk.authority_ok)
+                    $splitState.discard_check = [ordered]@{
+                        authority_ok = $postOk
+                        fence_status = $(if ($null -ne $postChk -and (Has $postChk 'fence_status')) { [string]$postChk.fence_status } else { $null })
+                        checked_epoch = $splitState.active.gpu_authority_epoch
+                        checked_instance = $splitState.active.resident_instance_id
+                    }
+                    if (-not $postOk) {
+                        # evidence for the report: the fenced result also cannot pass the target-fenced side-effect
+                        # gate (fence-op op_kind=result_publish naming OUR captured instance is refused when stale).
+                        $fev = Invoke-ResLeaseJson -LeaseInputs @{ action='fence-op'; resource='gpu'; op_kind='result_publish'; resident_instance_id=[string]$splitState.active.resident_instance_id } -RlPath $rlPath4 -PwshExe (Get-PwshExe)
+                        $fevOk = ($null -ne $fev -and (Has $fev 'fenced_op_ok') -and [bool]$fev.fenced_op_ok)
+                        $fevReason = if ($null -ne $fev -and (Has $fev 'reason')) { [string]$fev.reason } else { 'unknown' }
+                        $splitState.discard_check['fence_op_result_publish'] = [ordered]@{ fenced_op_ok = $fevOk; reason = $fevReason }
+                        $resp = $null   # DISCARD: the completion text is never surfaced/published
+                        throw [PSCustomObject]@{ code = 'stale_result_discarded'; message = "split post-generation gate: authority_ok=false (fence_status=$($splitState.discard_check.fence_status)) AND fence-op result_publish refused (reason=$fevReason target=$($splitState.active.resident_instance_id)); the in-flight completion was DISCARDED"; retryable = $true }
+                    }
+                }
+            }
+
+            # ---- i21 SPLIT: return to steady state -- release the scheduler exec lease and re-take the
+            #      revocable residency PIN under the stable holder (held BETWEEN calls; the split's whole point). ----
+            if ($splitOn -and $splitState.swap_committed) {
+                $rlPath5 = Resolve-ResLeasePath
+                $relEx = Invoke-ResLeaseJson -LeaseInputs @{ action='release'; resource='gpu'; holder="$glHolder!sched"; lease_id=[string]$splitState.active.exec_lease_id } -RlPath $rlPath5 -PwshExe (Get-PwshExe)
+                $splitState.exec_released = ($null -ne $relEx -and [bool]$relEx.released)
+                $rp = Invoke-ResLeaseJson -LeaseInputs @{ action='acquire'; resource='gpu'; holder=$glHolder; kind='residency_pin'; priority=$splitPrio
+                                                          ttl_seconds=$SplitPinTtlSeconds; owner_id=$glHolder; owner_incarnation_id=$splitInc
+                                                          resident_generation=$instanceGen; resident_instance_id=$splitNewInstId
+                                                          note='model.gateway split residency pin (post-swap)' } -RlPath $rlPath5 -PwshExe (Get-PwshExe)
+                if ($null -ne $rp -and [bool]$rp.acquired) {
+                    $splitState.repinned = $true
+                    $leaseState.acquired = $true; $leaseState.lease_id = [string]$rp.lease_id; $leaseState.owned = $false
+                    $splitState.pin = [ordered]@{
+                        lease_id = [string]$rp.lease_id; already_held = [bool]$rp.already_held
+                        gpu_authority_epoch = $(if (Has $rp 'gpu_authority_epoch') { $rp.gpu_authority_epoch } else { $null })
+                        resident_generation = $instanceGen; resident_instance_id = $splitNewInstId
+                        priority = $splitPrio; ttl_seconds = $SplitPinTtlSeconds
+                    }
+                    Write-Diag "split re-pin: pin=$($rp.lease_id) exec_released=$($splitState.exec_released) gen=$instanceGen inst=$splitNewInstId"
+                } else {
+                    $splitState.repinned = $false
+                    $warnings.Add('split: post-swap re-pin did not acquire; the resident is unpinned until the next call re-pins (revocation window)')
+                }
             }
         }
         finally {
@@ -1145,7 +1560,11 @@ try {
             # to load is torn down + de-registered so no dead resident is left behind.
             $killServer = $false
             if (-not $warmOn) { $killServer = ($serverPid -gt 0) }
-            elseif ($warmStartedNew -and -not $healthOk) { $killServer = ($serverPid -gt 0); Clear-WarmServer $warmRegPath }
+            elseif ($warmStartedNew -and -not $healthOk) {
+                # i21 split: a SUPERVISOR-launched tentative server is torn down by the supervisor (targeted evict
+                # in the split cleanup below), never by a gateway-side PID kill (the D-0055/56 re-wedge rule).
+                if (-not $splitSupLaunched) { $killServer = ($serverPid -gt 0); Clear-WarmServer $warmRegPath }
+            }
             if ($killServer -and $serverPid -gt 0) {
                 # kill by PID with /T = the whole child TREE (finding 5: never kill by a bare PID). This reaps
                 # llama.cpp's children (per-call ownership). The DURABLE Job-Object owner across invocations is now
@@ -1158,6 +1577,41 @@ try {
         }
     }
     finally {
+        # ---- i21 SPLIT crash-path cleanup (fail-closed; runs BEFORE the classic release below) ----
+        if ($splitOn -and $null -ne $splitState) {
+            try {
+                $rlPathF = Resolve-ResLeasePath
+                if (-not [string]::IsNullOrWhiteSpace([string]$splitState.pending_txn_id)) {
+                    # an UNCOMMITTED capability (launch/health failed or a throw before phase-2): '-Action commit
+                    # -HealthFailed' terminates the exact tentative instance's capability and grants NOTHING --
+                    # the GPU is left EMPTY (the old resident is NOT silently restored; that is a NEW acquisition).
+                    $hf = Invoke-ResLeaseJson -LeaseInputs @{ action='commit'; resource='gpu'; holder="$glHolder!sched"; owner_id=$glHolder
+                                                              transition_id=[string]$splitState.pending_txn_id
+                                                              resident_instance_id=$splitNewInstId; health_failed=$true
+                                                              request_id=("split-" + $InvocationId) } -RlPath $rlPathF -PwshExe (Get-PwshExe)
+                    $hfReason = if ($null -ne $hf -and (Has $hf 'reason')) { [string]$hf.reason } else { 'invoke_failed' }
+                    $splitState.commit = [ordered]@{ committed = $false; reason = $hfReason; health_failed_sent = $true }
+                    $warnings.Add("split: uncommitted capability closed with -HealthFailed (reason=$hfReason); GPU left empty, fail-closed")
+                    Write-Diag "split cleanup: commit -HealthFailed sent (reason=$hfReason)"
+                    if ($splitSupLaunched -and $serverPid -gt 0) {
+                        # tear down the supervisor-launched tentative tree via a TARGETED supervisor evict
+                        $tev = Invoke-SupervisorClient -Op 'evict' -Params @{ target_resident_instance_id = $splitNewInstId } -SupRoot $SupervisorRoot -WarmReg $warmRegPath -TimeoutMs 30000
+                        $tOk = ($null -ne $tev -and [bool]$tev.ok)
+                        Write-Diag "split cleanup: targeted supervisor evict of tentative inst=$splitNewInstId ok=$tOk"
+                        if (-not $tOk) { $warnings.Add('split: targeted supervisor evict of the tentative instance did not confirm; verify 0 orphans out-of-band') }
+                    }
+                    $splitState.pending_txn_id = $null
+                }
+                elseif ($splitState.swap_committed -and ($null -eq $splitState.repinned)) {
+                    # committed but a throw landed before the re-pin: release the scheduler exec lease so the
+                    # resource is not wedged under the sched sub-identity (the next call re-pins).
+                    $relF = Invoke-ResLeaseJson -LeaseInputs @{ action='release'; resource='gpu'; holder="$glHolder!sched" } -RlPath $rlPathF -PwshExe (Get-PwshExe)
+                    $splitState.exec_released = ($null -ne $relF -and [bool]$relF.released)
+                    Write-Diag "split cleanup: sched exec lease release=$($splitState.exec_released)"
+                }
+            } catch { Write-Diag "split cleanup error: $($_.Exception.Message)" }
+            $leaseState['split'] = $splitState   # additive: present ONLY when the split is engaged
+        }
         # release the gpu lease AFTER the server is fully torn down (only a lease we freshly acquired)
         if ($leaseState.owned -and -not [string]::IsNullOrWhiteSpace([string]$leaseState.lease_id) -and $leaseState.available) {
             $rel = Invoke-GpuLeaseAction -LeaseAction 'release' -Resource 'gpu' -Holder $glHolder -LeaseIdArg ([string]$leaseState.lease_id) -LeaseDirArg $LeaseDir -RlPath (Resolve-ResLeasePath) -PwshExe (Get-PwshExe)

@@ -111,6 +111,13 @@ param(
     [string]$GpuLeaseHolder,
     [string]$LeaseDir,
     [string]$ResLeasePath,
+    # --- i21 R1b CONSUMER wave: GPU-lease-split adoption (res.lease 0.4.0). DEFAULT-OFF; with the flag off the
+    #     governor is byte-for-byte unchanged (incl. the $env:LIFEORCH_INSTANCE stable-holder re-attach). When ON:
+    #     the model-affine segment holds a revocable RESIDENCY PIN (priority = the task's tier) instead of the
+    #     whole-task exec gpu lease; the EXEC lease is taken only around each LLM call BY THE GATEWAY
+    #     (use_pool_lease_split passes through), which asserts the full v0.4 tuple per call. ---
+    [switch]$SplitLease,             # engage the split (default-OFF)
+    [int]$SplitPriority = 0,         # residency-pin priority (0 = 30, the mid decision-floor tier)
     [int]$MaxObservationChars = 500,
     # --- test seam only (documented; no effect on real runs) ---
     [string[]]$FaultEscalateEpochs = @(),   # inject a synthetic HARD trigger at each named epoch's first step (-> immediate S0)
@@ -124,7 +131,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$SKILL_ID = 'agent.local.autoramp'; $SKILL_VERSION = '0.1.0'; $CONTRACT = '0.2'
+$SKILL_ID = 'agent.local.autoramp'; $SKILL_VERSION = '0.2.0'; $CONTRACT = '0.2'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $VERIF_SCHEMA  = 'lifeorch.goal_verification/0.1'
 $TRACE_SCHEMA  = 'lifeorch.governor_trace/0.1'
@@ -298,6 +305,8 @@ try {
             if ((Has $p 'gpu_lease_wait_s')      -and -not $bound.ContainsKey('GpuLeaseWaitSeconds')) { $GpuLeaseWaitSeconds = [int]$p.gpu_lease_wait_s }
             if ((Has $p 'lease_dir')             -and -not $bound.ContainsKey('LeaseDir'))           { $LeaseDir = [string]$p.lease_dir }
             if ((Has $p 'res_lease_path')        -and -not $bound.ContainsKey('ResLeasePath'))       { $ResLeasePath = [string]$p.res_lease_path }
+            if ((Has $p 'split_lease')           -and -not $bound.ContainsKey('SplitLease'))         { $SplitLease = [switch][bool]$p.split_lease }
+            if ((Has $p 'split_priority')        -and -not $bound.ContainsKey('SplitPriority'))      { $SplitPriority = [int]$p.split_priority }
             if ((Has $p 'm0_model') -and -not $bound.ContainsKey('M0Model')) { $M0Model = [string]$p.m0_model }
             if ((Has $p 'm1_model') -and -not $bound.ContainsKey('M1Model')) { $M1Model = [string]$p.m1_model }
             if ((Has $p 's0_model') -and -not $bound.ContainsKey('S0Model')) { $S0Model = [string]$p.s0_model }
@@ -448,6 +457,13 @@ try {
         # a resident WE did not load (not our previous epoch model) is stale/external -> HARD; our own prior model is an expected transition
         $out.hard = ([string]::IsNullOrWhiteSpace($loadedModel) -or ([string]$out.resident_model -ne [string]$loadedModel))
         $out.mismatch_reason = ($mismatch -join ',')
+        if ($splitOn) {
+            # i21 split: do NOT rip the resident here -- the next warm gateway call's v0.4 TWO-PHASE TRANSITION
+            # (+ PoolEvictor, fence-op-gated, supervisor-routed) performs the eviction atomically. An inline
+            # evict_warm would bypass the transition the split exists to prove.
+            Write-Diag "resident mismatch ($($out.mismatch_reason)) resident=$($out.resident_model) expected=$modelId loaded=$loadedModel hard=$($out.hard) -> eviction DEFERRED to the split transition"
+            return $out
+        }
         try {
             $ev = Invoke-Child $gatewayEntry (([ordered]@{ evict_warm=$true; warm_registry_path=$warmRegFile } | ConvertTo-Json -Compress)) (Join-Path $invDir 'evict')
             if ($null -ne $ev.env -and (Has $ev.env 'result') -and (Has $ev.env.result 'warm') -and (Has $ev.env.result.warm 'evicted')) { $out.evicted = [bool]$ev.env.result.warm.evicted }
@@ -457,18 +473,36 @@ try {
     }
 
     # ---- GPU lease (whole-task): acquire once, renew ~30s, release in finally ----
+    # ---- i21 -SplitLease (default-OFF): the model-affine segment holds a revocable RESIDENCY PIN instead;
+    #      the exec lease is taken only around each LLM call by the gateway (use_pool_lease_split). ----
     $glMode = if ([string]::IsNullOrWhiteSpace($GpuLease)) { 'auto' } else { $GpuLease.ToLowerInvariant() }
     if (@('off','auto','require') -notcontains $glMode) { $warnings.Add("unknown -GpuLease '$GpuLease'; using 'auto'"); $glMode = 'auto' }
     $holder = if (-not [string]::IsNullOrWhiteSpace($GpuLeaseHolder)) { $GpuLeaseHolder } elseif (-not [string]::IsNullOrWhiteSpace($env:LIFEORCH_INSTANCE)) { $env:LIFEORCH_INSTANCE } else { "agent.local.autoramp:$PID" }
     $env:LIFEORCH_INSTANCE = $holder   # so child gateway res.lease spawns re-attach to THIS holder
     $leaseState = [ordered]@{ mode=$glMode; available=$null; acquired=$false; owned=$false; already_held=$false; lease_id=$null; holder=$holder; renew_count=0; released=$null; lost=$false }
     $lastRenew = [DateTime]::UtcNow
+    $splitOn = $false; $splitPrio = 0; $splitInc = $null
+    if ($SplitLease) {
+        if ($glMode -eq 'off') { $warnings.Add('split_lease requires the gpu lease (-GpuLease off given); flag ignored') }
+        elseif ([string]::IsNullOrWhiteSpace($resleaseEntry)) { $warnings.Add('split_lease: res.lease not found; flag ignored (classic whole-task lease path)') }
+        else {
+            $splitOn = $true
+            $splitPrio = if ($SplitPriority -gt 0) { $SplitPriority } else { 30 }   # the mid decision-floor tier
+            $splitInc = 'inc' + [Guid]::NewGuid().ToString('N')                     # per-RUN owner incarnation (v0.4 ABA identity)
+            $env:LIFEORCH_OWNER_INCARNATION = $splitInc                             # children (gateway) assert the same incarnation
+            $leaseState['split'] = [ordered]@{ on=$true; kind='residency_pin'; priority=$splitPrio; owner_incarnation_id=$splitInc; reattach_recoveries=0 }
+            Write-Diag "split_lease ON: residency pin priority=$splitPrio owner_incarnation=$splitInc (exec leases are per-LLM-call, taken by the gateway)"
+        }
+    }
 
     # whole-task gpu lease helpers (acquire once; renew ~30s; release in finally)
+    # (-SplitLease ON: the SAME three call sites acquire/renew/release the revocable RESIDENCY PIN instead --
+    #  the pin covers the model-affine segment; per-call exec authority moves into the gateway child.)
     function Lease-Acquire {
         if ($glMode -eq 'off' -or [string]::IsNullOrWhiteSpace($resleaseEntry)) { if ($glMode -ne 'off') { $leaseState.available=$false; $warnings.Add('gpu lease: res.lease not found; proceeding without a lease') } ; return }
         $leaseState.available = $true
         $a = @('-File',$resleaseEntry,'-Action','acquire','-Resource','gpu','-Holder',$holder,'-TtlSeconds',"$GpuLeaseTtlSeconds",'-WaitSeconds',"$GpuLeaseWaitSeconds")
+        if ($splitOn) { $a += @('-Kind','residency_pin','-Priority',"$splitPrio",'-OwnerId',$holder,'-OwnerIncarnationId',$splitInc,'-Note','agent.local split residency pin (model-affine segment)') }
         if (-not [string]::IsNullOrWhiteSpace($LeaseDir)) { $a += @('-LeaseDir',$LeaseDir) }
         $r = Invoke-Bare $a
         if ($null -eq $r) { $leaseState.available=$false; $warnings.Add('gpu lease: acquire invocation failed; proceeding without a lease'); return }
@@ -488,9 +522,34 @@ try {
         $r = Invoke-Bare $a
         $script:lastRenew = [DateTime]::UtcNow
         if ($null -ne $r -and [bool](Prop $r 'renewed' $false)) { $leaseState.renew_count++; return $true }
+        if ($splitOn) {
+            # split: our own child gateway's SWAP re-pins under a NEW lease_id (the two-phase transition replaced
+            # the pin file), so a stale-id renew is EXPECTED after a swap -- RE-ATTACH by holder and adopt the
+            # current pin instead of declaring the lease lost. A true preemption (another holder) still reports lost.
+            $ra = @('-File',$resleaseEntry,'-Action','acquire','-Resource','gpu','-Holder',$holder,'-TtlSeconds',"$GpuLeaseTtlSeconds",'-WaitSeconds','0','-Kind','residency_pin','-Priority',"$splitPrio",'-OwnerId',$holder,'-OwnerIncarnationId',$splitInc)
+            if (-not [string]::IsNullOrWhiteSpace($LeaseDir)) { $ra += @('-LeaseDir',$LeaseDir) }
+            $r2 = Invoke-Bare $ra
+            if ($null -ne $r2 -and [bool](Prop $r2 'acquired' $false)) {
+                $leaseState.lease_id = [string](Prop $r2 'lease_id' '')
+                $leaseState.already_held = [bool](Prop $r2 'already_held' $false)
+                $leaseState.renew_count++
+                $leaseState.split.reattach_recoveries = [int]$leaseState.split.reattach_recoveries + 1
+                Write-Diag "split pin renew: re-attached under the current pin lease_id=$($leaseState.lease_id) (post-swap id churn is expected)"
+                return $true
+            }
+        }
         $leaseState.lost = $true; $warnings.Add('gpu lease renew failed (lease lost)'); return $false
     }
     function Lease-Release {
+        if ($splitOn) {
+            # split: release the PIN by holder (the id may have churned across swaps); ends the model-affine segment
+            if (-not $leaseState.acquired -or -not $leaseState.available) { return }
+            $a = @('-File',$resleaseEntry,'-Action','release','-Resource','gpu','-Holder',$holder)
+            if (-not [string]::IsNullOrWhiteSpace($LeaseDir)) { $a += @('-LeaseDir',$LeaseDir) }
+            $r = Invoke-Bare $a
+            $leaseState.released = ($null -ne $r -and [bool](Prop $r 'released' $false))
+            return
+        }
         if (-not $leaseState.owned -or [string]::IsNullOrWhiteSpace([string]$leaseState.lease_id) -or -not $leaseState.available) { return }
         $a = @('-File',$resleaseEntry,'-Action','release','-Resource','gpu','-Holder',$holder,'-LeaseId',[string]$leaseState.lease_id)
         if (-not [string]::IsNullOrWhiteSpace($LeaseDir)) { $a += @('-LeaseDir',$LeaseDir) }
@@ -501,6 +560,13 @@ try {
     # ---- gateway calls (direct, warm, pinned to the epoch model) ----
     function Invoke-GwGenerate([string]$modelId, [string]$system, [string]$prompt, [int]$maxTok, [string]$sub, [bool]$reqLogprobs = $false, [int]$loadTimeoutOverride = 0) {
         $o = [ordered]@{ model=$modelId; system=$system; prompt=$prompt; max_tokens=$maxTok; temperature=$Temperature; seed=$Seed; warm=$true; gpu_lease=$(if ($glMode -eq 'off') { 'off' } else { 'auto' }); gpu_lease_holder=$holder; pwsh_path=$PwshPath; warm_registry_path=$warmRegFile; review_queue_path=$childReviewPath }
+        if ($splitOn) {
+            # split: the gateway takes the EXEC lease around this call (re-attaching to our pin), runs any swap
+            # through the v0.4 two-phase transition + PoolEvictor, and asserts the FULL tuple per call.
+            $o.use_pool_lease_split = $true
+            $o.split_priority = $splitPrio
+            $o.owner_incarnation_id = $splitInc
+        }
         if (-not [string]::IsNullOrWhiteSpace($Registry)) { $o.registry = $Registry }
         if (-not [string]::IsNullOrWhiteSpace($LeaseDir)) { $o.lease_dir = $LeaseDir }
         # opt-in per-token logprobs (STEP 3): the gateway adds logprobs/top_logprobs to the chat body and
