@@ -1225,3 +1225,50 @@ alternatives · consequences · affects · state (provisional | locked) · revis
   `core-docs/fanout/` (slots 002/003 used -> archived -> reset), `archive/`.
 - **state:** locked. · **revisit-if:** the dense-stream decision gate lands (it may reshape #33/#34 input
   contracts); the live `#32->#16->#33->#34` composition wave starts; a #34 consumer needs `quality_score`.
+
+## D-0078 — 2026-07-31 — Fan-out iteration 23: the SUPERVISOR-HARDENING wave shipped (model.gateway 0.6.0); finding 5 durable Job-Object custody CLOSED/live-proven
+
+- **decision:** Run i23 (plan `fo-23-36f97a35`) as a SINGLE-WORKER GPU wave — Nicholas's lane pick: the
+  SUPERVISOR-HARDENING wave (the top standing candidate; the hard gate to warm-pool default-ON), with an
+  as-built supervisor red-team as the frontier deliverable sequenced AFTER the ship (the i19->i20 analogue).
+  Fold the i21 frontier red-team's 10 must-fixes (`research/2026-07-31-frontier-supervisor-redteam.md`, the
+  governing spec) into the DEFAULT-OFF durable Windows Job-Object gateway supervisor + integrity layer + real
+  evictor of `model.gateway` #7. `res.lease` #29 0.4.1 CONSUMED UNCHANGED.
+- **what shipped (`model.gateway` #7 0.5.0->0.6.0, `d289ba9`; ADDITIVE + DEFAULT-OFF — classic-cold + D-0057-warm
+  paths byte-identical):** all 10 must-fixes folded (MF10 partial). MF1+2 per-resident **suspended-create Job
+  custody** (CreateProcess suspended -> AssignProcessToJobObject -> IsProcessInJob verify -> resume; assignment
+  FATAL, no publish on `job_owned:false`; `tree_gone` = per-resident Job zero-members) — **LIVE-PROVEN on the
+  box** (real Job Objects, member-count, zero-members tree-gone). MF3 lifetime supervisor singleton. MF4
+  authenticated exact-`resident_instance_id`-target-fenced IPC (path-containment + replay rejection + separated
+  admin `shutdown`). MF5 no launch after a failed/partial evict or a failed CAS. MF6 abandonment-aware nonce'd
+  pool lock (no live-owner stale-age steal). MF7 hard pinned-`nvidia-smi` probe deadlines + `unmanaged_vram_pressure`.
+  MF8 heartbeat-stale => UNRESPONSIVE with NO split-brain fallback (SAFETY half; the exec.watchdog #00.1
+  out-of-process relaunch DRIVER named/not built). MF9 no manifest-only survivor adoption on restart. MF10
+  content-verify primitives + a fail-closed pre-launch hook (the ACL'd app-data state-dir move + the trusted
+  expected-hash-manifest provisioning named/not built). Files: `lib/Supervisor.psm1` (+531), `Start-GatewaySupervisor.ps1`,
+  `lib/PoolManager.psm1`, `lib/PoolEvictor.ps1`, `Invoke-ModelGateway.ps1`, `skill.json` (0.6.0), NEW
+  `tests/Invoke-ModelGatewayHardeningTests.ps1` (478).
+- **gate:** 366 off-machine + 74 on-box Windows real-custody green; `res.lease` 74/74+36/36+45/45 UNCHANGED
+  (not touched); 0 UNMANAGED orphans; leases dir empty; queue before==after; HEAD verified via native git
+  (`d289ba9`, not the dev.ship field — D-0072). Single-worker wave, no producer/consumer schema pair -> no
+  cross-module smoke required (D-0077 N/A).
+- **consequence:** **finding 5 (durable Job-Object custody) CLOSED / live-proven.** Warm-pool default-ON now
+  gates on ONLY (1) an **in-proc `res.lease` client** (the i21 ~6-9 child-pwsh-spawns/call finding) and (2) a
+  **GROWN soak** (>=24h, >=1000 transitions, >=25-each of the 5 fault classes + the 15 live tests + the p99/max
+  / handle-leak / lock-hold / unmanaged-pressure metrics). The full real-model 15-test fault-injection sweep
+  folds INTO that soak. NAMED residuals for a follow-on: the exec.watchdog #00.1 -> supervisor relaunch DRIVER
+  (MF8 availability half), and the ACL'd app-data state-dir move + trusted expected-hash-manifest provisioning (MF10).
+- **frontier lane:** an AS-BUILT supervisor red-team pack was emitted at fold (`frontier.bridge` pack
+  `ff24d3a4`, 10 files, verified vs shipped HEAD `d289ba9`) and couriered to Nicholas for GPT-5.x — the decisive
+  gate before the grown soak. Answer PENDING `read-return`; it folds into a research digest and governs any i24
+  hardening-follow-on (the i19->i20 / i21->i23 analogue).
+- **alternatives:** declare default-ON soak-only now (REJECTED: the as-built review is the standing pre-soak
+  design gate); pursue the MF8/MF10 residuals in-wave (REJECTED: named as follow-ons per the D-0061 ship-the-
+  solid-subset ethos — the safety halves shipped; only the availability/provisioning halves defer).
+- **affects:** `modules/07-model-gateway` (0.6.0 + NEW hardening tests), `CURRENT_STATE.md`, `MODULE_ROADMAP.md`,
+  `WARM_POOL_DESIGN.md` (worker-side; finding 5), `research/2026-07-31-frontier-supervisor-redteam.md` (governed
+  this wave), `FANOUT_ORCHESTRATOR_HANDOFF.md` (rewritten), `core-docs/fanout/` (slot 001 used -> archived ->
+  reset; SHIP-STATE added), `archive/`.
+- **state:** locked. · **revisit-if:** the as-built red-team answer returns (fold it; may open an i24
+  hardening-follow-on); the in-proc res.lease client + grown soak complete (THEN flip default-ON); the MF8 #00.1
+  relaunch driver or the MF10 app-data/trust-root provisioning is scheduled.

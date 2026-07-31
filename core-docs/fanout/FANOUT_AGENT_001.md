@@ -8,4 +8,4 @@
 - **Lane:** GPU (<=1 per wave)
 
 Candidate units for this lane: `FANOUT_ORCHESTRATOR_HANDOFF.md` section 4 (the single menu source).
-i21's brief is archived at `archive/fanout-agents/i21-RESLEASE-R1b-consumers-live.md` (D-0076).
+i23's brief is archived at `archive/fanout-agents/i23-SUPERVISOR-HARDENING.md` (D-0078).
