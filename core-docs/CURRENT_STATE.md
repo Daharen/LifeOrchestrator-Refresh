@@ -407,8 +407,8 @@ dispatch: fill the `FANOUT_AGENT_00N` slots from section 4, `plan` at `MaxParall
 relay prompts as FILES, `status` -> `handoff` -> fold + mirror under the git lease.
 
 Outstanding: **(1)** dispatch Wave 1 (embedding adapter + `artifact.search` MVP + retrieval-eval harness) once
-Nicholas approves; **(2)** fold the whole-project-direction frontier pack answer (`817e52e9`, pending) when it
-returns; **(3) FROZEN/deferred (D-0080):** further supervisor/warm-pool hardening (D-0079 GATE-NO stands;
+Nicholas approves; **(2)** the whole-project-direction frontier pack answer (`817e52e9`) is FOLDED (i25, D-0081) -- captured
+(read-return valid), it RATIFIES D-0080 with no course change; **(3) FROZEN/deferred (D-0080):** further supervisor/warm-pool hardening (D-0079 GATE-NO stands;
 classic detached-warm is the trusted default), generator upgrades, `video.interpret` + live composition, deep
 real-time perception, broad training; **(4)** the widget-03 `model.gateway` GPU live-GUI pass (open since
 D-0060); **(5) doc debt:** CURRENT_STATE + MODULE_ROADMAP + the handoff (+ PROJECT_DIRECTION / ARCHITECTURE_MAP
@@ -416,5 +416,5 @@ after the D-0080 edits) are over budget -- a hot-doc slim pass is a named unit (
 
 ---
 
-**Last updated:** 2026-07-31 -- D-0080 direction reset: pivot to the Collective Agent (cognitive virtual memory) on Nicholas's directive; froze further supervisor/warm-pool hardening (D-0079 GATE-NO stands), generators, video.interpret, real-time perception, and broad training; pulled the memory/retrieval/context/orchestration stack forward. Wave 1 (embedding adapter + artifact.search MVP + retrieval-eval harness) scoped -- workers NOT yet dispatched (held for review).
+**Last updated:** 2026-07-31 -- i25 (D-0081): the whole-project-direction frontier pack (817e52e9) RETURNED and was captured (read-return valid) -- it RATIFIES the D-0080 direction reset (the answer IS the directive doc research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md; no course change); 817e52e9 PENDING flags cleared. D-0080 stands: pivot to the Collective Agent (cognitive virtual memory); supervisor/warm-pool hardening, generators, video.interpret, real-time perception, broad training frozen; Wave 1 (embedding adapter + artifact.search MVP + retrieval-eval harness) scoped -- workers NOT yet dispatched (held for review).
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

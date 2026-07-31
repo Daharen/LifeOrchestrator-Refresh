@@ -134,9 +134,10 @@ Nicholas's directive: up to FOUR lanes per wave; any lane may be skipped. Every 
   (`{prompt, question?, paths?}`); Nicholas couriers it + pastes the answer back; run `read-return`, fold it. No
   lease; fully parallel. **FOLDED (D-0079):** the i23 as-built supervisor red-team (pack `ff24d3a4`) RETURNED **GATE = NO** -- the i23
   supervisor is NOT soak-ready (digest `research/2026-07-31-frontier-supervisor-asbuilt-redteam.md`): 9 P0/P1
-  must-fixes + 18 deterministic tests precede a gating soak. **PENDING NOW:** the whole-project-DIRECTION pack
-  (`817e52e9`, emitted this session at Nicholas's directive; the full core-docs + both supervisor digests) --
-  `read-return` it when Nicholas returns the answer, fold into a direction digest.
+  must-fixes + 18 deterministic tests precede a gating soak. **FOLDED (i25, D-0081):** the whole-project-DIRECTION pack
+  (`817e52e9`) RETURNED; `read-return` captured + validated it (valid/captured/pack_id_match). The answer IS the
+  D-0080 directive doc `research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md` -- it RATIFIES
+  D-0080 (no course change); no separate digest was needed. Wave 1 unchanged.
 
 **Clamps.** <=1 GPU worker always. **1 GPU + 2 CPU = MaxParallel 3** is the validated ceiling. The `git` lease
 serialises commits; `docs:[]` on all workers -> doc contention 0. Persistent llama-servers MUST launch DETACHED
@@ -315,8 +316,8 @@ adapter + `artifact.search` MVP + retrieval-eval harness + optional memory red-t
 dispatched; HELD for Nicholas's approval;** fill the `FANOUT_AGENT_00N` slots only then. **Warm pool + durable
 supervisor stay DEFAULT-OFF and FROZEN** (D-0079 GATE-NO stands; classic detached-warm is the trusted default;
 resume hardening only if a defect threatens the baseline or it blocks the memory work). Also frozen: generators,
-`video.interpret` + live composition, real-time perception (arch 27-49), broad training. **PENDING:** the
-whole-project-direction pack answer (`817e52e9`) -- `read-return` + fold when Nicholas returns it. **Doc debt:**
+`video.interpret` + live composition, real-time perception (arch 27-49), broad training. **FOLDED (i25, D-0081):**
+the whole-project-direction pack answer (`817e52e9`) RETURNED + was captured (read-return valid); it RATIFIES D-0080 (no course change). **Doc debt:**
 the hot docs (CURRENT_STATE / MODULE_ROADMAP / this handoff + PROJECT_DIRECTION / ARCHITECTURE_MAP after the
 D-0080 edits) are over budget -- a slim pass is a named unit. Start at section 2, then Wave 1 (section 4) on
 Nicholas's approval.
