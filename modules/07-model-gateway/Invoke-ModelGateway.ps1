@@ -368,9 +368,12 @@ function Get-ResidencyKey {
     }
 }
 function Get-ResidencyKeySha { param($Key) return (Get-Sha256Hex $utf8.GetBytes(($Key | ConvertTo-Json -Depth 8 -Compress))) }
-# Best-effort GPU free VRAM (MiB) via nvidia-smi; $null when nvidia-smi is absent (off-machine / mock) -> non-fatal.
+# Best-effort GPU free VRAM (MiB); $null when nvidia-smi is absent (off-machine / mock) -> non-fatal.
+# i23 MF7: prefer the PINNED-ABSOLUTE + HARD-DEADLINE probe (Get-GpuFreeMibBounded, PoolManager) so a hung
+# nvidia-smi cannot stall a residency op; degrade to the legacy PATH lookup only if the helper is unavailable.
 function Get-GpuFreeMib {
     try {
+        if (Get-Command Get-GpuFreeMibBounded -ErrorAction SilentlyContinue) { return (Get-GpuFreeMibBounded -DeadlineMs 4000) }
         $smi = Get-Command nvidia-smi -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($null -eq $smi) { return $null }
         $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
@@ -667,8 +670,27 @@ try {
             Write-Diag "use_supervisor: routed op=$supOp ok=true action=$(if (Has $rr 'action') { $rr.action } else { $supOp })"
         } else {
             $rc = if ($null -ne $supResp -and $null -ne $supResp.error) { [string]$supResp.error.code } else { 'supervisor_unavailable' }
-            $warnings.Add("use_supervisor: no live supervisor ($rc); falling back to the per-call path")
-            Write-Diag "use_supervisor: fallback ($rc)"
+            # i23 MF8 (red-team blocker 6): a WEDGED-but-ALIVE supervisor still owns the GPU tree. Its error carries
+            # no_fallback=true. In that case we MUST NOT spawn a per-call second server (that + a stolen lock =
+            # split-brain) -- FAIL CLOSED. Only a genuinely absent/dead supervisor (no_fallback=false) degrades to
+            # the per-call path. Recovery from a wedge is the out-of-process watchdog relaunch, not a second server.
+            $errObjR = if ($null -ne $supResp) { $supResp.error } else { $null }
+            $noFallback = $false
+            if ($null -ne $errObjR) {
+                if ($errObjR -is [System.Collections.IDictionary]) { $noFallback = ($errObjR.Contains('no_fallback') -and [bool]$errObjR['no_fallback']) }
+                elseif ($errObjR.PSObject -and ($errObjR.PSObject.Properties.Name -contains 'no_fallback')) { $noFallback = [bool]$errObjR.no_fallback }
+            }
+            if ($noFallback) {
+                $supervisorRouted = $true   # skip the per-call residency path entirely
+                $status = 'error'
+                $errorObj = [ordered]@{ code = $rc; message = "supervisor alive but unresponsive ($rc); failing closed -- NO per-call fallback (split-brain / stolen-lock guard). Recover via the watchdog supervisor relaunch."; retryable = $true }
+                $result = [ordered]@{ action = $supOp; via_supervisor = $false; supervisor_unresponsive = $true }
+                $warnings.Add("use_supervisor: supervisor UNRESPONSIVE ($rc); FAILING CLOSED (no per-call fallback -> no split-brain)")
+                Write-Diag "use_supervisor: FAIL-CLOSED ($rc) -- no second server spawned"
+            } else {
+                $warnings.Add("use_supervisor: no live supervisor ($rc); falling back to the per-call path")
+                Write-Diag "use_supervisor: fallback ($rc)"
+            }
         }
     }
 
@@ -1264,6 +1286,18 @@ try {
                     Write-Diag "split launch via supervisor: pid=$serverPid port=$usePort health_ok=$healthOk load_ms=$healthMs inst=$splitNewInstId"
                 } else {
                     $rc2 = if ($null -ne $supResp2 -and $null -ne $supResp2.error) { [string]$supResp2.error.code } else { 'supervisor_unavailable' }
+                    # i23 MF8: a WEDGED-but-alive supervisor (no_fallback=true) must NOT be worked around with a
+                    # per-call managed launch (split-brain risk). FAIL the transition closed; the outer cleanup
+                    # releases the leases. A genuinely absent/dead supervisor (no_fallback=false) still degrades.
+                    $errObjR2 = if ($null -ne $supResp2) { $supResp2.error } else { $null }
+                    $noFallback2 = $false
+                    if ($null -ne $errObjR2) {
+                        if ($errObjR2 -is [System.Collections.IDictionary]) { $noFallback2 = ($errObjR2.Contains('no_fallback') -and [bool]$errObjR2['no_fallback']) }
+                        elseif ($errObjR2.PSObject -and ($errObjR2.PSObject.Properties.Name -contains 'no_fallback')) { $noFallback2 = [bool]$errObjR2.no_fallback }
+                    }
+                    if ($noFallback2) {
+                        throw [PSCustomObject]@{ code = 'supervisor_unresponsive'; message = "split capability launch: supervisor alive but unresponsive ($rc2); failing closed (no per-call fallback -> no split-brain)" }
+                    }
                     $warnings.Add("split: no live supervisor for the capability launch ($rc2); falling back to the per-call managed launch")
                     Write-Diag "split launch: supervisor fallback ($rc2)"
                 }

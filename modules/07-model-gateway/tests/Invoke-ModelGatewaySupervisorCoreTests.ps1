@@ -122,10 +122,15 @@ $reqPing = New-SupervisorRequest -Op 'ping'; [void](Write-SupervisorRequest -Req
 $poll2 = Invoke-SupervisorPollOnce -Paths $pp -Handlers @{} -SupervisorPid 7 -SupervisorGeneration 'g'
 $pong = Read-SupervisorResponseFile (Join-Path $pp.resp_dir "$($reqPing.request_id).json")
 Ok ($null -ne $pong -and [bool]$pong.ok -and [bool]$pong.result.pong) 'S5 built-in ping -> pong'
-# shutdown (built-in):
-$reqSd = New-SupervisorRequest -Op 'shutdown'; [void](Write-SupervisorRequest -ReqDir $pp.req_dir -Request $reqSd)
+# shutdown (built-in) -- i23 MF4: authenticated admin op requires the supervisor generation:
+$reqSd = New-SupervisorRequest -Op 'shutdown' -ExpectGeneration 'g'; [void](Write-SupervisorRequest -ReqDir $pp.req_dir -Request $reqSd)
 $poll3 = Invoke-SupervisorPollOnce -Paths $pp -Handlers @{} -SupervisorPid 7 -SupervisorGeneration 'g'
-Ok ($poll3.shutdown -eq $true) 'S5 shutdown op sets the shutdown flag'
+Ok ($poll3.shutdown -eq $true) 'S5 shutdown op (with the matching generation) sets the shutdown flag'
+# a shutdown WITHOUT the generation is REFUSED (not a plain dispatch)
+$reqSdBad = New-SupervisorRequest -Op 'shutdown'; [void](Write-SupervisorRequest -ReqDir $pp.req_dir -Request $reqSdBad)
+$poll3b = Invoke-SupervisorPollOnce -Paths $pp -Handlers @{} -SupervisorPid 7 -SupervisorGeneration 'g'
+$sdBadResp = Read-SupervisorResponseFile (Join-Path $pp.resp_dir "$($reqSdBad.request_id).json")
+Ok ($poll3b.shutdown -eq $false -and $null -ne $sdBadResp -and [string]$sdBadResp.error.code -eq 'admin_auth_required') 'S5 an UNauthenticated shutdown is REFUSED (admin_auth_required)'
 # handler throws a structured error -> ok=false with the code:
 $reqBoom = New-SupervisorRequest -Op 'ensure_resident'; [void](Write-SupervisorRequest -ReqDir $pp.req_dir -Request $reqBoom)
 $poll4 = Invoke-SupervisorPollOnce -Paths $pp -Handlers @{ ensure_resident = { param($r) throw [PSCustomObject]@{ code='kaboom'; message='blew up' } } } -SupervisorPid 7 -SupervisorGeneration 'g'

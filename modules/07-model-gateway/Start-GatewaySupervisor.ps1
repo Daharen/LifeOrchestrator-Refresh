@@ -128,17 +128,10 @@ $SocketOwnerProbe = {
     }
     return $null
 }
+# i23 MF7: PINNED ABSOLUTE nvidia-smi + a HARD deadline (Get-GpuFreeMibBounded, PoolManager). A hung/absent
+# nvidia-smi -> $null (unknown), never a hang and never a bare-PATH shim. The pool lock is NEVER held across it.
 $VramProbe = {
-    try {
-        $smi = Get-Command nvidia-smi -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($null -eq $smi) { return $null }
-        $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
-        try { $o = & $smi.Source '--query-gpu=memory.free' '--format=csv,noheader,nounits' 2>$null } finally { $ErrorActionPreference = $prev }
-        $line = (@($o) | Where-Object { "$_".Trim() -ne '' } | Select-Object -First 1)
-        if ($null -eq $line) { return $null }
-        $n = 0; if ([int]::TryParse((("$line").Trim()), [ref]$n)) { return $n }
-        return $null
-    } catch { return $null }
+    try { return (Get-GpuFreeMibBounded -DeadlineMs 4000) } catch { return $null }
 }
 # StopProbe mirrors the gateway's Stop-ResidentServer: kill the whole TREE by PID (taskkill /T on Windows),
 # confirm exit; refuse to kill an alive-but-unidentified pid (PID reuse -> a foreign process). The Job Object
@@ -222,12 +215,13 @@ function Resolve-ModelLaunch {
 # the server as a CHILD of the (persistent, detached) supervisor, assigns the pid to the Job Object, and
 # returns identity. The mock/test .ps1 engine is run under pwsh (same seam the gateway uses).
 function New-RealLauncher {
-    param([object]$ML, [object]$Job, [string]$Pwsh, [string]$LogDir)
+    param([object]$ML, [object]$Job, [string]$Pwsh, [string]$LogDir, [hashtable]$TrustedHashes = $null)
     $enginePath = [string]$ML.engine_path; $modelPath = [string]$ML.model_path
     $ngl = [int]$ML.ngl; $ctx = [int]$ML.ctx; $ctk = [string]$ML.ctk; $ctv = [string]$ML.ctv; $flash = [bool]$ML.flash; $np = [int]$ML.np
+    $modelIdRef = [string]$ML.model_id; $trustedRef = $TrustedHashes
     $jobRef = $Job; $pwshRef = $Pwsh; $logDirRef = $LogDir
     $sb = {
-        param($ReqConfig, [int]$PortHint)
+        param($ReqConfig, [int]$PortHint, [string]$ResidentInstanceId)
         $port = if ($PortHint -gt 0) { $PortHint } else { Get-SupFreePort 8140 }
         if ($port -le 0) { throw [PSCustomObject]@{ code = 'no_free_port'; message = 'no free loopback port' } }
         $srvArgs = @('-m', $modelPath, '-ngl', "$ngl", '-c', "$ctx", '--host', '127.0.0.1', '--port', "$port", '--no-warmup', '--parallel', "$np")
@@ -238,15 +232,33 @@ function New-RealLauncher {
         else { $spFile = $enginePath; $spArgs = $srvArgs }
         if (-not (Test-Path -LiteralPath $logDirRef)) { New-Item -ItemType Directory -Path $logDirRef -Force | Out-Null }
         $so = Join-Path $logDirRef "server-$port.out.log"; $se = Join-Path $logDirRef "server-$port.err.log"
-        $spSplat = @{ FilePath = $spFile; ArgumentList = $spArgs; PassThru = $true; RedirectStandardOutput = $so; RedirectStandardError = $se }
-        if ($IsWindows) { $spSplat['WindowStyle'] = 'Hidden' }
-        $proc = Start-Process @spSplat
-        $serverPid = [int]$proc.Id
-        $jobOwned = $false
-        try { $jobOwned = [bool](Add-ProcessToGatewayJob -Job $jobRef -ProcessId $serverPid) } catch { $jobOwned = $false }
-        $startTicks = 0
-        try { $startTicks = [long]((Get-Process -Id $serverPid -ErrorAction Stop).StartTime.Ticks) } catch { try { $startTicks = [long]$proc.StartTime.Ticks } catch { } }
-        return [ordered]@{ pid = $serverPid; start_ticks = $startTicks; instance_generation = (New-InstanceGeneration); host = '127.0.0.1'; port = $port; job_owned = $jobOwned }
+        $rii = if (-not [string]::IsNullOrWhiteSpace($ResidentInstanceId)) { $ResidentInstanceId } else { ('ri' + [Guid]::NewGuid().ToString('N')) }
+        # i23 MF10: build a PRE-LAUNCH content-verify set from the TRUSTED-HASHES manifest (if provisioned). Each
+        # engine/model file is sha256-verified (+ reparse-point rejected) immediately before launch. Absent trusted
+        # hashes => no verification (a NAMED residual: provision trusted-hashes.json in the ACL'd state dir).
+        $preVerify = $null
+        if ($null -ne $trustedRef -and $trustedRef.ContainsKey($modelIdRef)) {
+            $th = $trustedRef[$modelIdRef]; $preVerify = @{}
+            if ($null -ne $th) {
+                $eh = if ($th -is [System.Collections.IDictionary]) { [string]$th['engine_sha256'] } elseif ($th.PSObject.Properties.Name -contains 'engine_sha256') { [string]$th.engine_sha256 } else { '' }
+                $mh = if ($th -is [System.Collections.IDictionary]) { [string]$th['model_sha256'] } elseif ($th.PSObject.Properties.Name -contains 'model_sha256') { [string]$th.model_sha256 } else { '' }
+                if (-not [string]::IsNullOrWhiteSpace($eh)) { $preVerify[$enginePath] = $eh }
+                if (-not [string]::IsNullOrWhiteSpace($mh)) { $preVerify[$modelPath] = $mh }
+            }
+        }
+        # i23 MF1+2: launch UNDER PER-RESIDENT SUSPENDED-CREATE JOB CUSTODY (Windows) -- suspended-create ->
+        # assign -> IsProcessInJob verify -> resume; the supervisor holds the per-resident job handle. Off-Windows
+        # this degrades to Start-Process (job_owned:false, honestly reported). The single supervisor-wide Job
+        # ($jobRef) is retained ONLY as a crash-time backstop reaper (precision correction).
+        $cs = New-CustodiedServer -FilePath $spFile -Arguments $spArgs -WorkDir $logDirRef -ResidentInstanceId $rii -StdoutPath $so -StderrPath $se -PreLaunchVerify $preVerify
+        if (-not $cs.ok) { return [ordered]@{ pid = 0; job_owned = $false; custody_supported = $cs.custody_supported; stage = $cs.stage; error = $cs.error; host = '127.0.0.1'; port = $port } }
+        $serverPid = [int]$cs.pid
+        # belt-and-suspenders: also add to the shared supervisor-wide job (crash-time backstop). On Win8+ a
+        # process may be in multiple (nested) jobs; a failure here is NON-fatal (per-resident custody is primary).
+        if (-not $cs.custody_supported) { try { [void](Add-ProcessToGatewayJob -Job $jobRef -ProcessId $serverPid) } catch { } }
+        $startTicks = if ($cs.start_ticks -gt 0) { [long]$cs.start_ticks } else { 0 }
+        if ($startTicks -le 0) { try { $startTicks = [long]((Get-Process -Id $serverPid -ErrorAction Stop).StartTime.Ticks) } catch { } }
+        return [ordered]@{ pid = $serverPid; start_ticks = $startTicks; instance_generation = (New-InstanceGeneration); host = '127.0.0.1'; port = $port; job_owned = [bool]$cs.job_owned; job_instance_id = $cs.job_instance_id; custody_supported = [bool]$cs.custody_supported }
     }.GetNewClosure()
     return $sb
 }
@@ -276,6 +288,14 @@ function Emit([string]$Act, [string]$Status, [object]$Result, [object]$ErrorObj)
 # =====================================================================================================
 function Invoke-SupervisorRun {
     Initialize-SupervisorDirs -Paths $paths
+    # i23 MF3: claim the lifetime singleton BEFORE publishing anything. A second supervisor on this root cannot
+    # claim it and exits cleanly (no double custody). Held for the whole run; released in the finally.
+    $singleton = Enter-SupervisorSingleton -Root $paths.root -TimeoutMs 0
+    if (-not $singleton.acquired) {
+        Write-Diag "another supervisor already holds the singleton for $($paths.root) (reason=$($singleton.reason)); exiting cleanly"
+        Emit 'run' 'ok' ([ordered]@{ ran = $false; already_running = $true; reason = 'singleton_held'; singleton = $singleton.name; supervisor_root = $paths.root }) $null
+        return
+    }
     $reg = $null
     try { if (Test-Path -LiteralPath $regPath -PathType Leaf) { $reg = (Get-Content -LiteralPath $regPath -Raw) | ConvertFrom-Json } } catch { $reg = $null }
     if ($null -eq $reg) { Write-Diag "WARNING: registry not loaded from $regPath; ensure_resident will error per-request" }
@@ -298,8 +318,10 @@ function Invoke-SupervisorRun {
     Write-Diag "supervisor RUNNING pid=$PID gen=$generation root=$($paths.root) warm_registry=$($paths.warm_registry)"
 
     # startup reconcile: verify any prior published resident as a CLAIM (never trust). Runs without our lock.
+    # i23 MF9: -RequireCustodian -- a FRESH supervisor holds NO retained custodian, so a manifest-only survivor
+    # is an orphan of failed custody (never adopted); it is fenced/killed and the pool driven to a clean EMPTY.
     try {
-        $rc = Invoke-SupervisorReconcile -WarmRegPath $paths.warm_registry -LockPath $paths.warm_lock -StartTicksProbe $StartTicksProbe -SocketOwnerProbe $SocketOwnerProbe -HealthProbe $HealthProbe -StopProbe $StopProbe
+        $rc = Invoke-SupervisorReconcile -WarmRegPath $paths.warm_registry -LockPath $paths.warm_lock -StartTicksProbe $StartTicksProbe -SocketOwnerProbe $SocketOwnerProbe -HealthProbe $HealthProbe -StopProbe $StopProbe -RequireCustodian
         Write-Diag "startup reconcile: action=$($rc.action) kept=$($rc.kept_resident) killed_pid=$($rc.killed_pid)"
     } catch { Write-Diag "startup reconcile error: $($_.Exception.Message)" }
 
@@ -318,12 +340,19 @@ function Invoke-SupervisorRun {
         # and the actual server tree agree. Absent => minted inside.
         $reqInstId = if ($p.ContainsKey('resident_instance_id')) { [string]$p['resident_instance_id'] } else { $null }
         $reqInstGen = if ($p.ContainsKey('instance_generation')) { [string]$p['instance_generation'] } else { $null }
-        $launcher = New-RealLauncher -ML $ml -Job $job -Pwsh $pwshExe -LogDir (Join-Path $paths.root 'servers')
+        # i23 MF10: load the optional TRUSTED-HASHES manifest (model_id -> {engine_sha256, model_sha256}) so the
+        # launcher content-verifies the engine+model bytes before launch. Provisioned OUT of the mutable
+        # models.json (the digest's anti-theater rule). Absent => no verification (a named residual).
+        $trustedHashes = $null
+        $thPath = Join-Path $paths.root 'trusted-hashes.json'
+        try { if (Test-Path -LiteralPath $thPath -PathType Leaf) { $thj = (Get-Content -LiteralPath $thPath -Raw) | ConvertFrom-Json; $trustedHashes = @{}; foreach ($pr in $thj.PSObject.Properties) { $trustedHashes[$pr.Name] = $pr.Value } } } catch { $trustedHashes = $null }
+        $launcher = New-RealLauncher -ML $ml -Job $job -Pwsh $pwshExe -LogDir (Join-Path $paths.root 'servers') -TrustedHashes $trustedHashes
         $meta = @{ model_id = $ml.model_id; host = '127.0.0.1'; port_hint = 0; managed_by = 'model.gateway.supervisor'; keep_resident_seconds = $KeepResidentSeconds }
         $res = Invoke-SupervisorEnsureResident -WarmRegPath $paths.warm_registry -LockPath $paths.warm_lock `
             -ReqConfig $ml.req_config -ModelMeta $meta -Launcher $launcher `
             -HealthProbe $HealthProbe -StopProbe $StopProbe -SocketOwnerProbe $SocketOwnerProbe -StartTicksProbe $StartTicksProbe -VramProbe $VramProbe `
-            -FenceHolder 'model.gateway.supervisor' -FenceTtlSeconds $FenceTtlSeconds -LoadTimeoutSec $LoadTimeoutSec -ForceReload:$forceReload -ResidentInstanceId $reqInstId -InstanceGeneration $reqInstGen
+            -FenceHolder 'model.gateway.supervisor' -FenceTtlSeconds $FenceTtlSeconds -LoadTimeoutSec $LoadTimeoutSec -ForceReload:$forceReload -ResidentInstanceId $reqInstId -InstanceGeneration $reqInstGen `
+            -RequireJobCustody:$IsWindows   # i23 MF1+2: custody is FATAL on the Windows default-ON path (no uncustodied publish)
         return $res
     }.GetNewClosure()
     $statusHandler = { param($Request) return (Get-SupervisorResidencyStatus -WarmRegPath $paths.warm_registry -StartTicksProbe $StartTicksProbe -HealthProbe $HealthProbe -KeepResidentSeconds $KeepResidentSeconds) }.GetNewClosure()
@@ -371,9 +400,11 @@ function Invoke-SupervisorRun {
         # graceful: state=STOPPING, evict the resident so no orphan survives, THEN close the job (reaps any remainder)
         try { $m = Read-SupervisorManifest $paths.manifest; if ($null -ne $m) { $mm = ConvertTo-MutableMap $m; $mm['state'] = 'STOPPING'; [void](Write-SupervisorManifest -Path $paths.manifest -Obj $mm) } } catch { }
         try { [void](Invoke-SupervisorEvict -WarmRegPath $paths.warm_registry -LockPath $paths.warm_lock -StopProbe $StopProbe -StartTicksProbe $StartTicksProbe -VramProbe $VramProbe) } catch { Write-Diag "evict-on-stop error: $($_.Exception.Message)" }
+        try { $nRes = Close-AllResidentJobTrees; if ($nRes -gt 0) { Write-Diag "closed $nRes per-resident job tree(s)" } } catch { }   # i23 MF1+2
         try { [void](Close-GatewayJob -Job $job) } catch { }
         Clear-SupervisorManifest $paths.manifest
         try { if (Test-Path -LiteralPath $paths.stop_sentinel) { Remove-Item -LiteralPath $paths.stop_sentinel -Force -ErrorAction SilentlyContinue } } catch { }
+        try { [void](Exit-SupervisorSingleton $singleton) } catch { }   # i23 MF3: release the lifetime singleton
         Write-Diag "supervisor stopped pid=$PID"
     }
     Emit 'run' 'ok' ([ordered]@{ ran = $true; stop_reason = $stopReason; supervisor_pid = $PID; job_supported = [bool]$job.supported }) $null
@@ -432,7 +463,10 @@ try {
             $supPid = $live.pid
             $method = 'graceful'
             if ($live.running) {
-                $resp = Send-SupervisorRequest -Paths $paths -Op 'shutdown' -TimeoutMs 5000 -StartTicksProbe $StartTicksProbe
+                # i23 MF4: shutdown is an authenticated admin op -- pass the supervisor's generation (read from the
+                # manifest) so the running loop accepts it. The stop-sentinel below remains the belt-and-suspenders.
+                $supGen = if ($null -ne $m -and (Has $m 'supervisor_generation')) { [string]$m.supervisor_generation } else { '' }
+                $resp = Send-SupervisorRequest -Paths $paths -Op 'shutdown' -ExpectGeneration $supGen -TimeoutMs 5000 -StartTicksProbe $StartTicksProbe
                 if (-not $resp.ok) { $warnings.Add("graceful shutdown request not acked: $($resp.error.code)") }
             }
             # also drop the stop sentinel (belt-and-suspenders) so a busy loop still exits

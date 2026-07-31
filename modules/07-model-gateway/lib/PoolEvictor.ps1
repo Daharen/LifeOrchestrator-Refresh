@@ -161,12 +161,29 @@ try {
                 return $null
             } catch { return $null }
         }
+        # i23 MF7: PINNED ABSOLUTE nvidia-smi + a HARD deadline (never a bare PATH shim; never a hang). On
+        # timeout the probe is KILLED -> $null (unknown) -> the ladder's confirmed:false (a normal failed
+        # prepare, never a throw or a blind kill). Env override LIFEORCH_NVIDIA_SMI wins.
         try {
-            $smi = Get-Command 'nvidia-smi' -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
-            if ($null -eq $smi) { return $null }
-            $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
-            try { $o = & $smi.Source '--query-gpu=memory.free' '--format=csv,noheader,nounits' 2>$null } finally { $ErrorActionPreference = $prev }
-            $line = @($o) | Select-Object -First 1
+            $smiPath = $null
+            if (-not [string]::IsNullOrWhiteSpace($env:LIFEORCH_NVIDIA_SMI) -and (Test-Path -LiteralPath $env:LIFEORCH_NVIDIA_SMI -PathType Leaf)) { $smiPath = [string]$env:LIFEORCH_NVIDIA_SMI }
+            elseif ($IsWindows) {
+                $sysRoot = if (-not [string]::IsNullOrWhiteSpace($env:SystemRoot)) { [string]$env:SystemRoot } else { 'C:\Windows' }
+                $c1 = Join-Path $sysRoot 'System32\nvidia-smi.exe'
+                if (Test-Path -LiteralPath $c1 -PathType Leaf) { $smiPath = $c1 }
+                elseif (-not [string]::IsNullOrWhiteSpace($env:ProgramFiles)) { $c2 = Join-Path $env:ProgramFiles 'NVIDIA Corporation\NVSMI\nvidia-smi.exe'; if (Test-Path -LiteralPath $c2 -PathType Leaf) { $smiPath = $c2 } }
+            }
+            if ([string]::IsNullOrWhiteSpace($smiPath)) { return $null }
+            $psi = [System.Diagnostics.ProcessStartInfo]::new(); $psi.FileName = $smiPath
+            [void]$psi.ArgumentList.Add('--query-gpu=memory.free'); [void]$psi.ArgumentList.Add('--format=csv,noheader,nounits')
+            $psi.UseShellExecute = $false; $psi.RedirectStandardOutput = $true; $psi.RedirectStandardError = $true; $psi.CreateNoWindow = $true
+            $pp = [System.Diagnostics.Process]::Start($psi)
+            if ($null -eq $pp) { return $null }
+            $soT = $pp.StandardOutput.ReadToEndAsync(); $null = $pp.StandardError.ReadToEndAsync()
+            if (-not $pp.WaitForExit(4000)) { try { $pp.Kill($true) } catch { try { $pp.Kill() } catch { } }; try { $pp.Dispose() } catch { }; return $null }
+            $txt = try { $soT.GetAwaiter().GetResult() } catch { '' }
+            try { $pp.Dispose() } catch { }
+            $line = (([string]$txt) -split "`n" | Where-Object { "$_".Trim() -ne '' } | Select-Object -First 1)
             $n = 0
             if ($null -ne $line -and [int]::TryParse(([string]$line).Trim(), [ref]$n)) { return $n }
             return $null

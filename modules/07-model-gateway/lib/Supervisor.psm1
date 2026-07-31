@@ -105,6 +105,44 @@ function Initialize-SupervisorDirs {
 }
 
 # ------------------------------------------------------------------------------------------------
+# i23 MF3 (red-team blocker: two-start race / must-fix 3): LIFETIME SUPERVISOR SINGLETON. A named OS mutex,
+# keyed by the CANONICAL supervisor root, claimed in 'run' BEFORE the manifest is published. A second
+# supervisor that cannot claim it EXITS cleanly (no double custody of the GPU tree). An ABANDONED mutex (the
+# prior supervisor died without releasing) counts as ACQUIRED -- the new generation takes over. The claim is
+# thread-affine (acquired + released on the run loop's main thread). Self-contained hash (no PoolManager dep)
+# so it works even if the integrity core failed to load. Cross-platform (Windows session namespace / Linux
+# temp-backed named mutex); proven cross-process on the cloud gate.
+# ------------------------------------------------------------------------------------------------
+function Get-SupervisorSingletonName {
+    param([Parameter(Mandatory)][string]$Root)
+    $canon = try { [System.IO.Path]::GetFullPath($Root) } catch { $Root }
+    $canon = ($canon.TrimEnd('/','\')).ToLowerInvariant()
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try { $hex = ([System.BitConverter]::ToString($sha.ComputeHash($script:SupUtf8NoBom.GetBytes($canon)))).Replace('-','').ToLowerInvariant() } finally { $sha.Dispose() }
+    return ('lifeorch_gwsup_' + $hex.Substring(0, 24))
+}
+function Enter-SupervisorSingleton {
+    param([Parameter(Mandatory)][string]$Root, [int]$TimeoutMs = 0)
+    $name = Get-SupervisorSingletonName $Root
+    $mx = $null
+    try { $created = $false; $mx = [System.Threading.Mutex]::new($false, $name, [ref]$created) }
+    catch { return [ordered]@{ acquired = $false; mutex = $null; name = $name; reason = "mutex_create_failed:$($_.Exception.Message)"; supported = $false } }
+    $got = $false
+    try { $got = $mx.WaitOne([Math]::Max(0, $TimeoutMs)) }
+    catch [System.Threading.AbandonedMutexException] { $got = $true }   # prior owner died -> we inherit it
+    catch { $got = $false }
+    if (-not $got) { try { $mx.Dispose() } catch { }; return [ordered]@{ acquired = $false; mutex = $null; name = $name; reason = 'held_by_other'; supported = $true } }
+    return [ordered]@{ acquired = $true; mutex = $mx; name = $name; reason = 'ok'; supported = $true }
+}
+function Exit-SupervisorSingleton {
+    param([object]$Claim)
+    if ($null -eq $Claim -or -not (Test-SupHasProp $Claim 'mutex') -or $null -eq $Claim.mutex) { return $false }
+    try { $Claim.mutex.ReleaseMutex() } catch { }
+    try { $Claim.mutex.Dispose() } catch { }
+    return $true
+}
+
+# ------------------------------------------------------------------------------------------------
 # Supervisor manifest: identity (pid + creation-time + a per-launch nonce) + a heartbeat. A client PROVES
 # the supervisor is live by (pid alive) AND (creation-time matches, rejecting PID reuse) AND (heartbeat
 # fresh). The StartTicksProbe is a seam (Process.StartTime); off-box liveness stays advisory, never throws.
@@ -138,9 +176,13 @@ function Test-SupervisorLiveness {
     } catch { $res.identity_ok = $false }
     $res.heartbeat_fresh = Test-SupervisorHeartbeatFresh -Manifest $Manifest -MaxAgeSeconds $HeartbeatMaxAgeSeconds
     $stateRunning = (-not (Test-SupHasProp $Manifest 'state')) -or ([string]$Manifest.state -eq 'RUNNING')
-    # "running" for routing = alive AND identity matches AND still in RUNNING state. Heartbeat freshness is
-    # reported but is advisory for routing (a busy in-process op can briefly delay a heartbeat write).
+    # "running" for routing = alive AND identity matches AND still in RUNNING state (unchanged; start/status use it).
     $res.running = ($res.alive -and $res.identity_ok -and $stateRunning)
+    # i23 MF8 (red-team blocker 6): RESPONSIVE folds in heartbeat freshness. running-but-NOT-responsive == a
+    # WEDGED supervisor (process alive, still holding the GPU tree, but its IPC + heartbeat loop have stalled).
+    # The client MUST NOT fall back to a per-call second server in that state (that + a stolen lock = split-brain);
+    # it fails closed until the out-of-process watchdog kills + relaunches the wedged supervisor.
+    $res['responsive'] = ($res.running -and $res.heartbeat_fresh)
     return $res
 }
 
@@ -165,12 +207,29 @@ function New-SupervisorRequest {
         created_utc       = (ConvertTo-SupUtcString (Get-SupNowUtc))
     }
 }
+# i23 MF4 (red-team blocker 2): a STRICT request_id format so an id that becomes a response FILENAME cannot
+# escape the control dir (path containment). Legitimate ids are GUID-N (32 hex) -> conform. Reject anything
+# with a path separator, '..', drive/UNC, or a non-[A-Za-z0-9_.-] byte.
+$script:SUP_REQID_RE = [regex]'^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$'
+function Test-SupervisorRequestId {
+    param([string]$RequestId)
+    if ([string]::IsNullOrWhiteSpace($RequestId)) { return $false }
+    if ($RequestId -match '[\\/:]' -or $RequestId.Contains('..')) { return $false }
+    return $script:SUP_REQID_RE.IsMatch($RequestId)
+}
+# The mutating ops that require replay/target/generation authentication (read-only ping/status are exempt).
+$script:SUP_MUTATING_OPS = @('ensure_resident','prepare_gpu','evict','reconcile','shutdown')
+# Idempotent request-receipt ledger (per supervisor process): a replayed destructive request_id is refused.
+$script:SupConsumedRequests = @{}
+function Reset-SupervisorConsumedRequests { $script:SupConsumedRequests = @{} }
 function Test-SupervisorRequestValid {
     param([object]$Request)
     $errs = New-Object System.Collections.Generic.List[string]
     if ($null -eq $Request) { $errs.Add('null_request'); return [ordered]@{ valid = $false; errors = $errs.ToArray() } }
     if (-not (Test-SupHasProp $Request 'schema') -or [string]$Request.schema -ne $script:SUP_REQ_SCHEMA) { $errs.Add('bad_schema') }
-    if (-not (Test-SupHasProp $Request 'request_id') -or [string]::IsNullOrWhiteSpace([string]$Request.request_id)) { $errs.Add('missing_request_id') }
+    $rid = if (Test-SupHasProp $Request 'request_id') { [string]$Request.request_id } else { '' }
+    if ([string]::IsNullOrWhiteSpace($rid)) { $errs.Add('missing_request_id') }
+    elseif (-not (Test-SupervisorRequestId $rid)) { $errs.Add('bad_request_id') }   # i23 MF4: path-containment
     $op = if (Test-SupHasProp $Request 'op') { [string]$Request.op } else { '' }
     if ([string]::IsNullOrWhiteSpace($op) -or ($script:SUP_OPS -notcontains $op)) { $errs.Add("bad_op:$op") }
     return [ordered]@{ valid = ($errs.Count -eq 0); errors = $errs.ToArray() }
@@ -233,7 +292,15 @@ function Send-SupervisorRequest {
     $manifest = Read-SupervisorManifest $Paths.manifest
     $live = Test-SupervisorLiveness -Manifest $manifest -StartTicksProbe $StartTicksProbe -HeartbeatMaxAgeSeconds $HeartbeatMaxAgeSeconds
     if (-not $live.running) {
-        return [ordered]@{ ok = $false; delivered = $false; error = [ordered]@{ code = 'supervisor_unavailable'; message = 'no running supervisor (attach failed); caller should use the per-call path'; retryable = $true }; liveness = $live }
+        # absent / dead / identity-mismatch / not-RUNNING: OUR supervisor is not holding the GPU tree, so the
+        # caller MAY safely degrade to the per-call path (no_fallback=false).
+        return [ordered]@{ ok = $false; delivered = $false; error = [ordered]@{ code = 'supervisor_unavailable'; message = 'no running supervisor (attach failed); caller may use the per-call path'; retryable = $true; supervisor_alive = [bool]$live.alive; no_fallback = $false }; liveness = $live }
+    }
+    # i23 MF8: RUNNING but heartbeat STALE == WEDGED. The process is alive and STILL OWNS the GPU tree, so a
+    # per-call second server would be split-brain. Fail closed (no_fallback=true) WITHOUT writing a request that
+    # will never be serviced -- recovery is the out-of-process watchdog killing + relaunching the supervisor.
+    if (-not $live.heartbeat_fresh) {
+        return [ordered]@{ ok = $false; delivered = $false; error = [ordered]@{ code = 'supervisor_unresponsive'; message = 'supervisor process alive but heartbeat stale (wedged); failing closed -- NO per-call fallback (split-brain guard)'; retryable = $true; supervisor_alive = $true; no_fallback = $true }; liveness = $live }
     }
     Initialize-SupervisorDirs -Paths $Paths
     $req = New-SupervisorRequest -Op $Op -Params $Params -ExpectGeneration $ExpectGeneration -ExpectFence $ExpectFence -Holder $Holder
@@ -248,17 +315,25 @@ function Send-SupervisorRequest {
                 return [ordered]@{ ok = [bool]$resp.ok; delivered = $true; response = $resp; error = $(if ($resp.ok) { $null } else { $resp.error }); request_id = $req.request_id }
             }
         }
-        # if the supervisor dies mid-wait, stop waiting (fail fast so the caller can degrade)
+        # if the supervisor dies mid-wait, stop waiting (fail fast so the caller can degrade -- the GPU tree is
+        # gone with it, so a per-call server is safe: no_fallback=false).
         $m2 = Read-SupervisorManifest $Paths.manifest
         $l2 = Test-SupervisorLiveness -Manifest $m2 -StartTicksProbe $StartTicksProbe -HeartbeatMaxAgeSeconds $HeartbeatMaxAgeSeconds
         if (-not $l2.alive) {
             try { Remove-Item -LiteralPath $reqPath -Force -ErrorAction SilentlyContinue } catch { }
-            return [ordered]@{ ok = $false; delivered = $true; error = [ordered]@{ code = 'supervisor_died'; message = 'supervisor exited while the request was in flight'; retryable = $true }; request_id = $req.request_id }
+            return [ordered]@{ ok = $false; delivered = $true; error = [ordered]@{ code = 'supervisor_died'; message = 'supervisor exited while the request was in flight'; retryable = $true; supervisor_alive = $false; no_fallback = $false }; request_id = $req.request_id }
         }
         Start-Sleep -Milliseconds $PollMs
     }
     try { Remove-Item -LiteralPath $reqPath -Force -ErrorAction SilentlyContinue } catch { }
-    return [ordered]@{ ok = $false; delivered = $true; error = [ordered]@{ code = 'supervisor_timeout'; message = "no response within ${TimeoutMs} ms"; retryable = $true }; request_id = $req.request_id }
+    # i23 MF8: on timeout, re-check liveness. If the process is STILL ALIVE it is WEDGED (owns the GPU tree but
+    # did not answer) -> no_fallback=true (fail closed; no split-brain). Only a dead process is fallback-safe.
+    $mT = Read-SupervisorManifest $Paths.manifest
+    $lT = Test-SupervisorLiveness -Manifest $mT -StartTicksProbe $StartTicksProbe -HeartbeatMaxAgeSeconds $HeartbeatMaxAgeSeconds
+    if ($lT.alive) {
+        return [ordered]@{ ok = $false; delivered = $true; error = [ordered]@{ code = 'supervisor_timeout'; message = "no response within ${TimeoutMs} ms (supervisor process still alive -> wedged; failing closed, NO per-call fallback)"; retryable = $true; supervisor_alive = $true; no_fallback = $true }; request_id = $req.request_id }
+    }
+    return [ordered]@{ ok = $false; delivered = $true; error = [ordered]@{ code = 'supervisor_died'; message = "no response within ${TimeoutMs} ms and the supervisor is gone"; retryable = $true; supervisor_alive = $false; no_fallback = $false }; request_id = $req.request_id }
 }
 
 # ------------------------------------------------------------------------------------------------
@@ -287,15 +362,46 @@ function Invoke-SupervisorPollOnce {
             $resp = New-SupervisorResponse -Request $req -Ok $false -ErrorObj ([ordered]@{ code = 'bad_request'; message = ([string]::Join(';', $valid.errors)) }) -SupervisorPid $SupervisorPid -SupervisorGeneration $SupervisorGeneration
         } else {
             $op = [string]$req.op
-            if ($op -eq 'shutdown') {
-                $shutdown = $true
-                $resp = New-SupervisorResponse -Request $req -Ok $true -Result ([ordered]@{ action = 'shutdown'; accepted = $true }) -SupervisorPid $SupervisorPid -SupervisorGeneration $SupervisorGeneration
+            $rid = [string]$req.request_id
+            $isMutating = ($script:SUP_MUTATING_OPS -contains $op)
+            $expGen = if (Test-SupHasProp $req 'expect_generation') { [string]$req.expect_generation } else { '' }
+            # i23 MF4: AUTHENTICATE mutating requests. (1) generation binding -- an expect_generation that does not
+            # match this supervisor's generation is a stale/foreign request -> REFUSE. (2) idempotent replay guard
+            # -- a request_id already consumed is REFUSED (a replayed destructive request cannot re-fire). ping /
+            # status are read-only and exempt. shutdown additionally requires admin auth (a matching generation).
+            $authErr = $null
+            if ($isMutating) {
+                if (-not [string]::IsNullOrWhiteSpace($expGen) -and -not [string]::IsNullOrWhiteSpace($SupervisorGeneration) -and $expGen -ne $SupervisorGeneration) {
+                    $authErr = [ordered]@{ code = 'generation_mismatch'; message = "expect_generation '$expGen' != supervisor '$SupervisorGeneration' (stale/foreign request refused)" }
+                }
+                elseif ($script:SupConsumedRequests.ContainsKey($rid)) {
+                    $authErr = [ordered]@{ code = 'stale_or_replayed'; message = "request_id already consumed (idempotent replay guard)" }
+                }
+            }
+            if ($null -ne $authErr) {
+                $resp = New-SupervisorResponse -Request $req -Ok $false -ErrorObj $authErr -SupervisorPid $SupervisorPid -SupervisorGeneration $SupervisorGeneration
+            } elseif ($op -eq 'shutdown') {
+                # i23 MF4: shutdown is a SEPARATE AUTHENTICATED ADMIN op -- it MUST carry the supervisor's exact
+                # generation (proving the caller read the current manifest). An unauthenticated/stale shutdown is
+                # refused (never a plain dispatch).
+                if ([string]::IsNullOrWhiteSpace($SupervisorGeneration)) {
+                    # generation unknown (bare unit tests): accept (no authority to check against)
+                    $shutdown = $true
+                    $resp = New-SupervisorResponse -Request $req -Ok $true -Result ([ordered]@{ action = 'shutdown'; accepted = $true; admin_authenticated = $false }) -SupervisorPid $SupervisorPid -SupervisorGeneration $SupervisorGeneration
+                } elseif ($expGen -eq $SupervisorGeneration) {
+                    $shutdown = $true
+                    $resp = New-SupervisorResponse -Request $req -Ok $true -Result ([ordered]@{ action = 'shutdown'; accepted = $true; admin_authenticated = $true }) -SupervisorPid $SupervisorPid -SupervisorGeneration $SupervisorGeneration
+                } else {
+                    $resp = New-SupervisorResponse -Request $req -Ok $false -ErrorObj ([ordered]@{ code = 'admin_auth_required'; message = 'shutdown requires the supervisor generation (authenticated admin op); refused' }) -SupervisorPid $SupervisorPid -SupervisorGeneration $SupervisorGeneration
+                }
+                if ($shutdown) { $script:SupConsumedRequests[$rid] = (ConvertTo-SupUtcString (Get-SupNowUtc)) }
             } elseif ($op -eq 'ping') {
                 $resp = New-SupervisorResponse -Request $req -Ok $true -Result ([ordered]@{ action = 'ping'; pong = $true; supervisor_pid = $SupervisorPid }) -SupervisorPid $SupervisorPid -SupervisorGeneration $SupervisorGeneration
             } elseif ($Handlers.ContainsKey($op)) {
                 try {
                     $r = & $Handlers[$op] $req
                     $resp = New-SupervisorResponse -Request $req -Ok $true -Result $r -SupervisorPid $SupervisorPid -SupervisorGeneration $SupervisorGeneration
+                    if ($isMutating) { $script:SupConsumedRequests[$rid] = (ConvertTo-SupUtcString (Get-SupNowUtc)) }   # consumed only on success
                 } catch {
                     $ex = $_.Exception
                     $code = 'handler_error'; $msg = "$($ex.Message)"
@@ -307,6 +413,14 @@ function Invoke-SupervisorPollOnce {
             } else {
                 $resp = New-SupervisorResponse -Request $req -Ok $false -ErrorObj ([ordered]@{ code = 'unsupported_op'; message = "no handler for op '$op'" }) -SupervisorPid $SupervisorPid -SupervisorGeneration $SupervisorGeneration
             }
+        }
+        # i23 MF4: PATH CONTAINMENT -- the response filename derives from request_id, which is validated by
+        # Test-SupervisorRequestValid above; a bad id yields a 'bad_request' response written under a SAFE
+        # sanitized name so a crafted id can never place a file outside resp_dir.
+        $respRid = [string]$resp.request_id
+        if (-not (Test-SupervisorRequestId $respRid)) {
+            $safe = ('badreq_' + [Guid]::NewGuid().ToString('N').Substring(0,12))
+            $resp['request_id'] = $safe
         }
         [void](Write-SupervisorResponse -RespDir $Paths.resp_dir -Response $resp)
         try { Remove-Item -LiteralPath $f.FullName -Force -ErrorAction SilentlyContinue } catch { }
@@ -405,6 +519,269 @@ function Close-GatewayJob {
     try { return [bool][LifeorchJob]::CloseHandle([IntPtr]$Job.handle) } catch { return $false }
 }
 
+# ================================================================================================
+# i23 MF1+2 (red-team blockers 1+3, must-fix 1+2): PER-RESIDENT SUSPENDED-CREATE JOB CUSTODY.
+# The single supervisor-wide job (above) assigns a server AFTER Start-Process has already run it -- a child
+# spawned pre-assignment (or via Win32_Process.Create) is never inherited into the job, and on a supervisor
+# crash escapes KILL_ON_JOB_CLOSE. This replaces it as the PRIMARY custody mechanism: for EACH resident,
+#   CreateProcess(CREATE_SUSPENDED) -> AssignProcessToJobObject(per-resident KILL_ON_JOB_CLOSE job)
+#   -> IsProcessInJob verify -> ResumeThread.
+# NO child executes before it is in its job. The supervisor HOLDS the per-resident job handle for the
+# resident's lifetime (durable custody + crash reap); tree_gone becomes "this resident's job reports ZERO
+# active members", not pid-death+socket. Any custody step failing => terminate the (still-suspended) process
+# and FAIL (job_owned:false is FATAL on the Windows default-ON path -- no manifest publish). Off-Windows the
+# suspended-create is unavailable, so New-CustodiedServer degrades to Start-Process (custody_supported:false,
+# job_owned:false) and the ORDERING + FATALITY CONTRACT is proven off-machine via an injected launcher.
+# ================================================================================================
+$script:CustodyTypeLoaded = $false
+function Initialize-CustodyType {
+    if ($script:CustodyTypeLoaded) { return $true }
+    if (-not $IsWindows) { return $false }
+    $src = @'
+using System;
+using System.Runtime.InteropServices;
+public static class LifeorchCustody {
+    [StructLayout(LayoutKind.Sequential)]
+    public struct JOBOBJECT_BASIC_LIMIT_INFORMATION {
+        public long PerProcessUserTimeLimit; public long PerJobUserTimeLimit; public uint LimitFlags;
+        public UIntPtr MinimumWorkingSetSize; public UIntPtr MaximumWorkingSetSize;
+        public uint ActiveProcessLimit; public UIntPtr Affinity; public uint PriorityClass; public uint SchedulingClass;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    public struct IO_COUNTERS {
+        public ulong ReadOperationCount; public ulong WriteOperationCount; public ulong OtherOperationCount;
+        public ulong ReadTransferCount; public ulong WriteTransferCount; public ulong OtherTransferCount;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    public struct JOBOBJECT_EXTENDED_LIMIT_INFORMATION {
+        public JOBOBJECT_BASIC_LIMIT_INFORMATION BasicLimitInformation; public IO_COUNTERS IoInfo;
+        public UIntPtr ProcessMemoryLimit; public UIntPtr JobMemoryLimit;
+        public UIntPtr PeakProcessMemoryUsed; public UIntPtr PeakJobMemoryUsed;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    public struct JOBOBJECT_BASIC_PROCESS_ID_LIST {
+        public uint NumberOfAssignedProcesses; public uint NumberOfProcessIdsInList; public IntPtr ProcessIdList0;
+    }
+    [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode)]
+    public struct STARTUPINFO {
+        public int cb; public string lpReserved; public string lpDesktop; public string lpTitle;
+        public int dwX; public int dwY; public int dwXSize; public int dwYSize; public int dwXCountChars; public int dwYCountChars;
+        public int dwFillAttribute; public int dwFlags; public short wShowWindow; public short cbReserved2;
+        public IntPtr lpReserved2; public IntPtr hStdInput; public IntPtr hStdOutput; public IntPtr hStdError;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    public struct PROCESS_INFORMATION { public IntPtr hProcess; public IntPtr hThread; public int dwProcessId; public int dwThreadId; }
+    [StructLayout(LayoutKind.Sequential)]
+    public struct SECURITY_ATTRIBUTES { public int nLength; public IntPtr lpSecurityDescriptor; public int bInheritHandle; }
+
+    public const uint JOB_KILL_ON_CLOSE = 0x2000;
+    public const int JobObjectExtendedLimitInformation = 9;
+    public const int JobObjectBasicProcessIdList = 3;
+    public const uint CREATE_SUSPENDED = 0x4;
+    public const uint CREATE_NO_WINDOW = 0x08000000;
+    public const uint STARTF_USESTDHANDLES = 0x100;
+    public const uint GENERIC_WRITE = 0x40000000;
+    public const uint GENERIC_READ = 0x80000000;
+    public const uint FILE_SHARE_READ = 1, FILE_SHARE_WRITE = 2;
+    public const uint CREATE_ALWAYS = 2, OPEN_EXISTING = 3;
+    public const uint FILE_ATTRIBUTE_NORMAL = 0x80;
+
+    [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)] static extern IntPtr CreateJobObject(IntPtr a, string name);
+    [DllImport("kernel32.dll", SetLastError=true)] static extern bool SetInformationJobObject(IntPtr j, int cls, IntPtr info, uint len);
+    [DllImport("kernel32.dll", SetLastError=true)] static extern bool AssignProcessToJobObject(IntPtr j, IntPtr p);
+    [DllImport("kernel32.dll", SetLastError=true)] static extern bool QueryInformationJobObject(IntPtr j, int cls, IntPtr info, uint len, IntPtr ret);
+    [DllImport("kernel32.dll", SetLastError=true)] static extern bool TerminateJobObject(IntPtr j, uint code);
+    [DllImport("kernel32.dll", SetLastError=true)] static extern bool IsProcessInJob(IntPtr proc, IntPtr job, out bool result);
+    [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)] static extern bool CreateProcess(string app, string cmd, IntPtr pa, IntPtr ta, bool inherit, uint flags, IntPtr env, string cwd, ref STARTUPINFO si, out PROCESS_INFORMATION pi);
+    [DllImport("kernel32.dll", SetLastError=true)] static extern uint ResumeThread(IntPtr h);
+    [DllImport("kernel32.dll", SetLastError=true)] static extern bool TerminateProcess(IntPtr h, uint code);
+    [DllImport("kernel32.dll", SetLastError=true)] static extern bool CloseHandle(IntPtr h);
+    [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)] static extern IntPtr CreateFileW(string name, uint access, uint share, ref SECURITY_ATTRIBUTES sa, uint disp, uint flags, IntPtr tmpl);
+
+    public class CustodyResult {
+        public bool ok; public int pid; public IntPtr hProcess; public IntPtr hJob; public bool inJob;
+        public string stage; public string error; public string jobName;
+    }
+    static readonly IntPtr INVALID_HANDLE = new IntPtr(-1);
+
+    // The load-bearing sequence: suspended-create -> assign -> verify -> resume. NO child runs before it is
+    // in its per-resident KILL_ON_JOB_CLOSE job. Any failure terminates the suspended process (it never ran).
+    public static CustodyResult CreateSuspendedInJob(string app, string cmdLine, string cwd, string jobName, string stdoutPath, string stderrPath) {
+        var r = new CustodyResult { ok=false, pid=0, hProcess=IntPtr.Zero, hJob=IntPtr.Zero, inJob=false, stage="init", error="", jobName=jobName };
+        IntPtr hJob = CreateJobObject(IntPtr.Zero, jobName);
+        if (hJob == IntPtr.Zero) { r.stage="create_job"; r.error="CreateJobObject err="+Marshal.GetLastWin32Error(); return r; }
+        var eli = new JOBOBJECT_EXTENDED_LIMIT_INFORMATION();
+        eli.BasicLimitInformation.LimitFlags = JOB_KILL_ON_CLOSE;
+        int eliLen = Marshal.SizeOf(typeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION));
+        IntPtr eliP = Marshal.AllocHGlobal(eliLen);
+        try {
+            Marshal.StructureToPtr(eli, eliP, false);
+            if (!SetInformationJobObject(hJob, JobObjectExtendedLimitInformation, eliP, (uint)eliLen)) { r.stage="set_job"; r.error="SetInformationJobObject err="+Marshal.GetLastWin32Error(); CloseHandle(hJob); return r; }
+        } finally { Marshal.FreeHGlobal(eliP); }
+        var sa = new SECURITY_ATTRIBUTES(); sa.nLength = Marshal.SizeOf(typeof(SECURITY_ATTRIBUTES)); sa.bInheritHandle = 1; sa.lpSecurityDescriptor = IntPtr.Zero;
+        IntPtr hOut = CreateFileW(stdoutPath, GENERIC_WRITE, FILE_SHARE_READ|FILE_SHARE_WRITE, ref sa, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, IntPtr.Zero);
+        IntPtr hErr = CreateFileW(stderrPath, GENERIC_WRITE, FILE_SHARE_READ|FILE_SHARE_WRITE, ref sa, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, IntPtr.Zero);
+        IntPtr hIn  = CreateFileW("NUL", GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_WRITE, ref sa, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, IntPtr.Zero);
+        if (hOut == INVALID_HANDLE || hErr == INVALID_HANDLE) {
+            r.stage="redirect"; r.error="CreateFile redirect failed err="+Marshal.GetLastWin32Error();
+            if (hOut != INVALID_HANDLE && hOut != IntPtr.Zero) CloseHandle(hOut);
+            if (hErr != INVALID_HANDLE && hErr != IntPtr.Zero) CloseHandle(hErr);
+            if (hIn  != INVALID_HANDLE && hIn  != IntPtr.Zero) CloseHandle(hIn);
+            CloseHandle(hJob); return r;
+        }
+        var si = new STARTUPINFO(); si.cb = Marshal.SizeOf(typeof(STARTUPINFO));
+        si.dwFlags = (int)STARTF_USESTDHANDLES; si.hStdOutput = hOut; si.hStdError = hErr; si.hStdInput = (hIn == INVALID_HANDLE ? IntPtr.Zero : hIn);
+        PROCESS_INFORMATION pi;
+        bool created = CreateProcess(app, cmdLine, IntPtr.Zero, IntPtr.Zero, true, CREATE_SUSPENDED|CREATE_NO_WINDOW, IntPtr.Zero, cwd, ref si, out pi);
+        if (hOut != IntPtr.Zero && hOut != INVALID_HANDLE) CloseHandle(hOut);
+        if (hErr != IntPtr.Zero && hErr != INVALID_HANDLE) CloseHandle(hErr);
+        if (hIn  != IntPtr.Zero && hIn  != INVALID_HANDLE) CloseHandle(hIn);
+        if (!created) { r.stage="create_process"; r.error="CreateProcess err="+Marshal.GetLastWin32Error(); CloseHandle(hJob); return r; }
+        if (!AssignProcessToJobObject(hJob, pi.hProcess)) {
+            r.stage="assign"; r.error="AssignProcessToJobObject err="+Marshal.GetLastWin32Error();
+            TerminateProcess(pi.hProcess, 1); CloseHandle(pi.hThread); CloseHandle(pi.hProcess); CloseHandle(hJob); return r;
+        }
+        bool inJob = false;
+        if (!IsProcessInJob(pi.hProcess, hJob, out inJob) || !inJob) {
+            r.stage="verify"; r.error="IsProcessInJob=false";
+            TerminateProcess(pi.hProcess, 1); CloseHandle(pi.hThread); CloseHandle(pi.hProcess); CloseHandle(hJob); return r;
+        }
+        uint rt = ResumeThread(pi.hThread);
+        CloseHandle(pi.hThread);
+        if (rt == 0xFFFFFFFF) {
+            r.stage="resume"; r.error="ResumeThread failed";
+            TerminateProcess(pi.hProcess, 1); CloseHandle(pi.hProcess); CloseHandle(hJob); return r;
+        }
+        r.ok = true; r.stage="running"; r.pid = pi.dwProcessId; r.hProcess = pi.hProcess; r.hJob = hJob; r.inJob = true;
+        return r;
+    }
+    // ZERO members == the resident's tree is gone (durable, not pid+socket heuristic).
+    public static int JobActiveProcessCount(IntPtr hJob) {
+        if (hJob == IntPtr.Zero) return -1;
+        int len = 1024; IntPtr buf = Marshal.AllocHGlobal(len);
+        try { if (!QueryInformationJobObject(hJob, JobObjectBasicProcessIdList, buf, (uint)len, IntPtr.Zero)) return -1; return Marshal.ReadInt32(buf, 0); }
+        finally { Marshal.FreeHGlobal(buf); }
+    }
+    public static bool KillJobTree(IntPtr hJob) { if (hJob == IntPtr.Zero) return false; return TerminateJobObject(hJob, 1); }
+    public static void CloseJobHandle(IntPtr hJob) { if (hJob != IntPtr.Zero) CloseHandle(hJob); }
+    public static void CloseProcHandle(IntPtr hProc) { if (hProc != IntPtr.Zero) CloseHandle(hProc); }
+}
+'@
+    try { Add-Type -TypeDefinition $src -Language CSharp -ErrorAction Stop; $script:CustodyTypeLoaded = $true; return $true } catch { return $false }
+}
+
+# Per-resident custody registry: resident_instance_id -> { hJob; hProcess; name; pid }. Lives in the supervisor
+# process (the run loop), reachable from both the launcher closure and the evict path.
+$script:SupResidentJobs = @{}
+function Register-ResidentJob { param([Parameter(Mandatory)][string]$InstanceId, [Parameter(Mandatory)][object]$JobInfo) $script:SupResidentJobs[$InstanceId] = $JobInfo }
+function Get-ResidentJobInfo { param([string]$InstanceId) if (-not [string]::IsNullOrWhiteSpace($InstanceId) -and $script:SupResidentJobs.ContainsKey($InstanceId)) { return $script:SupResidentJobs[$InstanceId] } return $null }
+function Get-ResidentJobMemberCount {
+    param([string]$InstanceId)
+    $info = Get-ResidentJobInfo $InstanceId
+    if ($null -eq $info -or -not $info.ContainsKey('hJob')) { return -1 }
+    if (-not $IsWindows -or -not $script:CustodyTypeLoaded) { return -1 }
+    try { return [int][LifeorchCustody]::JobActiveProcessCount([IntPtr]$info['hJob']) } catch { return -1 }
+}
+# Close (KILL_ON_JOB_CLOSE reaps) + terminate the resident's tree; returns whether members reached ZERO.
+function Close-ResidentJobTree {
+    param([string]$InstanceId, [int]$ConfirmTimeoutMs = 3000)
+    $info = Get-ResidentJobInfo $InstanceId
+    if ($null -eq $info) { return [ordered]@{ had_job = $false; members_zero = $true; note = 'no_tracked_job' } }
+    $out = [ordered]@{ had_job = $true; members_zero = $false; note = 'ok' }
+    if ($IsWindows -and $script:CustodyTypeLoaded) {
+        try { [void][LifeorchCustody]::KillJobTree([IntPtr]$info['hJob']) } catch { }
+        $deadline = (Get-SupNowUtc).AddMilliseconds($ConfirmTimeoutMs)
+        while ((Get-SupNowUtc) -lt $deadline) {
+            $cnt = try { [int][LifeorchCustody]::JobActiveProcessCount([IntPtr]$info['hJob']) } catch { -1 }
+            if ($cnt -le 0) { $out.members_zero = $true; break }
+            Start-Sleep -Milliseconds 100
+        }
+        try { [LifeorchCustody]::CloseJobHandle([IntPtr]$info['hJob']) } catch { }
+        try { [LifeorchCustody]::CloseProcHandle([IntPtr]$info['hProcess']) } catch { }
+    } else { $out.members_zero = $true; $out.note = 'custody_unsupported' }
+    if ($script:SupResidentJobs.ContainsKey($InstanceId)) { [void]$script:SupResidentJobs.Remove($InstanceId) }
+    return $out
+}
+# Close EVERY tracked per-resident Job (graceful stop). On a HARD crash the OS closes these handles for us and
+# KILL_ON_JOB_CLOSE reaps each tree -- the durable finding-5 guarantee; this is the clean-exit belt-and-suspenders.
+function Close-AllResidentJobTrees {
+    $ids = @($script:SupResidentJobs.Keys)
+    $n = 0
+    foreach ($id in $ids) { try { [void](Close-ResidentJobTree -InstanceId ([string]$id)); $n++ } catch { } }
+    return $n
+}
+# Windows command-line quoter (CreateProcess takes ONE command-line string; argv[0] is the program name).
+function ConvertTo-Win32CommandLine {
+    param([Parameter(Mandatory)][string]$FilePath, [string[]]$Arguments = @())
+    $q = {
+        param([string]$s)
+        if ([string]::IsNullOrEmpty($s)) { return '""' }
+        if ($s -notmatch '[ \t"]') { return $s }
+        $sb = New-Object System.Text.StringBuilder; [void]$sb.Append('"')
+        $bs = 0
+        foreach ($ch in $s.ToCharArray()) {
+            if ($ch -eq '\') { $bs++ }
+            elseif ($ch -eq '"') { [void]$sb.Append('\', ($bs * 2 + 1)); [void]$sb.Append('"'); $bs = 0 }
+            else { if ($bs -gt 0) { [void]$sb.Append('\', $bs); $bs = 0 }; [void]$sb.Append($ch) }
+        }
+        if ($bs -gt 0) { [void]$sb.Append('\', ($bs * 2)) }
+        [void]$sb.Append('"'); return $sb.ToString()
+    }
+    $parts = New-Object System.Collections.Generic.List[string]
+    [void]$parts.Add((& $q $FilePath))
+    foreach ($a in @($Arguments)) { [void]$parts.Add((& $q ([string]$a))) }
+    return ([string]::Join(' ', $parts))
+}
+# Launch a model server UNDER PER-RESIDENT SUSPENDED-CREATE CUSTODY (Windows) or, off-Windows, degrade to a
+# Start-Process launch (custody_supported:false, job_owned:false) so the mock-server state machine still runs.
+# Returns { ok; custody_supported; job_owned; pid; start_ticks; job_instance_id; in_job; stage; error }.
+function New-CustodiedServer {
+    param(
+        [Parameter(Mandatory)][string]$FilePath, [string[]]$Arguments = @(), [string]$WorkDir,
+        [Parameter(Mandatory)][string]$ResidentInstanceId, [Parameter(Mandatory)][string]$StdoutPath, [Parameter(Mandatory)][string]$StderrPath,
+        [hashtable]$PreLaunchVerify = $null   # i23 MF10: { <abs path> = <trusted expected sha256> } -- every entry
+                                              # is content-verified (+ reparse-point rejected) IMMEDIATELY before
+                                              # launch; ANY mismatch/reparse => NO launch (fail-closed).
+    )
+    # i23 MF10: verify engine+model file CONTENTS against the trusted expected-hash manifest before we launch.
+    if ($null -ne $PreLaunchVerify -and $PreLaunchVerify.Count -gt 0 -and (Get-Command Test-ContentHashTrusted -ErrorAction SilentlyContinue)) {
+        foreach ($vp in @($PreLaunchVerify.Keys)) {
+            $exp = [string]$PreLaunchVerify[$vp]
+            if ([string]::IsNullOrWhiteSpace($exp)) { continue }   # no trusted hash for this file -> skip (named residual: provision one)
+            $vr = Test-ContentHashTrusted -Path $vp -ExpectedSha256 $exp -RejectReparse
+            if (-not $vr.ok) {
+                return [ordered]@{ ok = $false; custody_supported = $IsWindows; job_owned = $false; pid = 0; start_ticks = 0; job_instance_id = $null; in_job = $false; stage = 'content_verify'; error = "content verification FAILED for '$vp' (reason=$($vr.reason)); refusing to launch" }
+            }
+        }
+    }
+    $logDir = Split-Path -Parent $StdoutPath
+    if (-not [string]::IsNullOrWhiteSpace($logDir) -and -not (Test-Path -LiteralPath $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
+    $cwd = if (-not [string]::IsNullOrWhiteSpace($WorkDir)) { $WorkDir } else { (Split-Path -Parent $FilePath) }
+    if ($IsWindows -and (Initialize-CustodyType)) {
+        $safe = ($ResidentInstanceId -replace '[^A-Za-z0-9_]', '')
+        if ($safe.Length -gt 20) { $safe = $safe.Substring(0, 20) }
+        $jobName = 'LifeorchResJob_' + $safe + '_' + ([Guid]::NewGuid().ToString('N').Substring(0, 8))
+        $cmdLine = ConvertTo-Win32CommandLine -FilePath $FilePath -Arguments $Arguments
+        $res = $null
+        try { $res = [LifeorchCustody]::CreateSuspendedInJob($FilePath, $cmdLine, $cwd, $jobName, $StdoutPath, $StderrPath) }
+        catch { return [ordered]@{ ok = $false; custody_supported = $true; job_owned = $false; pid = 0; start_ticks = 0; job_instance_id = $null; in_job = $false; stage = 'exception'; error = "$($_.Exception.Message)" } }
+        if ($null -eq $res -or -not $res.ok) {
+            return [ordered]@{ ok = $false; custody_supported = $true; job_owned = $false; pid = 0; start_ticks = 0; job_instance_id = $null; in_job = $false; stage = $(if ($null -ne $res) { [string]$res.stage } else { 'null_result' }); error = $(if ($null -ne $res) { [string]$res.error } else { 'null' }) }
+        }
+        Register-ResidentJob -InstanceId $ResidentInstanceId -JobInfo @{ hJob = $res.hJob; hProcess = $res.hProcess; name = $jobName; pid = [int]$res.pid }
+        $startTicks = 0; try { $startTicks = [long]((Get-Process -Id ([int]$res.pid) -ErrorAction Stop).StartTime.Ticks) } catch { }
+        return [ordered]@{ ok = $true; custody_supported = $true; job_owned = $true; pid = [int]$res.pid; start_ticks = $startTicks; job_instance_id = $jobName; in_job = $true; stage = 'running'; error = $null }
+    }
+    # off-Windows fallback: Start-Process, NO OS custody (job_owned:false honestly recorded)
+    $splat = @{ FilePath = $FilePath; ArgumentList = @($Arguments); PassThru = $true; RedirectStandardOutput = $StdoutPath; RedirectStandardError = $StderrPath }
+    $proc = $null
+    try { $proc = Start-Process @splat }
+    catch { return [ordered]@{ ok = $false; custody_supported = $false; job_owned = $false; pid = 0; start_ticks = 0; job_instance_id = $null; in_job = $false; stage = 'start_process'; error = "$($_.Exception.Message)" } }
+    $spid = [int]$proc.Id
+    $startTicks = 0; try { $startTicks = [long]((Get-Process -Id $spid -ErrorAction Stop).StartTime.Ticks) } catch { try { $startTicks = [long]$proc.StartTime.Ticks } catch { } }
+    return [ordered]@{ ok = $true; custody_supported = $false; job_owned = $false; pid = $spid; start_ticks = $startTicks; job_instance_id = $null; in_job = $false; stage = 'running'; error = $null }
+}
+
 # ------------------------------------------------------------------------------------------------
 # Reconcile-on-restart (finding #3). Read the resident manifest as a CLAIM and VERIFY it (pid alive +
 # creation-time identity + /health + socket owner); a valid resident is KEPT (warmth preserved), an
@@ -416,7 +793,10 @@ function Invoke-SupervisorReconcile {
     param(
         [Parameter(Mandatory)][string]$WarmRegPath, [Parameter(Mandatory)][string]$LockPath,
         [scriptblock]$StartTicksProbe = $null, [scriptblock]$SocketOwnerProbe = $null,
-        [scriptblock]$HealthProbe = $null, [scriptblock]$StopProbe = $null
+        [scriptblock]$HealthProbe = $null, [scriptblock]$StopProbe = $null,
+        [switch]$RequireCustodian   # i23 MF9: on a supervisor (RE)START, a surviving server is EVIDENCE OF FAILED
+                                    # CUSTODY, not an asset -- adopt ONLY via a durable custodian this process
+                                    # retained (a tracked per-resident Job with live members); else fence/kill + EMPTY.
     )
     $out = [ordered]@{ ran = $false; state_before = $null; state_after = $null; action = 'none'; kept_resident = $false; killed_pid = $null; notes = @() }
     if (-not $script:SupPoolCoreLoaded) { $out.notes += 'pool core not loaded'; return $out }
@@ -436,6 +816,32 @@ function Invoke-SupervisorReconcile {
         if ($ident.alive -and (Test-SupHasProp $reg 'pid')) { $sockOwner = Test-SocketOwner -Port $port -ExpectedPid ([int]$reg.pid) -SocketOwnerProbe $SocketOwnerProbe }
         $stateBefore = $out.state_before
         $validResident = ($stateBefore -eq 'RESIDENT' -and $ident.alive -and $ident.identity_ok -and $healthy -and ($sockOwner -ne $false))
+        # i23 MF9: NO MANIFEST-ONLY ADOPTION. A survivor is adopted ONLY if THIS supervisor holds a durable
+        # custodian for its resident_instance_id (a tracked per-resident Job with live members). A fresh
+        # (restarted) supervisor holds NONE -> any survivor is an orphan of failed custody: fence/kill + EMPTY.
+        if ($RequireCustodian) {
+            $claimInst = if (Test-SupHasProp $reg 'resident_instance_id') { [string]$reg.resident_instance_id } else { $null }
+            $custodian = if (-not [string]::IsNullOrWhiteSpace($claimInst)) { Get-ResidentJobInfo $claimInst } else { $null }
+            $custodianLive = $false
+            if ($null -ne $custodian) {
+                if ($IsWindows -and $script:CustodyTypeLoaded) { $custodianLive = ((Get-ResidentJobMemberCount $claimInst) -gt 0) } else { $custodianLive = $true }
+            }
+            if ($validResident -and $custodianLive) { $out.state_after = 'RESIDENT'; $out.action = 'kept_custodian_verified'; $out.kept_resident = $true; return $out }
+            # not adopted: a survivor without a retained custodian is an orphan -> kill (if alive+identity_ok) + EMPTY
+            $out.notes += 'require_custodian: manifest-only survivor NOT adopted (no retained custodian handle)'
+            if ($ident.alive -and $ident.identity_ok) {
+                $stopped = $false
+                if (-not [string]::IsNullOrWhiteSpace($claimInst)) { try { [void](Close-ResidentJobTree -InstanceId $claimInst) } catch { } }
+                if ($null -ne $StopProbe) { try { $stopped = [bool](& $StopProbe $reg $ident) } catch { $stopped = $false } }
+                if ($stopped) { $out.killed_pid = [int]$reg.pid; $out.notes += 'fenced/killed the unadopted survivor' }
+                else { $out.notes += 'survivor alive but unstopped; manifest cleared (orphan flagged)' }
+            } elseif ($ident.alive -and -not $ident.identity_ok) {
+                $out.notes += 'recorded pid alive but identity mismatch (PID reuse); manifest cleared without killing a foreign process'
+            }
+            Clear-PoolManifest $WarmRegPath
+            $out.state_after = 'EMPTY'; $out.action = "survivor_not_adopted_from_$stateBefore"
+            return $out
+        }
         if ($validResident) { $out.state_after = 'RESIDENT'; $out.action = 'kept_valid_resident'; $out.kept_resident = $true; return $out }
         if ($ident.alive -and $ident.identity_ok) {
             $stopped = $false
@@ -475,7 +881,8 @@ function Invoke-SupervisorEnsureResident {
         [string]$FenceHolder = 'gateway.supervisor', [int]$FenceTtlSeconds = 120,
         [switch]$ForceReload, [int]$LoadTimeoutSec = 120,
         [string]$ResidentInstanceId,  # v0.4 (i21): caller-pinned per-server-tree instance id stamped into the manifest (the target of every destructive op); omitted => minted here
-        [string]$InstanceGeneration   # v0.4 (i21): caller-pinned per-launch generation nonce -- the split pre-mints it and stamps it into the transition capability, so the manifest MUST carry the same value (resident_generation binding); omitted => the launcher's mint
+        [string]$InstanceGeneration,  # v0.4 (i21): caller-pinned per-launch generation nonce -- the split pre-mints it and stamps it into the transition capability, so the manifest MUST carry the same value (resident_generation binding); omitted => the launcher's mint
+        [switch]$RequireJobCustody    # i23 MF1+2: on the hardened Windows default-ON path, a launch that did not achieve per-resident Job membership (job_owned:false) is FATAL -- terminate + fail, NO uncustodied publish
     )
     if (-not $script:SupPoolCoreLoaded) { throw [PSCustomObject]@{ code = 'pool_core_absent'; message = 'PoolManager.psm1 not loaded' } }
     $reqHash = Get-ResidentConfigHash $ReqConfig
@@ -540,19 +947,41 @@ function Invoke-SupervisorEnsureResident {
                 [void](Update-FenceRenewal -Path $WarmRegPath -Fence $prevFence -TtlSeconds $FenceTtlSeconds)
                 return $out
             }
-            # cannot serve / unhealthy / forced -> EVICT (CAS STOPPING, confirm exit + VRAM), then reload
+            # cannot serve / unhealthy / forced -> EVICT (CAS STOPPING, confirm exit + tree-gone + VRAM), then reload.
+            # i23 MF5 (red-team blocker 5): a FAILED / PARTIAL evict, or a failed STOPPING CAS, is FATAL. We do NOT
+            # clear a manifest we cannot prove empty and do NOT launch a replacement over a resident that may still
+            # hold the GPU (split-brain). tree_gone is confirmed by the per-resident Job reporting ZERO active
+            # members (durable), not pid-death alone. The GPU is left ungranted; recovery is a retry / the watchdog.
             $myFence = $prevFence + 1
-            [void](Set-ManifestCas -Path $WarmRegPath -Fence $prevFence -Updates @{ state = 'STOPPING' })
+            $oldInstId = if (Test-SupHasProp $reg 'resident_instance_id') { [string]$reg.resident_instance_id } else { $null }
+            $casStop = Set-ManifestCas -Path $WarmRegPath -Fence $prevFence -Updates @{ state = 'STOPPING' }
+            if (-not $casStop) {
+                throw [PSCustomObject]@{ code = 'evict_cas_failed'; message = 'STOPPING CAS failed (fence superseded); refusing to evict/launch -- GPU left ungranted, manifest NOT cleared' }
+            }
             if ($ident.alive) {
                 if ($null -ne $VramProbe) { try { $out.vram.free_mib_before = & $VramProbe } catch { } }
                 $stopped = $false
                 if ($null -ne $StopProbe) { try { $stopped = [bool](& $StopProbe $reg $ident) } catch { $stopped = $false } }
-                if ($stopped) {
-                    $out.evicted = $true; $out.evict_confirmed = $true
-                    Start-Sleep -Milliseconds 200
-                    if ($null -ne $VramProbe) { try { $out.vram.free_mib_after = & $VramProbe } catch { } }
-                    if ($null -ne $out.vram.free_mib_before -and $null -ne $out.vram.free_mib_after) { $out.vram.recovered_mib = ($out.vram.free_mib_after - $out.vram.free_mib_before) }
-                } else { $out.evict_confirmed = $false }
+                if (-not $stopped) {
+                    $out.evict_confirmed = $false
+                    throw [PSCustomObject]@{ code = 'evict_not_confirmed'; message = 'the resident did not stop (evict unconfirmed); refusing to launch a replacement (no split-brain) -- GPU ungranted, manifest NOT cleared' }
+                }
+                # tree-gone: the per-resident Job must report ZERO active members (durable). No tracked job
+                # (off-Windows / classic) => had_job:false => trivially gone (pid-death already proven above).
+                if (-not [string]::IsNullOrWhiteSpace($oldInstId)) {
+                    $ct = Close-ResidentJobTree -InstanceId $oldInstId
+                    if ($ct.had_job -and -not $ct.members_zero) {
+                        $out.evict_confirmed = $false
+                        throw [PSCustomObject]@{ code = 'partial_tree_term'; message = "evicted the root but the resident Job still reports active members (partial tree); refusing to launch (no orphan/split-brain)" }
+                    }
+                }
+                $out.evicted = $true; $out.evict_confirmed = $true
+                Start-Sleep -Milliseconds 200
+                if ($null -ne $VramProbe) { try { $out.vram.free_mib_after = & $VramProbe } catch { } }
+                if ($null -ne $out.vram.free_mib_before -and $null -ne $out.vram.free_mib_after) { $out.vram.recovered_mib = ($out.vram.free_mib_after - $out.vram.free_mib_before) }
+            } else {
+                # the recorded resident is already gone: reap any tracked per-resident Job handle to avoid a leak
+                if (-not [string]::IsNullOrWhiteSpace($oldInstId)) { [void](Close-ResidentJobTree -InstanceId $oldInstId) }
             }
             $out.swap_count = $prevSwaps + 1
             $out.action = 'evict_reload'
@@ -560,11 +989,18 @@ function Invoke-SupervisorEnsureResident {
             $reg = $null
         }
 
-        # ---- LAUNCH a fresh resident (cold_start or evict_reload). The Launcher assigns the pid to the Job. ----
+        # ---- LAUNCH a fresh resident (cold_start or evict_reload). ----
+        # v0.4 (i21): the per-server-tree resident_instance_id -- the TARGET of every destructive op (never
+        # generation/config-key alone) and the KEY of the per-resident Job custody registry. Caller-pinned (so the
+        # res.lease grant and the manifest agree) or minted. Computed BEFORE the launch so the launcher can key
+        # per-resident Job custody (i23 MF1+2) to it.
+        $resInstId = if (-not [string]::IsNullOrWhiteSpace($ResidentInstanceId)) { $ResidentInstanceId } else { ('ri' + [Guid]::NewGuid().ToString('N')) }
         $portHint = if ($ModelMeta.ContainsKey('port_hint')) { [int]$ModelMeta['port_hint'] } else { 0 }
-        $launch = & $Launcher $ReqConfig $portHint
+        $launch = & $Launcher $ReqConfig $portHint $resInstId
         if ($null -eq $launch -or -not (Test-SupHasProp $launch 'pid') -or ([int]$launch.pid -le 0)) {
-            throw [PSCustomObject]@{ code = 'server_start_failed'; message = 'launcher returned no pid' }
+            $lstage = if ($null -ne $launch -and (Test-SupHasProp $launch 'stage')) { [string]$launch.stage } else { '?' }
+            $lerr = if ($null -ne $launch -and (Test-SupHasProp $launch 'error')) { [string]$launch.error } else { 'launcher returned no pid' }
+            throw [PSCustomObject]@{ code = 'server_start_failed'; message = "launcher returned no pid (stage=$lstage error=$lerr)" }
         }
         $serverPid = [int]$launch.pid
         $usePort = if (Test-SupHasProp $launch 'port') { [int]$launch.port } else { $portHint }
@@ -573,11 +1009,20 @@ function Invoke-SupervisorEnsureResident {
                        elseif (Test-SupHasProp $launch 'instance_generation') { [string]$launch.instance_generation }
                        else { (New-InstanceGeneration) }
         $jobOwned = if (Test-SupHasProp $launch 'job_owned') { [bool]$launch.job_owned } else { $false }
-        # v0.4 (i21): the per-server-tree resident_instance_id -- the TARGET of every destructive op (never
-        # generation/config-key alone). Caller-pinned (so the res.lease grant and the manifest agree) or minted.
-        $resInstId = if (-not [string]::IsNullOrWhiteSpace($ResidentInstanceId)) { $ResidentInstanceId } else { ('ri' + [Guid]::NewGuid().ToString('N')) }
+        $jobInstId = if (Test-SupHasProp $launch 'job_instance_id') { [string]$launch.job_instance_id } else { $null }
+        # i23 MF1+2: on the hardened Windows default-ON path, job_owned:false is FATAL. A resident that did not
+        # achieve per-resident Job membership would be an UNMANAGED ORPHAN on a supervisor crash -> terminate the
+        # (uncustodied) process and FAIL the transition. NO manifest publish on job_owned:false.
+        if ($RequireJobCustody -and -not $jobOwned) {
+            if ($serverPid -gt 0) {
+                try { if ($null -ne $StopProbe) { [void](& $StopProbe ([pscustomobject]@{ pid = $serverPid }) ([pscustomobject]@{ alive = $true; identity_ok = $true })) } } catch { }
+                try { $pp = Get-Process -Id $serverPid -ErrorAction SilentlyContinue; if ($null -ne $pp) { $pp.Kill($true) } } catch { }
+            }
+            throw [PSCustomObject]@{ code = 'job_custody_failed'; message = "per-resident Job custody failed (job_owned:false, stage=$(if (Test-SupHasProp $launch 'stage') { $launch.stage } else { '?' })); terminated the uncustodied process; refusing to publish (no orphan)" }
+        }
         $out.started_new = $true; $out.pid = $serverPid; $out.port = $usePort; $out.instance_generation = $instanceGen; $out.fence = $myFence; $out.job_owned = $jobOwned
         $out.resident_instance_id = $resInstId
+        $out['job_instance_id'] = $jobInstId
 
         $nowUtc = ConvertTo-SupUtcString (Get-SupNowUtc)
         $manifest = [ordered]@{
@@ -590,7 +1035,7 @@ function Invoke-SupervisorEnsureResident {
             ctx = $(if (Test-SupHasProp $ReqConfig 'context') { $ReqConfig.context } else { $null })
             keep_resident_seconds = $keepSec; swap_count = $out.swap_count
             started_at_utc = $nowUtc; resident_since_utc = $nowUtc; last_used_utc = $nowUtc
-            managed_by = $managedBy; manager_holder = $FenceHolder; job_owned = $jobOwned
+            managed_by = $managedBy; manager_holder = $FenceHolder; job_owned = $jobOwned; job_instance_id = $jobInstId
             socket_owner_verified = $null
             fence = $myFence; fence_holder = $FenceHolder; fence_ttl_seconds = $FenceTtlSeconds
             fence_acquired_utc = $nowUtc; fence_renewed_utc = $nowUtc
@@ -611,6 +1056,7 @@ function Invoke-SupervisorEnsureResident {
         $loadSw.Stop(); $out.load_ms = [int]$loadSw.Elapsed.TotalMilliseconds; $out.health_ok = $healthOk
         if (-not $healthOk) {
             if ($null -ne $StopProbe) { try { [void](& $StopProbe (Read-PoolManifest $WarmRegPath) (Test-ResidentIdentity (Read-PoolManifest $WarmRegPath) $StartTicksProbe)) } catch { } }
+            [void](Close-ResidentJobTree -InstanceId $resInstId)   # i23 MF1+2: reap the just-launched per-resident Job
             Clear-PoolManifest $WarmRegPath
             throw [PSCustomObject]@{ code = 'health_timeout'; message = "server did not become healthy within $LoadTimeoutSec s" }
         }
@@ -619,12 +1065,19 @@ function Invoke-SupervisorEnsureResident {
         $out.socket_owner_verified = $sockVerified
         if ($sockVerified -eq $false) {
             if ($null -ne $StopProbe) { try { [void](& $StopProbe (Read-PoolManifest $WarmRegPath) (Test-ResidentIdentity (Read-PoolManifest $WarmRegPath) $StartTicksProbe)) } catch { } }
+            [void](Close-ResidentJobTree -InstanceId $resInstId)
             Clear-PoolManifest $WarmRegPath
             throw [PSCustomObject]@{ code = 'socket_owner_mismatch'; message = "listening socket on port $usePort not owned by pid $serverPid (wrong-generation guard)" }
         }
-        # STARTING -> RESIDENT via fence-gated CAS
+        # STARTING -> RESIDENT via fence-gated CAS. i23 MF5: a FAILED final CAS means a higher fence superseded
+        # us mid-transition -> the server we launched is UNAUTHORIZED. Tear it down + FAIL (never publish a
+        # RESIDENT we no longer have authority for; never leave an orphan). Leave the GPU ungranted.
         $casOk = Set-ManifestCas -Path $WarmRegPath -Fence $myFence -Updates @{ state = 'RESIDENT'; socket_owner_verified = $sockVerified }
-        if (-not $casOk) { $out.can_serve_mismatches = @('resident_publish_cas_failed_fence_superseded') }
+        if (-not $casOk) {
+            if ($null -ne $StopProbe) { try { [void](& $StopProbe ([pscustomobject]@{ pid = $serverPid; start_ticks = $startTicks }) ([pscustomobject]@{ alive = $true; identity_ok = $true })) } catch { } }
+            [void](Close-ResidentJobTree -InstanceId $resInstId)
+            throw [PSCustomObject]@{ code = 'resident_publish_superseded'; message = 'final RESIDENT CAS failed (fence superseded mid-transition); tore down the unauthorized server; GPU left ungranted (no split-brain)' }
+        }
         return $out
     } finally { Exit-PoolLock $lock }
 }
@@ -652,12 +1105,18 @@ function Invoke-SupervisorEvict {
             if ($curInst -ne $TargetResidentInstanceId) { $out.reason = 'target_instance_mismatch'; $out['target_resident_instance_id'] = $TargetResidentInstanceId; $out['current_resident_instance_id'] = $curInst; return $out }
         }
         $ident = Test-ResidentIdentity $reg $StartTicksProbe
+        $evInstId = if (Test-SupHasProp $reg 'resident_instance_id') { [string]$reg.resident_instance_id } else { $null }
         if ($null -ne $VramProbe) { try { $out.vram.free_mib_before = & $VramProbe } catch { } }
         [void](Set-ManifestCas -Path $WarmRegPath -Fence ([long](Get-ManifestFence $reg)) -Updates @{ state = 'STOPPING' })
         $stopped = $false
         if ($null -ne $StopProbe) { try { $stopped = [bool](& $StopProbe $reg $ident) } catch { $stopped = $false } }
         if ($stopped -or -not $ident.alive) {
-            $out.evicted = $true; $out.reason = 'evicted'
+            # i23 MF1+2/MF5: reap the per-resident Job (durable tree-kill) + confirm ZERO members. No tracked job
+            # (off-Windows / classic) => had_job:false => tree-gone by pid-death (already proven by StopProbe).
+            $treeZero = $true
+            if (-not [string]::IsNullOrWhiteSpace($evInstId)) { $ct = Close-ResidentJobTree -InstanceId $evInstId; if ($ct.had_job -and -not $ct.members_zero) { $treeZero = $false } }
+            if (-not $treeZero) { $out.reason = 'partial_tree_term'; $out['tree_gone'] = $false; return $out }
+            $out.evicted = $true; $out.reason = 'evicted'; $out['tree_gone'] = $true
             Clear-PoolManifest $WarmRegPath
             Start-Sleep -Milliseconds 150
             if ($null -ne $VramProbe) { try { $out.vram.free_mib_after = & $VramProbe } catch { } }
@@ -674,7 +1133,7 @@ function Invoke-SupervisorPrepareGpu {
           [int]$RequiredVramMib = 0, [int]$SafetyMib = 512, [int]$ConfirmTimeoutMs = 5000,
           [scriptblock]$StopProbe = $null, [scriptblock]$StartTicksProbe = $null, [scriptblock]$VramProbe = $null)
     $out = [ordered]@{ action = 'prepare_gpu'; required_vram_mib = $RequiredVramMib; safety_mib = $SafetyMib; target_mib = ($RequiredVramMib + $SafetyMib)
-        had_resident = $false; plan = 'grant'; reason = 'no_resident'; evicted = $false
+        had_resident = $false; plan = 'grant'; reason = 'no_resident'; evicted = $false; unmanaged_vram_pressure = $false
         free_mib_before = $null; free_mib_after = $null; recovered_mib = $null; ready = $false }
     if (-not $script:SupPoolCoreLoaded) { $out.reason = 'pool_core_absent'; return $out }
     $reg = Read-PoolManifest $WarmRegPath
@@ -708,7 +1167,11 @@ function Invoke-SupervisorPrepareGpu {
             }
         } finally { Exit-PoolLock $lock }
     } elseif ($plan.decision -eq 'grant') { $out.reason = 'headroom_available' }
-    elseif ($plan.decision -eq 'insufficient') { $out.reason = 'insufficient_headroom_no_resident' }
+    elseif ($plan.decision -eq 'insufficient') {
+        # i23 MF7: short headroom with NO managed target to evict -> UNMANAGED VRAM PRESSURE. Report it and
+        # leave the GPU UNGRANTED (ready=$false); NEVER blind-kill the unidentified consumer holding the VRAM.
+        $out.unmanaged_vram_pressure = $true; $out.reason = 'unmanaged_vram_pressure'
+    }
     if ($null -ne $out.free_mib_before -and $null -ne $out.free_mib_after) { $out.recovered_mib = ($out.free_mib_after - $out.free_mib_before) }
     if ($null -eq $out.free_mib_after) { $out.ready = ($plan.decision -ne 'insufficient') }
     else { $out.ready = ($out.free_mib_after -ge $out.target_mib) }
@@ -741,10 +1204,12 @@ function Get-SupervisorResidencyStatus {
 Export-ModuleMember -Function `
     Test-SupHasProp, Get-SupNowUtc, ConvertTo-SupUtcString, ConvertFrom-SupUtcString, Read-SupJson, Write-SupJsonAtomic, Test-SupPidAlive, `
     Get-SupervisorPaths, Initialize-SupervisorDirs, `
+    Get-SupervisorSingletonName, Enter-SupervisorSingleton, Exit-SupervisorSingleton, `
     Write-SupervisorManifest, Read-SupervisorManifest, Clear-SupervisorManifest, Test-SupervisorHeartbeatFresh, Test-SupervisorLiveness, `
-    New-SupervisorRequest, Test-SupervisorRequestValid, Write-SupervisorRequest, Read-SupervisorRequestFile, `
+    New-SupervisorRequest, Test-SupervisorRequestValid, Test-SupervisorRequestId, Reset-SupervisorConsumedRequests, Write-SupervisorRequest, Read-SupervisorRequestFile, `
     New-SupervisorResponse, Write-SupervisorResponse, Read-SupervisorResponseFile, `
     Send-SupervisorRequest, Invoke-SupervisorPollOnce, `
     Initialize-JobObjectType, New-GatewayJobObject, Add-ProcessToGatewayJob, Close-GatewayJob, `
+    Initialize-CustodyType, New-CustodiedServer, ConvertTo-Win32CommandLine, Register-ResidentJob, Get-ResidentJobInfo, Get-ResidentJobMemberCount, Close-ResidentJobTree, Close-AllResidentJobTrees, `
     Invoke-SupervisorReconcile, Invoke-SupervisorEnsureResident, Invoke-SupervisorEvict, Invoke-SupervisorPrepareGpu, Get-SupervisorResidencyStatus `
     -Variable SUP_MANIFEST_SCHEMA, SUP_REQ_SCHEMA, SUP_RESP_SCHEMA, SUP_OPS
