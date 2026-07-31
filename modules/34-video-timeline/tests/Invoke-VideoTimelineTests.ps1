@@ -111,7 +111,7 @@ try {
     Check 'canonical: sorted keys (starts {"coverage":)' ($ft.text.StartsWith('{"coverage":'))
     Check 'canonical: sorted keys (ends "timestamp_unit":"ms"})' ($ft.text.TrimEnd("`n").EndsWith('"timestamp_unit":"ms"}'))
     Check 'canonical: schema id present' ($tl.schema -eq 'lifeorch.video_timeline/0.1')
-    Check 'canonical: generator name+version+params' (($tl.generator.name -eq 'video.timeline') -and ($tl.generator.version -eq '0.1.0') -and (Has $tl.generator 'params'))
+    Check 'canonical: generator name+version+params' (($tl.generator.name -eq 'video.timeline') -and ($tl.generator.version -eq '0.1.1') -and (Has $tl.generator 'params'))
     Check 'canonical: input_digest sha256 format' ([string]$tl.input_digest -match '^sha256:[0-9a-f]{64}$')
     Check 'canonical: NO "confidence" field anywhere' (-not $ft.text.Contains('"confidence"'))
     Check 'canonical: no invocation id leak' (-not $ft.text.Contains($probe))

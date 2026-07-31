@@ -1,0 +1,43 @@
+{
+ "media": {
+  "id": "recon-fs-refuse",
+  "meta": {
+   "frame_width": 320,
+   "frame_height": 240,
+   "duration_ms": 1000
+  }
+ },
+ "tracks": {
+  "schema": "lifeorch.track.objects/0.2",
+  "timestamp_unit": "ms",
+  "samples": [
+   {
+    "sample_index": 0,
+    "frame_index": 0,
+    "timestamp_ms": 0,
+    "scene_index": 0,
+    "detection_count": 1
+   }
+  ],
+  "tracks": [
+   {
+    "track_id": 0,
+    "class": "obj",
+    "scene_index": 0,
+    "observations": [
+     {
+      "sample_index": 0,
+      "timestamp_ms": 0,
+      "detection_score": 900000,
+      "association": {
+       "kind": "birth",
+       "iou_q": null,
+       "gap_ms": null
+      }
+     }
+    ],
+    "gaps": []
+   }
+  ]
+ }
+}

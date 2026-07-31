@@ -156,3 +156,26 @@ orchestrator reconciles both sides at fold against this list. Numbered for refer
     `low_confidence` -> `low_confidence_count`), association evidence under its own block, and no single
     ranking value is emitted at all (nothing to name `quality_score` yet -- if one is added later it takes
     that name plus a versioned formula, per the review).
+
+## i22 orchestrator-fold reconciliation (video.timeline 0.1.1, vs the track.objects 0.2.0 emitter)
+
+The two i22 workers were built in deliberate isolation against the same design digest; the orchestrator's
+cross-module smoke (plan `fo-22-d2c492e7`: real `#33 -Mode stable` canonical output fed into this module)
+found the two divergent readings below. Both are reconciled CONSUMER-SIDE here -- the emitter's canonical
+bytes (and its shipped cross-env hashes) are untouched.
+
+34. **`tracks.score_unit` is honored (was: silent x1e6 inflation).** The 0.2.0 emitter declares
+    `score_unit: "millionths"` file-level and stores `observation.detection_score` as the ALREADY-quantized
+    integer (its note #interpretations: "the digest's names kept"). 0.1.0 assumed a 0..1 float and
+    re-quantized -- a real 900000 became 900000000000 in evidence q fields (an "ok" timeline with corrupt
+    evidence). Now: `score_unit 'millionths'` => detection_score must be an integer 0..1000000, used
+    verbatim as q; absent/'unit_float' => a 0..1 float (x1e6 round-half-up) and a score > 1 is a
+    fail-closed violation instead of a silent scaling; any other declared unit is refused.
+35. **`scene_index: -1` is valid on samples and tracks (was: refused `must be >= 0`).** The 0.2.0 emitter
+    assigns pre-first-scene samples `firstIndex-1` (can be -1: "before the first listed scene"). Consumed
+    as an opaque partition label: presence intervals carry it verbatim; `-1` is not a listed scene, so it
+    never gains an `index.by_scene` bucket and scene_cut events are unaffected.
+
+Verification: `tests/Invoke-VideoTimelineReconTests.ps1` + `tests/fixtures/tracks-millionths.json` /
+`tracks-prescene.json` (REAL 0.2.0 canonical outputs embedded verbatim) / `tracks-scoreunit-refuse.json` /
+`tracks-floatscore-refuse.json`.

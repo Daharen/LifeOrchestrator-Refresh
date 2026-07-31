@@ -1,0 +1,318 @@
+{
+ "media": {
+  "id": "recon-prescene-001",
+  "meta": {
+   "frame_width": 320,
+   "frame_height": 240,
+   "duration_ms": 5000
+  }
+ },
+ "scenes": [
+  {
+   "index": 0,
+   "start": 1.0,
+   "end": 3.0,
+   "score": 0.5
+  },
+  {
+   "index": 1,
+   "start": 3.0,
+   "end": 5.0,
+   "score": 0.5
+  }
+ ],
+ "tracks": {
+  "algorithm": "stable-geometric-association/1",
+  "box_format": "xywh_top_left_half_open",
+  "box_unit": "milli_pixel",
+  "coordinate_space": "source_pixels",
+  "detector_provenance": null,
+  "frame_height": 240,
+  "frame_width": 320,
+  "identity_scope": "source_media+scene+tracker_invocation",
+  "input_digest": "sha256:2c9d33335a54614a53dc18e32473ce17de3f36393d431cdd736530f6cfa559ed",
+  "samples": [
+   {
+    "detection_count": 1,
+    "frame_index": 0,
+    "sample_index": 0,
+    "scene_index": -1,
+    "timestamp_ms": 500
+   },
+   {
+    "detection_count": 1,
+    "frame_index": 1,
+    "sample_index": 1,
+    "scene_index": 0,
+    "timestamp_ms": 1500
+   },
+   {
+    "detection_count": 1,
+    "frame_index": 2,
+    "sample_index": 2,
+    "scene_index": 0,
+    "timestamp_ms": 2500
+   },
+   {
+    "detection_count": 1,
+    "frame_index": 3,
+    "sample_index": 3,
+    "scene_index": 1,
+    "timestamp_ms": 3500
+   }
+  ],
+  "schema": "lifeorch.track.objects/0.2",
+  "score_unit": "millionths",
+  "source_media_id": "i22-smoke-B",
+  "source_media_sha256": null,
+  "summary": {
+   "births": 3,
+   "centroid_link_total": 0,
+   "class_summary": {
+    "obj": 3
+   },
+   "gap_total": 0,
+   "iou_link_total": 1,
+   "max_concurrent_tracks": 1,
+   "observation_total": 4,
+   "sample_count": 4,
+   "scene_count": 3,
+   "termination_reasons": {
+    "end_of_input": 1,
+    "max_gap": 0,
+    "max_missed_samples": 0,
+    "scene_boundary": 2
+   },
+   "track_count": 3
+  },
+  "timestamp_unit": "ms",
+  "tracker_params": {
+   "centroid_allowance_growth_per_s_q": 250000,
+   "centroid_base_allowance_q": 250000,
+   "centroid_max_allowance_q": 1000000,
+   "class_filter": [],
+   "iou_threshold_q": 300000,
+   "link_quality_formula": "link_quality/1",
+   "low_confidence_threshold_q": 500000,
+   "max_area_ratio_q": 4000000,
+   "max_gap_ms": 5000,
+   "max_gap_ms_effective": 5000,
+   "max_missed_samples": 3,
+   "min_score_q": 0,
+   "mode": "stable",
+   "no_scene_max_gap_ms": 2000,
+   "rounding": "round_half_up_toward_positive_infinity",
+   "scene_info": "scenes_list",
+   "tie_rule": "lexicographic_smallest_track_id_detection_rank"
+  },
+  "tracker_version": "0.2.0",
+  "tracks": [
+   {
+    "association_summary": {
+     "centroid_link_count": 0,
+     "iou_link_count": 0,
+     "maximum_gap_ms": 0,
+     "mean_link_quality_q": null,
+     "reacquisition_count": 0,
+     "weakest_link_quality_q": null
+    },
+    "class": "obj",
+    "class_id": 1,
+    "duration_ms": 0,
+    "end_ms": 500,
+    "first_frame_index": 0,
+    "gap_count": 0,
+    "gaps": [],
+    "last_frame_index": 0,
+    "observation_count": 1,
+    "observations": [
+     {
+      "association": {
+       "area_ratio_q": null,
+       "gap_ms": null,
+       "iou_q": null,
+       "kind": "birth",
+       "missed_samples": null,
+       "normalized_center_distance_q": null,
+       "previous_frame_index": null
+      },
+      "box": {
+       "height": 30000,
+       "width": 30000,
+       "x": 10000,
+       "y": 10000
+      },
+      "detection_index": 0,
+      "detection_score": 800000,
+      "frame_index": 0,
+      "low_confidence": false,
+      "sample_index": 0,
+      "timestamp_ms": 500
+     }
+    ],
+    "scene_index": -1,
+    "score_summary": {
+     "low_confidence_observation_count": 0,
+     "max_detection_score_q": 800000,
+     "mean_detection_score_q": 800000,
+     "min_detection_score_q": 800000,
+     "scored_observation_count": 1
+    },
+    "spanned_sample_count": 1,
+    "start_ms": 500,
+    "termination": {
+     "last_observed_ms": 500,
+     "missed_samples_at_termination": 0,
+     "reason": "scene_boundary",
+     "terminated_at_ms": 1500
+    },
+    "track_id": 0
+   },
+   {
+    "association_summary": {
+     "centroid_link_count": 0,
+     "iou_link_count": 1,
+     "maximum_gap_ms": 1000,
+     "mean_link_quality_q": 875000,
+     "reacquisition_count": 0,
+     "weakest_link_quality_q": 875000
+    },
+    "class": "obj",
+    "class_id": 1,
+    "duration_ms": 1000,
+    "end_ms": 2500,
+    "first_frame_index": 1,
+    "gap_count": 0,
+    "gaps": [],
+    "last_frame_index": 2,
+    "observation_count": 2,
+    "observations": [
+     {
+      "association": {
+       "area_ratio_q": null,
+       "gap_ms": null,
+       "iou_q": null,
+       "kind": "birth",
+       "missed_samples": null,
+       "normalized_center_distance_q": null,
+       "previous_frame_index": null
+      },
+      "box": {
+       "height": 30000,
+       "width": 30000,
+       "x": 12000,
+       "y": 10000
+      },
+      "detection_index": 0,
+      "detection_score": 800000,
+      "frame_index": 1,
+      "low_confidence": false,
+      "sample_index": 1,
+      "timestamp_ms": 1500
+     },
+     {
+      "association": {
+       "area_ratio_q": 1000000,
+       "gap_ms": 1000,
+       "iou_q": 875000,
+       "kind": "iou",
+       "missed_samples": 0,
+       "normalized_center_distance_q": 2222,
+       "previous_frame_index": 1
+      },
+      "box": {
+       "height": 30000,
+       "width": 30000,
+       "x": 14000,
+       "y": 10000
+      },
+      "detection_index": 0,
+      "detection_score": 800000,
+      "frame_index": 2,
+      "low_confidence": false,
+      "sample_index": 2,
+      "timestamp_ms": 2500
+     }
+    ],
+    "scene_index": 0,
+    "score_summary": {
+     "low_confidence_observation_count": 0,
+     "max_detection_score_q": 800000,
+     "mean_detection_score_q": 800000,
+     "min_detection_score_q": 800000,
+     "scored_observation_count": 2
+    },
+    "spanned_sample_count": 2,
+    "start_ms": 1500,
+    "termination": {
+     "last_observed_ms": 2500,
+     "missed_samples_at_termination": 0,
+     "reason": "scene_boundary",
+     "terminated_at_ms": 3500
+    },
+    "track_id": 1
+   },
+   {
+    "association_summary": {
+     "centroid_link_count": 0,
+     "iou_link_count": 0,
+     "maximum_gap_ms": 0,
+     "mean_link_quality_q": null,
+     "reacquisition_count": 0,
+     "weakest_link_quality_q": null
+    },
+    "class": "obj",
+    "class_id": 1,
+    "duration_ms": 0,
+    "end_ms": 3500,
+    "first_frame_index": 3,
+    "gap_count": 0,
+    "gaps": [],
+    "last_frame_index": 3,
+    "observation_count": 1,
+    "observations": [
+     {
+      "association": {
+       "area_ratio_q": null,
+       "gap_ms": null,
+       "iou_q": null,
+       "kind": "birth",
+       "missed_samples": null,
+       "normalized_center_distance_q": null,
+       "previous_frame_index": null
+      },
+      "box": {
+       "height": 30000,
+       "width": 30000,
+       "x": 16000,
+       "y": 10000
+      },
+      "detection_index": 0,
+      "detection_score": 800000,
+      "frame_index": 3,
+      "low_confidence": false,
+      "sample_index": 3,
+      "timestamp_ms": 3500
+     }
+    ],
+    "scene_index": 1,
+    "score_summary": {
+     "low_confidence_observation_count": 0,
+     "max_detection_score_q": 800000,
+     "mean_detection_score_q": 800000,
+     "min_detection_score_q": 800000,
+     "scored_observation_count": 1
+    },
+    "spanned_sample_count": 1,
+    "start_ms": 3500,
+    "termination": {
+     "last_observed_ms": 3500,
+     "missed_samples_at_termination": 0,
+     "reason": "end_of_input",
+     "terminated_at_ms": 3500
+    },
+    "track_id": 2
+   }
+  ]
+ }
+}

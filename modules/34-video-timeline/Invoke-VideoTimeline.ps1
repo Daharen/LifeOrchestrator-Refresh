@@ -49,7 +49,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$SKILL_ID = 'video.timeline'; $SKILL_VERSION = '0.1.0'; $CONTRACT = '0.2'
+$SKILL_ID = 'video.timeline'; $SKILL_VERSION = '0.1.1'; $CONTRACT = '0.2'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $TIMELINE_SCHEMA = 'lifeorch.video_timeline/0.1'
 $utf8 = [System.Text.UTF8Encoding]::new($false)
@@ -324,12 +324,18 @@ try {
             AddViolation 'tracks' 'must be a track-file path (string) or an inline track object'
         }
     }
+    $trackScoreUnit = 'unit_float'   # how tracks observation detection_score is scaled; see tracks.score_unit below
     if ($null -ne $tracksDoc) {
         if (-not (Has $tracksDoc 'schema') -or -not ($tracksDoc.schema -is [string]) -or [string]::IsNullOrEmpty([string]$tracksDoc.schema)) {
             AddViolation 'tracks.schema' 'required schema id (string) is missing'
         } else { $diagExtra['tracks_schema'] = [string]$tracksDoc.schema }
         if ((Has $tracksDoc 'timestamp_unit') -and $null -ne $tracksDoc.timestamp_unit -and ([string]$tracksDoc.timestamp_unit -ne 'ms')) {
             AddViolation 'tracks.timestamp_unit' "must be 'ms' when present (got '$($tracksDoc.timestamp_unit)')"
+        }
+        # i22 fold: the track.objects 0.2.0 emitter declares score_unit 'millionths' file-level -- honor the declaration
+        if ((Has $tracksDoc 'score_unit') -and $null -ne $tracksDoc.score_unit) {
+            if (($tracksDoc.score_unit -is [string]) -and (@('millionths', 'unit_float') -contains [string]$tracksDoc.score_unit)) { $trackScoreUnit = [string]$tracksDoc.score_unit }
+            else { AddViolation 'tracks.score_unit' "must be 'millionths' or 'unit_float' when present (got '$($tracksDoc.score_unit)')" }
         }
         if ((Has $tracksDoc 'identity_scope') -and $null -ne $tracksDoc.identity_scope) {
             if ($tracksDoc.identity_scope -is [string]) { $identityScope = [string]$tracksDoc.identity_scope }
@@ -366,7 +372,7 @@ try {
         if (-not (Has $sm 'sample_index')) { AddViolation "$samplesPathLabel[$i].sample_index" 'required sample_index is missing' } else { $sIdx = ReqInt $sm.sample_index "$samplesPathLabel[$i].sample_index" 0 }
         if (-not (Has $sm 'frame_index'))  { AddViolation "$samplesPathLabel[$i].frame_index"  'required frame_index is missing' }  else { $sFrame = ReqInt $sm.frame_index "$samplesPathLabel[$i].frame_index" 0 }
         if (-not (Has $sm 'timestamp_ms')) { AddViolation "$samplesPathLabel[$i].timestamp_ms" 'required timestamp_ms is missing' } else { $sTs = ReqInt $sm.timestamp_ms "$samplesPathLabel[$i].timestamp_ms" 0 }
-        $sScene = OptInt $sm 'scene_index' "$samplesPathLabel[$i]" 0
+        $sScene = OptInt $sm 'scene_index' "$samplesPathLabel[$i]" (-1)   # -1 = before the first listed scene (track.objects 0.2.0)
         $sDet   = OptInt $sm 'detection_count' "$samplesPathLabel[$i]" 0
         if ($null -ne $sIdx -and $null -ne $sFrame -and $null -ne $sTs) {
             if ($sampleByIndex.ContainsKey([long]$sIdx)) { AddViolation "$samplesPathLabel[$i].sample_index" "duplicate sample_index $sIdx" }
@@ -395,7 +401,7 @@ try {
             if ($null -ne $tid -and -not $seenTrackIds.Add([long]$tid)) { AddViolation "$tPath.track_id" "duplicate track_id $tid" }
             $tCls = $null
             if (-not (Has $tr 'class')) { AddViolation "$tPath.class" 'required class is missing' } else { $tCls = ReqStr $tr.class "$tPath.class" }
-            $tScene = OptInt $tr 'scene_index' $tPath 0
+            $tScene = OptInt $tr 'scene_index' $tPath (-1)   # -1 = before the first listed scene (track.objects 0.2.0)
             # observations (non-empty REQUIRED -- presence cannot be fabricated without observations)
             $obsList = New-Object System.Collections.Generic.List[object]
             if (-not (Has $tr 'observations') -or $null -eq $tr.observations) {
@@ -421,7 +427,17 @@ try {
                     $dsq = $null
                     if ((Has $ob 'detection_score') -and $null -ne $ob.detection_score) {
                         $ds = ReqNum $ob.detection_score "$oPath.detection_score"
-                        if ($null -ne $ds) { if ($ds -lt 0) { AddViolation "$oPath.detection_score" 'must be >= 0' } else { $dsq = QFromScore $ds } }
+                        if ($null -ne $ds) {
+                            if ($ds -lt 0) { AddViolation "$oPath.detection_score" 'must be >= 0' }
+                            elseif ($trackScoreUnit -eq 'millionths') {
+                                # already integer-millionth quantized by the emitter (track.objects 0.2.0 canonical unit)
+                                if ($ds -ne [math]::Floor($ds)) { AddViolation "$oPath.detection_score" "must be an integer when tracks.score_unit is 'millionths' (got $ds)" }
+                                elseif ($ds -gt 1000000) { AddViolation "$oPath.detection_score" "must be <= 1000000 when tracks.score_unit is 'millionths' (got $ds)" }
+                                else { $dsq = [long]$ds }
+                            }
+                            elseif ($ds -gt 1) { AddViolation "$oPath.detection_score" "must be <= 1 when tracks.score_unit is absent or 'unit_float' (unit-interval float; an integer-millionths emitter must declare score_unit 'millionths'; got $ds)" }
+                            else { $dsq = QFromScore $ds }
+                        }
                     }
                     $lowc = $false
                     if ((Has $ob 'low_confidence') -and $null -ne $ob.low_confidence) {
