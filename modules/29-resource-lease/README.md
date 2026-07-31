@@ -30,7 +30,9 @@ project's existing coordination doctrine (D-0003: atomic filesystem ops on one v
 | `renew` | Extend `expires_at` by `ttl_seconds` (needs the `lease_id`). A lost lease -> `renewed:false, reason:lease_lost`. |
 | `status` | Report `{exists, held, stale, holder, lease_id, expires_at_utc, seconds_remaining}` for one resource. |
 | `list` | Report every lease in the lease dir. |
-| `check` | **(v0.2)** Validate a fencing token + report `{fencing_token, lease_kind, revocable, revoked_by, token_current, fence_status}` -- the surface a holder polls to learn it has been **fenced out** or its **residency_pin was revoked**. |
+| `check` | **(v0.2)** Validate a fencing token + report `{fencing_token, lease_kind, revocable, revoked_by, token_current, fence_status}` -- the surface a holder polls to learn it has been **fenced out** or its **residency_pin was revoked**. **(v0.3/v0.4)** also reports the full-tuple `authority_ok` (folding `owner_id`/`resident_generation`/`gpu_authority_epoch` and, when engaged, `owner_incarnation_id`/`resident_instance_id`/`state_version`). |
+| `commit` | **(v0.4)** Two-phase transition PHASE-2: publish the started resident + issue the first **usable** exec lease only AFTER health (`-HealthOk`), or terminate the exact tentative instance and grant nothing (`-HealthFailed`, fail-closed). Idempotent on `request_id`. |
+| `fence-op` | **(v0.4)** The **target-fenced side-effect gate**: an external stop/kill/publish/release names an exact `-ResidentInstanceId` (+ optional epoch/exec-lease/state-version) and gets `{fenced_op_ok, reason}` -- a stale target is refused. "Stop whatever serves this resource" is impossible. |
 
 ## Conventional resources
 
@@ -139,6 +141,66 @@ inference is ACTIVE, and a late old-generation result proven unable to publish/k
 1/13/14 close **only after that live proof**; then a soak + flipping the warm pool default-ON (the orchestrator's
 call). This wave ships the res.lease primitive those consumers build on.
 
+## v0.4 -- the R1b' primitive hardening (additive, DEFAULT-OFF; red-team-driven)
+
+v0.4 folds the **blocking** primitive changes the i19 frontier concurrency/safety red-team (pack `b823d9db`)
+found the three v0.3 identities + the ten-step transition were **not sufficient** without. Still **additive +
+default-off**: a plain / v0.2 / v0.3 call is byte-identical, and the 74/74 + 36/36 gates stay green. The v0.4
+fields appear only when a v0.4 input is supplied (or on `-Action commit`/`fence-op`). It does **NOT** close
+findings 1/13/14 -- it makes the primitive *safe to build on* for the later consumer + live-GPU wave.
+
+- **Incarnation identities -- ABA close (finding 1, blockers 2/3).** The v0.3 tuple is joined by
+  **`owner_incarnation_id`** (a random minted per owning-process/supervisor-client **RESTART**) and
+  **`resident_instance_id`** (a random per **actual server process tree**, the **target of every destructive
+  op**, never reused). `resident_generation` stays a human-readable counter but is **never** the target of a
+  stop/kill. A stale owner restarting with the same logical `owner_id` gets a **new incarnation** and does **not**
+  regain authority; a callback captured against the old `resident_instance_id` cannot act on the replacement.
+  `check` folds both into `authority_ok`. (Closes the ABA cycle where `resident_generation`/`exec_lease_id`/
+  `owner_id` reuse let a stale server or callback become valid again after a crash.)
+- **The two-phase transition -- no exec authority before health (blocker 1).** `-Transition -TwoPhaseCommit`
+  reserves -> fences -> evicts -> confirms tree-gone + stable headroom, then issues a **NON-USABLE transition
+  capability** (`usable:false`, `lease_kind:transition_capability`): the new server starts under **scheduler
+  authority**, not an ordinary exec lease. The first **usable** exec lease is published only by the phase-2
+  `-Action commit -HealthOk` **after health** (`STARTING -> HEALTHY_UNPUBLISHED -> COMMITTED`, one atomic
+  publish+grant). Default single-shot `-Transition` (the collapsed form -- caller is both scheduler and resident,
+  no separate health gate) stays byte-compatible with v0.3. Fail-closed prep semantics are defined for
+  headroom-never/fell, partial-tree, OOM/`-HealthFailed`, requester-gone (capability expiry), and
+  `superseded_during_transition` -- the answer is **never** "the exec lease already belongs to the requester";
+  on `-HealthFailed` the tentative instance is dropped and the GPU is left **empty** (a new scheduled acquisition
+  is required; the old resident is not silently restored).
+- **Target-fenced side effects (blockers 4/8, finding 14).** `-Action fence-op -OpKind <k> -ResidentInstanceId
+  <id>` is the authority an external side effect (stop/kill/result-publish/manifest-write/lease-release/renew/
+  health-fail/idle-evict/complete) **must consult before it acts**. It answers `fenced_op_ok` in one read against
+  the CURRENT live resident: a stale target (wrong instance/epoch/exec-lease/state-version, or a superseded/
+  revoked/expired resident) is **refused**. The op **must name an exact instance** -- "stop whatever currently
+  serves this resource" returns `target_instance_required`. (A state-level recommit alone cannot un-kill a
+  process, so the kill is gated *here*.)
+- **Idempotent journal + commit-response idempotency (blocker 5).** The `<resource>.txn` journal carries the
+  red-team field set (`request_id`, `requester_owner_id/incarnation_id`, `authority_epoch_from/to`, `phase`,
+  `state_version`, `old/new_resident_instance_id`, `target_config_key`, per-op `operations[]` + receipts,
+  `deadline`, `cancel_requested`, `last_error`, `retry_count`, `grant_lease_id`). A transition/commit **retry on
+  the same `request_id` returns the SAME grant** -- never a second epoch/lease/resident (recovers a lost commit
+  response). Recovery/reconcile continues from every durable phase.
+- **A renewal can never resurrect a revoked lease (test F).** The fenced renew and the pin revoke serialize on a
+  per-resource **oplock** (an atomic claim); the renew re-reads under the lock and **fails closed** if it can't
+  hold it, so exactly one CAS wins and a renew cannot clobber a concurrent revoke.
+- **Waiter sequencing (finding 14 / test K).** A durable per-resource **`state_version`** bumps on every
+  authority/residency change (grant/renew/revoke/release/commit); waiters re-read it rather than depending on a
+  one-shot signal, and a stale captured `state_version` is fenced out.
+- **Job-Object contract (blocker 6) -- PRIMITIVE side only.** The primitive **defines** the contract the real #7
+  supervisor must honor (suspended-create -> assign-to-Job -> resume, or a supervisor already inside the Job with
+  breakaway disabled + verified; `KILL_ON_JOB_CLOSE`; the published resident records the Job-Object identity +
+  exact `resident_instance_id`) and the mock supervisor seam **enforces target-fenced stop**. The real launcher
+  chain is the later consumer wave -- not built here.
+
+**Still-open + DEFERRED (NOT faked here).** Findings **1/13/14 stay OPEN** -- they close only after the later
+consumer wave (#7 PoolManager + #21 governor adoption + the real nvidia-smi/eviction evictor + the live-GPU
+3B<->9B swap / pin-revocation / prepared-eviction proof). The **live-only** red-team cases -- real GPU OOM on a
+real partial load, a real supervisor/descendant escape + PID reuse, real WDDM external-consumer pressure after
+headroom sampling -- are **deferred to that wave and listed explicitly** in the v0.4 adversarial suite, not
+mocked. "Three observations ~250ms apart" is a **heuristic** for managed-tree reclamation, explicitly **not** a
+guarantee against outside VRAM allocation.
+
 ## Not in scope (follow-ons)
 
 Wiring the v0.2 split into `model.gateway`/`agent.local` + the real evictor + the live-GPU proof = **R1b** (above);
@@ -165,4 +227,20 @@ adversarial evictor scenario (only `late_evict` grants, after waiting for stable
 (a command evictor that bumps the fence mid-eviction -> `superseded_during_transition`, no grant), single-winner
 serialization, crash **reconcile** of a stale `PREPARING`/`DRAINING` txn, **result-after-revocation** + **expiry-during-exec**
 (a stale-epoch actor's `authority_ok` is false), and the **additive/default-off guards** (a plain acquire and a v0.2-engaged
-acquire are unchanged). Baseline: v0.1/v0.2 74/74 + v0.3 36/36, both green off-machine on cloud pwsh 7.4.6.
+acquire are unchanged).
+
+`tests/Invoke-ResLeaseR1bPrimeTests.ps1` is the **v0.4 (R1b') adversarial gate** (45 assertions) -- the
+off-machine-provable subset of the red-team's matrix: **A** ABA recovery (restarted owner + stale callbacks
+fenced out of publish/mutate/release/kill), **B** commit-response loss (single-shot + two-phase idempotent
+replay), **C** stale side-effect matrix (all 8 late ops from an old instance refused vs the new one), **D**
+superseded external op (a T1's delayed actions cannot touch the winner T2), **E** reentrant evictor (a command
+evictor that calls back into res.lease -> no deadlock, no lock-order inversion, no second transition), **F**
+renewal/revocation race (concurrent renewers vs a revoker -> the revoke is never lost, a renew never resurrects),
+**G** active preemption liveness, **H** partial-alloc-fail (partial-tree + phase-2 `-HealthFailed` publish/grant
+nothing, then a later clean transition succeeds), **J** lease expiry in every durable phase (capability expiry +
+crashed-txn reconcile per phase), **K** waiter sequencing (a durable monotonic `state_version`, stale-version
+fenced). The **live-only** cases (real GPU OOM, real supervisor/descendant escape + PID reuse, real WDDM
+pressure) are listed as **DEFERRED to the consumer wave**, not mocked.
+
+Baseline: **v0.1/v0.2 74/74 + v0.3 36/36 + v0.4 45/45 (155 assertions, 0 regression)**, all green off-machine on
+cloud pwsh 7.4.6 and unchanged live via the executor.

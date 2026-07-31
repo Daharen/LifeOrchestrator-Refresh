@@ -2,7 +2,12 @@
 <#
 .SYNOPSIS
   res.lease -- a filesystem lease/lock so N processes on this one box arbitrate contended resources
-  (Life Orchestrator, contract v0.2). The multi-instance coordination primitive (D-0050/D-0051).
+  (Life Orchestrator, contract v0.4). The multi-instance coordination primitive (D-0050/D-0051).
+  v0.4 (R1b') is ADDITIVE + DEFAULT-OFF over v0.1/v0.2/v0.3: incarnation identities (owner_incarnation_id +
+  resident_instance_id) close ABA; a two-phase transition (-TwoPhaseCommit then -Action commit) issues a
+  non-usable capability and publishes the first usable exec lease only AFTER health; -Action fence-op is the
+  target-fenced side-effect gate; an idempotent txn journal + request_id give commit-response idempotency; an
+  oplock-serialized renew can never resurrect a revoked lease; a durable state_version sequences waiters.
 .DESCRIPTION
   A generic named LEASE with a TTL. One action per invocation:
     - acquire : reserve a resource. Atomic (File CreateNew = open(O_CREAT|O_EXCL)/CREATE_NEW, atomic-fail-if-
@@ -95,6 +100,17 @@ param(
     [int]$HeadroomStableIntervalMs = 250,   # WDDM: spacing between the stable-headroom observations
     [switch]$Reconcile,                     # reconcile a crashed/stale transition journal (crash in PREPARING/DRAINING/STARTING)
     [long]$AuthorityEpoch = -1,             # assert-this-epoch CAS for a transition/exec op (-1 = not supplied); side effects ASSERT, never advance
+    # ---- v0.4 (R1b') additive surface (all default-off; a plain / v0.2 / v0.3 call supplies NONE of these) ----
+    [string]$OwnerIncarnationId,            # ABA (finding 1, blocker 3): random per owning-process/supervisor-client RESTART. A restarted owner_id gets a NEW incarnation and does NOT regain authority. Auto-minted when v0.4 is engaged and not supplied.
+    [string]$ResidentInstanceId,           # ABA (finding 1, blocker 2): random per ACTUAL server process tree; the TARGET of every destructive op (never resident_generation alone). Never reused.
+    [string]$RequestId,                     # acquisition idempotency key (blocker; test B): a retry with the same RequestId returns the SAME committed grant -- never a second epoch/lease/resident.
+    [switch]$TwoPhaseCommit,                # transition (blocker 1): issue a NON-USABLE transition capability (start under scheduler authority), then commit AFTER health. Default single-shot -Transition stays byte-compatible.
+    [switch]$HealthOk,                       # commit: the consumer reports the started resident is healthy (peak-memory admission passed) -> publish + issue the first usable exec lease.
+    [switch]$HealthFailed,                   # commit/abort: the started resident failed health / partial-load OOM -> terminate the exact tentative instance, publish nothing, grant nothing (fail-closed).
+    [string]$TransitionId,                  # commit / fence-op: the txn_id of the capability being committed / the transition a fenced op was dispatched under.
+    [string]$HealthReceipt,                 # commit: an opaque health receipt tied to the exact ResidentInstanceId + TransitionId (recorded in the journal).
+    [string]$OpKind,                         # fence-op: the captured side effect kind -- stop|result_publish|manifest_write|lease_release|lease_renew|health_fail|idle_evict|complete.
+    [long]$StateVersion = -1,               # fence-op / CAS: the durable state_version captured at dispatch (-1 = not supplied). A side effect asserts it; a bumped version fences the captured op out.
     [string]$LeaseDir,
     [string]$InputsJson,
     [string]$ArtifactRoot = (Join-Path $PSScriptRoot 'runtime/artifacts'),
@@ -104,7 +120,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$SKILL_ID = 'res.lease'; $SKILL_VERSION = '0.3.0'; $CONTRACT = '0.3'
+$SKILL_ID = 'res.lease'; $SKILL_VERSION = '0.4.0'; $CONTRACT = '0.4'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $LEASE_SCHEMA = 'lifeorch.res.lease/0.1'
 $PARTIAL_GRACE_SEC = 15   # an unparseable/empty lease (a partial write) is reclaimable at mtime + this
@@ -118,6 +134,9 @@ if ([string]::IsNullOrWhiteSpace($InvocationId)) { $InvocationId = [Guid]::NewGu
 $jsonNew = $false; $jsonPriority = $false; $jsonFencing = $false; $jsonAllowLO = $false
 # v0.3 (R1b) InputsJson engagement flags
 $jsonR1b = $false; $jsonTransition = $false; $jsonReconcile = $false; $jsonOwnerId = $false; $jsonResidentGen = $false
+# v0.4 (R1b') InputsJson engagement flags
+$jsonV4 = $false; $jsonOwnerInc = $false; $jsonResInst = $false; $jsonReqId = $false
+$jsonTwoPhase = $false; $jsonHealthOk = $false; $jsonHealthFailed = $false; $jsonStateVer = $false
 
 function Write-Diag([string]$m) { [Console]::Error.WriteLine("[res.lease] $m") }
 function Has([object]$o, [string]$n) { return ($null -ne $o -and $null -ne $o.PSObject -and ($o.PSObject.Properties.Name -contains $n)) }
@@ -279,19 +298,28 @@ function Set-LeaseExt([string]$leasePath, [System.Collections.IDictionary]$cand,
     $bytes = $utf8.GetBytes(($o | ConvertTo-Json -Depth 6))
     return (Grant-LeaseAtomic $leasePath $bytes)
 }
-# Rewrite a resident residency_pin (preserving its identity + ext) with a revoked_by stamp (finding 13).
+# The core lease fields New-LeaseObject writes; everything else in a lease is "ext" (v0.2/v0.3/v0.4 additive).
+$LEASE_CORE_FIELDS = @('schema','resource','holder','holder_pid','host','lease_id','acquired_at_utc','expires_at_utc','ttl_seconds','renew_count','note')
+# Extract the FULL ext block of a lease (all non-core fields, in order) so renew/revoke preserve the ENTIRE
+# identity tuple (owner_id, resident_generation, gpu_authority_epoch, owner_incarnation_id, resident_instance_id,
+# state_version, usable, ...) -- not just the v0.2 subset. A v0.1 lease has no ext -> returns an empty dict.
+function Get-LeaseExt($lease) {
+    $e = [ordered]@{}
+    if ($null -eq $lease -or $null -eq $lease.PSObject) { return $e }
+    foreach ($p in $lease.PSObject.Properties) { if ($LEASE_CORE_FIELDS -notcontains $p.Name) { $e[$p.Name] = $p.Value } }
+    return $e
+}
+# Rewrite a resident residency_pin (preserving its FULL identity + ext) with a revoked_by stamp (finding 13).
 function Set-PinRevoked([string]$leasePath, $rd, [string]$byHolder, [long]$byToken, [int]$byPriority, [string]$reason) {
     $l = $rd.lease
     $acq = ConvertTo-Utc (Prop $l 'acquired_at_utc' $null); if ($null -eq $acq) { $acq = [DateTime]::UtcNow }
     $exp = ConvertTo-Utc (Prop $l 'expires_at_utc' $null);  if ($null -eq $exp) { $exp = [DateTime]::UtcNow }
-    $ext = [ordered]@{
-        fencing_token     = [long](Prop $l 'fencing_token' 0)
-        lease_kind        = [string](Prop $l 'lease_kind' 'residency_pin')
-        priority          = [int](Prop $l 'priority' 0)
-        revocable         = $true
-        required_vram_mib = [int](Prop $l 'required_vram_mib' 0)
-        revoked_by        = [ordered]@{ holder = $byHolder; fencing_token = $byToken; priority = $byPriority; at_utc = ([DateTime]::UtcNow.ToString('o')); reason = $reason }
-    }
+    $ext = Get-LeaseExt $l
+    if (-not $ext.Contains('fencing_token')) { $ext['fencing_token'] = [long](Prop $l 'fencing_token' 0) }
+    if (-not $ext.Contains('lease_kind'))    { $ext['lease_kind']    = [string](Prop $l 'lease_kind' 'residency_pin') }
+    if (-not $ext.Contains('priority'))      { $ext['priority']      = [int](Prop $l 'priority' 0) }
+    $ext['revocable']  = $true
+    $ext['revoked_by'] = [ordered]@{ holder = $byHolder; fencing_token = $byToken; priority = $byPriority; at_utc = ([DateTime]::UtcNow.ToString('o')); reason = $reason }
     $o = New-LeaseObject ([string](Prop $l 'resource' '')) ([string](Prop $l 'holder' '')) ([string](Prop $l 'lease_id' '')) $acq $exp ([int](Prop $l 'ttl_seconds' 120)) ([int](Prop $l 'renew_count' 0)) ([string](Prop $l 'note' '')) $ext
     $bytes = $utf8.GetBytes(($o | ConvertTo-Json -Depth 6))
     return (Grant-LeaseAtomic $leasePath $bytes)
@@ -387,7 +415,9 @@ function Reconcile-Txn([string]$txnPath, [string]$fencePath, [int]$graceSec) {
     if ($null -eq $t) { return $null }
     $state = [string](Prop $t 'state' '')
     # only a crashed IN-PROGRESS transition is reconcilable; terminal states (COMMITTED/ABORTED) are left alone.
-    if (@('RESERVING','PREPARING','DRAINING','STARTING') -notcontains $state) { return $null }
+    # Every durable red-team phase counts as in-progress (v0.3 legacy RESERVING/PREPARING kept for old journals).
+    $IN_PROGRESS = @('RESERVING','PREPARING','RESERVED_FENCED','DRAINING','TERMINATING','TREE_GONE','HEADROOM_CONFIRMED','STARTING','HEALTHY_UNPUBLISHED','ABORTING')
+    if ($IN_PROGRESS -notcontains $state) { return $null }
     $stamp = ConvertTo-Utc (Prop $t 'updated_utc' $null)
     $age = if ($null -ne $stamp) { ([DateTime]::UtcNow - $stamp).TotalSeconds } else { [double]999999 }
     $curEpoch = Read-FenceCounter $fencePath
@@ -444,6 +474,112 @@ function Invoke-TransitionEvictor {
     return [ordered]@{ confirmed=$confirmed; free_vram_mib=$freeReport; evicted=$evicted; tree_gone=$treeGone; outcome=$outcome; detail=$det; observations=$obs.ToArray() }
 }
 
+# ============================================================================================================
+# v0.4 (R1b') -- incarnation identities (ABA close), the durable state_version, the oplock (serialize a fenced
+# read-modify-write so a renew can NEVER resurrect a concurrently-revoked lease), and the two-phase transition
+# (issue a NON-USABLE capability, then publish + issue the first usable exec lease only AFTER health). Every
+# destructive op targets resident_instance_id (a per-process-tree random, never reused) -- never a reusable
+# generation/config-key. res.lease stays PURE: it validates identity + records the journal; the real supervisor
+# (drain/cancel/tree-kill under a Job Object) and health/admission live in the #7 consumer wave.
+# ============================================================================================================
+# The durable per-resource state_version counter (sibling <resource>.state). Bumps on EVERY authority- or
+# residency-changing mutation (fresh grant, revoke, renew, release, transition reserve/commit/abort) so a waiter
+# re-reads a DURABLE version rather than depending on a one-shot signal (finding 14 / test K). Distinct from the
+# fence counter (gpu_authority_epoch), which bumps ONLY when exclusive GPU authority transfers.
+function Get-StateFileName([string]$resource) {
+    $safe = ($resource -replace '[^A-Za-z0-9._-]', '_'); if ($safe.Length -gt 48) { $safe = $safe.Substring(0, 48) }
+    $h = (Get-Sha256Hex $utf8.GetBytes($resource)).Substring(0, 8)
+    return "$safe-$h.state"
+}
+function Read-StateVersion([string]$statePath) {
+    if (-not (Test-Path -LiteralPath $statePath -PathType Leaf)) { return [long]0 }
+    try {
+        $fs = [System.IO.File]::Open($statePath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, ([System.IO.FileShare]::ReadWrite -bor [System.IO.FileShare]::Delete))
+        $t = $null
+        try { $sr = New-Object System.IO.StreamReader($fs, $utf8); try { $t = $sr.ReadToEnd() } finally { $sr.Dispose() } } finally { $fs.Dispose() }
+        $n = [long]0
+        if (-not [string]::IsNullOrWhiteSpace($t) -and [long]::TryParse($t.Trim(), [ref]$n)) { return $n }
+        return [long]0
+    } catch { return [long]0 }
+}
+function Bump-StateVersion([string]$statePath) {
+    $next = (Read-StateVersion $statePath) + [long]1
+    try {
+        $tmp = "$statePath.sv-$([Guid]::NewGuid().ToString('N').Substring(0,8)).tmp"
+        [System.IO.File]::WriteAllText($tmp, [string]$next, $utf8)
+        $moved = $false
+        for ($mi = 0; $mi -lt 6 -and -not $moved; $mi++) { try { [System.IO.File]::Move($tmp, $statePath, $true); $moved = $true } catch { Start-Sleep -Milliseconds 15 } }
+        if (-not $moved) { Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue }
+    } catch { }
+    return $next
+}
+# The per-resource OPLOCK: an atomic claim (CreateNew) that serializes a fenced read-modify-write against a
+# concurrent revoke/commit so exactly ONE CAS wins (test F). Grace-based stale-claimer cleanup (like the reclaim
+# CAS). Returns $true if acquired. Only taken on the FENCED renew/revoke path -- a plain v0.1 lease never has a
+# revoke racing it, so a plain renew never takes the oplock and stays byte-identical.
+function Enter-OpLock([string]$oplockPath, [int]$graceSec) {
+    $b = $utf8.GetBytes("oplock pid=$PID at=$([DateTime]::UtcNow.ToString('o'))")
+    if (Try-CreateLease $oplockPath $b) { return $true }
+    $cm = [DateTime]::UtcNow; try { $cm = [System.IO.File]::GetLastWriteTimeUtc($oplockPath) } catch { }
+    if ($cm.AddSeconds($graceSec) -lt [DateTime]::UtcNow) {
+        Remove-Item -LiteralPath $oplockPath -Force -ErrorAction SilentlyContinue
+        if (Try-CreateLease $oplockPath $b) { return $true }
+    }
+    return $false
+}
+function Exit-OpLock([string]$oplockPath) { Remove-Item -LiteralPath $oplockPath -Force -ErrorAction SilentlyContinue }
+# Revoke a resident revocable pin under the OPLOCK, RE-READING the freshest lease inside the critical section so
+# the revoked_by stamp lands on the CURRENT record -- even one a concurrent renew just wrote. This is what makes
+# "a renewal can never resurrect a revoked pin" hold (test F): the renew and the revoke serialize on the oplock,
+# and whichever writes second observes the other. Returns the revoked pin's identity, or $null if it changed/vanished.
+function Revoke-PinFenced([string]$leasePath, [string]$oplockPath, [string]$statePath, [string]$byHolder, [long]$byToken, [int]$byPriority, [string]$reason, [int]$graceSec) {
+    # the preemptor MUST win the CAS -> a generous oplock budget (renewers are one-shot + brief, so contention
+    # clears quickly). FAIL-CLOSED: if the lock truly cannot be taken, do NOT stamp without it (return $null).
+    $got = $false
+    for ($i = 0; $i -lt 300 -and -not $got; $i++) { if (Enter-OpLock $oplockPath $graceSec) { $got = $true } else { Start-Sleep -Milliseconds 10 } }
+    if (-not $got) { return $null }
+    try {
+        $rd = Read-LeaseFile $leasePath
+        if ($null -eq $rd -or $rd.partial) { return $null }
+        if (Test-LeaseExpired $rd ([DateTime]::UtcNow)) { return $null }
+        if ([string](Prop $rd.lease 'lease_kind' 'exec') -ne 'residency_pin') { return $null }
+        if (-not [bool](Prop $rd.lease 'revocable' $false)) { return $null }
+        $info = [ordered]@{ holder=[string](Prop $rd.lease 'holder' ''); lease_id=[string](Prop $rd.lease 'lease_id' ''); prior_fencing_token=[long](Prop $rd.lease 'fencing_token' 0); priority=[int](Prop $rd.lease 'priority' 0) }
+        [void](Set-PinRevoked $leasePath $rd $byHolder $byToken $byPriority $reason)
+        [void](Bump-StateVersion $statePath)
+        return $info
+    } finally { if ($got) { Exit-OpLock $oplockPath } }
+}
+# Mint a fresh, never-reused resident_instance_id (per actual server process tree). Random -- NOT a counter.
+function New-ResidentInstanceId { return 'ri-' + [Guid]::NewGuid().ToString('N') }
+# The v0.4 ext block stamped onto a fenced grant. incarnation + instance are present ONLY when engagedV4, so a
+# v0.2/v0.3 grant is byte-identical. usable=$false marks a NON-USABLE transition capability (blocker 1).
+function New-V4Ext([long]$token, [string]$kind, [int]$priority, [bool]$revocable, [int]$requiredVram, [string]$residentGen, [string]$ownerId, [string]$ownerInc, [string]$resInst, [long]$stateVer, [bool]$usable, [string]$reqId) {
+    return [ordered]@{
+        fencing_token=$token; gpu_authority_epoch=$token; lease_kind=$kind; priority=$priority
+        revocable=$revocable; required_vram_mib=$requiredVram; resident_generation=$residentGen
+        owner_id=$ownerId; owner_incarnation_id=$ownerInc; resident_instance_id=$resInst
+        state_version=$stateVer; usable=$usable; request_id=$reqId; revoked_by=$null
+    }
+}
+# Target-fenced side-effect validation (blockers 4/8, finding 14 / test C,D). A captured external op presents its
+# immutable target; res.lease answers whether the op MAY proceed against the CURRENT live lease/instance -- all in
+# one read. A stop/mutation whose captured resident_instance_id (or epoch/exec_lease_id/state_version) no longer
+# matches the current resident is REFUSED ("stop whatever serves config_key" is impossible: the caller MUST supply
+# an exact instance). This is the state-machine authority the real supervisor consults before any destructive op.
+function Test-FencedOp($read, [bool]$stale, $revokedBy, [string]$targetInstance, [long]$assertEpoch, [bool]$epochSupplied, [string]$assertExecLease, [bool]$execSupplied, [long]$assertStateVer, [bool]$stateSupplied, [long]$curStateVer) {
+    if ($null -eq $read -or $read.partial) { return [ordered]@{ ok=$false; reason='no_live_resident' } }
+    if ($stale) { return [ordered]@{ ok=$false; reason='resident_expired' } }
+    if ($null -ne $revokedBy) { return [ordered]@{ ok=$false; reason='authority_revoked' } }
+    $curInstance = [string](Prop $read.lease 'resident_instance_id' '')
+    if ([string]::IsNullOrWhiteSpace($targetInstance)) { return [ordered]@{ ok=$false; reason='target_instance_required' } }  # never "current server"
+    if ($targetInstance -ne $curInstance) { return [ordered]@{ ok=$false; reason='target_instance_mismatch' } }
+    if ($epochSupplied -and ($assertEpoch -ne [long](Prop $read.lease 'fencing_token' 0))) { return [ordered]@{ ok=$false; reason='epoch_stale' } }
+    if ($execSupplied -and ($assertExecLease -ne [string](Prop $read.lease 'lease_id' ''))) { return [ordered]@{ ok=$false; reason='exec_lease_mismatch' } }
+    if ($stateSupplied -and ($assertStateVer -ne $curStateVer)) { return [ordered]@{ ok=$false; reason='state_version_stale' } }
+    return [ordered]@{ ok=$true; reason='current' }
+}
+
 $status = 'ok'; $errorObj = $null; $result = $null; $inputsDigest = $null
 $artifacts = @()
 $warnings = New-Object System.Collections.Generic.List[string]
@@ -487,12 +623,23 @@ try {
             if ((Has $p 'headroom_stable_interval_ms')  -and -not $bound.ContainsKey('HeadroomStableIntervalMs')) { $HeadroomStableIntervalMs = [int]$p.headroom_stable_interval_ms; $jsonNew = $true; $jsonR1b = $true }
             if ((Has $p 'reconcile')                    -and -not $bound.ContainsKey('Reconcile'))                { if ([bool]$p.reconcile) { $jsonReconcile = $true }; $jsonNew = $true; $jsonR1b = $true }
             if ((Has $p 'authority_epoch')              -and -not $bound.ContainsKey('AuthorityEpoch'))           { $AuthorityEpoch = [long]$p.authority_epoch; $jsonNew = $true; $jsonR1b = $true }
+            # v0.4 (R1b') additive keys
+            if ((Has $p 'owner_incarnation_id')  -and -not $bound.ContainsKey('OwnerIncarnationId')) { $OwnerIncarnationId = [string]$p.owner_incarnation_id; $jsonNew=$true; $jsonR1b=$true; $jsonV4=$true; $jsonOwnerInc=$true }
+            if ((Has $p 'resident_instance_id')  -and -not $bound.ContainsKey('ResidentInstanceId')) { $ResidentInstanceId = [string]$p.resident_instance_id; $jsonNew=$true; $jsonR1b=$true; $jsonV4=$true; $jsonResInst=$true }
+            if ((Has $p 'request_id')            -and -not $bound.ContainsKey('RequestId'))          { $RequestId = [string]$p.request_id; $jsonNew=$true; $jsonR1b=$true; $jsonV4=$true; $jsonReqId=$true }
+            if ((Has $p 'two_phase_commit')      -and -not $bound.ContainsKey('TwoPhaseCommit'))      { if ([bool]$p.two_phase_commit) { $jsonTwoPhase=$true }; $jsonNew=$true; $jsonR1b=$true; $jsonV4=$true }
+            if ((Has $p 'health_ok')             -and -not $bound.ContainsKey('HealthOk'))            { if ([bool]$p.health_ok) { $jsonHealthOk=$true }; $jsonNew=$true; $jsonR1b=$true; $jsonV4=$true }
+            if ((Has $p 'health_failed')         -and -not $bound.ContainsKey('HealthFailed'))        { if ([bool]$p.health_failed) { $jsonHealthFailed=$true }; $jsonNew=$true; $jsonR1b=$true; $jsonV4=$true }
+            if ((Has $p 'transition_id')         -and -not $bound.ContainsKey('TransitionId'))        { $TransitionId = [string]$p.transition_id; $jsonNew=$true; $jsonR1b=$true; $jsonV4=$true }
+            if ((Has $p 'health_receipt')        -and -not $bound.ContainsKey('HealthReceipt'))       { $HealthReceipt = [string]$p.health_receipt; $jsonNew=$true; $jsonR1b=$true; $jsonV4=$true }
+            if ((Has $p 'op_kind')               -and -not $bound.ContainsKey('OpKind'))              { $OpKind = [string]$p.op_kind; $jsonNew=$true; $jsonR1b=$true; $jsonV4=$true }
+            if ((Has $p 'state_version')         -and -not $bound.ContainsKey('StateVersion'))        { $StateVersion = [long]$p.state_version; $jsonNew=$true; $jsonR1b=$true; $jsonV4=$true; $jsonStateVer=$true }
         }
     }
 
     if ([string]::IsNullOrWhiteSpace($Action)) { throw [PSCustomObject]@{ code='missing_parameter'; message='action is required (acquire|release|renew|status|list|check)'; retryable=$false } }
     $Action = $Action.ToLowerInvariant()
-    if (@('acquire','release','renew','status','list','check') -notcontains $Action) { throw [PSCustomObject]@{ code='invalid_action'; message="action must be acquire|release|renew|status|list|check (got '$Action')"; retryable=$false } }
+    if (@('acquire','release','renew','status','list','check','commit','fence-op') -notcontains $Action) { throw [PSCustomObject]@{ code='invalid_action'; message="action must be acquire|release|renew|status|list|check|commit|fence-op (got '$Action')"; retryable=$false } }
     if ($Action -ne 'list' -and [string]::IsNullOrWhiteSpace($Resource)) { throw [PSCustomObject]@{ code='missing_parameter'; message="$Action needs a resource"; retryable=$false } }
     if ($TtlSeconds -lt 1) { $TtlSeconds = 1 }
 
@@ -524,6 +671,23 @@ try {
     # gpu_authority_epoch is the fencing_token under a clearer name; an -AuthorityEpoch assertion is a fencing CAS.
     if ($authorityEpochSupplied -and -not $fencingTokenSupplied) { $FencingToken = $AuthorityEpoch; $fencingTokenSupplied = $true }
 
+    # ---- v0.4 (R1b') engagement: incarnation identities (ABA close) + two-phase transition + fenced side effects ----
+    # A v0.3-engaged call that supplies NONE of the v0.4 inputs is byte-identical to v0.3 (no incarnation fields,
+    # single-shot transition unchanged) so the 36/36 R1b gate stays green. The new actions commit/fence-op are v0.4.
+    $engagedV4 = $jsonV4 -or ($Action -eq 'commit') -or ($Action -eq 'fence-op')
+    foreach ($k in @('OwnerIncarnationId','ResidentInstanceId','RequestId','TwoPhaseCommit','HealthOk','HealthFailed','TransitionId','HealthReceipt','OpKind','StateVersion')) { if ($bound.ContainsKey($k)) { $engagedV4 = $true; break } }
+    if ($engagedV4) { $engagedR1b = $true; $engagedNew = $true }   # v0.4 implies the v0.3 + engaged surfaces
+    $ownerIncSupplied     = $bound.ContainsKey('OwnerIncarnationId') -or $jsonOwnerInc
+    $resInstSupplied      = $bound.ContainsKey('ResidentInstanceId') -or $jsonResInst
+    $requestIdSupplied    = $bound.ContainsKey('RequestId') -or $jsonReqId
+    $stateVersionSupplied = $bound.ContainsKey('StateVersion') -or $jsonStateVer -or ($StateVersion -ge 0)
+    $doTwoPhase   = ($TwoPhaseCommit.IsPresent -or $jsonTwoPhase)
+    $doHealthOk   = ($HealthOk.IsPresent -or $jsonHealthOk)
+    $doHealthFail = ($HealthFailed.IsPresent -or $jsonHealthFailed)
+    # Auto-mint an owner incarnation whenever the v0.4 surface is engaged and the caller did not pin one.
+    # A restarted owner (same OwnerId) that mints a fresh incarnation therefore does NOT inherit the old lease's authority.
+    if ($engagedV4 -and [string]::IsNullOrWhiteSpace($OwnerIncarnationId)) { $OwnerIncarnationId = 'inc-' + [Guid]::NewGuid().ToString('N') }
+
     # ---- resolve holder + lease dir ----
     if ([string]::IsNullOrWhiteSpace($Holder)) {
         $Holder = $env:LIFEORCH_INSTANCE
@@ -543,6 +707,8 @@ try {
         'acquire' {
             $leasePath = Join-Path $LeaseDir (Get-LeaseFileName $Resource)
             $fencePath = Join-Path $LeaseDir (Get-FenceFileName $Resource)
+            $statePath = Join-Path $LeaseDir (Get-StateFileName $Resource)
+            $v4GrantResInst = $null; $v4GrantStateVer = $null   # v0.4 output identities (set on an engagedV4 grant)
 
             # ===================== v0.3 (R1b): the single scheduler-owned ATOMIC hand-off transition ==============
             # reserve -> fence old owner off new exec -> drain/cancel active exec -> invalidate publish -> shut down
@@ -559,15 +725,36 @@ try {
                 $trAcquired=$false; $trReason=$null; $trState='RESERVING'; $newEpoch=$null; $revoked=$null
                 $evConfirmed=$false; $evEvicted=$false; $evTreeGone=$null; $evFree=$null; $evOutcome=$null; $evObs=@(); $superseded=$false
                 $myLid=[Guid]::NewGuid().ToString()
+                $idemReplay=$false; $twoPhaseCap=$false; $oldResInst=$null; $newResInst=$null
+                # ---- v0.4 request_id idempotency (blocker 5 / test B): a retry on the SAME acquisition key returns
+                #      the SAME committed grant -- NEVER a second epoch/lease/resident. A lost commit-response is
+                #      recovered here from the durable journal, not by re-running the transition. ----
+                if ($requestIdSupplied -and -not [string]::IsNullOrWhiteSpace($RequestId)) {
+                    $priorTxn = Read-Txn $txnPath
+                    if ($null -ne $priorTxn -and ([string](Prop $priorTxn 'request_id' '') -eq $RequestId) -and -not [string]::IsNullOrWhiteSpace([string](Prop $priorTxn 'grant_lease_id' ''))) {
+                        $gLid=[string](Prop $priorTxn 'grant_lease_id' '')
+                        $rdI=Read-LeaseFile $leasePath
+                        if ($null -ne $rdI -and -not $rdI.partial -and -not (Test-LeaseExpired $rdI ([DateTime]::UtcNow)) -and ([string](Prop $rdI.lease 'lease_id' '') -eq $gLid) -and ([string](Prop $rdI.lease 'holder' '') -eq $Holder)) {
+                            $trAcquired=$true; $idemReplay=$true; $trReason='idempotent_replay'; $myLid=$gLid
+                            $newEpoch=[long](Prop $priorTxn 'authority_epoch' 0); $leaseObj=$rdI.lease
+                            $trState=[string](Prop $priorTxn 'state' 'COMMITTED')
+                            $twoPhaseCap = -not [bool](Prop $rdI.lease 'usable' $true)
+                            $v4GrantResInst=[string](Prop $rdI.lease 'resident_instance_id' ''); $v4GrantStateVer=[long](Prop $rdI.lease 'state_version' 0)
+                        }
+                    }
+                }
                 # serialize transitions: exactly ONE transition-in-progress per resource (equal-priority single winner)
                 $claimBytes=$utf8.GetBytes("txn=$txnId owner=$OwnerId at=$($t0.ToString('o'))")
                 $gotClaim=$false
-                if (Try-CreateLease $txnClaimPath $claimBytes) { $gotClaim=$true }
-                else {
-                    $cm=[DateTime]::UtcNow; try { $cm=[System.IO.File]::GetLastWriteTimeUtc($txnClaimPath) } catch {}
-                    if ($cm.AddSeconds($PARTIAL_GRACE_SEC) -lt [DateTime]::UtcNow) { Remove-Item -LiteralPath $txnClaimPath -Force -ErrorAction SilentlyContinue; if (Try-CreateLease $txnClaimPath $claimBytes) { $gotClaim=$true } }
+                if (-not $trAcquired) {
+                    if (Try-CreateLease $txnClaimPath $claimBytes) { $gotClaim=$true }
+                    else {
+                        $cm=[DateTime]::UtcNow; try { $cm=[System.IO.File]::GetLastWriteTimeUtc($txnClaimPath) } catch {}
+                        if ($cm.AddSeconds($PARTIAL_GRACE_SEC) -lt [DateTime]::UtcNow) { Remove-Item -LiteralPath $txnClaimPath -Force -ErrorAction SilentlyContinue; if (Try-CreateLease $txnClaimPath $claimBytes) { $gotClaim=$true } }
+                    }
                 }
-                if (-not $gotClaim) { $trReason='transition_in_progress' }
+                if ($trAcquired) { }   # idempotent replay -> nothing to do; fall through to build the result
+                elseif (-not $gotClaim) { $trReason='transition_in_progress' }
                 else {
                   try {
                     $read=Read-LeaseFile $leasePath
@@ -587,32 +774,70 @@ try {
                         }
                     }
                     if (-not $trAcquired -and ($null -eq $trReason)) {
+                        # capture the EXACT old resident_instance_id (the target of the drain/kill) + mint the tentative NEW one
+                        $oldResInst = $(if ($hasResident) { [string](Prop $read.lease 'resident_instance_id' '') } else { $null })
+                        $newResInst = $(if (-not [string]::IsNullOrWhiteSpace($ResidentInstanceId)) { $ResidentInstanceId } else { New-ResidentInstanceId })
                         # ---- RESERVE: bump the GPU authority epoch (authority TRANSFERS to us) ----
                         $newEpoch = Mint-FencingToken $fencePath $priorEpoch
-                        $trState='PREPARING'
-                        $txnRec=[ordered]@{ schema='lifeorch.res.lease.txn/0.1'; txn_id=$txnId; resource=$Resource; owner_id=$OwnerId; holder=$Holder; state=$trState; authority_epoch=$newEpoch; prior_epoch=$priorEpoch; resident_holder=$residentHolder; resident_generation=$residentGen; required_vram_mib=$RequiredVramMiB; target_headroom_mib=$TargetHeadroomMiB; started_utc=$t0.ToString('o'); updated_utc=([DateTime]::UtcNow.ToString('o')) }
-                        [void](Write-Txn $txnPath $txnRec)
-                        # ---- FENCE the old owner off (stamp revoked_by so its old epoch is stale) ----
-                        if ($hasResident -and $residentKind -eq 'residency_pin') {
-                            [void](Set-PinRevoked $leasePath $read $Holder $newEpoch $Priority 'preempted_by_transition')
-                            $revoked=[ordered]@{ holder=$residentHolder; lease_id=[string](Prop $read.lease 'lease_id' ''); prior_fencing_token=[long](Prop $read.lease 'fencing_token' 0); priority=$residentPrio }
+                        $trState='RESERVED_FENCED'
+                        # enriched, idempotent-replay journal (blocker 5): the red-team field set + per-op records.
+                        $txnRec=[ordered]@{
+                            schema='lifeorch.res.lease.txn/0.2'; txn_id=$txnId; resource=$Resource
+                            request_id=$(if([string]::IsNullOrWhiteSpace($RequestId)){$null}else{$RequestId})
+                            owner_id=$OwnerId; requester_owner_id=$OwnerId; requester_incarnation_id=$(if($engagedV4){$OwnerIncarnationId}else{$null}); holder=$Holder
+                            state=$trState; two_phase=$doTwoPhase
+                            authority_epoch=$newEpoch; authority_epoch_from=$priorEpoch; authority_epoch_to=$newEpoch; prior_epoch=$priorEpoch
+                            resident_holder=$residentHolder; resident_generation=$residentGen; target_config_key=$(if([string]::IsNullOrWhiteSpace($ResidentGeneration)){$null}else{$ResidentGeneration})
+                            old_resident_instance_id=$(if([string]::IsNullOrWhiteSpace($oldResInst)){$null}else{$oldResInst}); new_resident_instance_id=$newResInst
+                            required_vram_mib=$RequiredVramMiB; target_headroom_mib=$TargetHeadroomMiB
+                            state_version=(Read-StateVersion $statePath); operations=@()
+                            deadline=$([DateTime]::UtcNow.AddMilliseconds([Math]::Max(1000,$ConfirmTimeoutMs+$DrainTimeoutMs)).ToString('o'))
+                            cancel_requested=$false; last_error=$null; retry_count=0
+                            grant_lease_id=$null; usable=$null
+                            started_utc=$t0.ToString('o'); updated_utc=([DateTime]::UtcNow.ToString('o'))
                         }
-                        # ---- DRAINING: the evictor drains->cancels->tree-kills OUTSIDE the lease mutex ----
+                        [void](Write-Txn $txnPath $txnRec)
+                        # ---- FENCE the old owner off (stamp revoked_by so its old epoch is stale), oplock-serialized ----
+                        if ($hasResident -and $residentKind -eq 'residency_pin') {
+                            $rvk = Revoke-PinFenced $leasePath "$leasePath.oplock" $statePath $Holder $newEpoch $Priority 'preempted_by_transition' $PARTIAL_GRACE_SEC
+                            $revoked = if ($null -ne $rvk) { $rvk } else { [ordered]@{ holder=$residentHolder; lease_id=[string](Prop $read.lease 'lease_id' ''); prior_fencing_token=[long](Prop $read.lease 'fencing_token' 0); priority=$residentPrio } }
+                        }
+                        # ---- DRAINING / TERMINATING: the evictor drains->cancels->tree-kills OUTSIDE the lease mutex.
+                        #      It targets the EXACT old_resident_instance_id (never "the current server"). ----
                         $trState='DRAINING'; $txnRec['state']=$trState; $txnRec['updated_utc']=[DateTime]::UtcNow.ToString('o'); [void](Write-Txn $txnPath $txnRec)
-                        $evCtx=[ordered]@{ resource=$Resource; lease_dir=$LeaseDir; txn_id=$txnId; owner_id=$OwnerId; authority_epoch=$newEpoch; required_vram_mib=$RequiredVramMiB; target_headroom_mib=$TargetHeadroomMiB; resident_holder=$residentHolder; resident_generation=$residentGen; drain_timeout_ms=$DrainTimeoutMs; state=$(if($hasResident){'occupied'}else{'free'}) }
+                        $opId=[Guid]::NewGuid().ToString('N')
+                        $evCtx=[ordered]@{ resource=$Resource; lease_dir=$LeaseDir; txn_id=$txnId; operation_id=$opId; owner_id=$OwnerId; owner_incarnation_id=$(if($engagedV4){$OwnerIncarnationId}else{$null}); authority_epoch=$newEpoch; required_vram_mib=$RequiredVramMiB; target_headroom_mib=$TargetHeadroomMiB; resident_holder=$residentHolder; resident_generation=$residentGen; target_resident_instance_id=$(if([string]::IsNullOrWhiteSpace($oldResInst)){$null}else{$oldResInst}); drain_timeout_ms=$DrainTimeoutMs; state=$(if($hasResident){'occupied'}else{'free'}) }
                         $ev=Invoke-TransitionEvictor $EvictorMode $MockEvictorResult $MockFreeVramMiB $EvictorCommand $evCtx $RequiredVramMiB $TargetHeadroomMiB $HeadroomObservations $HeadroomStableIntervalMs $ConfirmTimeoutMs
                         $evConfirmed=[bool]$ev.confirmed; $evEvicted=[bool]$ev.evicted; $evTreeGone=[bool]$ev.tree_gone; $evFree=$ev.free_vram_mib; $evOutcome=[string]$ev.outcome; $evObs=$ev.observations
+                        $txnRec['operations']=@([ordered]@{ operation_id=$opId; kind='evict_drain_terminate'; target_resident_instance_id=$(if([string]::IsNullOrWhiteSpace($oldResInst)){$null}else{$oldResInst}); status=$(if($evConfirmed){'confirmed'}else{'failed'}); tree_gone=$evTreeGone; receipt=$evOutcome })
+                        if ($evTreeGone -and $evConfirmed) { $trState='HEADROOM_CONFIRMED'; $txnRec['state']=$trState; $txnRec['updated_utc']=[DateTime]::UtcNow.ToString('o'); [void](Write-Txn $txnPath $txnRec) }
                         # ---- COMMIT-IF-EPOCH-CURRENT: grant ONLY if our reserved epoch is still the authority ----
                         $curEpoch=[long](Read-FenceCounter $fencePath)
                         if ($curEpoch -ne $newEpoch) { $superseded=$true; $trReason='superseded_during_transition'; $trState='ABORTED' }
                         elseif ($evConfirmed) {
                             $nowL=[DateTime]::UtcNow; $expiresAt=$nowL.AddSeconds($TtlSeconds)
-                            $ext=[ordered]@{ fencing_token=$newEpoch; gpu_authority_epoch=$newEpoch; lease_kind=$Kind; priority=$Priority; revocable=$(if($isPin){$true}else{$false}); required_vram_mib=$RequiredVramMiB; resident_generation=$ResidentGeneration; owner_id=$OwnerId; revoked_by=$null }
+                            # Two-phase (blocker 1): issue a NON-USABLE transition capability (usable=false) -- the new
+                            # server starts under scheduler authority, NOT an ordinary exec lease. The usable exec lease
+                            # is published only by the phase-2 commit AFTER health. Single-shot (default) grants a usable
+                            # exec lease immediately (the collapsed form; byte-compatible with v0.3, and correct when the
+                            # caller is BOTH scheduler and resident with no separate health gate).
+                            $capUsable = -not $doTwoPhase
+                            $capKind = $(if ($doTwoPhase) { 'transition_capability' } else { $Kind })
+                            $ext=[ordered]@{ fencing_token=$newEpoch; gpu_authority_epoch=$newEpoch; lease_kind=$capKind; priority=$Priority; revocable=$(if($isPin){$true}else{$false}); required_vram_mib=$RequiredVramMiB; resident_generation=$ResidentGeneration; owner_id=$OwnerId; revoked_by=$null }
+                            if ($engagedV4) {
+                                $capSv = Bump-StateVersion $statePath
+                                $ext['owner_incarnation_id']=$OwnerIncarnationId; $ext['resident_instance_id']=$newResInst; $ext['state_version']=$capSv; $ext['usable']=$capUsable; $ext['request_id']=$(if([string]::IsNullOrWhiteSpace($RequestId)){$null}else{$RequestId})
+                                $v4GrantResInst=$newResInst; $v4GrantStateVer=$capSv
+                            }
                             $cand=New-LeaseObject $Resource $Holder $myLid $nowL $expiresAt $TtlSeconds 0 $Note $ext
                             $bytes=$utf8.GetBytes(($cand | ConvertTo-Json -Depth 6))
-                            if (Grant-LeaseAtomic $leasePath $bytes) { $trAcquired=$true; $leaseObj=$cand; $trState='STARTING' }
+                            if (Grant-LeaseAtomic $leasePath $bytes) {
+                                $trAcquired=$true; $leaseObj=$cand; $twoPhaseCap=$doTwoPhase
+                                $trState=$(if ($doTwoPhase) { 'STARTING' } else { 'STARTING' })   # capability issued; consumer starts+health-checks (single-shot: usable now)
+                                $txnRec['grant_lease_id']=$myLid; $txnRec['usable']=$capUsable
+                            }
                             else { $trReason='seize_failed'; $trState='ABORTED' }
-                        } else { $trReason=$(if($evOutcome){"evictor_$evOutcome"}else{'headroom_not_confirmed'}); $trState='ABORTED' }
+                        } else { $trReason=$(if($evOutcome){"evictor_$evOutcome"}else{'headroom_not_confirmed'}); $trState='ABORTED'; $txnRec['last_error']=$trReason }
                         $txnRec['state']=$trState; $txnRec['updated_utc']=[DateTime]::UtcNow.ToString('o'); $txnRec['evictor_outcome']=$evOutcome; [void](Write-Txn $txnPath $txnRec)
                     }
                   } finally { Remove-Item -LiteralPath $txnClaimPath -Force -ErrorAction SilentlyContinue }
@@ -625,14 +850,26 @@ try {
                     ttl_seconds=$TtlSeconds; waited_ms=$trWaitedMs
                     reclaimed_stale=$false; already_held=$(if($trReason -eq 'already_held'){$true}else{$false})
                     held_by=$(if($trAcquired){$null}else{$heldBy}); held_expires_at_utc=$null; lease_dir=$LeaseDir
-                    fencing_token=$newEpoch; gpu_authority_epoch=$newEpoch; exec_lease_id=$(if($trAcquired -and $Kind -eq 'exec'){$myLid}else{$null})
+                    fencing_token=$newEpoch; gpu_authority_epoch=$newEpoch; exec_lease_id=$(if($trAcquired -and $Kind -eq 'exec' -and -not $twoPhaseCap){$myLid}else{$null})
                     resident_generation=$(if([string]::IsNullOrWhiteSpace($ResidentGeneration)){$null}else{$ResidentGeneration}); owner_id=$OwnerId
-                    lease_kind=$Kind; priority=$Priority; revocable=$(if($isPin){$true}else{$false}); revoked_by=$null
+                    lease_kind=$(if($twoPhaseCap){'transition_capability'}else{$Kind}); priority=$Priority; revocable=$(if($isPin){$true}else{$false}); revoked_by=$null
                     transition=$true; transition_id=$txnId; transition_state=$trState
                     prepared=$trAcquired; required_vram_mib=$RequiredVramMiB; target_headroom_mib=$TargetHeadroomMiB
                     evict_performed=$evEvicted; tree_gone=$evTreeGone; headroom_confirmed=$evConfirmed
                     free_vram_mib=$evFree; evictor_mode=$EvictorMode; evictor_outcome=$evOutcome; headroom_observations=$evObs
                     superseded=$superseded; reason=$trReason
+                }
+                if ($engagedV4) {
+                    # ABA incarnation identities + the two-phase capability marker (blocker 1) + idempotency.
+                    $result['owner_incarnation_id'] = $OwnerIncarnationId
+                    $result['resident_instance_id'] = $(if ($trAcquired) { $v4GrantResInst } else { $null })
+                    $result['state_version'] = $(if ($trAcquired) { $v4GrantStateVer } else { $null })
+                    $result['two_phase'] = $doTwoPhase
+                    $result['usable'] = $(if ($trAcquired) { (-not $twoPhaseCap) } else { $false })
+                    $result['capability_only'] = $twoPhaseCap   # true = a NON-usable transition capability awaiting commit
+                    $result['request_id'] = $(if ([string]::IsNullOrWhiteSpace($RequestId)) { $null } else { $RequestId })
+                    $result['idempotent_replay'] = $idemReplay
+                    $result['old_resident_instance_id'] = $(if ([string]::IsNullOrWhiteSpace($oldResInst)) { $null } else { $oldResInst })
                 }
                 if ($null -ne $revoked) { $result['revocation_signaled']=$true; $result['revoked_pin']=$revoked }
                 if ($null -ne $reconcileReport) { $result['reconciled']=$reconcileReport }
@@ -702,10 +939,10 @@ try {
                     $rRev = [bool](Prop $read.lease 'revocable' $false)
                     $rPrio = [int](Prop $read.lease 'priority' 0)
                     if ($rKind -eq 'residency_pin' -and $rRev -and $rPrio -lt $Priority) {
-                        # revoke the lower-priority pin, drive the evictor, then SEIZE (evict-before-grant)
+                        # revoke the lower-priority pin (oplock-serialized), drive the evictor, then SEIZE (evict-before-grant)
                         $tq = Mint-FencingToken $fencePath 0
-                        [void](Set-PinRevoked $leasePath $read $Holder $tq $Priority 'preempted_by_prepared_acquire')
-                        $revokedPin = [ordered]@{ holder=$rHolder; lease_id=[string](Prop $read.lease 'lease_id' ''); prior_fencing_token=[long](Prop $read.lease 'fencing_token' 0); priority=$rPrio }
+                        $rvk = Revoke-PinFenced $leasePath "$leasePath.oplock" $statePath $Holder $tq $Priority 'preempted_by_prepared_acquire' $PARTIAL_GRACE_SEC
+                        $revokedPin = if ($null -ne $rvk) { $rvk } else { [ordered]@{ holder=$rHolder; lease_id=[string](Prop $read.lease 'lease_id' ''); prior_fencing_token=[long](Prop $read.lease 'fencing_token' 0); priority=$rPrio } }
                         $ev = Invoke-Evictor $EvictorMode $MockEvictorResult $MockFreeVramMiB $EvictorCommand ([ordered]@{ resource=$Resource; required_vram_mib=$RequiredVramMiB; target_headroom_mib=$TargetHeadroomMiB; state='occupied'; resident_holder=$rHolder; resident_priority=$rPrio; confirm_interval_ms=$ConfirmIntervalMs; confirm_timeout_ms=$ConfirmTimeoutMs }) $RequiredVramMiB $TargetHeadroomMiB $ConfirmIntervalMs $ConfirmTimeoutMs
                         $headroomConfirmed=[bool]$ev.confirmed; $freeVram=$ev.free_vram_mib; $evictorOutcome=[string]$ev.outcome; $evictPerformed=[bool]$ev.evicted
                         if ($headroomConfirmed) {
@@ -733,8 +970,8 @@ try {
                         $rH0=[string](Prop $rd0.lease 'holder' ''); $rK0=[string](Prop $rd0.lease 'lease_kind' 'exec'); $rR0=[bool](Prop $rd0.lease 'revocable' $false); $rP0=[int](Prop $rd0.lease 'priority' 0)
                         if ($rH0 -ne $Holder -and $rK0 -eq 'residency_pin' -and $rR0 -and $rP0 -lt $Priority) {
                             $tq0 = Mint-FencingToken $fencePath 0
-                            [void](Set-PinRevoked $leasePath $rd0 $Holder $tq0 $Priority 'preempted_by_priority')
-                            $revokedPin = [ordered]@{ holder=$rH0; lease_id=[string](Prop $rd0.lease 'lease_id' ''); prior_fencing_token=[long](Prop $rd0.lease 'fencing_token' 0); priority=$rP0 }
+                            $rvk0 = Revoke-PinFenced $leasePath "$leasePath.oplock" $statePath $Holder $tq0 $Priority 'preempted_by_priority' $PARTIAL_GRACE_SEC
+                            $revokedPin = if ($null -ne $rvk0) { $rvk0 } else { [ordered]@{ holder=$rH0; lease_id=[string](Prop $rd0.lease 'lease_id' ''); prior_fencing_token=[long](Prop $rd0.lease 'fencing_token' 0); priority=$rP0 } }
                         }
                     }
                 }
@@ -816,9 +1053,24 @@ try {
                     $fencingToken = Mint-FencingToken $fencePath 0
                     $ext = [ordered]@{ fencing_token=$fencingToken; lease_kind=$Kind; priority=$Priority; revocable=$(if ($isPin) { $true } else { $false }); required_vram_mib=$(if ($RequiredVramMiB -ge 0) { $RequiredVramMiB } else { 0 }); revoked_by=$null }
                     if ($engagedR1b) { $ext['gpu_authority_epoch']=$fencingToken; $ext['resident_generation']=$(if([string]::IsNullOrWhiteSpace($ResidentGeneration)){$null}else{$ResidentGeneration}); $ext['owner_id']=$OwnerId }
+                    if ($engagedV4) {
+                        # ABA close: stamp the incarnation identities. A fresh grant mints a resident_instance_id
+                        # unless the caller pinned one (the exact process tree it will manage). usable=true (an
+                        # ordinary exec/pin lease is immediately usable; a NON-usable transition capability is only
+                        # produced by the two-phase transition path). Bump the durable state_version.
+                        $v4StateVer = Bump-StateVersion $statePath
+                        $v4ResInst = if (-not [string]::IsNullOrWhiteSpace($ResidentInstanceId)) { $ResidentInstanceId } else { New-ResidentInstanceId }
+                        $ext['owner_incarnation_id'] = $OwnerIncarnationId
+                        $ext['resident_instance_id'] = $v4ResInst
+                        $ext['state_version'] = $v4StateVer
+                        $ext['usable'] = $true
+                        $ext['request_id'] = $(if ([string]::IsNullOrWhiteSpace($RequestId)) { $null } else { $RequestId })
+                        $v4GrantResInst = $v4ResInst; $v4GrantStateVer = $v4StateVer
+                    }
                     [void](Set-LeaseExt $leasePath $leaseObj $ext)
                 } elseif ($acquired -and $alreadyHeld) {
                     $fencingToken = [long](Prop $leaseObj 'fencing_token' 0)
+                    if ($engagedV4) { $v4GrantResInst = [string](Prop $leaseObj 'resident_instance_id' ''); $v4GrantStateVer = [long](Prop $leaseObj 'state_version' 0) }
                 }
             }
 
@@ -862,6 +1114,15 @@ try {
                 $result['resident_generation'] = $(if ([string]::IsNullOrWhiteSpace($ResidentGeneration)) { $null } else { $ResidentGeneration })
                 $result['owner_id'] = $OwnerId
             }
+            if ($engagedV4) {
+                # ABA-closing incarnation identities (finding 1): the owner incarnation (per owner RESTART) + the
+                # resident_instance_id (per process tree, the target of destructive ops) + the durable state_version.
+                $result['owner_incarnation_id'] = $OwnerIncarnationId
+                $result['resident_instance_id'] = $(if ($acquired) { $v4GrantResInst } else { $null })
+                $result['state_version'] = $(if ($acquired) { $v4GrantStateVer } else { $null })
+                $result['usable'] = $(if ($acquired) { $true } else { $false })
+                $result['request_id'] = $(if ([string]::IsNullOrWhiteSpace($RequestId)) { $null } else { $RequestId })
+            }
             $normInputs = [ordered]@{ action='acquire'; resource=$Resource; holder=$Holder }
             if ($engagedNew) { $normInputs['kind'] = $Kind; if ($prioritySupplied) { $normInputs['priority'] = $Priority } }
             Write-Diag "acquire resource=$Resource acquired=$acquired reclaimed_stale=$reclaimedStale already_held=$alreadyHeld prepared=$prepared waited_ms=$waitedMs"
@@ -877,13 +1138,18 @@ try {
                 $curHolder = [string](Prop $read.lease 'holder' '')
                 $curToken = [long](Prop $read.lease 'fencing_token' 0)
                 $heldBy = $curHolder
+                $isFencedRel = (Has $read.lease 'fencing_token')
                 $idMatch = (-not [string]::IsNullOrWhiteSpace($LeaseId)) -and ($LeaseId -eq $curLid)
                 $holderMatch = [string]::IsNullOrWhiteSpace($LeaseId) -and ($Holder -eq $curHolder)
                 if (($idMatch -or $holderMatch) -and $fencingTokenSupplied -and ($FencingToken -ne $curToken)) {
                     # v0.2 CAS guard: a superseded holder (stale token) is FENCED OUT of releasing the current lease
                     $reason = 'fence_stale'
                 } elseif ($idMatch -or $holderMatch) {
-                    try { Remove-Item -LiteralPath $leasePath -Force; $released = $true } catch { $reason = 'delete_failed' }
+                    try {
+                        Remove-Item -LiteralPath $leasePath -Force; $released = $true
+                        # residency changed -> bump the durable state_version so waiters re-read (finding 14 / test K). Fenced leases only (plain v0.1 release stays byte-identical).
+                        if ($isFencedRel) { [void](Bump-StateVersion (Join-Path $LeaseDir (Get-StateFileName $Resource))) }
+                    } catch { $reason = 'delete_failed' }
                 } else { $reason = 'lease_mismatch' }
             }
             $result = [ordered]@{ action='release'; resource=$Resource; released=$released; reason=$reason; held_by=$heldBy; lease_dir=$LeaseDir }
@@ -892,6 +1158,8 @@ try {
         }
         'renew' {
             $leasePath = Join-Path $LeaseDir (Get-LeaseFileName $Resource)
+            $statePath = Join-Path $LeaseDir (Get-StateFileName $Resource)
+            $oplockPath = "$leasePath.oplock"
             $read = Read-LeaseFile $leasePath
             $renewed = $false; $reason = $null; $heldBy = $null; $newExp = $null; $renewCount = $null
             $curToken = $null; $revokedBy = $null
@@ -904,10 +1172,50 @@ try {
                 $curToken = [long](Prop $read.lease 'fencing_token' 0)
                 $revokedBy = Prop $read.lease 'revoked_by' $null
                 if ((-not [string]::IsNullOrWhiteSpace($LeaseId)) -and ($LeaseId -eq $curLid)) {
-                    if ($fencingTokenSupplied -and ($FencingToken -ne $curToken)) {
-                        $reason = 'fence_stale'   # a superseded holder cannot renew
+                    # ---- FENCED renew: serialize the read-modify-write under the OPLOCK against a concurrent revoke
+                    #      so a renewal can NEVER resurrect a revoked lease (test F). Re-read the freshest record
+                    #      inside the critical section; preserve the FULL identity ext; bump the durable state_version.
+                    if ($isFenced) {
+                        $got = $false
+                        for ($i = 0; $i -lt 200 -and -not $got; $i++) { if (Enter-OpLock $oplockPath $PARTIAL_GRACE_SEC) { $got = $true } else { Start-Sleep -Milliseconds 10 } }
+                        try {
+                            # FAIL-CLOSED: never do the read-modify-write without holding the oplock -- an unlocked
+                            # renew could clobber a concurrent revoke (resurrect it). A contended renew retries.
+                            if (-not $got) { $reason = 'renew_contended' }
+                            else {
+                            $fresh = Read-LeaseFile $leasePath
+                            if ($null -eq $fresh -or $fresh.partial) { $reason = 'lease_lost' }
+                            elseif ([string](Prop $fresh.lease 'lease_id' '') -ne $LeaseId) { $reason = 'lease_lost' }
+                            elseif (Test-LeaseExpired $fresh ([DateTime]::UtcNow)) { $reason = 'lease_lost' }
+                            else {
+                                $curToken  = [long](Prop $fresh.lease 'fencing_token' 0)
+                                $revokedBy = Prop $fresh.lease 'revoked_by' $null
+                                $heldBy    = [string](Prop $fresh.lease 'holder' '')
+                                if ($fencingTokenSupplied -and ($FencingToken -ne $curToken)) { $reason = 'fence_stale' }
+                                elseif ($null -ne $revokedBy) { $reason = 'revoked' }   # the revoke won the CAS -> authority LOST (never resurrected)
+                                else {
+                                    $nowR = [DateTime]::UtcNow; $newExpiresAt = $nowR.AddSeconds($TtlSeconds)
+                                    $prevCount = 0; try { $prevCount = [int](Prop $fresh.lease 'renew_count' 0) } catch { $prevCount = 0 }
+                                    $renewCount = $prevCount + 1
+                                    $acqAt = ConvertTo-Utc (Prop $fresh.lease 'acquired_at_utc' $null); if ($null -eq $acqAt) { $acqAt = $nowR }
+                                    $rExt = Get-LeaseExt $fresh.lease      # FULL ext (owner_id, resident_generation, incarnation, instance, usable, ...)
+                                    $rExt['revoked_by'] = $null
+                                    $rExt['state_version'] = (Bump-StateVersion $statePath)
+                                    $updated = New-LeaseObject $Resource $heldBy $LeaseId $acqAt $newExpiresAt $TtlSeconds $renewCount ([string](Prop $fresh.lease 'note' '')) $rExt
+                                    $tmp = "$leasePath.renew-$([Guid]::NewGuid().ToString('N').Substring(0,8)).tmp"
+                                    [System.IO.File]::WriteAllText($tmp, ($updated | ConvertTo-Json -Depth 6), $utf8)
+                                    try { [System.IO.File]::Move($tmp, $leasePath, $true); $renewed = $true; $newExp = $newExpiresAt.ToString('o') }
+                                    catch { Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue; $reason = 'renew_write_failed' }
+                                }
+                            }
+                            }
+                        } finally { if ($got) { Exit-OpLock $oplockPath } }
+                    }
+                    # ---- PLAIN v0.1 renew (no fencing surface -> no revoke can race it): byte-identical path ----
+                    elseif ($fencingTokenSupplied -and ($FencingToken -ne $curToken)) {
+                        $reason = 'fence_stale'
                     } elseif ($null -ne $revokedBy) {
-                        $reason = 'revoked'       # a higher-priority acquire revoked this pin -> authority LOST
+                        $reason = 'revoked'
                     } else {
                         $nowR = [DateTime]::UtcNow
                         $newExpiresAt = $nowR.AddSeconds($TtlSeconds)
@@ -915,19 +1223,7 @@ try {
                         $renewCount = $prevCount + 1
                         $acqAt = ConvertTo-Utc (Prop $read.lease 'acquired_at_utc' $null)
                         if ($null -eq $acqAt) { $acqAt = $nowR }
-                        # preserve the v0.2 ext fields (same fencing_token) on a fenced lease; byte-identical otherwise
-                        $rExt = $null
-                        if ($isFenced) {
-                            $rExt = [ordered]@{
-                                fencing_token     = $curToken
-                                lease_kind        = [string](Prop $read.lease 'lease_kind' 'exec')
-                                priority          = [int](Prop $read.lease 'priority' 0)
-                                revocable         = [bool](Prop $read.lease 'revocable' $false)
-                                required_vram_mib = [int](Prop $read.lease 'required_vram_mib' 0)
-                                revoked_by        = $null
-                            }
-                        }
-                        $updated = New-LeaseObject $Resource $heldBy $curLid $acqAt $newExpiresAt $TtlSeconds $renewCount ([string](Prop $read.lease 'note' '')) $rExt
+                        $updated = New-LeaseObject $Resource $heldBy $curLid $acqAt $newExpiresAt $TtlSeconds $renewCount ([string](Prop $read.lease 'note' '')) $null
                         $tmp = "$leasePath.renew-$([Guid]::NewGuid().ToString('N').Substring(0,8)).tmp"
                         [System.IO.File]::WriteAllText($tmp, ($updated | ConvertTo-Json -Depth 6), $utf8)
                         try {
@@ -980,15 +1276,16 @@ try {
             $leasePath = Join-Path $LeaseDir (Get-LeaseFileName $Resource)
             $fencePath = Join-Path $LeaseDir (Get-FenceFileName $Resource)
             $txnPath = Join-Path $LeaseDir (Get-TxnFileName $Resource)
+            $statePath = Join-Path $LeaseDir (Get-StateFileName $Resource)
             $checkReconcile = $(if ($doReconcile) { Reconcile-Txn $txnPath $fencePath $PARTIAL_GRACE_SEC } else { $null })
             $read = Read-LeaseFile $leasePath
             $nowC = [DateTime]::UtcNow
             if ($null -eq $read) {
                 $result = [ordered]@{ action='check'; resource=$Resource; exists=$false; held=$false; stale=$false; holder=$null; lease_id=$null; fencing_token=$null; lease_kind=$null; revocable=$null; revoked_by=$null; priority=$null; expires_at_utc=$null; seconds_remaining=$null; token_current=$(if ($fencingTokenSupplied) { $false } else { $null }); fence_status='not_held'; lease_dir=$LeaseDir }
-                if ($engagedR1b) { $result['gpu_authority_epoch']=$null; $result['exec_lease_id']=$null; $result['resident_generation']=$null; $result['owner_id']=$null; $result['owner_current']=$false; $result['generation_current']=$false; $result['authority_ok']=$false }
+                if ($engagedR1b) { $result['gpu_authority_epoch']=$null; $result['exec_lease_id']=$null; $result['resident_generation']=$null; $result['owner_id']=$null; $result['owner_current']=$false; $result['generation_current']=$false; if ($engagedV4) { $result['owner_incarnation_id']=$null; $result['resident_instance_id']=$null; $result['owner_incarnation_current']=$false; $result['resident_instance_current']=$false; $result['state_version']=$null; $result['current_state_version']=(Read-StateVersion $statePath); $result['state_version_current']=$false; $result['usable']=$false }; $result['authority_ok']=$false }
             } elseif ($read.partial) {
                 $result = [ordered]@{ action='check'; resource=$Resource; exists=$true; held=$true; stale=$false; holder='<writing>'; lease_id=$null; fencing_token=$null; lease_kind=$null; revocable=$null; revoked_by=$null; priority=$null; expires_at_utc=$null; seconds_remaining=$null; token_current=$(if ($fencingTokenSupplied) { $false } else { $null }); fence_status='writing'; lease_dir=$LeaseDir }
-                if ($engagedR1b) { $result['gpu_authority_epoch']=$null; $result['exec_lease_id']=$null; $result['resident_generation']=$null; $result['owner_id']=$null; $result['owner_current']=$false; $result['generation_current']=$false; $result['authority_ok']=$false }
+                if ($engagedR1b) { $result['gpu_authority_epoch']=$null; $result['exec_lease_id']=$null; $result['resident_generation']=$null; $result['owner_id']=$null; $result['owner_current']=$false; $result['generation_current']=$false; if ($engagedV4) { $result['owner_incarnation_id']=$null; $result['resident_instance_id']=$null; $result['owner_incarnation_current']=$false; $result['resident_instance_current']=$false; $result['state_version']=$null; $result['current_state_version']=(Read-StateVersion $statePath); $result['state_version_current']=$false; $result['usable']=$false }; $result['authority_ok']=$false }
             } else {
                 $stale = Test-LeaseExpired $read $nowC
                 $exp = ConvertTo-Utc (Prop $read.lease 'expires_at_utc' $null)
@@ -1030,12 +1327,137 @@ try {
                     $result['owner_id'] = $(if ([string]::IsNullOrWhiteSpace($rOwner)) { $null } else { $rOwner })
                     $result['owner_current'] = $ownerCur
                     $result['generation_current'] = $genCur
+                    if ($engagedV4) {
+                        # ---- ABA: fold the incarnation identities into the full-tuple assertion (finding 1) ----
+                        # A stale owner that RESTARTED with the same owner_id but a NEW owner_incarnation_id, or a
+                        # callback captured against the OLD resident_instance_id, is FENCED OUT here: incarnation /
+                        # instance / state_version each veto authority_ok when supplied and non-matching.
+                        $rOwnerInc = [string](Prop $read.lease 'owner_incarnation_id' '')
+                        $rResInst  = [string](Prop $read.lease 'resident_instance_id' '')
+                        $rUsable   = [bool](Prop $read.lease 'usable' $true)   # legacy leases (no field) count as usable
+                        $curStateVer = Read-StateVersion $statePath
+                        $incCur  = $(if ($ownerIncSupplied) { ($live -and ($OwnerIncarnationId -eq $rOwnerInc)) } else { $null })
+                        $instCur = $(if ($resInstSupplied)  { ($live -and ($ResidentInstanceId -eq $rResInst)) } else { $null })
+                        $svCur   = $(if ($stateVersionSupplied) { ($live -and ($StateVersion -eq [long]($rLeaseStateVer=[long](Prop $read.lease 'state_version' 0)))) } else { $null })
+                        if ($ownerIncSupplied)     { $authorityOk = ($authorityOk -and [bool]$incCur) }
+                        if ($resInstSupplied)      { $authorityOk = ($authorityOk -and [bool]$instCur) }
+                        if ($stateVersionSupplied) { $authorityOk = ($authorityOk -and [bool]$svCur) }
+                        # a NON-USABLE transition capability never confers ordinary exec authority (blocker 1)
+                        if (-not $rUsable) { $authorityOk = $false }
+                        $result['owner_incarnation_id'] = $(if ([string]::IsNullOrWhiteSpace($rOwnerInc)) { $null } else { $rOwnerInc })
+                        $result['resident_instance_id'] = $(if ([string]::IsNullOrWhiteSpace($rResInst)) { $null } else { $rResInst })
+                        $result['owner_incarnation_current'] = $incCur
+                        $result['resident_instance_current'] = $instCur
+                        $result['state_version'] = [long](Prop $read.lease 'state_version' 0)
+                        $result['current_state_version'] = $curStateVer
+                        $result['state_version_current'] = $svCur
+                        $result['usable'] = $rUsable
+                    }
                     $result['authority_ok'] = $authorityOk
                 }
             }
             if ($null -ne $checkReconcile) { $result['reconciled'] = $checkReconcile }
             $normInputs = [ordered]@{ action='check'; resource=$Resource }
             Write-Diag "check resource=$Resource exists=$($result.exists) fence_status=$($result.fence_status)"
+        }
+        'fence-op' {
+            # ---- v0.4 (R1b') target-fenced side-effect gate (blockers 4/8, finding 14; tests C/D) ----
+            # A captured external op (a stop/kill, a result publication, a manifest write, a lease release/renew, a
+            # health-fail, an idle-evict, a completion) presents its IMMUTABLE target -- captured at dispatch -- and
+            # res.lease answers, in ONE read, whether the op MAY proceed against the CURRENT live resident. The op
+            # MUST name an exact -ResidentInstanceId; "stop whatever currently serves this resource" is impossible.
+            # A stale target (wrong instance / epoch / exec_lease / state_version, or a superseded/revoked/expired
+            # resident) is REFUSED (fenced_op_ok:false). This is the authority the real supervisor consults BEFORE any
+            # destructive action -- the state-level recommit alone cannot un-kill a process, so the KILL is gated here.
+            $leasePath = Join-Path $LeaseDir (Get-LeaseFileName $Resource)
+            $statePath = Join-Path $LeaseDir (Get-StateFileName $Resource)
+            $read = Read-LeaseFile $leasePath
+            $nowF = [DateTime]::UtcNow
+            $staleF = $(if ($null -eq $read) { $true } else { Test-LeaseExpired $read $nowF })
+            $revokedByF = $(if ($null -ne $read -and -not $read.partial) { Prop $read.lease 'revoked_by' $null } else { $null })
+            $curStateVerF = Read-StateVersion $statePath
+            $opk = $(if ([string]::IsNullOrWhiteSpace($OpKind)) { 'stop' } else { $OpKind.ToLowerInvariant() })
+            $VALID_OPS = @('stop','result_publish','manifest_write','lease_release','lease_renew','health_fail','idle_evict','complete')
+            if ($VALID_OPS -notcontains $opk) { throw [PSCustomObject]@{ code='invalid_op_kind'; message="op_kind must be one of $($VALID_OPS -join '|') (got '$opk')"; retryable=$false } }
+            $fo = Test-FencedOp $read $staleF $revokedByF $ResidentInstanceId $FencingToken $fencingTokenSupplied $LeaseId (-not [string]::IsNullOrWhiteSpace($LeaseId)) $StateVersion $stateVersionSupplied $curStateVerF
+            $curInst = $(if ($null -ne $read -and -not $read.partial) { [string](Prop $read.lease 'resident_instance_id' '') } else { $null })
+            $result = [ordered]@{
+                action='fence-op'; resource=$Resource; op_kind=$opk
+                fenced_op_ok=[bool]$fo.ok; reason=[string]$fo.reason
+                target_resident_instance_id=$(if ([string]::IsNullOrWhiteSpace($ResidentInstanceId)) { $null } else { $ResidentInstanceId })
+                current_resident_instance_id=$(if ([string]::IsNullOrWhiteSpace($curInst)) { $null } else { $curInst })
+                current_epoch=$(if ($null -ne $read -and -not $read.partial) { [long](Prop $read.lease 'fencing_token' 0) } else { $null })
+                current_state_version=$curStateVerF
+                held=(-not $staleF); stale=$staleF; revoked=($null -ne $revokedByF); lease_dir=$LeaseDir
+            }
+            $normInputs = [ordered]@{ action='fence-op'; resource=$Resource; op_kind=$opk; target=$ResidentInstanceId }
+            Write-Diag "fence-op resource=$Resource op=$opk ok=$($fo.ok) reason=$($fo.reason) target=$ResidentInstanceId current=$curInst"
+        }
+        'commit' {
+            # ---- v0.4 (R1b') two-phase transition PHASE-2 (blocker 1): publish the started resident + issue the
+            #      FIRST usable exec lease ONLY after health. On -HealthFailed (partial-load OOM / admission fail),
+            #      terminate the EXACT tentative instance and publish/grant NOTHING -- fail-closed, GPU left empty
+            #      (a new scheduled acquisition is required; the old resident is NOT silently restored). Idempotent
+            #      on request_id: a lost commit response replays the SAME committed grant (test B). ----
+            $leasePath = Join-Path $LeaseDir (Get-LeaseFileName $Resource)
+            $fencePath = Join-Path $LeaseDir (Get-FenceFileName $Resource)
+            $txnPath   = Join-Path $LeaseDir (Get-TxnFileName $Resource)
+            $statePath = Join-Path $LeaseDir (Get-StateFileName $Resource)
+            $t = Read-Txn $txnPath
+            $committed=$false; $cmReason=$null; $cmLid=$null; $cmState='ABORTED'; $cmEpoch=$null; $cmInst=$null; $cmUsable=$false
+            if ($null -eq $t) { $cmReason='no_transition' }
+            else {
+                $tState=[string](Prop $t 'state' ''); $tId=[string](Prop $t 'txn_id' '')
+                $tEpoch=[long](Prop $t 'authority_epoch' 0); $tNewInst=[string](Prop $t 'new_resident_instance_id' ''); $tGrantLid=[string](Prop $t 'grant_lease_id' '')
+                $rd=Read-LeaseFile $leasePath
+                $leaseLive = ($null -ne $rd -and -not $rd.partial -and -not (Test-LeaseExpired $rd ([DateTime]::UtcNow)))
+                # idempotency: already COMMITTED to a usable grant that still lives -> replay the SAME commit (test B)
+                if ($tState -eq 'COMMITTED' -and $leaseLive -and ([string](Prop $rd.lease 'lease_id' '') -eq $tGrantLid) -and [bool](Prop $rd.lease 'usable' $true)) {
+                    $committed=$true; $cmReason='idempotent_replay'; $cmLid=$tGrantLid; $cmState='COMMITTED'; $cmEpoch=$tEpoch; $cmInst=[string](Prop $rd.lease 'resident_instance_id' ''); $cmUsable=$true
+                }
+                elseif (-not [string]::IsNullOrWhiteSpace($TransitionId) -and $TransitionId -ne $tId) { $cmReason='transition_id_mismatch' }
+                elseif ($tState -eq 'ABORTED') { $cmReason='transition_aborted' }
+                elseif (-not $leaseLive) { $cmReason='capability_lost' }
+                elseif ([string](Prop $rd.lease 'lease_id' '') -ne $tGrantLid) { $cmReason='capability_superseded' }
+                elseif ([string](Prop $rd.lease 'holder' '') -ne $Holder) { $cmReason='not_capability_holder' }
+                elseif ([bool](Prop $rd.lease 'usable' $true)) { $cmReason='already_usable' }   # single-shot lease is not a capability -> nothing to commit
+                elseif ($resInstSupplied -and ($ResidentInstanceId -ne [string](Prop $rd.lease 'resident_instance_id' ''))) { $cmReason='resident_instance_mismatch' }
+                else {
+                    $curEpoch=[long](Read-FenceCounter $fencePath)
+                    if ($curEpoch -ne $tEpoch) { $cmReason='superseded_during_transition' }   # a higher-priority seize won between phase 1 and 2
+                    elseif ($doHealthFail) {
+                        # fail-closed: drop the EXACT tentative instance's capability; publish/grant NOTHING.
+                        Remove-Item -LiteralPath $leasePath -Force -ErrorAction SilentlyContinue
+                        [void](Bump-StateVersion $statePath)
+                        $cmReason='health_failed'; $cmState='ABORTED'; $cmInst=$tNewInst
+                    } else {
+                        # HEALTHY_UNPUBLISHED -> COMMITTED: publish + flip the capability to a usable exec lease atomically.
+                        $l=$rd.lease
+                        $acq=ConvertTo-Utc (Prop $l 'acquired_at_utc' $null); if($null -eq $acq){$acq=[DateTime]::UtcNow}
+                        $expiresAt=[DateTime]::UtcNow.AddSeconds($TtlSeconds)
+                        $sv=Bump-StateVersion $statePath
+                        $ext=Get-LeaseExt $l; $ext['lease_kind']='exec'; $ext['usable']=$true; $ext['state_version']=$sv; $ext['health_receipt']=$(if([string]::IsNullOrWhiteSpace($HealthReceipt)){$null}else{$HealthReceipt}); $ext['revoked_by']=$null
+                        $o=New-LeaseObject $Resource $Holder ([string](Prop $l 'lease_id' '')) $acq $expiresAt $TtlSeconds ([int](Prop $l 'renew_count' 0)) ([string](Prop $l 'note' '')) $ext
+                        $bytes=$utf8.GetBytes(($o | ConvertTo-Json -Depth 6))
+                        if (Grant-LeaseAtomic $leasePath $bytes) { $committed=$true; $cmReason='committed'; $cmLid=[string](Prop $l 'lease_id' ''); $cmState='COMMITTED'; $cmEpoch=$tEpoch; $cmInst=$tNewInst; $cmUsable=$true }
+                        else { $cmReason='publish_failed' }
+                    }
+                    # persist the terminal journal state (idempotent-replayable)
+                    $r2=[ordered]@{}; foreach($p in $t.PSObject.Properties){ $r2[$p.Name]=$p.Value }
+                    $r2['state']=$cmState; $r2['usable']=$cmUsable; $r2['committed_utc']=([DateTime]::UtcNow.ToString('o'))
+                    if ($committed) { $r2['grant_lease_id']=$cmLid; $r2['last_error']=$null } else { $r2['last_error']=$cmReason }
+                    [void](Write-Txn $txnPath $r2)
+                }
+            }
+            $result=[ordered]@{
+                action='commit'; resource=$Resource; committed=$committed; transition_state=$cmState; reason=$cmReason
+                lease_id=$cmLid; exec_lease_id=$(if($committed -and $cmUsable){$cmLid}else{$null}); usable=$cmUsable
+                gpu_authority_epoch=$cmEpoch; resident_instance_id=$cmInst; owner_id=$OwnerId
+                transition_id=$(if([string]::IsNullOrWhiteSpace($TransitionId)){[string](Prop $t 'txn_id' '')}else{$TransitionId})
+                request_id=$(if([string]::IsNullOrWhiteSpace($RequestId)){$null}else{$RequestId}); lease_dir=$LeaseDir
+            }
+            $normInputs=[ordered]@{ action='commit'; resource=$Resource; transition_id=$TransitionId }
+            Write-Diag "commit resource=$Resource committed=$committed state=$cmState reason=$cmReason"
         }
         'list' {
             $nowLst = [DateTime]::UtcNow
