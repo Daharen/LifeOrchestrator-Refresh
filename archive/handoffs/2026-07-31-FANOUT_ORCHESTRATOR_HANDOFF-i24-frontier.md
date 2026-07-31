@@ -19,10 +19,10 @@ including the frontier lane (a human-couriered pack, not a driven session).
   (`d289ba9`) folded the i21 frontier red-team's **10 must-fixes** into the DEFAULT-OFF durable Job-Object
   supervisor + integrity layer + real evictor (MF10 partial; **MF1+2 per-resident suspended-create Job custody
   LIVE-PROVEN**), ADDITIVE + defaults byte-identical; 366 off-machine + 74 on-box green, res.lease 74/36/45
-  UNCHANGED, 0 orphans. **Finding 5 (durable Job-Object custody) is CLOSED/live-proven.** The i23 as-built supervisor red-team (pack `ff24d3a4`, vs HEAD `d289ba9`) has RETURNED -- **GATE = NO**
-  (D-0079): the i23 supervisor is NOT soak-ready. Default-ON is re-gated to an i24 deterministic-hardening wave
-  (9 P0/P1 fixes + 18 tests) -> trusted deployment config -> the #00.1 recovery driver -> an in-proc res.lease
-  client -> a grown soak; digest `research/2026-07-31-frontier-supervisor-asbuilt-redteam.md`.
+  UNCHANGED, 0 orphans. **Finding 5 (durable Job-Object custody) is CLOSED/live-proven.** An AS-BUILT supervisor
+  red-team pack (`ff24d3a4`, 10 files, vs HEAD `d289ba9`) was emitted for GPT-5.x -- **answer PENDING
+  `read-return`** (fold it when it returns; it governs any i24 hardening-follow-on -- the i19->i20 / i21->i23
+  analogue).
 - **Warm-pool default-ON now gates (D-0078) on ONLY (1) an in-proc `res.lease` client (the i21 ~6-9
   child-pwsh-spawns/call finding) and (2) a GROWN soak** (>=24h, >=1000 transitions, >=25-each of 5 fault
   classes + the 15 live tests + p99/max/handle-leak/lock-hold/unmanaged-pressure metrics; the full real-model
@@ -78,7 +78,7 @@ section 7).
 the trusted audit surface; the Governor's `-AutoRamp` is DEFAULT-ON (M0->M1->S0); the strong tier is Qwen3.5-9B
 Q5_K_M GPU-resident on b10092. The res.lease GPU-lease split is shipped, hardened, consumer-adopted +
 live-proven (i18-i21). The **warm pool + durable supervisor stay default-OFF**: after the i23 supervisor-hardening
-wave, default-ON is RE-GATED to a full i24 deterministic-hardening wave (D-0079; the as-built red-team returned GATE = NO -- see section 4 + `research/2026-07-31-frontier-supervisor-asbuilt-redteam.md`). **The
+wave, default-ON gates on an **in-proc `res.lease` client + a GROWN soak** (D-0078; finding 5 CLOSED). **The
 Phase C video spine front half is BUILT** (#32 media.decompose + #33 track.objects 0.2.0 stable + #34
 video.timeline 0.1.1, contract-proven end-to-end); `video.interpret` (pos 22), the live composition wave, and
 the DENSE-STREAM decision gate remain.
@@ -110,7 +110,7 @@ the DENSE-STREAM decision gate remain.
   done; MF8 #00.1 relaunch driver + MF10 ACL'd app-data/trusted-hash-manifest NAMED residuals); 366 off-machine
   + 74 on-box green; res.lease 74/36/45 UNCHANGED; defaults byte-identical; 0 orphans. **Finding 5 CLOSED.** An
   AS-BUILT supervisor red-team pack (`ff24d3a4`, vs `d289ba9`) was emitted for GPT-5.x -- answer PENDING.
-  default-ON is RE-GATED (D-0079): a full i24 deterministic-hardening wave (as-built red-team = GATE NO; see the digest) precedes it.
+  default-ON now gates on ONLY the in-proc res.lease client + a grown soak.
 
 Runtime paths: plans `.../30-orchestrate-fanout/runtime/plans/<plan_id>/` · artifacts `.../runtime/artifacts/<id>/`
 · leases `.../29-resource-lease/runtime/leases/`. Waves + ad-hoc commits share one counter; **the next wave is
@@ -126,11 +126,8 @@ Nicholas's directive: up to FOUR lanes per wave; any lane may be skipped. Every 
 - **Coding lane (CPU, >=1).** A broad-remit CPU worker in a DISTINCT module/area from the CPU lane. Lease git.
 - **Frontier-review lane (off-box, OPTIONAL).** NOT a Cowork worker: emit a frontier.bridge #31 `pack`
   (`{prompt, question?, paths?}`); Nicholas couriers it + pastes the answer back; run `read-return`, fold it. No
-  lease; fully parallel. **FOLDED (D-0079):** the i23 as-built supervisor red-team (pack `ff24d3a4`) RETURNED **GATE = NO** -- the i23
-  supervisor is NOT soak-ready (digest `research/2026-07-31-frontier-supervisor-asbuilt-redteam.md`): 9 P0/P1
-  must-fixes + 18 deterministic tests precede a gating soak. **PENDING NOW:** the whole-project-DIRECTION pack
-  (`817e52e9`, emitted this session at Nicholas's directive; the full core-docs + both supervisor digests) --
-  `read-return` it when Nicholas returns the answer, fold into a direction digest.
+  lease; fully parallel. **PENDING NOW:** the i23 as-built supervisor red-team answer (pack `ff24d3a4`) --
+  `read-return` it when Nicholas returns it, fold into a digest; it may open an i24 hardening-follow-on.
 
 **Clamps.** <=1 GPU worker always. **1 GPU + 2 CPU = MaxParallel 3** is the validated ceiling. The `git` lease
 serialises commits; `docs:[]` on all workers -> doc contention 0. Persistent llama-servers MUST launch DETACHED

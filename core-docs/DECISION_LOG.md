@@ -1272,3 +1272,48 @@ alternatives · consequences · affects · state (provisional | locked) · revis
 - **state:** locked. · **revisit-if:** the as-built red-team answer returns (fold it; may open an i24
   hardening-follow-on); the in-proc res.lease client + grown soak complete (THEN flip default-ON); the MF8 #00.1
   relaunch driver or the MF10 app-data/trust-root provisioning is scheduled.
+
+## D-0079 -- 2026-07-31 -- Fan-out iteration 24 (frontier-review lane): the as-built supervisor red-team returned GATE = NO; warm-pool default-ON re-gated; whole-project-direction pack emitted
+
+- **decision:** Run the iteration-24 FRONTIER lane per Nicholas's directive: (a) `read-return` + fold the
+  AS-BUILT supervisor red-team answer the i23 wave emitted (`frontier.bridge` pack `ff24d3a4`, verified vs
+  shipped HEAD `d289ba9`), and (b) emit a NEW whole-project-DIRECTION frontier pack so Nicholas can evaluate the
+  project's path / direction / goals with a frontier model. No GPU/CPU/coding BUILD lanes this session -- held
+  pending Nicholas's direction discussion.
+- **the answer (GPT-5.x; captured/valid, `pack_id_match`, sha256 `eb9daafb...`; digest
+  `research/2026-07-31-frontier-supervisor-asbuilt-redteam.md`):** GATE = **NO**. `d289ba9` does NOT reduce
+  warm-pool default-ON to a client + soak only. The suspended-create launch primitive (MF1/MF2) is materially
+  improved and several primitives are real, but deterministic CUSTODY, FENCING, TRANSITION, LIVENESS, and
+  RECOVERY defects remain. 9 prioritized must-fixes: P0.1 durable mandatory authority-tuple IPC binding (blank
+  generation authorizes mutations; under-fenced handlers; process-local replay guard written after the side
+  effect; client accepts any `ok`); P0.2 fail-closed Job custody (`-1` count read as zero-members; `PrepareGpu`
+  never queries the Job; require a state-signed eviction receipt); P0.3 delete every fail-open non-split
+  transition (ignored CAS + manifest cleared after a failed evict; `PrepareGpu` TOCTOU; unknown VRAM grants);
+  P0.4 alive-supervisor fallback + off-thread heartbeat, THEN build #00.1 (MF8 recovery driver = hard blocker
+  before the soak); P0.5 fail-closed exclusive boot reconcile; P0.6 scope the singleton to the physical GPU/pool
+  authority; P0.7 short pool lock, no lockless degradation; P1.8 mandatory trusted-hash provisioning (MF10) +
+  app-data relocation before the production-config soak; P1.9 revalidate identity before any forced supervisor
+  kill -- plus 18 deterministic tests to add before the soak.
+- **consequence (re-gate; revises the D-0078 conclusion):** warm-pool default-ON now gates on **i24
+  deterministic hardening (P0.1-P0.7 + 18 tests) -> mandatory trusted deployment config (P1.8) -> the #00.1
+  recovery driver (P0.4/MF8) -> an in-proc `res.lease` client -> a grown soak -> default-ON**. The in-proc
+  client is DEMOTED to a perf/integration improvement (it cannot repair the IPC authority gap). MF8 (recovery
+  driver) + MF10 (trusted-hash provisioning) move from D-0078 "named residuals" to HARD BLOCKERS before the
+  soak. Finding 5 stays live-proven for the launch primitive; custody ACCOUNTING (P0.2) is not yet fail-closed.
+  The classic detached-warm (D-0057) path stays the trusted default and is unaffected.
+- **direction pack:** a whole-project-direction `frontier.bridge` pack was emitted (pack `817e52e9`, 26 files /
+  ~721 KB: the full core-docs brain + all 12 research digests incl. both supervisor red-teams) asking a frontier
+  model to evaluate the project's path/direction/goals as a whole -- answer PENDING `read-return`.
+- **alternatives:** accept the i23 gate (client + soak only) and proceed to the soak (REJECTED: the as-built
+  review is the standing pre-soak design gate and it returned NO with concrete code defects); fold silently
+  without a direction pack (REJECTED: Nicholas asked for the direction pack); run i24 build lanes now (DEFERRED:
+  held for the direction discussion).
+- **affects:** `CURRENT_STATE.md` (re-gate), `FANOUT_ORCHESTRATOR_HANDOFF.md` (frontier section + gate + box
+  state; snapshot archived), `research/2026-07-31-frontier-supervisor-asbuilt-redteam.md` (NEW digest),
+  `modules/31-frontier-bridge/runtime/artifacts/ff24d3a4...` (captured answer) + the `817e52e9` direction pack.
+  Named-not-updated this session: `MODULE_ROADMAP.md` warm-pool gate note (defers to CURRENT_STATE; folds at the
+  next full close). CURRENT_STATE + MODULE_ROADMAP + FANOUT_ORCHESTRATOR_HANDOFF remain over budget -- the slim
+  pass is still a named unit.
+- **state:** locked. · **revisit-if:** the direction-pack answer returns (fold it into a direction digest);
+  Nicholas picks the i24 lanes (the supervisor-hardening wave, freeze the durable supervisor + keep classic
+  detached-warm as default, or a different lane); any P0/P1 must-fix ships (update the gate).
