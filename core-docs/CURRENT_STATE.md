@@ -21,7 +21,7 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
 - **ACTIVE = the fan-out loop. Iterations 1–17 are DONE** (D-0055..D-0070) via `orchestrate.fanout` #30 over
   `res.lease` #29, workers hand-dispatched into fresh Cowork sessions. Ledger:
   **`FANOUT_ORCHESTRATOR_HANDOFF.md`**; rationale: **DECISION_LOG D-0055..D-0070**. Do not re-narrate here.
-- **NEXT = iteration 18** (D-0070); iteration 17 (plan `fo-17-3a115347`, 3/3 on-box + a folded frontier design review)
+- **NEXT = iteration 21** (the R1b CONSUMER wave; D-0075. Iterations 1-20 DONE, D-0055..D-0075); iteration 17 (plan `fo-17-3a115347`, 3/3 on-box + a folded frontier design review)
   shipped the FIRST generator upgrade — an **SD 3.5 Medium fp16 quality tier** in `gen.image` #23 (legacy SD1.5 kept
   default) + a CPU portability follow-on (config-resolvable **Python interpreter path** for `image.util` #15 +
   `detect.objects` #16) + the NEW module #33 `track.objects` (Phase C video position 20). The 4-lane model: **1 GPU worker (HARD-CLAMPED <=1/wave) + 1 CPU + 1 broad coding + 1
@@ -30,7 +30,7 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
   **`FANOUT_ORCHESTRATOR_HANDOFF.md`**.
 - **Hard boundary (D-0051, non-negotiable):** the orchestrator NEVER drives another AI session — including the
   frontier lane, a human-couriered pack (`frontier.bridge` #31).
-- Repo HEAD at last mirror: the **i17 close-out docs commit** (D-0070, `master`) — confirm live
+- Repo HEAD at last mirror: the **i20 close-out docs commit** (D-0075, `master`) — confirm live
   with `git log -1` (read-only over the mount is fine).
 
 ## Adaptive Resource Governor (agent.local #21)
@@ -103,7 +103,7 @@ Detail + follow-ons per module: `MODULE_ROADMAP.md`; producer status: `REVIEW_QU
 registry facts: `TOOL_MODEL_REGISTRY.md`. Roster (all MVP-complete unless noted):
 
 - **Infra:** #0 exec.bootstrap (+ the `dev.ship` job-runner, D-0048) · #00.1 exec.watchdog · #1
-  skill.bootstrap (contract v0.2) · #29 res.lease (gpu/git/doc leases; consumer trio complete; **v0.2.0 R1a lease-split keystone i18** -- fencing_token + exec/revocable residency_pin split + prepared-handoff mock-evictor + lock-order rejection; findings 13/14 primitive landed, OPEN pending R1b) · #30
+  skill.bootstrap (contract v0.2) · #29 res.lease (gpu/git/doc leases; consumer trio complete; **v0.2.0 R1a (i18) -> v0.3.0 R1b (i19) -> v0.4.0 R1b' primitive hardening (i20)** -- fencing/three-identity fencing + exec/revocable residency_pin split + incarnation ids (owner_incarnation_id/resident_instance_id) + exec_lease UUID + two-phase transition-capability (no grant-before-ready) + target-fenced `fence-op` + idempotent saga journal + lock-order rejection; findings 13/14 primitive HARDENED, still OPEN pending the R1b CONSUMER wave) · #30
   orchestrate.fanout · #31 frontier.bridge (`pack` takes `{prompt, files}` — NOT `{task,...}`, D-0057).
 - **Observation/UIA:** #2 fs.observer · #3 proc.observer · #4 uia.inspector · #5 uia.actor · #6 capture.screen.
 - **Model core:** #7 model.gateway (detached warm server D-0057; warm pool Stage-1.1 hardened + durable supervisor default-OFF, D-0068/D-0069) · #8 classify.batch · #9 review.processor ·
@@ -244,7 +244,7 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 | #26 agent.coding | not built (designed, D-0037) | — | 07-26 |
 | #27 route.tools | 33/33 | `e444851` | 07-28 |
 | #28 fs.manage | 21/21 off-machine (on-target verify `m29-verify-001` 25/25) | `m29-after-003` | 07-26 |
-| #29 res.lease | 74/74 baseline + 36/36 v0.3 adversarial `-Live` (v0.3.0 R1b primitive: three-identity fencing + scheduler-owned atomic transition + adversarial mock evictor) | `2d45ffe` | 07-30 |
+| #29 res.lease | 74/74 baseline + 36/36 v0.3 + 45/45 v0.4 adversarial `-Live` (v0.4.0 R1b' primitive hardening: incarnation ids + exec_lease UUID + two-phase transition-capability + target-fenced `fence-op` + idempotent saga journal + oplock renew + durable state_version; 0 regression) | `f6df675` | 07-31 |
 | #30 orchestrate.fanout | 71/71 `-Live` | `2afd5de` | 07-28 |
 | #31 frontier.bridge | 65/65 + hardened return-capture | `f52f21d`/`b17a945` | 07-28 |
 | #32 media.decompose | 76/76 cloud + 76/76 `-Live` | `5026e2c` | 07-30 |
@@ -334,7 +334,7 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
   i16 (`cc296fc`) added the **DURABLE Job-Object gateway supervisor** (`Start-GatewaySupervisor.ps1` +
   `lib/Supervisor.psm1`, `-UseSupervisor`): resident + Job-Object tree survive ACROSS invocations — **finding 5
   durable = CLOSED** (228/228 off-machine + live tree-reap / two-invocation reuse / 3B->9B swap / 0 orphans).
-  DEFAULT-OFF. i18 shipped the res.lease fencing PRIMITIVE (R1a `e701328`, v0.2.0); per the folded frontier review findings 13/14 stay OPEN until **R1b** (the PoolManager/governor consumer + the live-GPU swap/eviction proof), THEN a soak. Classic + D-0057 warm paths are the
+  DEFAULT-OFF. the res.lease fencing PRIMITIVE shipped + HARDENED across R1a `e701328` v0.2.0 (i18) -> R1b `2d45ffe` v0.3.0 (i19) -> R1b' `f6df675` v0.4.0 (i20, red-team-driven: incarnation ids + two-phase transition-capability + target-fenced side effects + idempotent saga journal; 45/45 adversarial); per the folded frontier reviews findings 1/13/14 stay OPEN until the **R1b CONSUMER wave** (#7 PoolManager + #21 governor adoption + the real evictor + the live-GPU swap/eviction proof), THEN a soak. Classic + D-0057 warm paths are the
   trusted default. Detail: `WARM_POOL_DESIGN.md` §10.
 - **SD 3.5 Medium fp16 is NOT a clean 11 GB VRAM fit (i17, D-0070).** With `enable_model_cpu_offload` + VAE tiling the
   torch VRAM peak is ~12.06 GB — the T5-XXL fp16 spike overflows the 11 GB 2080 Ti and leans on the NVIDIA driver
@@ -378,17 +378,17 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
   #21 should CONSUME that schema. Deepest open Q: sparse `media.decompose` keyframes may lack enough continuity for
   identity — the eventual design may need a dense low-res tracking stream distinct from sparse semantic keyframes.
 - **Warm-pool default-ON gate (D-0069):** durable supervisor SHIPPED (finding 5 CLOSED); default-ON now awaits only
-  a **soak** + the **res.lease fencing wave** (13/14, single-worker). exec.watchdog #00.1 -> supervisor relaunch is
+  the **R1b CONSUMER wave** (#7/#21 + the real evictor + the live-GPU proof; the res.lease primitive is HARDENED through R1b' 0.4.0 i20) + a **soak**. exec.watchdog #00.1 -> supervisor relaunch is
   NAMED (not built).
 
 ## Next expected action
 
-**Run iteration 20 (R1b')** per **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4 (which owns the candidate menu). i18 shipped **R1a** (res.lease 0.2.0 lease-split keystone); the top follow-on is **R1b** -- wire the split into `model.gateway` #7 PoolManager + `agent.local` #21 governor + the live-GPU swap/eviction proof (findings 13/14 close THERE, not at R1a; frontier hardening in `research/2026-07-30-work-order-gpu-lease-split.md`). Scope
+**Run iteration 21 (the R1b CONSUMER wave)** per **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4 (which owns the candidate menu). The res.lease #29 primitive is now shipped + hardened (R1a 0.2.0 i18 -> R1b 0.3.0 i19 -> R1b' 0.4.0 i20, red-team-driven; 74/74 + 36/36 + 45/45). The top follow-on is the **R1b CONSUMER wave** (GPU, single-worker) -- wire the split into `model.gateway` #7 PoolManager + `agent.local` #21 governor (behind `-UsePoolLeaseSplit`/`-SplitLease`, default-off) + the real nvidia-smi evictor (`-EvictorMode command`) + the live-GPU 3B<->9B swap / pin-revocation / prepared-eviction proof + the live-only tests; ONLY THERE do findings 1/13/14 CLOSE (then a soak, then warm-pool default-ON). Scope
 up to 4 lanes (1 GPU + 1 CPU + 1 coding + optional frontier) -> `plan` at `MaxParallel 3` -> confirm the
 preflight -> relay prompts (+ any frontier pack) as FILES -> `status` -> `handoff` -> fold + mirror the
 core-docs under the git lease.
 
-Outstanding: **(1) R1b** (the res.lease-split consumer wiring in #7/#21 + the live-GPU proof; findings 13/14 close there) then warm-pool default-ON (R1b + a soak); the baton-pass DIRECTION (R1b->ABA proof->soak->R2->#26) is **Nicholas's explicit call** (contradicts the D-0050 spine, trajectory review §7);
+Outstanding: **(1) the R1b CONSUMER wave** (the res.lease-split consumer wiring in #7/#21 + the real evictor + the live-GPU proof; findings 1/13/14 close there -- the primitive is hardened through R1b' 0.4.0) then warm-pool default-ON (+ a soak); the baton-pass DIRECTION (R1b->ABA proof->soak->R2->#26) is **Nicholas's explicit call** (contradicts the D-0050 spine, trajectory review §7);
 **(2)** the res.lease fencing infra wave (13/14, single-worker); **(3)** continue the Phase C video spine (#32+#33
 done -> video.timeline #21 + video.interpret #22); **(3b)** the `track.objects` #33 refinement wave (folded frontier
 review); **(4)** generator upgrades (SD3.5 image DONE; Z-Image / music / video / audio remain); **(5)** widget-03 GPU
@@ -396,5 +396,5 @@ live-GUI pass; **(6)** portability follow-ons (interpreter #15/#16 DONE; pwsh-pa
 
 ---
 
-**Last updated:** 2026-07-30 — fan-out iteration 19 close-out (D-0073): R1b res.lease #29 GPU-lease-split PRIMITIVE shipped (v0.3.0, `2d45ffe`) + folded frontier concurrency/safety red-team -> i20 = R1b' primitive hardening (findings 1/13/14 stay OPEN).
+**Last updated:** 2026-07-30 — fan-out iteration 20 close-out (D-0075): R1b' res.lease #29 primitive hardening SHIPPED (v0.4.0, `f6df675`; red-team-driven: incarnation ids + two-phase transition-capability + target-fenced side effects + idempotent saga journal + adversarial matrix A-K 45/45; 0 regression). findings 1/13/14 STAY OPEN -> the R1b CONSUMER wave (#7/#21 + real evictor + live-GPU proof) closes them.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

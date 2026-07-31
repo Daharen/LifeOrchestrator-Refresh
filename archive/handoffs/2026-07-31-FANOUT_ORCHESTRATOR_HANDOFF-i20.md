@@ -12,7 +12,7 @@ human-dispatched, including the frontier lane (a human-couriered pack, not a dri
 
 ## 0. TL;DR
 
-- Read section 2 (orient + verify the box), then run **iteration 21** (section 4) -- the R1b CONSUMER wave (GPU, single-worker). Iterations 1-20 are DONE +
+- Read section 2 (orient + verify the box), then run **iteration 19** (section 4). Iterations 1-18 are DONE +
   live-confirmed (ledger in section 3; rationale D-0055..D-0070). The 4-lane wave model is VALIDATED (up to 1 GPU
   + 1 CPU + 1 coding + 1 off-box frontier at MaxParallel 3; any lane may be skipped -- i17 ran 3 on-box lanes + a
   folded frontier design review).
@@ -84,14 +84,13 @@ Generator leads for #22-#25 are IN; the FIRST upgrade -- SD 3.5 Medium image tie
 - i17 `fo-17-3a115347` (D-0070): **3-lane wave, 3/3 on-box + a folded frontier DESIGN review.** GPU FIRST generator upgrade -- **SD 3.5 Medium fp16 tier** in `gen.image` #23 `77f1628`+`980dd6d` (`-Tier sd35`; Diffusers-native, SD1.5 kept default; ~12 GB torch peak = NOT a clean 11 GB fit, sequential-offload ladder fallback; 50/50 mock + Module 7 42/42 x2); CPU interpreter-path shim into `image.util` #15 + `detect.objects` #16 `58870fb` (#15 54/54, #16 40/44 live, ops/setup 161/175); coding NEW module **#33 `track.objects`** `3264dd5` (deterministic greedy-IoU tracker, Phase C video #20; 79/79 + 79/79); frontier GPT-5.x tracker DESIGN review (pack `794dbdfe`) -> `research/2026-07-30-track-objects-design-review.md` (greedy-IoU = BASELINE; defines the stable-identity tracker + the #21 schema). MaxParallel 3, 0 conflicts, 0 orphans.
 - i18 `fo-18-c2d73598` (D-0072): a SINGLE-WORKER core-infra wave -- **R1a**, the res.lease #29 GPU-lease-split KEYSTONE at the PRIMITIVE layer (`e701328`, res.lease 0.2.0: a monotonic `fencing_token` + CAS check/validate; the `exec` vs revocable `residency_pin` split with priority-revocation; a prepared-handoff/evict-before-grant PROTOCOL with a `none`/`mock`/`command` evictor seam; lock-order-inversion rejection + `-AllowLockOrder`; additive/default-off; 74/74). The worker built it but a device-bridge collapse cut off its dev.ship+report -> the orchestrator VERIFIED (74/74) + shipped it. Folded off-box frontier direction review (pack `42ad8308` -> `research/2026-07-30-frontier-review-self-tasking-orchestration.md`): R1a-primitive / R1b-consumer split is SOUND but PROVISIONAL -- **findings 1/13/14 close at R1b, NOT R1a**; R1b needs three-identity fencing (gpu_authority_epoch / resident_generation / exec_lease_id) + one atomic scheduler-owned transition + an adversarial mock + WDDM headroom discipline; R4 -> an ABA proof. #7/#21 consumers + the real evictor + the live-GPU proof = **R1b** (deferred).
 - i19 `fo-19-3aa34fe9` (D-0073): a single-worker wave -- the **R1b PRIMITIVE** layer (res.lease 0.3.0, `2d45ffe`; three-identity fencing `gpu_authority_epoch`/`resident_generation`/`exec_lease_id` + the scheduler-owned atomic `-Transition` + an adversarial mock evictor; 74/74 baseline 0-regression + 36/36 adversarial). Worker took the fallback -- #7/#21 consumers + the real evictor + the live-GPU proof did NOT ship. A folded frontier concurrency/safety red-team (pack `b823d9db`) GREW the remainder: the identities are necessary-but-insufficient + the transition is unsafe-as-ordered (grants an ordinary lease before the new resident is healthy/published; side effects must be fenced AT THE TARGET) -> **i20 = R1b'** (primitive hardening: incarnation ids + transition-capability + target-fenced callback CAS + idempotent saga journal + Job-Object contract + adversarial matrix A-K, single-worker CPU). #7/#21 consumers + live proof = a later wave; **findings 1/13/14 stay OPEN.**
-- i20 `fo-20-a28f65da` (D-0075): a single-worker CPU wave -- the **R1b' PRIMITIVE HARDENING** (res.lease 0.4.0, `f6df675`; red-team-driven, folding the i19 concurrency/safety red-team pack `b823d9db`): incarnation ids (`owner_incarnation_id`/`resident_instance_id` + `exec_lease_id` as a never-reused UUID -> closes ABA); the hand-off transition re-cast as a two-phase durable saga (the new server starts under a scheduler-only transition capability, NOT an ordinary exec lease; the first usable exec lease publishes only AFTER health = no grant-before-ready); target-fenced side effects (`-Action fence-op` refuses a stale stop/kill/publish that names the wrong `resident_instance_id`); an idempotent saga journal + commit-response idempotency; an oplock-serialized renew that cannot resurrect a revoked lease; a durable per-resource `state_version` for waiters; the off-machine adversarial matrix A-K 45/45. 74/74 baseline + 36/36 v0.3 + 45/45 v0.4, 0 regression, additive/default-off/backward-compatible. The primitive is now SAFE to build on; **#7/#21 consumer adoption + the real evictor + the live-GPU proof = the R1b CONSUMER wave (i21); findings 1/13/14 STAY OPEN until then.**
 
 Runtime paths: plans `.../30-orchestrate-fanout/runtime/plans/<plan_id>/` · artifacts
 `.../runtime/artifacts/<invocation_id>/` · leases `.../29-resource-lease/runtime/leases/`.
 
-Waves + ad-hoc commits share one counter; **the next wave is iteration 21 -- the R1b CONSUMER wave (i20 shipped the R1b' primitive hardening `f6df675`, res.lease 0.4.0).**
+Waves + ad-hoc commits share one counter; **the next wave is iteration 20 (R1b'; i19 shipped the R1b primitive `2d45ffe`).**
 
-## 4. Current frontier: iteration 21 -- the R1b CONSUMER wave, then back to the 4-lane model (validated at i14-i17, D-0067..D-0070)
+## 4. Current frontier: iteration 18 -- the 4-lane wave (validated at i14-i17, D-0067..D-0070)
 
 Nicholas's directive: up to FOUR lanes per wave; any lane may be skipped (i16 skipped frontier; i17 ran all four). Every lane is
 human-dispatched.
@@ -249,9 +248,7 @@ F: is reached natively by the Windows executor, not by the session. Machine prer
 the executor process running (`ops/start-executor.bat` or the watchdog), heartbeat fresh + `degraded:false`.
 Computer-use (Task Manager) is only for out-of-band wedge recovery.
 
-## 11. Box state at handoff (2026-07-31, iteration 20 close-out, D-0075)
-
-**i18-i20 update (authoritative = section 3 ledger + CURRENT_STATE):** i18 shipped R1a (res.lease 0.2.0, `e701328`), i19 the R1b primitive (0.3.0, `2d45ffe`), i20 the R1b' primitive hardening (0.4.0, `f6df675`; red-team-driven, 74/74 + 36/36 + 45/45, 0 regression). HEAD = the D-0075 i20 close-out docs commit (`master`; confirm `git log -1`). The res.lease primitive is now hardened + safe to build on; **findings 1/13/14 STAY OPEN** -> they close at the **R1b CONSUMER wave** (i21, GPU single-worker: #7 PoolManager + #21 governor adoption + the real nvidia-smi evictor + the live-GPU swap/eviction proof), then a soak, then warm-pool default-ON. The paragraphs below predate i18 and are retained as history.
+## 11. Box state at handoff (2026-07-30, iteration 18 close-out, D-0072)
 
 Iterations done through 17; i17 was a clean 3-lane wave (3/3 on-box) + a folded off-box frontier design review. No
 res.lease held; heartbeat `degraded:false`; post-wave recon confirmed 0 orphaned `llama-server`/python and
@@ -263,4 +260,4 @@ durable = CLOSED.** The **Phase C video spine is UNDERWAY** -- #32 `media.decomp
 (next: `video.timeline` #21 + `video.interpret` #22; the i17 frontier review defines the track schema #21 must
 consume + the track.objects refinement roadmap). **First generator upgrade SHIPPED:** SD 3.5 Medium fp16 image tier
 in `gen.image` #23 (opt-in `-Tier sd35`; NOT a clean 11 GB fit, ~12 GB torch peak). PENDING human live-GUI confirm:
-the widget-03 `model.gateway` GPU pass (D-0060). (This section's body predates i18; see the i18-i20 update at the top of section 11 + section 3's ledger. Start at section 2, then run iteration 21 -- the R1b CONSUMER wave.)
+the widget-03 `model.gateway` GPU pass (D-0060). **Start at section 2, then run iteration 18 (section 4).**
