@@ -12,6 +12,11 @@
   (-IouThreshold / -MaxAge / -MinScore / -Classes), every error path, -InputsJson inline frames, an AST
   parse of the shipped .ps1 files, and the Module 1 wrapper.
 
+  0.2.0 NOTE: skill 0.2.0 makes the new STABLE tracker the DEFAULT (-Mode stable) and retains this
+  baseline byte-identical behind -Mode greedy. This suite IS the greedy regression oracle, so every
+  tracking invocation below pins -Mode greedy (the assertion set is unchanged from 0.1.0: 79 checks).
+  The stable tracker has its own suites: Invoke-TrackObjectsStableTests.ps1 + Invoke-TrackObjectsProbe.ps1.
+
   -PwshPath <pwsh>  : the interpreter used to invoke the skill + the generator. Passed through explicitly.
   -Live             : informational banner only (the assertions are identical in both modes).
 #>
@@ -81,7 +86,7 @@ try {
     }
 
     # ================= combined scenario: every lifecycle case =================
-    $sTxt = RunEntry @('-InputFile', $fx.scenario, '-ArtifactRoot', $artRoot)
+    $sTxt = RunEntry @('-InputFile', $fx.scenario, '-Mode', 'greedy', '-ArtifactRoot', $artRoot)
     Check 'scenario exit 0' ($script:code -eq 0)
     $ev = Test-SkillResultEnvelope -Json $sTxt
     Check 'scenario envelope validates' ([bool]$ev.valid)
@@ -124,52 +129,52 @@ try {
 
     # ================= targeted fixtures =================
     # crossing: two same-class objects, paths cross, identities stay separate -> 2 full tracks
-    $cr = (RunEntry @('-InputFile', $fx.crossing, '-ArtifactRoot', $artRoot)) | ConvertFrom-Json
+    $cr = (RunEntry @('-InputFile', $fx.crossing, '-Mode', 'greedy', '-ArtifactRoot', $artRoot)) | ConvertFrom-Json
     Check 'crossing 2 tracks both len 6' ([int]$cr.result.summary.track_count -eq 2 -and (@($cr.result.tracks | Where-Object { [int]$_.length -eq 6 }).Count -eq 2))
     Check 'crossing 0 deaths' ([int]$cr.result.summary.deaths -eq 0)
 
     # occlusion: one track, revived across the 1-frame gap
-    $oc = (RunEntry @('-InputFile', $fx.occlusion, '-ArtifactRoot', $artRoot)) | ConvertFrom-Json
+    $oc = (RunEntry @('-InputFile', $fx.occlusion, '-Mode', 'greedy', '-ArtifactRoot', $artRoot)) | ConvertFrom-Json
     Check 'occlusion 1 track' ([int]$oc.result.summary.track_count -eq 1)
     Check 'occlusion track frames skip gap' ((Frames (@($oc.result.tracks)[0])) -eq '0,1,3,4,5')
 
     # occlusion with MaxAge 0: no coasting -> the gap splits it into 2 tracks
-    $oc0 = (RunEntry @('-InputFile', $fx.occlusion, '-MaxAge', '0', '-ArtifactRoot', $artRoot)) | ConvertFrom-Json
+    $oc0 = (RunEntry @('-InputFile', $fx.occlusion, '-Mode', 'greedy', '-MaxAge', '0', '-ArtifactRoot', $artRoot)) | ConvertFrom-Json
     Check 'occlusion MaxAge 0 splits into 2 tracks' ([int]$oc0.result.summary.track_count -eq 2)
     Check 'occlusion MaxAge 0 has a death' ([int]$oc0.result.summary.deaths -ge 1)
 
     # birth mid-sequence: a second track first appears at frame 3
-    $bi = (RunEntry @('-InputFile', $fx.birth, '-ArtifactRoot', $artRoot)) | ConvertFrom-Json
+    $bi = (RunEntry @('-InputFile', $fx.birth, '-Mode', 'greedy', '-ArtifactRoot', $artRoot)) | ConvertFrom-Json
     Check 'birth 2 tracks' ([int]$bi.result.summary.track_count -eq 2)
     $biNew = @($bi.result.tracks | Where-Object { [int]$_.first_frame -eq 3 })
     Check 'birth new track starts at frame 3' ($biNew.Count -eq 1)
 
     # death + rebirth: gap > max_age(2) ages out the first track; reappearance is a NEW id
-    $de = (RunEntry @('-InputFile', $fx.death, '-ArtifactRoot', $artRoot)) | ConvertFrom-Json
+    $de = (RunEntry @('-InputFile', $fx.death, '-Mode', 'greedy', '-ArtifactRoot', $artRoot)) | ConvertFrom-Json
     Check 'death 2 tracks (aged out -> new id)' ([int]$de.result.summary.track_count -eq 2)
     Check 'death 1 death counted' ([int]$de.result.summary.deaths -eq 1)
     Check 'death first track aged_out' ((@($de.result.tracks | Where-Object { $_.aged_out -eq $true }).Count) -eq 1)
 
     # multiclass: identical box, different class -> per-class must NOT merge
-    $mc = (RunEntry @('-InputFile', $fx.multiclass, '-ArtifactRoot', $artRoot)) | ConvertFrom-Json
+    $mc = (RunEntry @('-InputFile', $fx.multiclass, '-Mode', 'greedy', '-ArtifactRoot', $artRoot)) | ConvertFrom-Json
     Check 'multiclass 2 tracks (no cross-class merge)' ([int]$mc.result.summary.track_count -eq 2)
     Check 'multiclass one car + one person' ((@($mc.result.tracks | Where-Object { $_.class -eq 'car' }).Count -eq 1) -and (@($mc.result.tracks | Where-Object { $_.class -eq 'person' }).Count -eq 1))
 
     # empty: zero detections -> zero tracks, status ok
-    $em = (RunEntry @('-InputFile', $fx.empty, '-ArtifactRoot', $artRoot)) | ConvertFrom-Json
+    $em = (RunEntry @('-InputFile', $fx.empty, '-Mode', 'greedy', '-ArtifactRoot', $artRoot)) | ConvertFrom-Json
     Check 'empty 0 tracks status ok' ($em.status -eq 'ok' -and [int]$em.result.summary.track_count -eq 0 -and [int]$em.result.summary.input_frames -eq 3)
 
     # ---- -Classes filter: only track 'person' in the scenario -> the two cars drop out ----
-    $cf = (RunEntry @('-InputFile', $fx.scenario, '-Classes', 'person', '-ArtifactRoot', $artRoot)) | ConvertFrom-Json
+    $cf = (RunEntry @('-InputFile', $fx.scenario, '-Mode', 'greedy', '-Classes', 'person', '-ArtifactRoot', $artRoot)) | ConvertFrom-Json
     Check 'classes filter person -> 2 tracks' ([int]$cf.result.summary.track_count -eq 2 -and (@($cf.result.tracks | Where-Object { $_.class -ne 'person' }).Count -eq 0))
 
     # ---- -MinScore filter: drop the lowest-scored car (0.85) leaves fewer tracked detections ----
-    $ms = (RunEntry @('-InputFile', $fx.scenario, '-MinScore', '0.88', '-ArtifactRoot', $artRoot)) | ConvertFrom-Json
+    $ms = (RunEntry @('-InputFile', $fx.scenario, '-Mode', 'greedy', '-MinScore', '0.88', '-ArtifactRoot', $artRoot)) | ConvertFrom-Json
     Check 'min_score filter drops low-score dets' ([int]$ms.result.summary.tracked_detections -lt 19)
 
     # ================= determinism: two runs -> byte-identical tracks.json (sha256) + result payload =================
-    $d1 = (RunEntry @('-InputFile', $fx.scenario, '-ArtifactRoot', $artRoot, '-InvocationId', 'det-1')) | ConvertFrom-Json
-    $d2 = (RunEntry @('-InputFile', $fx.scenario, '-ArtifactRoot', $artRoot, '-InvocationId', 'det-2')) | ConvertFrom-Json
+    $d1 = (RunEntry @('-InputFile', $fx.scenario, '-Mode', 'greedy', '-ArtifactRoot', $artRoot, '-InvocationId', 'det-1')) | ConvertFrom-Json
+    $d2 = (RunEntry @('-InputFile', $fx.scenario, '-Mode', 'greedy', '-ArtifactRoot', $artRoot, '-InvocationId', 'det-2')) | ConvertFrom-Json
     $sha1 = @($d1.artifacts | Where-Object { $_.path -match 'tracks\.json$' })[0].sha256
     $sha2 = @($d2.artifacts | Where-Object { $_.path -match 'tracks\.json$' })[0].sha256
     Check 'determinism tracks.json sha256 identical' ($sha1 -eq $sha2 -and -not [string]::IsNullOrWhiteSpace($sha1))
@@ -180,7 +185,7 @@ try {
 
     # ================= committed fixture is valid + tracks the same scenario =================
     Check 'committed scenario fixture exists' (Test-Path -LiteralPath $committedFixture)
-    $cm = (RunEntry @('-InputFile', $committedFixture, '-ArtifactRoot', $artRoot)) | ConvertFrom-Json
+    $cm = (RunEntry @('-InputFile', $committedFixture, '-Mode', 'greedy', '-ArtifactRoot', $artRoot)) | ConvertFrom-Json
     Check 'committed fixture 4 tracks 1 death' ([int]$cm.result.summary.track_count -eq 4 -and [int]$cm.result.summary.deaths -eq 1)
 
     # ================= -InputsJson inline frames (no file) =================
@@ -188,7 +193,7 @@ try {
             [ordered]@{ frame = 0; detections = @([ordered]@{ class = 'dog'; class_id = 16; score = 0.9; box = [ordered]@{ x = 10; y = 10; width = 40; height = 40 } }) },
             [ordered]@{ frame = 1; detections = @([ordered]@{ class = 'dog'; class_id = 16; score = 0.9; box = [ordered]@{ x = 20; y = 10; width = 40; height = 40 } }) }
         ) } | ConvertTo-Json -Depth 8 -Compress
-    $il = (RunEntry @('-InputsJson', $inline, '-ArtifactRoot', $artRoot)) | ConvertFrom-Json
+    $il = (RunEntry @('-InputsJson', $inline, '-Mode', 'greedy', '-ArtifactRoot', $artRoot)) | ConvertFrom-Json
     Check 'inline frames 1 dog track len 2' ([int]$il.result.summary.track_count -eq 1 -and [int](@($il.result.tracks)[0].length) -eq 2 -and $il.result.input.source -eq 'inline')
 
     # ================= error paths (valid error envelope, exit 0) =================
@@ -211,20 +216,20 @@ try {
     Check 'invalid_input_shape error' ($e4.status -eq 'error' -and $e4.error.code -eq 'invalid_input_shape')
 
     $baddet = Join-Path $fxDir 'baddet.json'; [System.IO.File]::WriteAllText($baddet, '{"frames":[{"frame":0,"detections":[{"class":"car"}]}]}', ([System.Text.UTF8Encoding]::new($false)))
-    $e5 = (RunEntry @('-InputFile', $baddet)) | ConvertFrom-Json
+    $e5 = (RunEntry @('-InputFile', $baddet, '-Mode', 'greedy')) | ConvertFrom-Json
     Check 'invalid_detection (missing box) error' ($e5.status -eq 'error' -and $e5.error.code -eq 'invalid_detection')
 
     $e6 = (RunEntry @('-InputFile', $fx.scenario, '-IouThreshold', '5')) | ConvertFrom-Json
     Check 'invalid_iou_threshold error' ($e6.status -eq 'error' -and $e6.error.code -eq 'invalid_iou_threshold')
 
-    $e7 = (RunEntry @('-InputFile', $fx.scenario, '-MaxAge', '-1')) | ConvertFrom-Json
+    $e7 = (RunEntry @('-InputFile', $fx.scenario, '-Mode', 'greedy', '-MaxAge', '-1')) | ConvertFrom-Json
     Check 'invalid_max_age error' ($e7.status -eq 'error' -and $e7.error.code -eq 'invalid_max_age')
 
     $e8 = (RunEntry @('-InputsJson', 'not json')) | ConvertFrom-Json
     Check 'invalid_inputs_json error' ($e8.status -eq 'error' -and $e8.error.code -eq 'invalid_inputs_json')
 
     # ================= Module 1 wrapper =================
-    $wjson = ([ordered]@{ input = $fx.scenario } | ConvertTo-Json -Compress)
+    $wjson = ([ordered]@{ input = $fx.scenario; mode = 'greedy' } | ConvertTo-Json -Compress)
     $rep = & $PwshPath -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $wrapper -SkillDir $moduleRoot -InputsJson $wjson -PwshPath $PwshPath -ArtifactRoot $artRoot
     $repObj = ([string]($rep | Out-String)).Trim() | ConvertFrom-Json
     Check 'wrapper manifest_valid' ($repObj.manifest_valid -eq $true)

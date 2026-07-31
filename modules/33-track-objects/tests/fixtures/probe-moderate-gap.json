@@ -1,0 +1,94 @@
+{
+  "frames": [
+    {
+      "frame": 0,
+      "timestamp_ms": 0,
+      "detections": [
+        {
+          "class": "obj",
+          "class_id": 1,
+          "score": 0.9,
+          "box": {
+            "x": 40,
+            "y": 60,
+            "width": 40,
+            "height": 40
+          },
+          "label": "M"
+        }
+      ]
+    },
+    {
+      "frame": 1,
+      "timestamp_ms": 500,
+      "detections": [
+        {
+          "class": "obj",
+          "class_id": 1,
+          "score": 0.9,
+          "box": {
+            "x": 55,
+            "y": 60,
+            "width": 40,
+            "height": 40
+          },
+          "label": "M"
+        }
+      ]
+    },
+    {
+      "frame": 2,
+      "timestamp_ms": 1000,
+      "detections": []
+    },
+    {
+      "frame": 3,
+      "timestamp_ms": 1500,
+      "detections": []
+    },
+    {
+      "frame": 4,
+      "timestamp_ms": 2000,
+      "detections": [
+        {
+          "class": "obj",
+          "class_id": 1,
+          "score": 0.9,
+          "box": {
+            "x": 97,
+            "y": 60,
+            "width": 40,
+            "height": 40
+          },
+          "label": "M"
+        }
+      ]
+    },
+    {
+      "frame": 5,
+      "timestamp_ms": 2500,
+      "detections": [
+        {
+          "class": "obj",
+          "class_id": 1,
+          "score": 0.9,
+          "box": {
+            "x": 112,
+            "y": 60,
+            "width": 40,
+            "height": 40
+          },
+          "label": "M"
+        }
+      ]
+    }
+  ],
+  "scenes": [
+    {
+      "index": 0,
+      "start": 0.0,
+      "end": 3.0,
+      "score": 0.9
+    }
+  ]
+}

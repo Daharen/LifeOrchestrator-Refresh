@@ -1,334 +1,287 @@
 {
   "schema": "lifeorch.skill.result/0.1",
   "skill_id": "track.objects",
-  "skill_version": "0.1.0",
+  "skill_version": "0.2.0",
   "contract_version": "0.2",
-  "invocation_id": "EXAMPLE-track-0000",
+  "invocation_id": "c2b8f7d4-0000-4000-8000-track0objects",
   "status": "ok",
-  "started_at_utc": "2026-07-30T00:00:00.0000000Z",
-  "finished_at_utc": "2026-07-30T00:00:00.0100000Z",
-  "duration_ms": 10,
-  "inputs_digest": "sha256:8cf24c05dadb859eef25ce94e19ee4e33554cee127e342bbc8ec6442309c4197",
+  "started_at_utc": "2026-07-31T08:10:45.7695737Z",
+  "finished_at_utc": "2026-07-31T08:10:46.5684966Z",
+  "duration_ms": 795,
+  "inputs_digest": "sha256:060669d631c845151dba31bf83cfe49b8b24ece1f492224623325467299b6061",
   "result": {
-    "input": {
-      "source": "file",
-      "path": "C:\\\\Users\\\\just_\\\\LifeOrchestrator-Refresh\\\\modules\\\\33-track-objects\\\\tests\\\\fixtures\\\\scenario.json",
-      "frames": 6
-    },
-    "params": {
-      "iou_threshold": 0.3,
-      "max_age": 2,
-      "min_score": 0.0,
-      "classes": []
-    },
-    "summary": {
-      "input_frames": 6,
-      "input_detections": 19,
-      "tracked_detections": 19,
-      "track_count": 4,
-      "births": 4,
-      "deaths": 1,
-      "coast_frames": 3,
-      "max_concurrent_tracks": 4,
-      "class_summary": {
-        "car": 2,
-        "person": 2
-      }
-    },
-    "tracks": [
-      {
-        "track_id": 0,
-        "class": "car",
-        "class_id": 2,
-        "frames": [
-          {
-            "frame": 0,
-            "timestamp_s": 0.0,
-            "box": {
-              "x": 20,
-              "y": 20,
-              "width": 40,
-              "height": 40
-            },
-            "score": 0.9,
-            "det_index": 0
-          },
-          {
-            "frame": 1,
-            "timestamp_s": 0.5,
-            "box": {
-              "x": 35,
-              "y": 20,
-              "width": 40,
-              "height": 40
-            },
-            "score": 0.9,
-            "det_index": 0
-          },
-          {
-            "frame": 2,
-            "timestamp_s": 1.0,
-            "box": {
-              "x": 50,
-              "y": 20,
-              "width": 40,
-              "height": 40
-            },
-            "score": 0.9,
-            "det_index": 0
-          },
-          {
-            "frame": 3,
-            "timestamp_s": 1.5,
-            "box": {
-              "x": 65,
-              "y": 20,
-              "width": 40,
-              "height": 40
-            },
-            "score": 0.9,
-            "det_index": 0
-          },
-          {
-            "frame": 4,
-            "timestamp_s": 2.0,
-            "box": {
-              "x": 80,
-              "y": 20,
-              "width": 40,
-              "height": 40
-            },
-            "score": 0.9,
-            "det_index": 0
-          },
-          {
-            "frame": 5,
-            "timestamp_s": 2.5,
-            "box": {
-              "x": 95,
-              "y": 20,
-              "width": 40,
-              "height": 40
-            },
-            "score": 0.9,
-            "det_index": 0
-          }
-        ],
-        "first_frame": 0,
-        "last_frame": 5,
-        "length": 6,
-        "aged_out": false
+    "mode": "stable",
+    "canonical": {
+      "algorithm": "stable-geometric-association/1",
+      "box_format": "xywh_top_left_half_open",
+      "box_unit": "milli_pixel",
+      "coordinate_space": "source_pixels",
+      "detector_provenance": null,
+      "frame_height": null,
+      "frame_width": null,
+      "identity_scope": "source_media+scene+tracker_invocation",
+      "input_digest": "sha256:060669d631c845151dba31bf83cfe49b8b24ece1f492224623325467299b6061",
+      "samples": [
+        {
+          "detection_count": 1,
+          "frame_index": 0,
+          "sample_index": 0,
+          "scene_index": 0,
+          "timestamp_ms": 0
+        },
+        {
+          "detection_count": 1,
+          "frame_index": 1,
+          "sample_index": 1,
+          "scene_index": 0,
+          "timestamp_ms": 500
+        },
+        {
+          "detection_count": 0,
+          "frame_index": 2,
+          "sample_index": 2,
+          "scene_index": 0,
+          "timestamp_ms": 1000
+        },
+        {
+          "detection_count": 0,
+          "frame_index": 3,
+          "sample_index": 3,
+          "scene_index": 0,
+          "timestamp_ms": 1500
+        },
+        {
+          "detection_count": 1,
+          "frame_index": 4,
+          "sample_index": 4,
+          "scene_index": 0,
+          "timestamp_ms": 2000
+        },
+        {
+          "detection_count": 1,
+          "frame_index": 5,
+          "sample_index": 5,
+          "scene_index": 0,
+          "timestamp_ms": 2500
+        }
+      ],
+      "schema": "lifeorch.track.objects/0.2",
+      "score_unit": "millionths",
+      "source_media_id": null,
+      "source_media_sha256": null,
+      "summary": {
+        "births": 1,
+        "centroid_link_total": 1,
+        "class_summary": {
+          "obj": 1
+        },
+        "gap_total": 1,
+        "iou_link_total": 2,
+        "max_concurrent_tracks": 1,
+        "observation_total": 4,
+        "sample_count": 6,
+        "scene_count": 1,
+        "termination_reasons": {
+          "end_of_input": 1,
+          "max_gap": 0,
+          "max_missed_samples": 0,
+          "scene_boundary": 0
+        },
+        "track_count": 1
       },
-      {
-        "track_id": 1,
-        "class": "car",
-        "class_id": 2,
-        "frames": [
-          {
-            "frame": 0,
-            "timestamp_s": 0.0,
-            "box": {
-              "x": 95,
-              "y": 190,
-              "width": 40,
-              "height": 40
-            },
-            "score": 0.85,
-            "det_index": 1
-          },
-          {
-            "frame": 1,
-            "timestamp_s": 0.5,
-            "box": {
-              "x": 80,
-              "y": 190,
-              "width": 40,
-              "height": 40
-            },
-            "score": 0.85,
-            "det_index": 1
-          },
-          {
-            "frame": 2,
-            "timestamp_s": 1.0,
-            "box": {
-              "x": 65,
-              "y": 190,
-              "width": 40,
-              "height": 40
-            },
-            "score": 0.85,
-            "det_index": 1
-          },
-          {
-            "frame": 3,
-            "timestamp_s": 1.5,
-            "box": {
-              "x": 50,
-              "y": 190,
-              "width": 40,
-              "height": 40
-            },
-            "score": 0.85,
-            "det_index": 1
-          },
-          {
-            "frame": 4,
-            "timestamp_s": 2.0,
-            "box": {
-              "x": 35,
-              "y": 190,
-              "width": 40,
-              "height": 40
-            },
-            "score": 0.85,
-            "det_index": 1
-          },
-          {
-            "frame": 5,
-            "timestamp_s": 2.5,
-            "box": {
-              "x": 20,
-              "y": 190,
-              "width": 40,
-              "height": 40
-            },
-            "score": 0.85,
-            "det_index": 1
-          }
-        ],
-        "first_frame": 0,
-        "last_frame": 5,
-        "length": 6,
-        "aged_out": false
+      "timestamp_unit": "ms",
+      "tracker_params": {
+        "centroid_allowance_growth_per_s_q": 250000,
+        "centroid_base_allowance_q": 250000,
+        "centroid_max_allowance_q": 1000000,
+        "class_filter": [],
+        "iou_threshold_q": 300000,
+        "link_quality_formula": "link_quality/1",
+        "low_confidence_threshold_q": 500000,
+        "max_area_ratio_q": 4000000,
+        "max_gap_ms": 5000,
+        "max_gap_ms_effective": 5000,
+        "max_missed_samples": 3,
+        "min_score_q": 0,
+        "mode": "stable",
+        "no_scene_max_gap_ms": 2000,
+        "rounding": "round_half_up_toward_positive_infinity",
+        "scene_info": "scenes_list",
+        "tie_rule": "lexicographic_smallest_track_id_detection_rank"
       },
-      {
-        "track_id": 2,
-        "class": "person",
-        "class_id": 0,
-        "frames": [
-          {
-            "frame": 0,
-            "timestamp_s": 0.0,
-            "box": {
-              "x": 40,
-              "y": 110,
-              "width": 40,
-              "height": 40
-            },
-            "score": 0.8,
-            "det_index": 2
+      "tracker_version": "0.2.0",
+      "tracks": [
+        {
+          "association_summary": {
+            "centroid_link_count": 1,
+            "iou_link_count": 2,
+            "maximum_gap_ms": 1500,
+            "mean_link_quality_q": 452613,
+            "reacquisition_count": 1,
+            "weakest_link_quality_q": 448750
           },
-          {
-            "frame": 1,
-            "timestamp_s": 0.5,
-            "box": {
-              "x": 55,
-              "y": 110,
-              "width": 40,
-              "height": 40
+          "class": "obj",
+          "class_id": 1,
+          "duration_ms": 2500,
+          "end_ms": 2500,
+          "first_frame_index": 0,
+          "gap_count": 1,
+          "gaps": [
+            {
+              "after_sample_index": 1,
+              "before_sample_index": 4,
+              "elapsed_ms": 1500,
+              "end_ms": 2000,
+              "missed_samples": 2,
+              "reacquired_by": "centroid",
+              "start_ms": 500
+            }
+          ],
+          "last_frame_index": 5,
+          "observation_count": 4,
+          "observations": [
+            {
+              "association": {
+                "area_ratio_q": null,
+                "gap_ms": null,
+                "iou_q": null,
+                "kind": "birth",
+                "missed_samples": null,
+                "normalized_center_distance_q": null,
+                "previous_frame_index": null
+              },
+              "box": {
+                "height": 40000,
+                "width": 40000,
+                "x": 40000,
+                "y": 60000
+              },
+              "detection_index": 0,
+              "detection_score": 900000,
+              "frame_index": 0,
+              "low_confidence": false,
+              "sample_index": 0,
+              "timestamp_ms": 0
             },
-            "score": 0.8,
-            "det_index": 2
+            {
+              "association": {
+                "area_ratio_q": 1000000,
+                "gap_ms": 500,
+                "iou_q": 454545,
+                "kind": "iou",
+                "missed_samples": 0,
+                "normalized_center_distance_q": 70313,
+                "previous_frame_index": 0
+              },
+              "box": {
+                "height": 40000,
+                "width": 40000,
+                "x": 55000,
+                "y": 60000
+              },
+              "detection_index": 0,
+              "detection_score": 900000,
+              "frame_index": 1,
+              "low_confidence": false,
+              "sample_index": 1,
+              "timestamp_ms": 500
+            },
+            {
+              "association": {
+                "area_ratio_q": 1000000,
+                "gap_ms": 1500,
+                "iou_q": 0,
+                "kind": "centroid",
+                "missed_samples": 2,
+                "normalized_center_distance_q": 551250,
+                "previous_frame_index": 1
+              },
+              "box": {
+                "height": 40000,
+                "width": 40000,
+                "x": 97000,
+                "y": 60000
+              },
+              "detection_index": 0,
+              "detection_score": 900000,
+              "frame_index": 4,
+              "low_confidence": false,
+              "sample_index": 4,
+              "timestamp_ms": 2000
+            },
+            {
+              "association": {
+                "area_ratio_q": 1000000,
+                "gap_ms": 500,
+                "iou_q": 454545,
+                "kind": "iou",
+                "missed_samples": 0,
+                "normalized_center_distance_q": 70313,
+                "previous_frame_index": 4
+              },
+              "box": {
+                "height": 40000,
+                "width": 40000,
+                "x": 112000,
+                "y": 60000
+              },
+              "detection_index": 0,
+              "detection_score": 900000,
+              "frame_index": 5,
+              "low_confidence": false,
+              "sample_index": 5,
+              "timestamp_ms": 2500
+            }
+          ],
+          "scene_index": 0,
+          "score_summary": {
+            "low_confidence_observation_count": 0,
+            "max_detection_score_q": 900000,
+            "mean_detection_score_q": 900000,
+            "min_detection_score_q": 900000,
+            "scored_observation_count": 4
           },
-          {
-            "frame": 3,
-            "timestamp_s": 1.5,
-            "box": {
-              "x": 70,
-              "y": 110,
-              "width": 40,
-              "height": 40
-            },
-            "score": 0.8,
-            "det_index": 2
+          "spanned_sample_count": 6,
+          "start_ms": 0,
+          "termination": {
+            "last_observed_ms": 2500,
+            "missed_samples_at_termination": 0,
+            "reason": "end_of_input",
+            "terminated_at_ms": 2500
           },
-          {
-            "frame": 4,
-            "timestamp_s": 2.0,
-            "box": {
-              "x": 85,
-              "y": 110,
-              "width": 40,
-              "height": 40
-            },
-            "score": 0.8,
-            "det_index": 2
-          },
-          {
-            "frame": 5,
-            "timestamp_s": 2.5,
-            "box": {
-              "x": 100,
-              "y": 110,
-              "width": 40,
-              "height": 40
-            },
-            "score": 0.8,
-            "det_index": 2
-          }
-        ],
-        "first_frame": 0,
-        "last_frame": 5,
-        "length": 5,
-        "aged_out": false
-      },
-      {
-        "track_id": 3,
-        "class": "person",
-        "class_id": 0,
-        "frames": [
-          {
-            "frame": 1,
-            "timestamp_s": 0.5,
-            "box": {
-              "x": 200,
-              "y": 110,
-              "width": 40,
-              "height": 40
-            },
-            "score": 0.7,
-            "det_index": 3
-          },
-          {
-            "frame": 2,
-            "timestamp_s": 1.0,
-            "box": {
-              "x": 200,
-              "y": 110,
-              "width": 40,
-              "height": 40
-            },
-            "score": 0.7,
-            "det_index": 2
-          }
-        ],
-        "first_frame": 1,
-        "last_frame": 2,
-        "length": 2,
-        "aged_out": true
-      }
-    ]
+          "track_id": 0
+        }
+      ]
+    },
+    "canonical_path": "/tmp/exart/c2b8f7d4-0000-4000-8000-track0objects/tracks.json",
+    "canonical_sha256": "ffed64f2c751d7303425c432cd5ba9cbf5898ddf5768f2c44785d7d4b6c23553",
+    "diagnostics_path": "/tmp/exart/c2b8f7d4-0000-4000-8000-track0objects/diagnostics.json"
   },
   "confidence": null,
   "artifacts": [
     {
-      "path": "runtime/artifacts/EXAMPLE-track-0000/tracks.json",
+      "path": "/tmp/exart/c2b8f7d4-0000-4000-8000-track0objects/tracks.json",
       "kind": "json",
-      "bytes": 6061,
-      "sha256": "2f372883fb0f8d3a37691394306fb0403cc171ab64e4837e7bba30eca594aa73"
+      "bytes": 4144,
+      "sha256": "ffed64f2c751d7303425c432cd5ba9cbf5898ddf5768f2c44785d7d4b6c23553"
     },
     {
-      "path": "runtime/artifacts/EXAMPLE-track-0000/tracks.md",
+      "path": "/tmp/exart/c2b8f7d4-0000-4000-8000-track0objects/diagnostics.json",
+      "kind": "json",
+      "bytes": 577,
+      "sha256": "d3541e8a61b2a5ea6d2aa9e6afad00ee41a79daba747240a7cf47d94b4d1aed5"
+    },
+    {
+      "path": "/tmp/exart/c2b8f7d4-0000-4000-8000-track0objects/tracks.md",
       "kind": "markdown",
-      "bytes": 417,
-      "sha256": "a3f1fa20d6fdb8afbed15ba0c327c3ea114196f5c31c24b97a45462b302901e6"
+      "bytes": 342,
+      "sha256": "167f88dadfbf8046780626757800073130c0565ebadb51c24ef4b8ad325dd190"
     }
   ],
   "model_provenance": [],
   "diagnostics": {
     "log": "stderr.txt",
-    "artifact_dir": "runtime/artifacts/EXAMPLE-track-0000"
+    "artifact_dir": "/tmp/exart/c2b8f7d4-0000-4000-8000-track0objects"
   },
   "warnings": [],
   "error": null
