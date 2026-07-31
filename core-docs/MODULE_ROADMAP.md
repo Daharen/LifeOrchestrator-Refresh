@@ -18,15 +18,18 @@ full text → `archive/`. Per-module params/artifacts → `modules/<NN>-*/README
 
 ## Build priority (2026-07-25 pivot — D-0029)
 
-> **2026-07-30 (D-0070):** Modules 0–33 + 00.1 and Widgets 01–04 are BUILT; fan-out iterations 1–17
-> SHIPPED (D-0055..D-0070). Live status + next action: `CURRENT_STATE.md`. Wave model + candidate menu:
-> `FANOUT_ORCHESTRATOR_HANDOFF.md` (the ONE live handoff). Warm-pool Stage-1.1 hardening SHIPPED (i15,
-> still default-OFF); generator model leads RECEIVED (`research/2026-07-30-generator-model-leads.md`).
-> Next: the **SUPERVISOR-HARDENING wave** (the top gate to warm-pool default-ON -- fold the i21 frontier red-team's 10 must-fixes into the durable supervisor + real evictor; `research/2026-07-31-frontier-supervisor-redteam.md`) + an in-proc res.lease client + a grown soak; the R1b CONSUMER wave is DONE (i21, D-0076: #7 0.5.0 + #21 0.2.0 + #29 0.4.1 + real evictor + live proof; findings 1/13/14 close-eligible at the lease/consumer layer); continue the Phase C video spine (#32 + #33 done -> video.timeline #21 / video.interpret #22); generator upgrades (SD3.5 DONE; Z-Image / music / video / audio remain); the baton-pass direction (R1b->ABA proof->soak->R2->#26) is Nicholas's call.
+> **2026-07-31 (D-0077):** Modules 0–34 + 00.1 and Widgets 01–04 are BUILT; fan-out iterations 1–22
+> SHIPPED (D-0055..D-0077). Live status + next action: `CURRENT_STATE.md`. Wave model + candidate menu:
+> `FANOUT_ORCHESTRATOR_HANDOFF.md` (the ONE live handoff). Warm-pool default-ON gates on the
+> **SUPERVISOR-HARDENING wave** (i21 frontier red-team, 10 must-fixes; `research/2026-07-31-frontier-supervisor-redteam.md`)
+> + an in-proc res.lease client + a grown soak (D-0076). Video spine: #32 + #33 (0.2.0 STABLE tracker, i22) +
+> #34 video.timeline (i22) BUILT -> `video.interpret` (pos 22) + the live composition wave + the dense-stream
+> decision gate remain. Generator upgrades: SD3.5 DONE; Z-Image / ACE-Step / LTX-Video / Stable Audio remain.
+> The baton-pass direction (R1b->ABA proof->soak->R2->#26) is Nicholas's call.
 
 **The per-module numbers are architectural positions, not a build sequence.** The full 0–49 spine (+ the
 real-time autonomic layer 45–49 and the 6-level operating hierarchy) lives in `ARCHITECTURE_MAP.md`.
-**Modules 0–33 + 00.1 are built; Widgets 01–04 are built.** The near-term order delivers a **locally usable
+**Modules 0–34 + 00.1 are built; Widgets 01–04 are built.** The near-term order delivers a **locally usable
 core** (cost-offload + a human interface) before the deep-research spine.
 
 **Phase A — utility & cost-offload Modules — COMPLETE except the deferred coding agent:**
@@ -52,7 +55,7 @@ Console (D-0039), #2 Module Launcher (D-0049), #3 Verification Console (D-0050/5
 Backlog: **Voice Console · Generator Studio · Document Workspace · System/Executor Monitor** (the old
 "Review / Escalation Dashboard" was reoriented into Widget #3, D-0050). Full list in `widgets/README.md`.
 
-**Phase C — canonical spine UNDERWAY (D-0070):** video (19–22; #32 media.decompose + #33 track.objects DONE) → search/routing/orchestration (23–26) →
+**Phase C — canonical spine UNDERWAY (D-0077):** video (19–22; #32 media.decompose + #33 track.objects (stable 0.2.0) + #34 video.timeline DONE; video.interpret pos 22 remains) → search/routing/orchestration (23–26) →
 general-screen-perception + self-improving (27–44) → the real-time autonomic layer (45–49).
 
 **Direction (D-0050):** past MVP the project drives ONE spine — the **offload / audit loop** under the
@@ -338,7 +341,9 @@ D-0063 warm-pool second opinion.
 
 **32 `media.decompose`** — Video Decompose · MVP complete 2026-07-30 (Phase C video spine STARTED; D-0069, `5026e2c`). NEW deterministic ffmpeg/ffprobe module — the video analog of `audio.ingest` #10 / `image.util` #15; `parallel_safe:true` (no CUDA/model/port). Ops: **meta** always (ffprobe show_format+show_streams -> container + per-stream codec/res/fps/pix_fmt/bitrate/channels/sample_rate); **-Audio** (composes #10 -> whisper-ready 16k mono s16 WAV); **-Keyframes N** (scene-preferred else evenly-spaced PNGs + sidecar); **-Scenes** (`{index,start,end,score}` + `-SceneThreshold`). **Gotcha reused:** ffprobe resolved as the ffmpeg SIBLING (the Python `Scripts\ffprobe.exe` shim). Gates 76/76 cloud + 76/76 `-Live`. Arch position 19. **Follow-ons (named, not built):** subtitle-stream extraction (srt/vtt); clip segmentation by scene; low-res proxy transcode; batch/directory; VAD segmentation; contact-sheet; ANY model/VLM frame interpretation (= `video.interpret`, arch #22).
 
-**33 `track.objects`** — Object Tracking · MVP complete 2026-07-30 (Phase C video spine #20; D-0070, `3264dd5`). NEW deterministic module — per-class greedy IoU association over `detect.objects` #16-shape per-frame detections -> identity tracks (birth / coast [constant-position] / death lifecycle, monotonic ids); CPU-only, `parallel_safe:true` (no model/CUDA/port), byte-identical for identical input. MVP runs on JSON fixtures (decoupled — no live #16/#32). Gates 79/79 cloud + 79/79 `-Live`. Arch position 20. **The greedy-IoU MVP is a BASELINE / regression oracle:** the folded frontier design review (`research/2026-07-30-track-objects-design-review.md`, D-0070) defines the real stable-identity tracker — scene-boundary reset, elapsed-TIME aging, deterministic GLOBAL (Hungarian) assignment, a gated normalized-centroid fallback, fixed-point + canonical-JSON determinism, and a richer track schema (sample manifest + gaps-not-coast-boxes + separated detection/association evidence) that `video.timeline` #21 must consume. **Follow-ons (named):** the refinement wave; live `#32 -> #16 -> #33` composition; Kalman/constant-velocity; embedding re-ID; overlay video; batch/directory.
+**33 `track.objects`** — Object Tracking · MVP complete 2026-07-30 (Phase C video spine #20; D-0070, `3264dd5`). NEW deterministic module — per-class greedy IoU association over `detect.objects` #16-shape per-frame detections -> identity tracks (birth / coast [constant-position] / death lifecycle, monotonic ids); CPU-only, `parallel_safe:true` (no model/CUDA/port), byte-identical for identical input. MVP runs on JSON fixtures (decoupled — no live #16/#32). Gates 79/79 cloud + 79/79 `-Live`. Arch position 20. **0.2.0 (i22, D-0077, `b60340c`): the reviewed STABLE-IDENTITY tracker is the DEFAULT (`-Mode stable`); greedy retained BYTE-IDENTICAL as `-Mode greedy` (regression oracle).** Scene-boundary hard separation (`scene_boundary` deaths; #32 seconds-shape scenes; pre-first-scene `scene_index -1`); elapsed-TIME aging (`max_gap_ms` / `max_missed_samples`; timestamps REQUIRED in stable mode); deterministic GLOBAL per-class-per-scene integer-Hungarian assignment (pure pwsh, no SciPy; **the lexicographic tie rule is contract**); tightly-gated normalized-centroid fallback (two explicit tiers, IoU strictly outranks); fixed-point throughout (milli-pixel boxes, `score_unit millionths`, integer ms) + canonical JSON split from a diagnostics envelope; the richer schema (sample manifest + first-class gaps, never coast boxes + separated detection/association evidence; no aggregate confidence). Labeled 10-fixture probe: stable **0 false merges / 0 id switches**, beats greedy on within-scene gaps. Gates: greedy 78 + stable 76 + probe 15 cloud; 169/169 `-Live`; 11 cross-env hashes equal. `video.timeline` #34 0.1.1 consumes this contract exactly (i22 fold). **Follow-ons (named):** Kalman/constant-velocity; learned re-ID; optical flow; camera-motion compensation; cross-class alias families; interpolated coast boxes; cross-video identity; ByteTrack low-score recovery; a versioned `quality_score/N`; live `#32 -> #16 -> #33` composition; **the dense low-res tracking-stream decision gate (OPEN — decide before live-composition/`video.interpret` contracts freeze).**
+
+**34 `video.timeline`** — Searchable Timeline Fuse · MVP complete 2026-07-31 (Phase C pos 21; D-0077, `e8583d1` + orchestrator fold `bad9e27` = 0.1.1). NEW deterministic CPU fuse: a per-source artifact MANIFEST (media meta REQUIRED; optional #32 scenes, reviewed sample manifest, reviewed-schema #33 tracks (`score_unit millionths` honored verbatim; `scene_index -1` valid; float mode fail-closes at score > 1), #11 transcript, #14 OCR (frame_index maps via samples else REFUSED), #16 detections) -> ONE canonical `lifeorch.video_timeline/0.1` timeline: coverage with sampled vs not-sampled vs tracker-gap DISTINGUISHABLE; per-track APPEARANCE SEGMENTATION split at first-class `track_gap` intervals (NEVER merged across a gap); content-canonical events (speech/ocr_text/detection_sample/scene_cut); a by_class/by_track/by_scene/by_kind index; separated detection/association evidence in q units; NO `confidence` field; canonical bytes split from a diagnostics envelope; byte-identical cross-machine. Strict fail-closed validation (19+ refusal paths); honest documented degradation modes; `parallel_safe:true`; pwsh-only. Gates: 138/138 cloud + 138/138 `-Live` + recon 20/20 (fixtures embed REAL #33 0.2.0 canonical bytes); 9 cross-env hashes equal. **Follow-ons (named):** live `#32->#16->#33->#34` composition; `video.interpret` pos 22 (model lane); `artifact.search` #23 integration; rendering/export; cross-video identity; `quality_score` (versioned); the dense-stream input-contract gate (shared with #33).
 
 ## Widgets (Phase B, `widgets/`)
 
@@ -370,7 +375,8 @@ D-0063 warm-pool second opinion.
 **Architectural positions** (`ARCHITECTURE_MAP.md`), NOT build-order folder numbers — Phase A pulled
 `logic.escalator` into `modules/19-logic-escalator/`. The video block takes its own next-free folder numbers
 when built. **19 `media.decompose`** audio/subs/scenes/keyframes/clips/meta/proxies (**BUILT i16 as `modules/32-media-decompose`, D-0069**) · **20 `track.objects`** identity across frames (**BUILT i17 as `modules/33-track-objects`, D-0070** — greedy-IoU MVP baseline; roadmap in `research/2026-07-30-track-objects-design-review.md`) · **21 `video.timeline`** transcription + scenes + OCR + keyframes + detections +
-tracks → a searchable timeline · **22 `video.interpret`** selective frames/clips → local VLM.
+tracks → a searchable timeline (**BUILT i22 as `modules/34-video-timeline`, D-0077**) · **22 `video.interpret`**
+selective frames/clips → local VLM (the LAST unbuilt video-block position).
 
 ## Modules 23–26 — Higher integration (provisional, later)
 

@@ -45,3 +45,6 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 - `i17-TRACK-objects.md` | the filled coding-lane brief (NEW module #33 track.objects) dispatched in i17 | used brief archived on wave completion | 2026-07-30 | D-0070
 - `i21-RESLEASE-R1b-consumers-live.md` | the filled GPU-lane brief (R1b CONSUMER wave: lease-split adoption + real evictor + live-GPU proof) dispatched in i21 (plan fo-21-61c7597b) | used brief archived on wave completion | 2026-07-31 | D-0076
 - `2026-07-31-FANOUT_ORCHESTRATOR_HANDOFF-i21.md` | snapshot of the FANOUT_ORCHESTRATOR_HANDOFF at the i21 close-out (before the i22 rewrite) | handoff snapshot per DOC_PROTOCOL section 5 | 2026-07-31 | D-0076
+- `i22-TRACK-STABLE-i22.md` | the filled CPU-lane brief (track.objects #33 stable-identity refinement) dispatched in i22 (plan fo-22-d2c492e7) | used brief archived on wave completion | 2026-07-31 | D-0077
+- `i22-VIDEO-TIMELINE-i22.md` | the filled coding-lane brief (NEW module #34 video.timeline) dispatched in i22 (plan fo-22-d2c492e7) | used brief archived on wave completion | 2026-07-31 | D-0077
+- `2026-07-31-FANOUT_ORCHESTRATOR_HANDOFF-i22.md` | snapshot of the FANOUT_ORCHESTRATOR_HANDOFF at the i22 close-out (before the i23 rewrite) | handoff snapshot per DOC_PROTOCOL section 5 | 2026-07-31 | D-0077

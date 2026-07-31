@@ -14,18 +14,17 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
 
 - **Phase:** MVP build-out on the D-0029 usable-local-core-first build priority (`MODULE_ROADMAP.md → Build
   priority`). Two tracks: **Modules** (`modules/`) + **Widgets** (`widgets/`, the human-interface layer).
-  **Phase C (the canonical spine) is UNDERWAY** — the video block: #32 `media.decompose` (i16) + #33 `track.objects` (i17).
+  **Phase C (the canonical spine) is UNDERWAY** — the video block: #32 `media.decompose` (i16) + #33 `track.objects` (i17; STABLE tracker i22) + #34 `video.timeline` (i22).
 - **Direction (D-0050):** past MVP the project drives ONE spine — the **OFFLOAD / AUDIT LOOP** under the
   **verify-cost rule**: offload only what is cheaper to VERIFY than to do; deterministic modules are Claude's
   hands, model modules only where machine- or human-checkable.
 - **ACTIVE = the fan-out loop. Iterations 1–17 are DONE** (D-0055..D-0070) via `orchestrate.fanout` #30 over
   `res.lease` #29, workers hand-dispatched into fresh Cowork sessions. Ledger:
   **`FANOUT_ORCHESTRATOR_HANDOFF.md`**; rationale: **DECISION_LOG D-0055..D-0070**. Do not re-narrate here.
-- **NEXT = iteration 22** (iterations 1-21 DONE, D-0055..D-0076). i21 (plan `fo-21-61c7597b`) shipped the **R1b CONSUMER wave**: model.gateway #7 0.5.0 (`-UsePoolLeaseSplit` + the real supervisor-routed evictor `lib/PoolEvictor.ps1`) + agent.local #21 autoramp 0.2.0 (`-SplitLease`) + res.lease #29 0.4.1, all default-off + a full live-GPU proof (findings 1/13/14 CLOSE-ELIGIBLE at the lease/consumer layer). A parallel frontier SECURITY red-team of the durable supervisor + real evictor (pack `5cbe8913`) returned NO with 7 must-fixes (verified vs HEAD `00e5912`) -> warm-pool default-ON now gates on a SUPERVISOR-HARDENING wave + an in-proc res.lease client + a GROWN soak (NOT soak-only). The 4-lane model holds: **1 GPU worker (HARD-CLAMPED <=1/wave) + 1 CPU + 1 broad coding + 1 externalized frontier-GPT review lane** (any lane may be skipped); validated ceiling `MaxParallel 3`. Wave model, candidate menu + anti-collision rules: **`FANOUT_ORCHESTRATOR_HANDOFF.md`**.
+- **NEXT = iteration 23** (iterations 1-22 DONE, D-0055..D-0077). i22 (plan `fo-22-d2c492e7`, D-0077) was a TWO-LANE CPU wave on the Phase C video spine (supervisor-hardening deliberately deferred by Nicholas; no GPU/frontier lane): `track.objects` #33 0.1.0->**0.2.0** (`b60340c`; the frontier-reviewed STABLE-IDENTITY tracker is the DEFAULT `-Mode stable`, greedy retained byte-identical; labeled probe 0 false merges) + NEW **`video.timeline` #34 0.1.0** (`e8583d1`, arch pos 21) + the ORCHESTRATOR FOLD **0.1.1** (`bad9e27`): the cross-module smoke (real #33 stable output fed into #34 -- the check neither isolated worker could run) caught 2 consumer-side contract divergences (detection_score x1e6 inflation; `scene_index -1` refused), fixed consumer-side, recon suite 20/20, the #33->#34 chain PROVEN on real bytes. Warm-pool default-ON still gates on the SUPERVISOR-HARDENING wave + an in-proc res.lease client + a GROWN soak (D-0076). The 4-lane model holds: **1 GPU worker (HARD-CLAMPED <=1/wave) + 1 CPU + 1 broad coding + 1 externalized frontier-GPT review lane** (any lane may be skipped); validated ceiling `MaxParallel 3`. Wave model, candidate menu + anti-collision rules: **`FANOUT_ORCHESTRATOR_HANDOFF.md`**.
 - **Hard boundary (D-0051, non-negotiable):** the orchestrator NEVER drives another AI session — including the
   frontier lane, a human-couriered pack (`frontier.bridge` #31).
-- Repo HEAD at last mirror: the **i21 close-out docs commit** (D-0076, `master`) — confirm live
-  with `git log -1` (read-only over the mount is fine).
+- Repo HEAD at last mirror: the **i22 close-out docs commit** (D-0077, `master`; parents `e8583d1` #34 -> `b60340c` #33 -> `bad9e27` fold) — confirm live with `git log -1` (read-only over the mount is fine).
 
 ## Adaptive Resource Governor (agent.local #21)
 
@@ -109,10 +108,13 @@ registry facts: `TOOL_MODEL_REGISTRY.md`. Roster (all MVP-complete unless noted)
 - **Video spine (Phase C, UNDERWAY):** **#32 media.decompose** (deterministic ffmpeg/ffprobe decompose —
   meta/audio/keyframes/scenes; composes #10; `parallel_safe:true`; arch 19, D-0069) · **#33 track.objects**
   (deterministic per-class greedy-IoU tracker over #16-shape detections -> identity tracks, birth/coast/death +
-  monotonic ids; `parallel_safe:true`; MVP on fixtures; arch 20, D-0070). Next: positions 21-22 (video.timeline /
-  video.interpret), Proposed. **track.objects greedy-IoU is a BASELINE** — the folded frontier review
-  (`research/2026-07-30-track-objects-design-review.md`) defines the real stable-identity tracker (scene-bounded,
-  elapsed-time-aged, globally-assigned, gated centroid fallback) + the schema `video.timeline` #21 needs.
+  monotonic ids; `parallel_safe:true`; MVP on fixtures; arch 20, D-0070). **#34 video.timeline** (deterministic per-source fuse: manifest ->
+  canonical searchable `lifeorch.video_timeline/0.1` timeline; appearance segmentation split at first-class
+  gaps; sampled/not-sampled/tracker-gap distinguishable; `parallel_safe:true`; arch pos 21, i22 D-0077).
+  **#33 0.2.0 (i22) IS the reviewed stable-identity tracker** (`-Mode stable` default; greedy = `-Mode greedy`
+  oracle; `score_unit millionths`; pre-first-scene `scene_index -1`; #34 0.1.1 consumes that contract
+  exactly -- proven on real bytes). Next: `video.interpret` (pos 22), Proposed; the dense-stream decision
+  gate (Unresolved questions) precedes any live-composition input-contract freeze.
 - **NOT built:** #26 agent.coding — designed + DEFERRED (D-0037; no safe code-exec substrate on this box).
 - **Widgets (native + `launch.bat`, D-0038):** 01 Local Agent Console · 02 Module Launcher · 03 Verification
   Console (**durable verdicts** — results sidecar keyed by `packet_id`; the packet file is never modified, D-0065) · **04 Fan-out Wave Dashboard** (read-only plan/worker/lease view; D-0067; live-GUI confirm DONE i15 D-0068).
@@ -242,7 +244,8 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 | #30 orchestrate.fanout | 71/71 `-Live` | `2afd5de` | 07-28 |
 | #31 frontier.bridge | 65/65 + hardened return-capture | `f52f21d`/`b17a945` | 07-28 |
 | #32 media.decompose | 76/76 cloud + 76/76 `-Live` | `5026e2c` | 07-30 |
-| #33 track.objects | 79/79 cloud + 79/79 `-Live` | `3264dd5` | 07-30 |
+| #33 track.objects | 0.2.0: greedy 78 (0.1.0 assertion set, `-Mode greedy` pinned) + stable 76 + probe 15 cloud; 169/169 `-Live`; 11 cross-env hashes equal | `b60340c` | 07-31 |
+| #34 video.timeline | 0.1.1: 138/138 cloud + 138/138 `-Live` + recon 20/20 (cloud + `-Live`); 9 cross-env hashes equal | `e8583d1`/`bad9e27` | 07-31 |
 | widgets/01 Agent Console | 91/91 `-Live` (89/89 cloud) | `b1f36f0` | 07-28 |
 | widgets/02 Module Launcher | 75/75 `-Live` (64/64 cloud) | `c509e571` | 07-27 |
 | widgets/03 Verification Console | 173/173 cloud mock + live STA SelfTests (`SELFTEST_VERDICT_PERSIST_OK`, `SELFTEST_AUTOLOAD_OK`) | `f3c1ec7` | 07-29 |
@@ -277,6 +280,11 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 - **`@($list)` on a raw `System.Collections.Generic.List[object]` throws "Argument types do not match"**
   (pwsh 7.4.6) when it holds `[pscustomobject]`s — use `$list.ToArray()` / `$list.Count`, or
   `([array]$x).Count` for maybe-null cmdlet output (StrictMode Latest).
+- **pwsh 7.4.6 `[System.Array]::Sort` with an `object[]` + a `Comparison[string]` sorts a CONVERTED COPY,**
+  not the original array (generic-overload binding converts first; the intended in-place sort is a silent
+  no-op). #33's canonical key sort no-op'd and `class_summary` leaked per-process RANDOMIZED hashtable order
+  (string-hash seed) -- caught ONLY by the double-run byte-identity gate (i22). Cast to a real `[string[]]`
+  before an in-place sort; keep double-run byte-identity gates in every canonical-bytes module.
 - **`$var:` in a double-quoted string** (e.g. `"item $id: done"`) parses `$id:` as a scope/drive reference —
   a **syntax error**; delimit with `${id}`. Catch it by AST-parsing every shipped `.ps1` with
   `[System.Management.Automation.Language.Parser]::ParseFile` before submitting (`dev.ship` does).
@@ -368,21 +376,36 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
   GPU-lane wave (most need a new engine/venv). **FIRST upgrade SHIPPED i17 (D-0070): SD 3.5 Medium fp16 image tier
   (Diffusers-native runner-up). Remaining: image lead Z-Image-Turbo Q8 (stable-diffusion.cpp), music ACE-Step, video
   LTX-Video / Wan2.1, audio Stable Audio — each its own GPU-lane wave.**
-- **`track.objects` #33 greedy-IoU MVP is a BASELINE, not the stable-identity tracker (i17, D-0070).** The folded
-  frontier design review (`research/2026-07-30-track-objects-design-review.md`) recommends a scene-bounded,
-  elapsed-time-aged, globally-assigned geometric tracker with a gated centroid fallback + a richer track schema +
-  fixed-point / canonical-JSON determinism. Two follow-ons: (A) a track.objects refinement wave; (B) `video.timeline`
-  #21 should CONSUME that schema. Deepest open Q: sparse `media.decompose` keyframes may lack enough continuity for
-  identity — the eventual design may need a dense low-res tracking stream distinct from sparse semantic keyframes.
+- **The video-spine DENSE-STREAM decision gate is OPEN (i17 review, restated i22 D-0077).** #33 0.2.0 IS the
+  reviewed stable-identity tracker and #34 0.1.1 consumes its schema exactly (contract reconciled + proven on
+  real bytes), but the review's deepest question stands: sparse semantic keyframes may lack recoverable temporal
+  continuity for identity AT ALL — the likely eventual architecture is a DENSE low-res tracking-sample stream
+  from `media.decompose` for identity + sparse keyframes for semantics. Decide BEFORE freezing `video.interpret`
+  (pos 22) / live-composition input contracts.
 - **Warm-pool default-ON gate (D-0069/D-0076):** the res.lease split is shipped + hardened + consumer-adopted + live-proven (i21; findings 1/13/14 CLOSE-ELIGIBLE at the lease/consumer layer). But the i21 frontier SECURITY red-team of the durable supervisor + real evictor (`research/2026-07-31-frontier-supervisor-redteam.md`, verified vs HEAD `00e5912`) returned NO with 7 structural must-fixes -> default-ON now gates on (1) a SUPERVISOR-HARDENING wave (per-resident suspended-create Job custody + assignment-fatal; lifetime singleton; authenticated exact-target IPC; no-launch-after-failed/partial-evict-or-CAS; pool-lock nonce + no stale-age steal; hard probe deadlines; heartbeat-stale watchdog recovery; kill/reload restart reconcile; real exe/model verification), (2) an in-proc res.lease client, (3) a GROWN soak. **Finding 5 (durable Job-Object custody) is RE-OPENED.** exec.watchdog #00.1 -> supervisor relaunch is part of must-fix (8), still NAMED (not built).
 
 ## Next expected action
 
-**Run iteration 22** per **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4 (which owns the candidate menu). The R1b GPU-lease split is now shipped + hardened + consumer-adopted + LIVE-PROVEN (i18-i21); findings 1/13/14 are CLOSE-ELIGIBLE at the lease/consumer layer. The TOP candidate is the **SUPERVISOR-HARDENING wave** -- fold the i21 frontier red-team's 10 must-fixes (`research/2026-07-31-frontier-supervisor-redteam.md`) into the durable supervisor + real evictor; it is the hard gate to warm-pool default-ON (single-worker; mostly off-machine-provable, custody + fault-injection needs the GPU). Scope up to 4 lanes -> `plan` at `MaxParallel <=3` -> confirm the preflight -> relay prompts (+ any frontier pack) as FILES -> `status` -> `handoff` -> fold + mirror the core-docs under the git lease.
+**Run iteration 23** per **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4 (which owns the candidate menu). The TOP
+candidate remains the **SUPERVISOR-HARDENING wave** (the i21 frontier red-team's 10 must-fixes,
+`research/2026-07-31-frontier-supervisor-redteam.md` -- the hard gate to warm-pool default-ON; single-worker GPU)
+-- Nicholas deferred it at i22 in favor of the video spine; re-offer it first. Scope lanes with Nicholas ->
+`plan` at `MaxParallel <=3` -> confirm preflight -> relay prompts as FILES -> `status` -> `handoff` -> fold +
+mirror under the git lease. **Standing rule from i22 (D-0077): when parallel isolated workers build a schema
+PRODUCER and its CONSUMER against a shared design doc, the orchestrator MUST run a cross-module smoke (real
+producer bytes into the consumer) at fold BEFORE close -- i22's smoke caught 2 real divergences the workers'
+own green gates could not see.**
 
-Outstanding: **(1) the SUPERVISOR-HARDENING wave** (the gate to warm-pool default-ON) + an **in-proc res.lease client** (the i21 split-overhead finding) + a **GROWN soak** -> THEN default-ON; the baton-pass DIRECTION (R1b->ABA proof->soak->R2->#26) is **Nicholas's explicit call**; **(2)** continue the Phase C video spine (#32+#33 done -> video.timeline #21 + video.interpret #22); **(2b)** the `track.objects` #33 refinement wave; **(3)** generator upgrades (SD3.5 image DONE; Z-Image / music / video / audio remain); **(4)** widget-03 GPU live-GUI pass; **(5)** portability follow-ons (interpreter #15/#16 DONE; pwsh-path / infra / model-bound remain).
+Outstanding: **(1) the SUPERVISOR-HARDENING wave** + an **in-proc res.lease client** + a **GROWN soak** -> THEN
+warm-pool default-ON (D-0076; the baton-pass direction stays Nicholas's call); **(2)** the Phase C video spine:
+`video.interpret` (pos 22), the live `#32->#16->#33->#34` composition wave, and the **dense-stream decision
+gate** (decide before freezing those input contracts); **(3)** generator upgrades (SD3.5 DONE; Z-Image / music /
+video / audio remain); **(4)** the widget-03 `model.gateway` GPU live-GUI pass (open since D-0060); **(5)**
+portability follow-ons ($PwshPath / core-infra / model-bound F: literals); **(6) doc debt:** CURRENT_STATE.md
+(~41 KB vs 34 KB) + MODULE_ROADMAP.md (~39 KB vs 37 KB) are over budget -- a slim pass (archive snapshot ->
+compress history to D-refs) is a named unit for an upcoming wave (DOC_PROTOCOL section 2).
 
 ---
 
-**Last updated:** 2026-07-31 — fan-out iteration 21 close-out (D-0076): the R1b CONSUMER wave SHIPPED + LIVE-PROVEN (model.gateway #7 0.5.0 `-UsePoolLeaseSplit` + real evictor `lib/PoolEvictor.ps1` + agent.local #21 autoramp 0.2.0 `-SplitLease` + res.lease #29 0.4.1; 0 regression + full live-GPU proof). Findings 1/13/14 CLOSE-ELIGIBLE at the lease/consumer layer. A parallel frontier supervisor+evictor SECURITY red-team (pack `5cbe8913`, verified vs HEAD `00e5912`) returned 7 must-fixes -> warm-pool default-ON now gates on a SUPERVISOR-HARDENING wave + an in-proc lease client + a GROWN soak (NOT soak-only); finding 5 RE-OPENED.
+**Last updated:** 2026-07-31 — fan-out iteration 22 close-out (D-0077): the Phase C two-lane CPU wave SHIPPED (#33 0.2.0 stable-identity tracker default + NEW #34 video.timeline 0.1.0->0.1.1); the orchestrator cross-module smoke caught + fixed 2 consumer-side schema divergences; the #33->#34 chain is proven on real bytes; slots reset; next = i23 (supervisor-hardening is the top candidate).
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

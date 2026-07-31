@@ -1181,3 +1181,47 @@ alternatives · consequences · affects · state (provisional | locked) · revis
 - **consequence:** warm-pool default-ON now gates on (1) a SUPERVISOR-HARDENING wave (the 10 ranked must-fixes: per-resident suspended-create Job custody + assignment-fatal; lifetime supervisor singleton; authenticated exact-`resident_instance_id`-target IPC; no-launch-after-failed/partial-evict-or-CAS; pool-lock nonce + no stale-age steal; hard probe deadlines + `unmanaged_vram_pressure`; heartbeat-stale watchdog recovery with no live-but-unresponsive fallback; kill/reload restart reconcile; real exe/model verification), (2) an in-proc `res.lease` client (the i21 split-overhead finding: ~6-9 child-pwsh spawns/call dominate), (3) a GROWN soak (>=24h continuous supervisor, >=1000 transitions, sleep/resume, separate >=25-each fault counts, p99+max / handle-leak / lock-hold / unmanaged-pressure metrics + the 15 enumerated live tests). THEN default-ON.
 - **alternatives:** fold 1/13/14 as fully CLOSED + "soak only" per the worker's report -- REJECTED: the supervisor the real evictor routes through has verified structural holes; that would ship a false safety claim (the D-0061 negative-results-first-class ethos).
 - **affects:** `modules/07-model-gateway` (0.5.0 + `lib/PoolEvictor.ps1`), `modules/21-agent-local` (0.2.0), `modules/29-resource-lease` (0.4.1), `CURRENT_STATE.md`, `MODULE_ROADMAP.md`, `TOOL_MODEL_REGISTRY.md`, `WARM_POOL_DESIGN.md` s10, `ADAPTIVE_RESOURCE_GOVERNOR.md` s6, `research/2026-07-31-frontier-supervisor-redteam.md` (NEW), `FANOUT_ORCHESTRATOR_HANDOFF.md` (rewritten), `core-docs/fanout/` (slot 001 reset + i21 archive). · **revisit-if:** the supervisor-hardening wave starts (this digest governs it) / it surfaces a consumer or primitive defect / Nicholas rules on sequencing (supervisor-hardening vs the baton-pass direction).
+
+## D-0077 — 2026-07-31 — Fan-out iteration 22: the Phase C two-lane CPU wave + the orchestrator cross-module reconciliation
+
+- **decision:** Run i22 (plan `fo-22-d2c492e7`) as a TWO-LANE CPU wave on the Phase C video spine — Nicholas's
+  explicit lane pick (defer the supervisor-hardening wave; skip the frontier lane; the remaining "portability"
+  CPU slices are all model-bound/core-infra and cannot ride a no-GPU multi-lane wave). CPU lane
+  `TRACK-STABLE-i22`: `track.objects` #33 0.1.0->0.2.0 (`b60340c`) — the frontier-reviewed STABLE-IDENTITY
+  tracker as the new default `-Mode stable` (scene-boundary hard separation; elapsed-TIME aging; deterministic
+  GLOBAL per-class-per-scene integer-Hungarian assignment with the lexicographic tie rule AS CONTRACT;
+  two-tier IoU-then-gated-centroid association; fixed-point + canonical JSON split from diagnostics; the
+  richer sample-manifest/first-class-gaps/separated-evidence schema; `score_unit millionths`; pre-first-scene
+  `scene_index -1`), greedy retained byte-identical as `-Mode greedy`. Coding lane `VIDEO-TIMELINE-i22`: NEW
+  `modules/34-video-timeline` 0.1.0 (`e8583d1`, arch pos 21) — the deterministic fixture-driven manifest fuse
+  into ONE canonical searchable `lifeorch.video_timeline/0.1` timeline (appearance segmentation never merged
+  across gaps; sampled/not-sampled/tracker-gap distinguishable; fail-closed validation; honest degradation).
+  Both lanes built in DELIBERATE ISOLATION against the same design digest
+  (`research/2026-07-30-track-objects-design-review.md`), ambiguities recorded in per-module SCHEMA_NOTES.md.
+- **the orchestrator fold:** a cross-module smoke (REAL #33 stable canonical output fed into #34 — the check
+  neither isolated worker could run) caught 2 consumer-side contract divergences: (1) #34 read
+  `detection_score` as a 0..1 float and re-quantized ×1e6 — real 900000 became 900000000000 in an "ok"
+  timeline (silent evidence corruption); (2) #34 refused the emitter's documented pre-first-scene
+  `scene_index -1`. Fixed CONSUMER-SIDE as #34 **0.1.1** (`bad9e27`): honor the emitter's file-level
+  `score_unit` declaration (verbatim integer q; float mode now FAIL-CLOSED at score > 1); accept
+  `scene_index >= -1` as an opaque partition label (never an `index.by_scene` bucket). NEW recon suite 20/20
+  (fixtures embed real emitter bytes) + main 138/138 (one generator-version assertion updated) + smoke rerun
+  green end-to-end. The emitter's canonical bytes and shipped hashes are untouched.
+- **reason:** the emitter followed the digest's fixed-point rules; the consumer followed its field-name float
+  convention — both defensible readings of an under-specified digest; the consumer aligns to the emitter's
+  DECLARED contract (no heuristic scale-sniffing, no emitter rework, no hash churn).
+- **alternatives:** fix the emitter to emit floats (REJECTED: violates its fixed-point/no-float canonical-bytes
+  determinism); heuristic value>1 scale detection without a declaration (REJECTED: ambiguous at 1, silently
+  guessy); declare the wave failed and respin (REJECTED: two small additive consumer fixes, fully gated).
+- **consequences:** the #33->#34 chain is PROVEN compatible on real bytes; findings/gates unchanged elsewhere;
+  **standing rule adopted: parallel isolated workers building a schema PRODUCER and its CONSUMER against a
+  shared design doc REQUIRE an orchestrator cross-module smoke (real producer bytes into the consumer) at fold
+  before close** — green isolated gates cannot see divergent readings. New Known-failure: pwsh 7.4.6
+  `[System.Array]::Sort(object[], Comparison[string])` sorts a CONVERTED COPY (silent no-op on the original);
+  double-run byte-identity gates caught it. Doc debt named: CURRENT_STATE (~41 KB/34) + MODULE_ROADMAP
+  (~40 KB/37) over budget -> a slim pass is a named unit for an upcoming wave.
+- **affects:** `modules/33-track-objects` (0.2.0), `modules/34-video-timeline` (NEW, 0.1.1),
+  `CURRENT_STATE.md`, `MODULE_ROADMAP.md`, `FANOUT_ORCHESTRATOR_HANDOFF.md` (rewritten),
+  `core-docs/fanout/` (slots 002/003 used -> archived -> reset), `archive/`.
+- **state:** locked. · **revisit-if:** the dense-stream decision gate lands (it may reshape #33/#34 input
+  contracts); the live `#32->#16->#33->#34` composition wave starts; a #34 consumer needs `quality_score`.
