@@ -1317,3 +1317,49 @@ alternatives · consequences · affects · state (provisional | locked) · revis
 - **state:** locked. · **revisit-if:** the direction-pack answer returns (fold it into a direction digest);
   Nicholas picks the i24 lanes (the supervisor-hardening wave, freeze the durable supervisor + keep classic
   detached-warm as default, or a different lane); any P0/P1 must-fix ships (update the gate).
+
+## D-0080 -- 2026-07-31 -- User-directed reprioritization: pivot to the Collective Agent (cognitive virtual memory); freeze supervisor/generator/video/real-time/training; Wave 1 = the memory + retrieval substrate
+
+- **decision:** On Nicholas's explicit written directive (source
+  `research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md`, delivered the same session as the
+  whole-project-direction frontier pack `817e52e9`), REPRIORITIZE away from breadth-first Module expansion,
+  generator upgrades, and further model-residency infrastructure as an end in itself, and TOWARD the memory /
+  retrieval / context-compilation / skill-activation / episodic-failure-procedure-memory / sandboxed-work layers
+  that turn the existing Modules into ONE persistent COLLECTIVE AGENT built on COGNITIVE VIRTUAL MEMORY: external
+  authoritative memory (repo / SQLite / artifacts) + DISPOSABLE model contexts; a deterministic coordinator hands
+  a model a small, task-specific working set; specialists execute; evaluators verify; success becomes reusable
+  procedure. Nicholas becomes manager / product-owner / final authority. EXTENDS D-0050 (verify-cost offload +
+  audit loop) and D-0029 (usable-local-core-first); does NOT discard them.
+- **hardware framing:** the RTX 2080 Ti (one ~7 GB heavyweight resident at a time; 9B executive + fresh contexts)
+  is the ACTIVE engineering target; an RTX PRO 6000-class 96 GB box is the HORIZON upgrade -- a config / model-
+  quality / concurrency change, NOT an architecture prerequisite. Keep a hardware-abstraction layer so the upgrade
+  changes tiering, not memory / contracts / procedures / verification / UI.
+- **authority change (AMENDS D-0051):** the hard "orchestrator NEVER drives another AI session" boundary is
+  SCOPED, not removed. The EXTERNAL / frontier fan-out stays HUMAN-COURIERED (D-0051/D-0052 intact), but a future
+  DETERMINISTIC LOCAL coordinator IS AUTHORIZED to create fresh LOCAL logical contexts and invoke LOCAL models
+  with no human courier (directive s1.8 + Priority 10). Automated EXTERNAL/frontier access stays OUT.
+- **frozen / deferred (directive s16.5/16.6 + Addendum B):** further durable-supervisor / warm-pool hardening
+  (keep classic detached-warm as the trusted default; revisit only if a defect threatens the baseline or it
+  blocks the memory work -- this RATIFIES the D-0079 GATE-NO freeze); generator upgrades #22-#25; model-heavy
+  `video.interpret` + the live composition wave; deep real-time perception (arch 27-49); broad foundation-model
+  training; the 27B-as-normal-top-tier; simultaneous heavyweight residents.
+- **pulled forward (the new build order):** embedding adapter -> `artifact.search` deterministic MVP ->
+  retrieval evaluation -> repository intelligence -> context compiler -> episodic + failure memory -> skill +
+  procedure registry -> skill routing + strong preflight -> read-only Collective Agent slice -> sandboxed coding
+  worker -> sequential local orchestrator -> domain vertical slices (life-mgmt / research / game-dev) -> unified
+  UI -> (later) specialist training.
+- **Wave 1 (scoped this session; workers NOT dispatched -- HELD for Nicholas's review):** GPU = embedding adapter
+  (versioned, testable, gpu-lease + CPU-fallback probe); coding = `artifact.search` deterministic MVP (SQLite
+  catalog + FTS + Markdown-aware chunking + provenance + incremental ingest + mock embedding iface); CPU =
+  retrieval-evaluation harness (benchmark + recall@K/MRR + stale/provenance cases); optional frontier =
+  memory-architecture red-team (non-blocking design review). Orchestrator fold = a REAL producer->consumer smoke
+  (embedding -> artifact.search -> benchmark, resolving to real repo source spans).
+- **disciplines preserved:** verification / audit, `res.lease`, idempotency, `dev.ship` named-file commits,
+  DOC_PROTOCOL budgets + replace-don't-append, disk-canonical + Project mirror, <=1 GPU worker/wave, the D-0077
+  cross-module smoke, `docs:[]` workers.
+- **affects:** `PROJECT_DIRECTION.md`, `CURRENT_STATE.md`, `MODULE_ROADMAP.md`, `ARCHITECTURE_MAP.md`,
+  `FANOUT_ORCHESTRATOR_HANDOFF.md` (all reset by replacement this session), `DECISION_LOG(_INDEX).md`, NEW source
+  `research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md`. D-0051 boundary scoped (its index row).
+- **state:** locked. · **revisit-if:** Nicholas amends the directive; a Wave-1 acceptance gate fails; a supervisor
+  defect threatens the trusted baseline; the RTX PRO 6000 migration begins (rerun benchmarks); the local-
+  coordinator authority needs tightening before it is built.
