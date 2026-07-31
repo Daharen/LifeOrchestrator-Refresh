@@ -4,11 +4,29 @@ Stable doctrine for the near-term track. Concise by design. This document owns *
 and direction**; it does not own status (`CURRENT_STATE.md`), module order (`MODULE_ROADMAP.md`),
 or interface rules (`SKILL_CONTRACT.md`).
 
-## Present goal
+## Present goal (D-0080): the Collective Agent
 
-Create **useful local capabilities that frontier and local agents can invoke** on this machine.
-Each capability is a *skill*: independently usable, testable on its own, and runnable through the
-bootstrap executor. Success is measured in working MVPs, not architectural completeness.
+Build a **persistent local managerial and construction system** -- a *Collective Agent* -- in which Nicholas is
+the manager, product owner, and final authority, and the system retrieves its own relevant knowledge, activates
+the right skills, delegates bounded work, verifies results, learns reusable procedures from experience, and
+iteratively constructs Life Orchestrator and other projects.
+
+The design principle is **cognitive virtual memory**: external stores (repo, SQLite, artifacts) are the
+authoritative memory; a model context is a disposable working set. A deterministic coordinator hands a model a
+small, task-specific packet; specialist Modules execute; evaluators verify; successful experience becomes
+structured memory and reusable procedure. The active reasoner is only one component -- this is not a better
+chatbot, it is an apprentice organization.
+
+This EXTENDS, and does not discard, the offload / verify-cost doctrine (D-0050) and the usable-local-core build
+order (D-0029): the existing ~35 Modules + 4 Widgets are the substrate; the reprioritization (D-0080; directive
+`research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md`) connects them into the architecture
+that makes them cumulatively useful. Success = retrieved-and-verified work Nicholas did not have to decompose,
+not module count.
+
+**Hardware framing.** The **RTX 2080 Ti** (one ~7 GB heavyweight resident at a time; a 9B executive + many fresh
+contexts) is the active build target. An **RTX PRO 6000-class 96 GB** box is the horizon upgrade -- a stronger
+executive + more concurrency, a configuration change, NOT an architecture prerequisite. The architecture must not
+depend on 96 GB VRAM to function.
 
 ## Modules and Widgets (vocabulary — D-0029)
 
@@ -21,6 +39,11 @@ Widgets make it usable by a human. (Widget is the adopted name for the HID / hum
 
 ## Current-phase priorities
 
+- **Collective Agent first (D-0080).** The immediate priority is the memory / retrieval / context-compilation /
+  skill-activation / episodic-failure-procedure substrate that turns the existing Modules into one persistent
+  agent. Further durable-supervisor / warm-pool hardening (the D-0079 GATE-NO stands), generator upgrades,
+  model-heavy video interpretation, deep real-time perception, and broad training are FROZEN or deferred. Build
+  order + Wave 1: `MODULE_ROADMAP.md -> Build priority` + `FANOUT_ORCHESTRATOR_HANDOFF.md` section 4.
 - **Speed and practical usefulness first.** A working, testable MVP beats an elegant unfinished design.
 - **Modularity.** Skills must be independently usable *before* any integrated orchestration is built.
 - **Offload cost locally.** The system should increasingly move remote token consumption onto the
@@ -82,11 +105,17 @@ agents submit PowerShell task packages to a filesystem queue and receive machine
   evasion, or covert persistence — and must not attempt to preserve access after authorization is
   revoked. These are hard prohibitions, not stylistic preferences.
 
+**Local coordination authority (D-0080, amends D-0051).** The orchestrator's hard "never drive another AI
+session" boundary is SCOPED, not removed: the external / frontier fan-out stays human-couriered (D-0051/D-0052
+intact; automated external-AI access stays out), but a future deterministic LOCAL coordinator IS authorized to
+create fresh local logical contexts and invoke local models with no human courier -- the substrate for planner /
+worker / reviewer roles sharing one resident model across disposable contexts.
+
 ## Long-horizon note (deliberately brief)
 
 Life Orchestrator's own long-horizon aims may include a persistent structured memory, coordinated
 local + remote model orchestration, and the progressive replacement of stochastic workflows with cheaper
-deterministic tools where they earn it. **None of that is near-term work.** The full destination — the
+deterministic tools where they earn it. **Per D-0080 the persistent structured memory + coordinated local orchestration are now NEAR-TERM (the Collective Agent); the full 27-49 real-time-perception spine + the 45-49 autonomic layer remain long-horizon.** The full destination — the
 canonical 0-49 Module spine, the real-time autonomic control layer (45-49), and the 6-level operating
 hierarchy — is mapped in `ARCHITECTURE_MAP.md` (a reference for orientation, **not** a build order).
 

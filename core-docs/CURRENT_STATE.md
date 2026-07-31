@@ -12,19 +12,31 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
 
 ## Phase + active work
 
-- **Phase:** MVP build-out on the D-0029 usable-local-core-first build priority (`MODULE_ROADMAP.md → Build
-  priority`). Two tracks: **Modules** (`modules/`) + **Widgets** (`widgets/`, the human-interface layer).
-  **Phase C (the canonical spine) is UNDERWAY** — the video block: #32 `media.decompose` (i16) + #33 `track.objects` (i17; STABLE tracker i22) + #34 `video.timeline` (i22).
-- **Direction (D-0050):** past MVP the project drives ONE spine — the **OFFLOAD / AUDIT LOOP** under the
-  **verify-cost rule**: offload only what is cheaper to VERIFY than to do; deterministic modules are Claude's
-  hands, model modules only where machine- or human-checkable.
-- **ACTIVE = the fan-out loop. Iterations 1–23 are DONE** (D-0055..D-0078) via `orchestrate.fanout` #30 over
-  `res.lease` #29, workers hand-dispatched into fresh Cowork sessions. Ledger:
-  **`FANOUT_ORCHESTRATOR_HANDOFF.md`**; rationale: **DECISION_LOG D-0055..D-0070**. Do not re-narrate here.
-- **NEXT = iteration 24** (iterations 1-23 DONE, D-0055..D-0078). i23 (plan `fo-23-36f97a35`, D-0078) was a SINGLE-WORKER GPU wave: the **SUPERVISOR-HARDENING wave** — `model.gateway` #7 0.5.0->**0.6.0** (`d289ba9`) folded the i21 frontier red-team's **10 must-fixes** into the DEFAULT-OFF durable Job-Object supervisor + integrity layer + real evictor (MF10 partial; MF1+2 per-resident suspended-create Job custody **LIVE-PROVEN**), ADDITIVE + defaults byte-identical; 366 off-machine + 74 on-box green, res.lease 74/36/45 unchanged, 0 orphans. **Finding 5 (durable Job-Object custody) CLOSED** -> warm-pool default-ON is RE-GATED (D-0079): the as-built supervisor red-team (pack `ff24d3a4`) RETURNED **GATE = NO** -- the i23 supervisor is NOT soak-ready. Default-ON now needs an **i24 deterministic-hardening wave (9 P0/P1 fixes + 18 tests) -> trusted deployment config -> the #00.1 recovery driver -> an in-proc res.lease client -> a GROWN soak** (`research/2026-07-31-frontier-supervisor-asbuilt-redteam.md`). The 4-lane model holds (1 GPU <=1/wave + 1 CPU + 1 coding + 1 frontier; any lane skippable; ceiling `MaxParallel 3`). Wave model + candidate menu: **`FANOUT_ORCHESTRATOR_HANDOFF.md`**.
-- **Hard boundary (D-0051, non-negotiable):** the orchestrator NEVER drives another AI session — including the
-  frontier lane, a human-couriered pack (`frontier.bridge` #31).
-- Repo HEAD at last mirror: the **i23 close-out docs commit** (D-0078, `master`; worker parent `d289ba9` model.gateway 0.6.0) — confirm live with `git log -1` (read-only over the mount is fine).
+- **Phase (D-0080): building the Collective Agent.** On Nicholas's directive
+  (`research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md`) the project pivots from
+  breadth-first Module/Widget expansion to connecting the existing ~35 Modules + 4 Widgets into ONE persistent
+  agent on **cognitive virtual memory**: external authoritative memory (repo/SQLite/artifacts) + disposable
+  model contexts; a deterministic coordinator hands a model a small task-specific packet; specialists execute;
+  evaluators verify; success becomes reusable procedure. Nicholas is manager. RTX 2080 Ti (one ~7 GB resident; a
+  9B executive) = build target; RTX PRO 6000 (96 GB) = horizon.
+- **Direction (extends D-0050):** the offload / verify-cost AUDIT LOOP still holds -- offload only what is
+  cheaper to VERIFY than to do; deterministic modules are Claude's hands, model modules only where machine- or
+  human-checkable. D-0080 adds the memory/retrieval/context substrate that makes it cumulative.
+- **NEXT = Wave 1 (memory + retrieval substrate); workers NOT yet dispatched -- HELD for Nicholas's approval.**
+  GPU = embedding adapter; coding = `artifact.search` deterministic MVP (SQLite + FTS + Markdown chunking +
+  provenance); CPU = retrieval-evaluation harness; optional frontier = memory-architecture red-team.
+  Orchestrator fold = a REAL embedding->artifact.search->benchmark producer/consumer smoke. Work orders:
+  **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4. Build order: **`MODULE_ROADMAP.md -> Build priority`**.
+- **FROZEN / deferred (D-0080):** further durable-supervisor / warm-pool hardening (keep classic detached-warm
+  as the trusted default; the D-0079 GATE-NO stands -- revisit only if a defect threatens the baseline or it
+  blocks the memory work); generator upgrades; model-heavy `video.interpret` + live composition; deep real-time
+  perception (arch 27-49); broad training.
+- **Fan-out loop: iterations 1-23 DONE + the i24 frontier lane** (D-0055..D-0080) via `orchestrate.fanout` #30
+  over `res.lease` #29, workers hand-dispatched into fresh Cowork sessions. Ledger + wave model:
+  **`FANOUT_ORCHESTRATOR_HANDOFF.md`**.
+- **Boundary (D-0051, amended by D-0080):** the orchestrator never drives another *external/frontier* AI session
+  (that stays human-couriered); a future deterministic LOCAL coordinator IS authorized to spawn fresh local
+  contexts + invoke local models (Priority 10).
 
 ## Adaptive Resource Governor (agent.local #21)
 
@@ -386,11 +398,23 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 
 ## Next expected action
 
-**Run iteration 24** per **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4 (which owns the candidate menu). The i24 FRONTIER LANE has landed (D-0079): the as-built supervisor red-team RETURNED **GATE = NO** (folded to `research/2026-07-31-frontier-supervisor-asbuilt-redteam.md`) and a whole-project-direction frontier pack (`817e52e9`) was emitted for Nicholas's path/direction review (answer pending). Warm-pool default-ON is RE-GATED to a full i24 deterministic-hardening wave (9 P0/P1 fixes + 18 tests) -> trusted deployment config -> the #00.1 recovery driver -> an in-proc res.lease client -> a GROWN soak. The i24 BUILD lanes (GPU/CPU/coding) are HELD pending Nicholas's direction discussion; the top GPU-lane candidate is now that supervisor-hardening wave (single-worker core-infra). Scope lanes with Nicholas -> `plan` at `MaxParallel <=3` -> confirm preflight -> relay prompts as FILES -> `status` -> `handoff` -> fold + mirror under the git lease. **Standing rule (D-0077): parallel isolated PRODUCER/CONSUMER workers get an orchestrator cross-module smoke at fold before close.**
+**Direction reset complete (D-0080); Wave 1 scoped; workers NOT yet dispatched -- HELD for Nicholas's review.**
+The project now builds the Collective Agent memory/retrieval substrate. Wave 1 lanes + work orders live in
+**`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4: GPU = embedding adapter; coding = `artifact.search` deterministic
+MVP; CPU = retrieval-evaluation harness; optional frontier = memory-architecture red-team (non-blocking). At
+fold the orchestrator runs the REAL embedding->artifact.search->benchmark producer/consumer smoke (D-0077). To
+dispatch: fill the `FANOUT_AGENT_00N` slots from section 4, `plan` at `MaxParallel <=3`, confirm preflight,
+relay prompts as FILES, `status` -> `handoff` -> fold + mirror under the git lease.
 
-Outstanding: **(1) warm-pool default-ON** is RE-GATED (D-0079, GATE NO): an i24 deterministic-hardening wave (9 P0/P1 fixes + 18 tests) -> trusted deployment config -> the #00.1 recovery driver -> an in-proc res.lease client -> a GROWN soak (MF8 + MF10 are now hard blockers before the soak; the baton-pass direction stays Nicholas's call); **(2)** fold the whole-project-direction frontier pack answer (`817e52e9`, pending) when Nicholas returns it (the as-built supervisor red-team `ff24d3a4` is FOLDED -> GATE NO, D-0079); **(3)** the Phase C video spine: `video.interpret` (pos 22), the live `#32->#16->#33->#34` composition wave, and the **dense-stream decision gate** (decide before freezing those input contracts); **(4)** generator upgrades (SD3.5 DONE; Z-Image / music / video / audio remain); **(5)** the widget-03 `model.gateway` GPU live-GUI pass (open since D-0060); **(6)** portability follow-ons ($PwshPath / core-infra / model-bound F: literals); **(7) doc debt:** CURRENT_STATE.md + MODULE_ROADMAP.md over budget -- a slim pass (archive snapshot -> compress history to D-refs) is a named unit (DOC_PROTOCOL section 2).
+Outstanding: **(1)** dispatch Wave 1 (embedding adapter + `artifact.search` MVP + retrieval-eval harness) once
+Nicholas approves; **(2)** fold the whole-project-direction frontier pack answer (`817e52e9`, pending) when it
+returns; **(3) FROZEN/deferred (D-0080):** further supervisor/warm-pool hardening (D-0079 GATE-NO stands;
+classic detached-warm is the trusted default), generator upgrades, `video.interpret` + live composition, deep
+real-time perception, broad training; **(4)** the widget-03 `model.gateway` GPU live-GUI pass (open since
+D-0060); **(5) doc debt:** CURRENT_STATE + MODULE_ROADMAP + the handoff (+ PROJECT_DIRECTION / ARCHITECTURE_MAP
+after the D-0080 edits) are over budget -- a hot-doc slim pass is a named unit (DOC_PROTOCOL section 2).
 
 ---
 
-**Last updated:** 2026-07-31 -- fan-out iteration 24 frontier lane (D-0079): the AS-BUILT supervisor red-team RETURNED GATE = NO (`research/2026-07-31-frontier-supervisor-asbuilt-redteam.md`) -- the i23 supervisor is NOT soak-ready; warm-pool default-ON is RE-GATED to i24 deterministic hardening (9 P0/P1 fixes + 18 tests) -> trusted deployment config -> #00.1 recovery driver -> in-proc res.lease client -> grown soak (MF8/MF10 now hard blockers; in-proc client demoted to perf). Also emitted the whole-project-direction frontier pack (`817e52e9`, answer pending). Next = i24 (lanes are Nicholas's call after the direction discussion).
+**Last updated:** 2026-07-31 -- D-0080 direction reset: pivot to the Collective Agent (cognitive virtual memory) on Nicholas's directive; froze further supervisor/warm-pool hardening (D-0079 GATE-NO stands), generators, video.interpret, real-time perception, and broad training; pulled the memory/retrieval/context/orchestration stack forward. Wave 1 (embedding adapter + artifact.search MVP + retrieval-eval harness) scoped -- workers NOT yet dispatched (held for review).
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

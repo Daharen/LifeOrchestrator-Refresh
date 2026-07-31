@@ -18,14 +18,18 @@ full text → `archive/`. Per-module params/artifacts → `modules/<NN>-*/README
 
 ## Build priority (2026-07-25 pivot — D-0029)
 
-> **2026-07-31 (D-0077):** Modules 0–34 + 00.1 and Widgets 01–04 are BUILT; fan-out iterations 1–22
-> SHIPPED (D-0055..D-0077). Live status + next action: `CURRENT_STATE.md`. Wave model + candidate menu:
-> `FANOUT_ORCHESTRATOR_HANDOFF.md` (the ONE live handoff). Warm-pool default-ON gates on the
-> **in-proc res.lease client + a GROWN soak** (the SUPERVISOR-HARDENING wave SHIPPED i23, D-0078, `d289ba9`, #7 0.6.0 — finding 5 CLOSED; `research/2026-07-31-frontier-supervisor-redteam.md`).
-> + an in-proc res.lease client + a grown soak (D-0076). Video spine: #32 + #33 (0.2.0 STABLE tracker, i22) +
-> #34 video.timeline (i22) BUILT -> `video.interpret` (pos 22) + the live composition wave + the dense-stream
-> decision gate remain. Generator upgrades: SD3.5 DONE; Z-Image / ACE-Step / LTX-Video / Stable Audio remain.
-> The baton-pass direction (R1b->ABA proof->soak->R2->#26) is Nicholas's call.
+> **2026-07-31 (D-0080) -- REPRIORITIZED to the Collective Agent (cognitive virtual memory).** On Nicholas's
+> directive (`research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md`) the build order pivots
+> to the memory + retrieval + context + skill-activation + episodic/failure/procedure substrate that connects
+> the existing Modules into one persistent agent. **PULLED FORWARD:** embedding adapter -> `artifact.search` MVP
+> -> retrieval eval -> repo intelligence -> context compiler -> episodic/failure memory -> skill+procedure
+> registry -> skill routing -> read-only Collective Agent slice -> sandbox coding worker -> sequential LOCAL
+> orchestrator -> domain slices -> unified UI. **FROZEN/deferred:** supervisor/warm-pool hardening (D-0079
+> GATE-NO stands; classic detached-warm is the trusted default), generators, `video.interpret` + live
+> composition, real-time perception (27-49), broad training. **Wave 1 = embedding adapter + `artifact.search`
+> MVP + retrieval-eval harness** (+ optional memory red-team; `FANOUT_ORCHESTRATOR_HANDOFF.md` s4). 2080 Ti =
+> build target, RTX PRO 6000 = horizon. Modules 0-34 + 00.1 + Widgets 01-04 remain BUILT; live status
+> `CURRENT_STATE.md`.
 
 **The per-module numbers are architectural positions, not a build sequence.** The full 0–49 spine (+ the
 real-time autonomic layer 45–49 and the 6-level operating hierarchy) lives in `ARCHITECTURE_MAP.md`.

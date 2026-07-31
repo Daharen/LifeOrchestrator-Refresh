@@ -12,12 +12,6 @@ including the frontier lane (a human-couriered pack, not a driven session).
 
 ## 0. TL;DR
 
-- **DIRECTION RESET (D-0080): build the Collective Agent (cognitive virtual memory).** On
-  Nicholas's directive the project pivots to the memory / retrieval / context / skill-activation substrate;
-  supervisor/warm-pool hardening (D-0079 GATE-NO), generators, `video.interpret`, real-time perception + broad
-  training are FROZEN. **NEXT = Wave 1** (section 4): embedding adapter + `artifact.search` MVP + retrieval-eval
-  harness (+ optional memory red-team) -- **workers NOT yet dispatched; HELD for Nicholas's approval.** Directive:
-  `research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md`.
 - Read section 2 (orient + verify the box), then run **iteration 24**. Iterations 1-23 are DONE +
   live-confirmed (ledger in section 3; rationale D-0055..D-0078). The 4-lane wave model is VALIDATED (up to 1 GPU
   + 1 CPU + 1 coding + 1 off-box frontier at MaxParallel 3; any lane may be skipped).
@@ -118,11 +112,11 @@ the DENSE-STREAM decision gate remain.
   AS-BUILT supervisor red-team pack (`ff24d3a4`, vs `d289ba9`) was emitted for GPT-5.x -- answer PENDING.
   default-ON is RE-GATED (D-0079): a full i24 deterministic-hardening wave (as-built red-team = GATE NO; see the digest) precedes it.
 
-Runtime paths: plans `.../30-orchestrate-fanout/runtime/plans/<plan_id>/` · artifacts `.../runtime/artifacts/<id>/`
-· leases `.../29-resource-lease/runtime/leases/`. Waves + ad-hoc commits share one counter; **the next wave is
+Runtime paths: plans `.../30-orchestrate-fanout/runtime/plans/<plan_id>/` ┬╖ artifacts `.../runtime/artifacts/<id>/`
+┬╖ leases `.../29-resource-lease/runtime/leases/`. Waves + ad-hoc commits share one counter; **the next wave is
 iteration 24.**
 
-## 4. Current frontier: WAVE 1 (D-0080) -- the Collective Agent memory substrate
+## 4. Current frontier: iteration 24 -- pick lanes with Nicholas, then run the 4-lane model
 
 Nicholas's directive: up to FOUR lanes per wave; any lane may be skipped. Every lane is human-dispatched.
 
@@ -153,41 +147,29 @@ the pack as FILES + slot docs -> workers run + report -> poll `-Action status -P
 wave's shape demands -> fold, mirror the core-docs under the `git` lease, archive the used briefs + reset the
 slots -> iterate.
 
-**Wave 1 work orders (D-0080 -- the Collective Agent memory substrate; workers NOT yet dispatched -- fill the
-`FANOUT_AGENT_00N` slots only when Nicholas approves dispatch).** Distinct modules; `docs:[]`; <=1 GPU worker.
-
-- **GPU lane -- Embedding adapter.** Turn the pre-provisioned `embedding.qwen3-0p6b` (staged + unwired) into a
-  conforming, versioned, testable local capability. Scope: text + batch-text input; normalized vectors + dims +
-  model/version/hash provenance; deterministic input-order preservation; empty/oversize handling; gpu lease;
-  CPU-fallback feasibility probe. NO vector DB, NO ingestion, NO routing. Accept: stable schema; repeated-input
-  consistency within tolerance; batch==single; 0 orphaned model procs; latency/memory measured;
-  fixture/similarity-order tests; clean failure modes.
-- **Coding lane -- `artifact.search` deterministic MVP** (arch #23; the authoritative catalog + hybrid lexical
-  substrate). Scope: SQLite schema (sources/documents/versions/chunks + provenance); file inventory + content
-  hash; Markdown-aware chunking + generic-text fallback; FTS; metadata filters; an embedding-provider interface
-  with a MOCK; result->source provenance; incremental changed-file ingest; a CLI/skill contract. Non-goals:
-  AST/call-graph, summaries, episodes, failure memory, context compiler, UI, web search. Accept: index a fixture
-  repo + a bounded real-repo slice; exact + FTS retrieval; deterministic re-ingest; changed/deleted
-  reconciliation; no duplicate chunks; DB integrity check; provenance to source; mock-embedding contract tests.
-- **CPU lane -- Retrieval-evaluation harness** (make retrieval quality measurable BEFORE vector integration).
-  Scope: benchmark schema; query + required-source labels; lexical baseline; recall@K / MRR / stale-source /
-  provenance metrics; report artifact; fixture corpus + initial LO benchmark questions. NO production router.
-  Accept: deterministic benchmark run; known lexical baseline; a FAILING test when a required source is absent;
-  a version/staleness test; machine- + human-readable reports.
-- **Frontier lane (optional, non-blocking) -- Memory-architecture red-team.** Design review of the SQLite schema,
-  embedding-adapter contract, `artifact.search` boundaries, benchmark design, provenance, versioning, privacy,
-  failure modes, and the 2080 Ti operating assumptions. The local wave does NOT block on it unless it flags a
-  safety-critical issue.
-- **Orchestrator fold (REQUIRED, D-0077 cross-module smoke).** A REAL producer->consumer smoke: embedding adapter
-  produces vectors -> `artifact.search` ingests -> the benchmark runs hybrid retrieval -> results resolve to real
-  source spans -> a repeat run is stable -> a changed-file re-index updates results -> all artifacts + model
-  provenance captured. Parallel isolated worker tests are NOT sufficient.
-
-**Later waves (pointer, not a menu):** Wave 2 = repository intelligence + episode/failure schema+recorder; Wave 3
-= context compiler + skill-card/registry + retrieval reranker. Then read-only Collective Agent slice -> sandbox
-coding worker -> sequential LOCAL orchestrator (D-0080 local coordinator; no human courier) -> domain slices ->
-unified UI. Frozen: supervisor/warm-pool hardening (D-0079 GATE-NO), generators, `video.interpret`, real-time
-perception, broad training. Full spec: `research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md`.
+**Candidate-unit menu** (pick with Nicholas each wave):
+- **CPU / core-infra (THE top candidate -- re-offer it first): the IN-PROC `res.lease` CLIENT** -- the i21
+  split-overhead finding: ~6-9 child-pwsh spawns/call (~0.9-1.3 s each) dominate wall time; batch the ops into
+  an in-process client. SINGLE-worker (res.lease/model.gateway core infra). One of the TWO remaining warm-pool
+  default-ON gates.
+- **GPU / core-infra: the GROWN SOAK of the hardened supervisor** -- the second remaining default-ON gate: >=24h
+  continuous supervisor lifetime, >=1000 transitions, sleep/resume, >=25-each of the 5 fault classes + the 15
+  deterministic live tests, p99/max + handle-leak + lock-hold + unmanaged-pressure metrics. A GPU-lane / on-box
+  soak harness (single-worker; it drives real swaps). Best AFTER the as-built red-team answer folds (it may add
+  soak cases or open a small hardening-follow-on first).
+- **Frontier: fold the i23 as-built supervisor red-team answer** (pack `ff24d3a4`, PENDING) -- `read-return` +
+  digest; then, if it flags gaps, an i24 SUPERVISOR-HARDENING-FOLLOW-ON (the MF8 #00.1 relaunch driver + the
+  MF10 ACL'd app-data / trusted expected-hash-manifest provisioning are the already-named residuals). Or the
+  DENSE-STREAM decision (sparse-keyframe identity vs a dense low-res tracking stream from #32) or a
+  `video.interpret` design review.
+- **GPU: a GENERATOR UPGRADE** #22-#25 (SD 3.5 image DONE; next Wan2.1 1.3B video / Stable Audio Open 1.0, or
+  Z-Image-Turbo Q8 / ACE-Step / LTX-Video -- `research/2026-07-30-generator-model-leads.md`); or the widget-03
+  `model.gateway` GPU live-GUI pass (open since D-0060); or `video.interpret` (pos 22, model-bound).
+- **Coding: the Phase C video spine** -- the live `#32->#16->#33->#34` composition wave (settle the dense-stream
+  gate first) or #33/#34 follow-ons or Verification Console / widget polish / test-coverage.
+- **CPU: the core-docs SLIM pass** (CURRENT_STATE + MODULE_ROADMAP over budget -- snapshot + compress history to
+  D-refs; orchestrator-adjacent, can be an ad-hoc unit) or a portability follow-on ($PwshPath across model-bound
+  entrypoints = a GPU-lane ride; core-infra 00.1 + `ops/*.bat` = single-worker).
 
 ## 5. Worker briefs: the FANOUT_AGENT slot system (D-0066)
 
@@ -303,20 +285,21 @@ reached natively by the Windows executor. Machine prerequisite: the executor run
 the watchdog), heartbeat fresh + `degraded:false`. Computer-use (Task Manager) is only for out-of-band wedge
 recovery.
 
-## 11. Box state at handoff (2026-07-31, D-0080 direction reset)
+## 11. Box state at handoff (2026-07-31, iteration 23 close-out, D-0078)
 
-Iterations 1-23 DONE + the i24 frontier lane (D-0079 fold + the whole-project-direction pack) + the D-0080
-reprioritization. HEAD = the D-0080 doc-reset commit (`master`; chain ... D-0079 `a584ba2` -> D-0080 record
-`ebef50c` -> this reset) -- confirm with `git log -1`. No LIVE `res.lease` held (durable `gpu-*.fence/.state/.txn`
-siblings persist by design -- NOT a held lease); heartbeat `degraded:false`; 0 UNMANAGED `llama-server`/python.
+Iterations done through 23; i23 was a clean SINGLE-worker GPU wave (the supervisor-hardening wave) -- no
+cross-module smoke required (no producer/consumer split). No LIVE res.lease held (durable
+`gpu-*.fence/.state/.txn` siblings persist by design -- NOT a held lease); heartbeat `degraded:false`; post-wave
+recon confirmed 0 UNMANAGED `llama-server`/python and `ready_for_handoff=true`. **HEAD = the D-0078 i23 close-out
+docs commit** (worker parent `d289ba9` model.gateway 0.6.0; `master`) -- confirm with `git log -1`.
 
-**Direction = the Collective Agent (cognitive virtual memory), D-0080.** NEXT = **Wave 1** (section 4): embedding
-adapter + `artifact.search` MVP + retrieval-eval harness + optional memory red-team -- **workers NOT yet
-dispatched; HELD for Nicholas's approval;** fill the `FANOUT_AGENT_00N` slots only then. **Warm pool + durable
-supervisor stay DEFAULT-OFF and FROZEN** (D-0079 GATE-NO stands; classic detached-warm is the trusted default;
-resume hardening only if a defect threatens the baseline or it blocks the memory work). Also frozen: generators,
-`video.interpret` + live composition, real-time perception (arch 27-49), broad training. **PENDING:** the
-whole-project-direction pack answer (`817e52e9`) -- `read-return` + fold when Nicholas returns it. **Doc debt:**
-the hot docs (CURRENT_STATE / MODULE_ROADMAP / this handoff + PROJECT_DIRECTION / ARCHITECTURE_MAP after the
-D-0080 edits) are over budget -- a slim pass is a named unit. Start at section 2, then Wave 1 (section 4) on
-Nicholas's approval.
+**Warm pool + durable supervisor stay DEFAULT-OFF** -- after i23, default-ON gates on ONLY **(1) an in-proc
+`res.lease` client** (the i21 ~6-9 child-pwsh-spawns/call finding) and **(2) a GROWN soak** of the hardened
+supervisor. **Finding 5 (durable Job-Object custody) is CLOSED/live-proven** (i23, D-0078). NAMED residuals: the
+exec.watchdog #00.1 -> supervisor relaunch DRIVER (MF8 availability half) + the ACL'd app-data state-dir move +
+trusted expected-hash-manifest provisioning (MF10). **PENDING: the as-built supervisor red-team answer** (pack
+`ff24d3a4`) -- `read-return` + fold when Nicholas returns it; it governs any i24 hardening-follow-on. The Phase C
+video spine front half is BUILT + contract-proven; remaining: `video.interpret` (pos 22, model-bound), the live
+composition wave, and the DENSE-STREAM decision gate. PENDING human live-GUI confirm: the widget-03
+`model.gateway` GPU pass (D-0060). Doc debt: CURRENT_STATE + MODULE_ROADMAP over budget (a named slim unit).
+Start at section 2, then run iteration 24 -- pick lanes with Nicholas from the section-4 menu.

@@ -125,8 +125,39 @@ load/evict, async CPU/GPU work, and teacher-to-student distillation.
 
 ---
 
+## The Collective Agent planes (D-0080)
+
+The near-term architecture (directive `research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md`)
+adds these planes over the existing Modules, on the **cognitive virtual memory** model (external stores are
+authoritative; a model context is a disposable working set):
+
+- **Memory plane** -- semantic / procedural / episodic / failure / prospective memory; authoritative in the
+  repo + a first SQLite catalog + the artifact store (files stay canonical where they already are).
+- **Retrieval plane** -- hybrid: exact/lexical (FTS) + semantic vectors + structured filters + relationship
+  traversal + reranking; model judgment only after the space is narrowed.
+- **Context-compiler plane** -- turns a task into a small, versioned, provenance-bearing context packet with
+  adaptive expansion and a token budget; the centerpiece.
+- **Skill-activation plane** -- deterministic eligibility -> semantic skill retrieval -> classifier -> reranker
+  -> bounded 9B preflight -> deterministic plan validation; compact skill cards, full docs only on demand.
+- **Episode / failure / procedure plane** -- every run records a structured episode; failures become
+  retrieval-triggered prevention; recurring success is promoted to verified procedures (then deterministic
+  controllers, then -- later -- specialists).
+- **Sandboxed-worker plane** -- bounded work orders run in the lightest adequate isolation (git worktree /
+  restricted subprocess / VM), with independent review + machine-checkable promotion gates.
+- **Unified interface** -- one local application (a single access point) that renders the above; absorbs the
+  existing Widgets as backend services rather than replacing them.
+
+**Hardware-independent model tiering.** One resident heavyweight at a time on the 2080 Ti (a 9B executive + fresh
+contexts sharing it); the RTX PRO 6000 horizon raises the executive tier + concurrency without changing memory,
+contracts, procedures, verification, or the UI.
+
+---
+
 ## Status & build order
-0-18 + 00.1 are **built**. The **near-term build order is re-prioritized** (D-0029) to deliver a locally
-usable core — cost-offload (the Local Logic Escalator + a local orchestrator) plus a human interface (the
-Widget layer) — **before** the deep-research spine (27-49). See `MODULE_ROADMAP.md → Build priority`.
+0-18 + 00.1 are **built**; Modules 0-34 + Widgets 01-04 exist. **The near-term build order is REPRIORITIZED
+(D-0080)** to the **Collective Agent (cognitive virtual memory)**: build the memory / retrieval / context /
+skill-activation / episodic-failure-procedure / sandboxed-work planes (above) that connect the existing Modules
+into one persistent agent -- BEFORE the deep-research perception spine (27-49), which is frozen along with
+further supervisor hardening, generators, and broad training. See `MODULE_ROADMAP.md → Build priority` and the
+directive `research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md`.
 **This map is the destination; the roadmap is the route.**
