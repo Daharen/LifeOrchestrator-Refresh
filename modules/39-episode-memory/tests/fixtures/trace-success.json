@@ -1,0 +1,36 @@
+{
+  "schema": "lifeorch.run_trace/0.1",
+  "trace_id": "trace-succ-0001",
+  "task_id": "build-hello-module",
+  "parent_project": "life-orchestrator",
+  "attempt": 1,
+  "original_request": "Build a tiny deterministic hello.echo module with a passing test suite.",
+  "context_packet_id": "ctx-0007",
+  "started_at": "2026-08-01T09:00:00.0000000Z",
+  "finished_at": "2026-08-01T09:07:30.0000000Z",
+  "final_status": "ok",
+  "plan": [
+    {"step": 1, "intent": "author skill.json + entrypoint"},
+    {"step": 2, "intent": "write the deterministic worker"},
+    {"step": 3, "intent": "run the test suite off-machine then live"}
+  ],
+  "models": [
+    {"model_id": "llm.strong.qwen3p5-9b", "model_version": "Q5_K_M", "engine_build": "b10092"}
+  ],
+  "metrics": {"wall_ms": 450000, "model_tokens": 3120, "gpu_seconds": 41, "retries": 0},
+  "events": [
+    {"seq": 0, "type": "stage_start", "stage": "plan", "role": "planner"},
+    {"seq": 1, "type": "note", "stage": "plan", "text": "normalized the request into a 3-step plan"},
+    {"seq": 2, "type": "stage_end", "stage": "plan", "status": "ok", "duration_ms": 30000},
+    {"seq": 3, "type": "stage_start", "stage": "implement", "role": "worker"},
+    {"seq": 4, "type": "tool_invocation", "stage": "implement", "skill_id": "fs.manage", "op": "write", "status": "ok", "args_digest": "sha256:aa01", "artifact_refs": ["skill.json"], "duration_ms": 1200},
+    {"seq": 5, "type": "tool_invocation", "stage": "implement", "skill_id": "fs.manage", "op": "write", "status": "ok", "args_digest": "sha256:aa02", "artifact_refs": ["Invoke-Hello.ps1"], "duration_ms": 900},
+    {"seq": 6, "type": "state_change", "stage": "implement", "target": "modules/99-hello/Invoke-Hello.ps1", "kind": "create", "before": null, "after": "created 41-line entrypoint", "reversible": true},
+    {"seq": 7, "type": "stage_end", "stage": "implement", "status": "ok", "duration_ms": 210000},
+    {"seq": 8, "type": "stage_start", "stage": "verify", "role": "reviewer"},
+    {"seq": 9, "type": "tool_invocation", "stage": "verify", "skill_id": "exec.bootstrap", "op": "run-tests", "status": "ok", "args_digest": "sha256:aa03", "artifact_refs": ["test-out.txt"], "duration_ms": 8000, "model_id": "llm.strong.qwen3p5-9b", "model_version": "Q5_K_M", "engine_build": "b10092"},
+    {"seq": 10, "type": "test_result", "stage": "verify", "suite": "Invoke-HelloTests.ps1", "passed": 12, "failed": 0, "total": 12, "status": "ok"},
+    {"seq": 11, "type": "reviewer_outcome", "stage": "verify", "reviewer": "blind-9b", "verdict": "approve", "note": "envelope validates; deterministic double-run byte-identical"},
+    {"seq": 12, "type": "stage_end", "stage": "verify", "status": "ok", "duration_ms": 60000}
+  ]
+}

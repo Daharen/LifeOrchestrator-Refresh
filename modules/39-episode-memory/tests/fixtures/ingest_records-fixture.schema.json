@@ -1,0 +1,19 @@
+{
+  "schema": "lifeorch.ingest_records_request/0.1",
+  "purpose": "FIXTURE target contract -- the shape episode.record emits records into so the orchestrator can feed a REAL episode + failure into artifact.search #36 0.2 `ingest_records` at fold (D-0077). #36 0.2 is built by a sibling worker this wave; this is episode.record's best-effort target aligned to MEMORY_CONTRACT s1, reconciled at fold. NOT a live #36 endpoint.",
+  "request": {
+    "op": "ingest_records",
+    "namespace": "<string: isolation scope / project_id>",
+    "record_count": "<int: len(records)>",
+    "records": "<array of MEMORY_CONTRACT s1 record envelopes (lifeorch.memory_record/0.1)>"
+  },
+  "record_envelope_required_fields": [
+    "schema", "record_id", "record_version_id", "record_kind", "body_schema", "namespace",
+    "content_hash", "status", "authority_level", "sensitivity_class", "valid_from", "valid_to",
+    "created_by_ingest_run", "source_version_id", "source_span", "derivation_refs",
+    "parser_fingerprint", "chunker_fingerprint", "extractor_fingerprint", "schema_version",
+    "token_count", "embedding_space_id", "parent_edges", "child_edges", "body"
+  ],
+  "record_kinds": ["episode", "episode_stage", "failure"],
+  "acceptance": "Every record in `records` validates against the s1 envelope (op `validate` all_valid=true): required fields present, ids well-formed (kind-prefixed 24-hex), content_hash recomputes from canonical content (provenance valid), status is the currentness object (not a bare boolean), sensitivity_class present, parent/child edges are first-class arrays. #36 0.2 keys chunk-analog embeddings on embedding_space_id (null here -- episodes/failures are unembedded by this producer)."
+}

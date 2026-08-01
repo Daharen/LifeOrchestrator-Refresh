@@ -1,0 +1,45 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "episode.record",
+  "name": "Episode and Failure Memory Recorder",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "Wave 2 PRODUCER (D-0080/D-0083, directive 5.3/5.4/10). DEFINES the EPISODE and FAILURE record schemas as MEMORY_CONTRACT s1 record+provenance ENVELOPES (lifeorch.memory_record/0.1: record_id, record_version_id, record_kind episode|episode_stage|failure, namespace, content_hash, status/currentness, authority_level, sensitivity_class, valid_from/to, created_by_ingest_run, source_version_id, source_span/derivation_refs, parser/chunker/extractor fingerprints, schema_version, token_count, embedding_space_id (null until embedded), parent/child edges). Ships a DETERMINISTIC RECORDER (op record) that turns a run TRACE (lifeorch.run_trace/0.1) into a COMPLETE episode record + episode_stage children EVEN when the run FAILED or the trace is truncated, and derives a candidate failure record on failure. Ships a deterministic FAILURE-SIGNATURE retrieval SEAM (op search-failures: a lifeorch.task_context/0.1 query + a failure corpus -> failures ranked by task-conditioned facet overlap; unrelated failures with zero overlap NEVER surface -- the seam a later retriever/reranker consumes, NOT a production retriever), an s1 VALIDATOR (op validate: envelope fields + id well-formedness + PROVENANCE recomputation of content_hash), and an ingest_records bundle shaped for #36 0.2 ingest_records (reconciled at fold, D-0077). Every id/hash is a pure function of the fixed input + recorder fingerprints -> canonical JSON is INTEGER-ONLY, UTF-8 no BOM, sorted keys, byte-identical on a re-run cross-machine. Thin pwsh wrapper over a stdlib-only Python worker (episode_record.py). CPU-only, no model, no CUDA, no network -> parallel_safe:true. NON-GOALS (later waves): auto-capture wired into agent.local #21, failure MINING / procedure discovery, embeddings, the catalog DB (#36 owns storage), the context compiler, UI.",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-EpisodeRecord.ps1",
+    "args_spec": "Named params: -Op record|build-failure|search-failures|validate (default record). record: -Trace <run_trace.json|inline> [-EmitFailure bool]. build-failure: -Failures <list|path> or -Failure <one|path>. search-failures: -TaskContext <query|path> -Corpus <records-or-descriptors|path> [-K int]. validate: -Records <list|bundle|path>. OR generic -InputsJson '<json {op, trace|input, failure, failures, task_context, corpus, records, namespace, emit_failure, k, base_dir, python_path, worker_path}>'. Also: -BaseDir, -PythonPath, -WorkerPath, -ArtifactRoot, -InvocationId."
+  },
+  "inputs": [
+    { "name": "op", "type": "string", "required": false, "default": "record", "description": "record | build-failure | search-failures | validate." },
+    { "name": "trace", "type": "object", "required": false, "description": "record: a lifeorch.run_trace/0.1 (path via -Trace, or inline). {trace_id, task_id, parent_project, attempt?, original_request, context_packet_id?, started_at?, finished_at?, final_status, plan?, models?, metrics?, escalation_reasons?, failure?, events:[{seq,type,stage?,role?,...}]}. Event types: stage_start|stage_end|tool_invocation|state_change|test_result|reviewer_outcome|human_intervention|error|note|model." },
+    { "name": "failures", "type": "array", "required": false, "description": "build-failure: a list of failure descriptors (path via -Failures or inline). Each: {component, skills?, component_version?, affected_versions?, attempted_operation, environmental_conditions{runtime?,tools?,file_types?,schemas?,model_config?}, observable_symptoms, root_cause?, hypothesis?, evidence?, correction?, prevention_rule?, verification_case?, confidence?|confidence_ppm?, status?, authority_level?, keywords?, links?}." },
+    { "name": "failure", "type": "object", "required": false, "description": "build-failure: a single failure descriptor (path via -Failure or inline)." },
+    { "name": "task_context", "type": "object", "required": false, "description": "search-failures: a lifeorch.task_context/0.1 query {components?, skills?, file_types?, schemas?, model_config?, planned_operations?, keywords?, failure_signature?}." },
+    { "name": "corpus", "type": "array", "required": false, "description": "search-failures: a failure corpus -- a list of built failure records (s1 envelopes) OR raw descriptors, or a bundle {records:[...]}." },
+    { "name": "records", "type": "array", "required": false, "description": "validate: a list of s1 record envelopes, or an ingest bundle {records:[...]}, or a single record." },
+    { "name": "namespace", "type": "string", "required": false, "description": "Isolation scope / project_id stamped on emitted records (else trace.parent_project or 'default')." },
+    { "name": "emit_failure", "type": "bool", "required": false, "default": true, "description": "record: when the run failed and a trace.failure descriptor is present, emit a candidate failure record." },
+    { "name": "k", "type": "int", "required": false, "description": "search-failures: cap the number of ranked matches returned." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "record: { op, namespace, episode_record_id, episode_version_id, episode_final_status, stage_count, failure_emitted, failure_record_id, failure_signature, record_count, records_digest, all_valid }. build-failure: { op, namespace, record_count, records_digest, record_ids, failure_signatures, all_valid }. search-failures: { op, corpus_size, match_count, result_ids, top_record_id, search_digest }. validate: { op, num_records, num_valid, all_valid }. Artifacts (canonical, deterministic): record -> episode.json, episode_stages.json, failure.json (on failure), records.json (the ingest_records bundle), validation.json; build-failure -> failures.json, records.json, validation.json; search-failures -> search.json; validate -> validation.json; plus worker-summary.json. On failure the envelope is status=error with a structured error and no record artifacts.",
+    "record_kinds": ["episode", "episode_stage", "failure"]
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4", "python>=3.8"],
+    "models": [],
+    "libraries": [],
+    "cpu": "any", "gpu": "none", "memory_mb": 256,
+    "network": false, "filesystem": "read-write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 120, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

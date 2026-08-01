@@ -1,0 +1,48 @@
+{
+  "schema": "lifeorch.run_trace/0.1",
+  "trace_id": "trace-fail-0001",
+  "task_id": "decompose-clip-a",
+  "parent_project": "life-orchestrator",
+  "attempt": 2,
+  "original_request": "Decompose clip-a.mp4 into audio + keyframes + a scene list via media.decompose.",
+  "context_packet_id": "ctx-0019",
+  "started_at": "2026-08-01T11:00:00.0000000Z",
+  "finished_at": "2026-08-01T11:03:12.0000000Z",
+  "final_status": "failed",
+  "plan": [
+    {"step": 1, "intent": "resolve ffmpeg + ffprobe"},
+    {"step": 2, "intent": "probe the container then extract streams"}
+  ],
+  "models": [],
+  "metrics": {"wall_ms": 192000, "retries": 1},
+  "escalation_reasons": ["deterministic tool resolution failed; not a model problem"],
+  "events": [
+    {"seq": 0, "type": "stage_start", "stage": "resolve-tools", "role": "worker"},
+    {"seq": 1, "type": "tool_invocation", "stage": "resolve-tools", "skill_id": "fs.observer", "op": "which", "status": "ok", "args_digest": "sha256:bb01", "artifact_refs": [], "duration_ms": 300},
+    {"seq": 2, "type": "note", "stage": "resolve-tools", "text": "ffmpeg resolved from WinGet Links"},
+    {"seq": 3, "type": "stage_end", "stage": "resolve-tools", "status": "ok", "duration_ms": 5000},
+    {"seq": 4, "type": "stage_start", "stage": "probe", "role": "worker"},
+    {"seq": 5, "type": "tool_invocation", "stage": "probe", "skill_id": "media.decompose", "op": "probe", "status": "error", "args_digest": "sha256:bb02", "artifact_refs": [], "duration_ms": 700},
+    {"seq": 6, "type": "error", "stage": "probe", "code": "ffprobe_wrong_binary", "message": "ffprobe metadata empty; where.exe resolved the Python310 Scripts ffprobe shim before the real WinGet Links ffprobe"}
+  ],
+  "failure": {
+    "component": "media.decompose",
+    "skills": ["audio.ingest"],
+    "component_version": "0.1.0",
+    "affected_versions": ["media.decompose@0.1.0", "audio.ingest@0.1.0"],
+    "attempted_operation": "resolve the ffprobe executable to probe a video container",
+    "environmental_conditions": {
+      "runtime": "windows",
+      "tools": ["ffmpeg", "ffprobe"],
+      "file_types": [".mp4"],
+      "schemas": [],
+      "model_config": {}
+    },
+    "observable_symptoms": "where.exe ffprobe returns the Python310 Scripts ffprobe shim before the real WinGet Links ffprobe; the probe returns empty metadata",
+    "hypothesis": "PATH lists a Python Scripts ffprobe shim ahead of the real ffprobe",
+    "evidence": [
+      {"kind": "command_output", "ref": "resolve-tools#which", "snippet": "where.exe ffprobe -> C:/.../Python310/Scripts/ffprobe.exe"}
+    ],
+    "keywords": ["ffprobe", "python", "shim", "shadow", "path"]
+  }
+}

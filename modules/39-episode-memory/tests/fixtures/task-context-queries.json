@@ -1,0 +1,67 @@
+{
+  "schema": "lifeorch.task_context_query_suite/0.1",
+  "note": "Each query targets ONE failure in failure-corpus.json. must_exclude_components lists failures that MUST NOT surface (guaranteed zero-overlap) -- the test FAILS if any of them appears in the results.",
+  "queries": [
+    {
+      "query_id": "q_ffprobe",
+      "expect_top_component": "media.decompose",
+      "must_exclude_components": ["classify.batch", "ocr.layout"],
+      "task_context": {
+        "schema": "lifeorch.task_context/0.1",
+        "components": ["media.decompose"],
+        "skills": [],
+        "file_types": [],
+        "schemas": [],
+        "model_config": {},
+        "planned_operations": ["resolve ffprobe path", "probe a video container"],
+        "keywords": ["ffprobe", "shim", "python", "scripts", "shadow"]
+      }
+    },
+    {
+      "query_id": "q_pwsh51",
+      "expect_top_component": "ocr.layout",
+      "must_exclude_components": ["media.decompose", "orchestrate.fanout"],
+      "task_context": {
+        "schema": "lifeorch.task_context/0.1",
+        "components": ["ocr.layout"],
+        "skills": [],
+        "file_types": [".ps1"],
+        "schemas": [],
+        "model_config": {},
+        "planned_operations": ["run a windows powershell 5.1 worker script"],
+        "keywords": ["ansi", "bom", "unexpected", "emdash"]
+      }
+    },
+    {
+      "query_id": "q_wedge",
+      "expect_top_component": "orchestrate.fanout",
+      "must_exclude_components": ["ocr.layout", "dev.ship"],
+      "task_context": {
+        "schema": "lifeorch.task_context/0.1",
+        "components": ["orchestrate.fanout", "model.gateway"],
+        "skills": [],
+        "file_types": [],
+        "schemas": [],
+        "model_config": {"model_id": "llm.strong.qwen3p5-9b", "engine_build": "b10092"},
+        "planned_operations": ["run a persistent llama-server across a blocking call"],
+        "keywords": ["orphan", "llama", "server", "heartbeat", "running"]
+      }
+    },
+    {
+      "query_id": "q_none",
+      "expect_top_component": null,
+      "expect_match_count": 0,
+      "must_exclude_components": ["media.decompose", "ocr.layout", "classify.batch", "orchestrate.fanout", "dev.ship"],
+      "task_context": {
+        "schema": "lifeorch.task_context/0.1",
+        "components": ["canva.design"],
+        "skills": [],
+        "file_types": [".psd"],
+        "schemas": [],
+        "model_config": {},
+        "planned_operations": ["render a marketing graphic"],
+        "keywords": ["graphic", "brand", "layout"]
+      }
+    }
+  ]
+}
