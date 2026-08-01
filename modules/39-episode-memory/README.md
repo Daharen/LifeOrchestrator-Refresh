@@ -1,10 +1,20 @@
 # episode.record (Module 39) -- Episode + Failure Memory Recorder
 
-Wave 2 PRODUCER lane of the Collective Agent memory substrate (D-0080/D-0083; directive 5.3/5.4/10). A NEW
-module that DEFINES the **episode** and **failure** record schemas as `MEMORY_CONTRACT` s1 record+provenance
-envelopes and ships a DETERMINISTIC RECORDER that turns a run TRACE into a COMPLETE episode record (+
-`episode_stage` children) -- even when the run FAILED -- plus a deterministic failure-signature retrieval
-SEAM and an s1 validator. CPU-only, no model, no network, `parallel_safe`.
+Wave 2 PRODUCER lane of the Collective Agent memory substrate (D-0080/D-0083; conformed to
+`MEMORY_CONTRACT` Amendment A1 record-envelope **v0.1.1**, D-0085; directive 5.3/5.4/10). A module that
+DEFINES the **episode** and **failure** record schemas as `MEMORY_CONTRACT` s1 record+provenance envelopes
+and ships a DETERMINISTIC RECORDER that turns a run TRACE into a COMPLETE episode record -- with the full
+per-stage detail carried **structurally in the episode body** (`stage_sequence`) -- even when the run
+FAILED -- plus a deterministic failure-signature retrieval SEAM and an s1 validator. CPU-only, no model, no
+network, `parallel_safe`.
+
+**Amendment A1 (v0.1.1) conformance vs 0.1.0:** the envelope `status`/`currentness` is now a SINGLE STRING
+from the s5 enum (`current` baseline; the retired `{state, stale_reasons, verified}` object is gone), and
+`episode_stage` is NO LONGER a `record_kind` -- per-stage detail is structural (inside
+`episode.body.stage_sequence` + in-body `has_stage` child_edges). The ingest bundle carries ONLY `episode`
++ `failure` records, which drop into #36 0.2 `ingest_records` with **zero rejections**. ALL record
+ids/versions change vs 0.1.0 by design (extractor 0.1.0 -> 0.1.1 + the body change); a re-run stays
+byte-identical.
 
 It PRODUCES conforming s1 records; the orchestrator feeds a real episode + failure record into
 `artifact.search` #36 0.2 `ingest_records` at fold (D-0077). It does NOT write the catalog DB (#36 owns
@@ -13,7 +23,7 @@ storage), auto-capture into `agent.local` #21, mine failures, embed, compile con
 ## Layout
 
 ```
-skill.json                 the manifest (contract v0.2, skill 0.1.0)
+skill.json                 the manifest (contract v0.2, skill 0.1.1)
 Invoke-EpisodeRecord.ps1   thin pwsh contract wrapper (dispatches -Op to the worker, builds the envelope)
 episode_record.py          the deterministic stdlib-only worker (all schema/recorder/seam/validator logic)
 SCHEMA_NOTES.md            EVERY schema/interface interpretation (the D-0077 fold depends on it)
@@ -30,10 +40,11 @@ Invoke via `pwsh -NoProfile -File .\Invoke-EpisodeRecord.ps1 -Op <op> <inputs>` 
 `-InputsJson '<json>'` whose keys include `op`). Every invocation returns one `lifeorch.skill.result/0.1`
 envelope on stdout and writes canonical artifacts to `runtime/artifacts/<invocation_id>/`.
 
-- **`record`** `-Trace <run_trace.json|inline> [-EmitFailure bool] [-Namespace ns]` -> `episode.json`,
-  `episode_stages.json`, `failure.json` (when the run failed and a failure descriptor is present),
-  `records.json` (the ingest_records bundle), `validation.json`. A FAILED/TRUNCATED trace still yields a
-  COMPLETE episode.
+- **`record`** `-Trace <run_trace.json|inline> [-EmitFailure bool] [-Namespace ns]` -> `episode.json`
+  (per-stage detail folded in `body.stage_sequence`), `episode_stages.json` (a HUMAN/DEBUG view of that
+  in-body stage detail -- NOT part of the ingest bundle), `failure.json` (when the run failed and a failure
+  descriptor is present), `records.json` (the ingest_records bundle = `episode` + `failure` only),
+  `validation.json`. A FAILED/TRUNCATED trace still yields a COMPLETE episode.
 - **`build-failure`** `-Failures <list|path>` (or `-Failure <one|path>`) `[-Namespace ns]` -> `failures.json`,
   `records.json`, `validation.json`. Builds curated failure records (deterministic id + failure_signature +
   match_keys) -- e.g. to author a failure corpus.

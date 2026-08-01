@@ -1,6 +1,6 @@
-# episode.record -- example invocations
+# episode.record -- example invocations (0.1.1)
 
-## record: a run trace -> an episode (+ stages)
+## record: a run trace -> an episode (per-stage detail folded in-body)
 
 ```powershell
 pwsh -NoProfile -File .\Invoke-EpisodeRecord.ps1 -Op record -Trace .\tests\fixtures\trace-success.json
@@ -12,8 +12,10 @@ Or generically (any conforming caller / the executor / an orchestrator skill):
 pwsh -NoProfile -File .\Invoke-EpisodeRecord.ps1 -InputsJson '{"op":"record","trace":"tests/fixtures/trace-success.json"}'
 ```
 
-Emits `episode.json` (one `episode` s1 record), `episode_stages.json` (the `episode_stage` children),
-`records.json` (the `ingest_records` bundle for #36 0.2), and `validation.json`. A FAILED/truncated trace
+Emits `episode.json` (one `episode` s1 record whose `body.stage_sequence` carries the FULL per-stage
+detail), `episode_stages.json` (a HUMAN/DEBUG view of that in-body stage detail -- NOT a record, NOT
+ingested), `records.json` (the `ingest_records` bundle for #36 0.2 = `episode` + `failure` ONLY; v0.1.1
+retired `episode_stage` as a record_kind), and `validation.json`. A FAILED/truncated trace
 (`tests/fixtures/trace-failure.json`) still yields a COMPLETE episode plus a candidate `failure.json`.
 
 The stdout is the `lifeorch.skill.result/0.1` envelope in `example-result.json`.

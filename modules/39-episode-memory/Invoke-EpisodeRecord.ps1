@@ -2,15 +2,17 @@
 <#
 .SYNOPSIS
   episode.record -- the Wave 2 PRODUCER: DEFINE the EPISODE + FAILURE record schemas (MEMORY_CONTRACT
-  s1 envelope) and a DETERMINISTIC RECORDER that turns a run TRACE into a COMPLETE episode record
-  (+ episode_stage children) even on failure, plus a failure-signature retrieval SEAM and an s1
-  VALIDATOR (Life Orchestrator module 39, contract v0.2). Thin contract wrapper over the deterministic
-  stdlib-only Python worker episode_record.py -- the worker owns all schema/id/recorder/seam logic
-  (integer-only canonical output; byte-identical on a re-run, cross-machine).
+  s1 envelope v0.1.1, Amendment A1 / D-0085) and a DETERMINISTIC RECORDER that turns a run TRACE into a
+  COMPLETE episode record -- with the full per-stage detail carried STRUCTURALLY in the episode body --
+  even on failure, plus a failure-signature retrieval SEAM and an s1 VALIDATOR (Life Orchestrator module
+  39, contract v0.2). Thin contract wrapper over the deterministic stdlib-only Python worker
+  episode_record.py -- the worker owns all schema/id/recorder/seam logic (integer-only canonical output;
+  byte-identical on a re-run, cross-machine).
 .DESCRIPTION
   Ops (-Op, or op in -InputsJson; default 'record'):
-    record          -Trace <run_trace.json|inline> -> episode + episode_stage records (+ candidate
-                    failure when the run failed), an ingest_records bundle, and an s1 validation report.
+    record          -Trace <run_trace.json|inline> -> an episode record (per-stage detail folded IN the
+                    episode body; episode_stage is NOT a separate record, v0.1.1) + a candidate failure
+                    when the run failed, an ingest_records bundle, and an s1 validation report.
                     A FAILED/TRUNCATED trace still yields a COMPLETE episode.
     build-failure   -Failures <list|path> (or -Failure <one>) -> curated failure s1 record(s).
     search-failures -TaskContext <query|path> -Corpus <records-or-descriptors|path> [-K n]
@@ -50,7 +52,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$SKILL_ID = 'episode.record'; $SKILL_VERSION = '0.1.0'; $CONTRACT = '0.2'
+$SKILL_ID = 'episode.record'; $SKILL_VERSION = '0.1.1'; $CONTRACT = '0.2'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 $bound = $PSBoundParameters

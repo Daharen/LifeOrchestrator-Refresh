@@ -1,8 +1,9 @@
 # Work Order: Episode + Failure Memory Recorder (`episode.record`)
 
-**Contract version targeted:** 0.2 (SKILL_CONTRACT) + MEMORY_CONTRACT s1 v0.1 (FROZEN, D-0083) ·
-**Author:** EPISODE-MEMORY-i27 / 2026-08-01 · **Roadmap entry:** Wave 2 PRODUCER lane (directive Priority 5)
-· **Plan:** fo-27-bab47060
+**Contract version targeted:** 0.2 (SKILL_CONTRACT) + MEMORY_CONTRACT s1 record-envelope **v0.1.1**
+(Amendment A1, D-0085 -- string status; episode_stage retired) · **Author:** EPISODE-MEMORY-i27 (0.1.0) /
+EPISODE-CONFORM-i28 (0.1.1) / 2026-08-01 · **Roadmap entry:** Wave 2 PRODUCER lane (directive Priority 5)
+· **Plan:** fo-27-bab47060 (0.1.0) -> fo-28-45c4ad65 (0.1.1 conformance)
 
 ### Problem being solved
 The Collective Agent has a memory/retrieval substrate (Wave 1: #35/#36/#37) but no way to REMEMBER what
@@ -17,7 +18,9 @@ candidate failure record, then feed them into `artifact.search` #36 0.2 `ingest_
 failure-signature seam lets a future retriever surface the RIGHT past failure for the active task.
 
 ### Explicit scope (in)
-- The **episode** schema (directive 10.1) as an s1 `episode` envelope + `episode_stage` children (edges).
+- The **episode** schema (directive 10.1) as an s1 `episode` envelope with the full per-stage detail
+  carried STRUCTURALLY in `body.stage_sequence` (+ in-body `has_stage` child_edges by ordinal). v0.1.1
+  (D-0085): `episode_stage` is NOT a `record_kind`.
 - The **failure** schema (directive 5.4/10.2) as an s1 `failure` envelope, incl. a deterministic,
   task-conditioned `failure_signature`.
 - A DETERMINISTIC RECORDER: run trace -> a COMPLETE episode (+ stages) EVEN on failure; idempotent ids.
@@ -37,7 +40,7 @@ failure-signature seam lets a future retriever surface the RIGHT past failure fo
   SKILL_CONTRACT 0.2 (manifest + result envelope + `-InputsJson` + Module 1 wrapper report).
 
 ### Skill contract requirements
-- `skill_id=episode.record`, `version=0.1.0`, `determinism=deterministic`, `parallel_safe=true`,
+- `skill_id=episode.record`, `version=0.1.1`, `determinism=deterministic`, `parallel_safe=true`,
   `batch=false`, `streaming=false`.
 - `result` = an op-specific projection (ids, counts, `records_digest`/`search_digest`, `all_valid`);
   `confidence=null` (deterministic); `model_provenance=[]`; artifact kind `json`.
@@ -77,7 +80,12 @@ failure-signature seam lets a future retriever surface the RIGHT past failure fo
 - [x] DETERMINISTIC re-run (identical records/ids/order; pinned shas + double-run byte-identity).
 - [x] records shaped to drop into #36 0.2 `ingest_records` (validated vs the frozen s1 envelope / the
       fixture ingest_records schema).
-- [x] skill.json 0.1.0 + README + WORK_ORDER + SCHEMA_NOTES to contract; off-machine gate green.
+- [x] **v0.1.1 (Amendment A1, D-0085):** envelope `status` is an ENFORCED single s5 STRING on every record;
+      the ingest bundle is `episode` + `failure` ONLY (episode_stage retired -- per-stage detail fully
+      recoverable in `episode.body.stage_sequence`, a test asserts each s4 field survives); the real
+      episode + failure records ingest into #36 0.2 `ingest_records` with ZERO rejections (a local
+      #36-shape self-check + the orchestrator D-0077 fold smoke).
+- [x] skill.json 0.1.1 + README + WORK_ORDER + SCHEMA_NOTES to the amended contract; off-machine gate green.
 
 ### Manual verification procedure
 - Run the two `record` examples and inspect `episode.json` (complete on both), `failure.json` (candidate on

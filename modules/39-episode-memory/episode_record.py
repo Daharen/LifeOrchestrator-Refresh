@@ -1,17 +1,27 @@
 #!/usr/bin/env python3
 # episode_record.py -- deterministic core of the EPISODE + FAILURE memory recorder (Life Orchestrator
-# module 39 `episode.record`, contract v0.2, Wave 2 PRODUCER lane, plan fo-27-bab47060, D-0077/D-0083).
+# module 39 `episode.record` 0.1.1, contract v0.2, Wave 2 PRODUCER lane, plan fo-28-45c4ad65, D-0077/D-0085).
 #
 # WHAT THIS IS
 #   The PRODUCER half of the Wave-2 episode/failure split. It DEFINES the EPISODE and FAILURE record
-#   schemas as MEMORY_CONTRACT s1 record+provenance ENVELOPES (v0.1) and ships a DETERMINISTIC RECORDER
-#   that turns a run TRACE into a COMPLETE `episode` record (+ `episode_stage` children) -- EVEN when the
-#   run FAILED -- plus a deterministic FAILURE-SIGNATURE retrieval SEAM. No model, no network, CPU-only.
+#   schemas as MEMORY_CONTRACT s1 record+provenance ENVELOPES (v0.1.1, Amendment A1 / D-0085) and ships a
+#   DETERMINISTIC RECORDER that turns a run TRACE into a COMPLETE `episode` record -- with the full
+#   per-stage detail carried STRUCTURALLY IN the episode body (`stage_sequence`) -- EVEN when the run
+#   FAILED -- plus a deterministic FAILURE-SIGNATURE retrieval SEAM. No model, no network, CPU-only.
+#
+#   AMENDMENT A1 (v0.1.1, D-0085) conformance vs the shipped 0.1.0:
+#     * The envelope `status`/`currentness` is a SINGLE STRING from the s5 enum (`current` baseline) --
+#       the retired 0.1.0 `{state, stale_reasons, verified}` object is gone. (A failure's INVESTIGATION
+#       state stays a distinct `body.status`; it is NEVER the envelope status.)
+#     * `episode_stage` is NO LONGER a record_kind. Per-stage detail is STRUCTURAL: the full stage body
+#       lives inside `episode.body.stage_sequence` (+ in-body `child_edges: has_stage` by ordinal). The
+#       ingest bundle carries ONLY `episode` + `failure` records. ALL record ids/versions change vs 0.1.0
+#       BY DESIGN (extractor 0.1.0 -> 0.1.1 + the body change); a re-run is still byte-identical.
 #
 #   Ops (request.op):
-#     record          trace -> { episode, episode_stages[], optional candidate failure } as s1 records,
-#                     an ingest_records bundle, and an s1 validation report. A FAILED/TRUNCATED trace
-#                     still yields a COMPLETE episode (open stages are closed, final_status=failed).
+#     record          trace -> { episode (stages folded in-body), optional candidate failure } as s1
+#                     records, an ingest_records bundle, and an s1 validation report. A FAILED/TRUNCATED
+#                     trace still yields a COMPLETE episode (open stages are closed, final_status=failed).
 #     build-failure   failure descriptor(s) -> curated `failure` s1 record(s) (deterministic id +
 #                     failure_signature + match_keys). Used to author the fixture failure corpus.
 #     search-failures task-context descriptor + a failure corpus -> ranked matching failures (the SEAM a
@@ -43,10 +53,12 @@ import hashlib
 import argparse
 
 GENERATOR_NAME = "episode.record"
-GENERATOR_VERSION = "0.1.0"
-RECORD_ENVELOPE_SCHEMA = "lifeorch.memory_record/0.1"   # the MEMORY_CONTRACT s1 envelope id
-EPISODE_BODY_SCHEMA = "lifeorch.episode/0.1"            # directive 10.1
-EPISODE_STAGE_BODY_SCHEMA = "lifeorch.episode_stage/0.1"
+GENERATOR_VERSION = "0.1.1"
+RECORD_ENVELOPE_SCHEMA = "lifeorch.memory_record/0.1"   # the MEMORY_CONTRACT s1 envelope id (v0.1.1 status)
+EPISODE_BODY_SCHEMA = "lifeorch.episode/0.1"            # directive 10.1 (body FAMILY id; the stage_sequence
+                                                       # now carries FULL in-body stage detail -- v0.1.1)
+EPISODE_STAGE_BODY_SCHEMA = "lifeorch.episode_stage/0.1"  # the IN-BODY per-stage detail schema (v0.1.1:
+                                                       # stages are structural, NOT a separate record_kind)
 FAILURE_BODY_SCHEMA = "lifeorch.failure/0.1"            # directive 5.4 / 10.2
 TRACE_SCHEMA = "lifeorch.run_trace/0.1"                 # the recorder's INPUT schema
 TASK_CONTEXT_SCHEMA = "lifeorch.task_context/0.1"       # the failure-retrieval query shape
@@ -56,7 +68,7 @@ SCHEMA_VERSION = "1"
 # derivation fingerprints (carried into every record's provenance; a change -> new content_hash -> new
 # record_version_id -> derivation_stale, exactly per MEMORY_CONTRACT s4/s5).
 PARSER_FINGERPRINT = "episode.trace_parser/1"           # parses the run_trace input
-EXTRACTOR_FINGERPRINT = "episode.recorder/0.1.0"        # the recorder itself (the extractor)
+EXTRACTOR_FINGERPRINT = "episode.recorder/0.1.1"        # the recorder itself (the extractor); v0.1.1 A1
 CHUNKER_FINGERPRINT = None                              # episodes/failures are NOT chunked
 
 # Default privacy label (MEMORY_CONTRACT s7). An episode may reference personal/task data; the field is
@@ -69,7 +81,17 @@ _TOKEN_RE = re.compile(r"[a-z0-9]+")
 _ID_RE = re.compile(r"^[a-z]+_[0-9a-f]{24}$")
 _HEXCH_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 
-RECORD_KINDS = ("episode", "episode_stage", "failure")
+# v0.1.1 (D-0085): the record_kind enum is CLOSED and `episode_stage` is NOT a kind -- per-stage detail
+# is STRUCTURAL, inside episode.body.stage_sequence. This producer emits ONLY `episode` + `failure`.
+RECORD_KINDS = ("episode", "failure")
+
+# MEMORY_CONTRACT s5 staleness taxonomy: the envelope `status`/`currentness` is a SINGLE STRING from this
+# CLOSED set (`current` = healthy baseline), NEVER a boolean or an object (v0.1.1, D-0085). Mirrors the
+# EXACT set #36 0.2 enforces (artifact_search.STATUS_ENUM) so every emitted record ingests with 0 rejections.
+STATUS_ENUM = frozenset([
+    "current", "source_stale", "derivation_stale", "embedding_stale", "relationship_stale",
+    "summary_stale", "authority_stale", "temporal_expiry", "deleted", "unverified",
+])
 ENVELOPE_FIELDS = (
     "schema", "record_id", "record_version_id", "record_kind", "body_schema", "namespace",
     "content_hash", "status", "authority_level", "sensitivity_class", "valid_from", "valid_to",
@@ -223,11 +245,18 @@ def load_json_input(value, base_dir, what):
 
 def build_envelope(record_kind, record_id, version_prefix, namespace, body, body_schema,
                    source_version_id, derivation_refs, authority_level, sensitivity_class,
-                   valid_from, valid_to, parent_edges, child_edges, source_span=None):
+                   valid_from, valid_to, parent_edges, child_edges, source_span=None,
+                   status="current", stale_reasons=None):
     """Assemble a MEMORY_CONTRACT s1 record+provenance envelope. Every derived id/hash is deterministic.
     content_hash is computed over the IMMUTABLE canonical content (body + kind + namespace + provenance
-    fingerprints + source refs) -- NOT over the logical record_id or volatile fields -- so a change in
-    the run's content OR the recorder version yields a new content_hash -> a new record_version_id."""
+    fingerprints + source refs) -- NOT over the logical record_id or the VOLATILE currentness fields
+    (`status`/`attrs`) -- so a change in the run's content OR the recorder version yields a new
+    content_hash -> a new record_version_id, while a later staleness transition does NOT.
+
+    `status` is a SINGLE STRING from the s5 enum (v0.1.1, D-0085; `current` = healthy baseline). Multiple
+    simultaneous stale reasons (rare, NOT at record-creation) -> an optional `attrs.stale_reasons` list."""
+    if status not in STATUS_ENUM:
+        raise ValueError("envelope status %r not in the s5 enum" % (status,))
     body = intify(body)
     canonical_content = {
         "record_kind": record_kind,
@@ -255,9 +284,12 @@ def build_envelope(record_kind, record_id, version_prefix, namespace, body, body
         "body_schema": body_schema,
         "namespace": namespace,
         "content_hash": content_hash,
-        # status/currentness = the s5 taxonomy, NOT a single boolean. Fresh record -> current, no stale
-        # reasons; verified is set true here and INDEPENDENTLY recomputed by the validator (op validate).
-        "status": {"state": "current", "stale_reasons": [], "verified": True},
+        # status/currentness = a SINGLE STRING from the s5 enum (v0.1.1, D-0085) -- NOT a boolean, NOT an
+        # object. A freshly-built record is `current` (valid provenance, no staleness at birth); the
+        # validator (op validate) INDEPENDENTLY recomputes provenance and is the authority on any
+        # `unverified` transition. A domain/body status (a failure's INVESTIGATION state) stays a distinct
+        # body.status field and is NEVER the envelope status.
+        "status": status,
         "authority_level": authority_level,
         "sensitivity_class": sensitivity_class,
         "valid_from": valid_from,
@@ -276,6 +308,13 @@ def build_envelope(record_kind, record_id, version_prefix, namespace, body, body
         "child_edges": child_edges,
         "body": body,
     }
+    # optional attrs.stale_reasons (v0.1.1, D-0085): only when >1 stale reason must be carried alongside
+    # the single-string status. Empty/None at record-creation -> the field is OMITTED entirely (it is a
+    # volatile currentness detail, NOT part of the immutable content_hash, exactly like `status`).
+    if stale_reasons:
+        reasons = [r for r in stale_reasons if r in STATUS_ENUM]
+        if reasons:
+            env["attrs"] = {"stale_reasons": sorted_unique(reasons)}
     return env
 
 
@@ -441,8 +480,9 @@ def _stage_status(group, coll, trace_failed):
 
 
 def record_trace(trace, namespace, emit_failure_default=True):
-    """The RECORDER: a run trace -> a COMPLETE episode record (+ episode_stage children) + an optional
-    candidate failure record. Works even when the trace FAILED or is truncated."""
+    """The RECORDER: a run trace -> a COMPLETE episode record (full per-stage detail folded IN the
+    episode body, v0.1.1) + an optional candidate failure record. Works even when the trace FAILED or is
+    truncated. Returns (episode_env, failure_env|None)."""
     if not isinstance(trace, dict):
         raise ValueError("trace must be an object")
     events = trace.get("events") or []
@@ -463,13 +503,15 @@ def record_trace(trace, namespace, emit_failure_default=True):
     final_status = declared_status or ("failed" if any_error else "ok")
     trace_failed = final_status in ("failed", "error", "escalated", "cancelled")
 
-    # ---- stages ----
+    # ---- stages (v0.1.1, D-0085: STRUCTURAL, folded IN the episode body -- NOT separate records) ----
+    # The full per-stage detail (the retired 0.1.0 EPISODE_STAGE body) is carried in-body in
+    # `episode.body.stage_sequence`; linkage is an in-body ordinal (+ a has_stage child_edge by ordinal).
+    # `episode_stage` is no longer emitted as a record_kind, so NO record points at a nonexistent stage.
     groups = _event_stage_groups(events)
     episode_record_id = "ep_" + id24(ns, task_id, attempt)
 
-    stage_records = []
-    stage_refs = []            # ordered lightweight refs kept in the episode body
-    episode_child_edges = []
+    stage_sequence = []        # ordered FULL per-stage detail objects (was separate episode_stage records)
+    episode_child_edges = []   # has_stage edges referencing an IN-BODY ordinal (no separate stage record)
     agg = {"tool_invocations": [], "state_changes": [], "test_results": [],
            "reviewer_outcomes": [], "human_interventions": [], "errors": [], "models": []}
 
@@ -478,7 +520,10 @@ def record_trace(trace, namespace, emit_failure_default=True):
         st_status = _stage_status(group, coll, trace_failed)
         ev_range = [min(group["event_indices"]), max(group["event_indices"]) + 1] if group["event_indices"] else [0, 0]
         stage_name = group["name"]
-        stage_body = {
+        # the FULL EPISODE_STAGE_BODY_SCHEMA detail (a separate episode_stage record at 0.1.0), now carried
+        # in-body so NO per-stage field is lost. `event_range` (the stage's slice of the trace) is
+        # preserved too -- at 0.1.0 it was the stage record's derivation coordinate.
+        stage_detail = {
             "stage_index": si,
             "stage_name": stage_name,
             "role": group["role"],
@@ -493,19 +538,10 @@ def record_trace(trace, namespace, emit_failure_default=True):
             "errors": coll["errors"],
             "notes": coll["notes"],
             "model_provenance": coll["models"],
+            "event_range": ev_range,
         }
-        stage_record_id = "eps_" + id24(episode_record_id, si, stage_name)
-        stage_parent_edges = [{"edge_kind": "stage_of", "parent_record_id": episode_record_id, "ordinal": si}]
-        stage_deriv = [{"ref_kind": "run_trace", "trace_id": trace_id,
-                        "trace_content_hash": trace_hash, "event_range": ev_range}]
-        stage_env = build_envelope(
-            "episode_stage", stage_record_id, "epsv", ns, stage_body, EPISODE_STAGE_BODY_SCHEMA,
-            src_version_id, stage_deriv, "observed", DEFAULT_SENSITIVITY,
-            trace.get("started_at"), trace.get("finished_at"), stage_parent_edges, [])
-        stage_records.append(stage_env)
-        stage_refs.append({"ordinal": si, "stage_name": stage_name, "status": st_status,
-                           "record_id": stage_record_id})
-        episode_child_edges.append({"edge_kind": "has_stage", "child_record_id": stage_record_id, "ordinal": si})
+        stage_sequence.append(stage_detail)
+        episode_child_edges.append({"edge_kind": "has_stage", "ordinal": si, "stage_name": stage_name})
         for key in ("tool_invocations", "state_changes", "test_results", "reviewer_outcomes",
                     "human_interventions", "errors", "models"):
             agg[key].extend(coll[key])
@@ -538,7 +574,7 @@ def record_trace(trace, namespace, emit_failure_default=True):
         "context_packet_id": trace.get("context_packet_id"),
         "attempt": attempt,
         "plan": trace.get("plan") or [],
-        "stage_sequence": stage_refs,
+        "stage_sequence": stage_sequence,
         "model_provenance": models,
         "engine_provenance": engines,
         "tool_invocations": agg["tool_invocations"],
@@ -551,7 +587,7 @@ def record_trace(trace, namespace, emit_failure_default=True):
         "metrics": trace.get("metrics") or {},
         "escalation_reasons": escalation_reasons,
         "failure_reasons": failure_reasons,
-        "stage_count": len(stage_records),
+        "stage_count": len(stage_sequence),
         "complete": True,   # the recorder ALWAYS emits a complete episode, even from a failed trace
     }
     episode_deriv = [{"ref_kind": "run_trace", "trace_id": trace_id,
@@ -574,7 +610,7 @@ def record_trace(trace, namespace, emit_failure_default=True):
                                      "record_version_id": episode_env["record_version_id"]}
         failure_env = build_failure(descriptor, ns, src_version_id, trace_id, trace_hash)
 
-    return episode_env, stage_records, failure_env
+    return episode_env, failure_env
 
 
 # ------------------------------------------------------------------ failure records + signature + seam
@@ -810,10 +846,20 @@ def validate_record(env):
     ch = env.get("content_hash")
     if not (isinstance(ch, str) and _HEXCH_RE.match(ch)):
         errors.append("malformed content_hash: %r" % ch)
-    # status/currentness must be the taxonomy object, not a bare boolean
+    # status/currentness must be a SINGLE STRING from the s5 enum (v0.1.1, D-0085) -- not a boolean, not
+    # an object. This is the EXACT check #36 0.2 applies at ingest (invalid_status otherwise).
     st = env.get("status")
-    if not (isinstance(st, dict) and "state" in st and "stale_reasons" in st):
-        errors.append("status must be a currentness object {state, stale_reasons, verified}")
+    if not (isinstance(st, str) and st in STATUS_ENUM):
+        errors.append("status must be a single string from the s5 enum (got %r)" % (st,))
+    # optional attrs.stale_reasons: when present, a list of s5 enum values (the multi-reason carrier)
+    attrs = env.get("attrs")
+    if attrs is not None:
+        if not isinstance(attrs, dict):
+            errors.append("attrs must be an object when present")
+        else:
+            sr = attrs.get("stale_reasons")
+            if sr is not None and not (isinstance(sr, list) and all(isinstance(x, str) and x in STATUS_ENUM for x in sr)):
+                errors.append("attrs.stale_reasons must be a list of s5 enum values")
     if env.get("sensitivity_class") in (None, ""):
         errors.append("sensitivity_class missing (required by s7 from day one)")
     if "embedding_space_id" not in env:
@@ -837,10 +883,22 @@ def validate_record(env):
                    "tool_invocations", "state_changes", "test_results", "metrics", "complete"):
             if bf not in b:
                 errors.append("episode.body missing %s" % bf)
-    elif rk == "episode_stage":
-        for bf in ("stage_index", "stage_name", "status"):
-            if bf not in b:
-                errors.append("episode_stage.body missing %s" % bf)
+        # v0.1.1 (D-0085): per-stage detail is STRUCTURAL, inside episode.body.stage_sequence
+        # (episode_stage is retired as a record_kind). Each stage must carry the FULL stage body.
+        seq = b.get("stage_sequence")
+        if not isinstance(seq, list):
+            errors.append("episode.body.stage_sequence must be a list of in-body stage detail objects")
+        else:
+            for i, stg in enumerate(seq):
+                if not isinstance(stg, dict):
+                    errors.append("episode.body.stage_sequence[%d] must be an object" % i)
+                    continue
+                for sf in ("stage_index", "stage_name", "role", "status", "closed_explicitly",
+                           "duration_ms", "tool_invocations", "state_changes", "test_results",
+                           "reviewer_outcomes", "human_interventions", "errors", "notes",
+                           "model_provenance"):
+                    if sf not in stg:
+                        errors.append("episode.body.stage_sequence[%d] missing %s" % (i, sf))
     elif rk == "failure":
         for bf in ("component", "attempted_operation", "observable_symptoms", "failure_signature",
                    "match_keys", "confidence_ppm", "status"):
@@ -911,13 +969,18 @@ def run(request):
     if op == "record":
         trace = load_json_input(request.get("trace") if request.get("trace") is not None else request.get("input"), base_dir, "trace")
         emit_failure = request.get("emit_failure", True)
-        episode_env, stage_records, failure_env = record_trace(trace, namespace, emit_failure)
+        episode_env, failure_env = record_trace(trace, namespace, emit_failure)
         ns = episode_env["namespace"]
-        all_records = [episode_env] + stage_records + ([failure_env] if failure_env else [])
+        # v0.1.1 (D-0085): the ingest bundle carries ONLY episode + failure records -- per-stage detail is
+        # STRUCTURAL, inside episode.body.stage_sequence (episode_stage is retired as a record_kind).
+        all_records = [episode_env] + ([failure_env] if failure_env else [])
+        stage_sequence = episode_env["body"]["stage_sequence"]
         validation = validate_records(all_records)
         bundle = ingest_bundle(ns, all_records)
         artifacts.append(write_canon(out_dir, "episode.json", episode_env))
-        artifacts.append(write_canon(out_dir, "episode_stages.json", stage_records))
+        # episode_stages.json is a HUMAN/DEBUG VIEW of the in-body stage detail -- NOT part of the ingest
+        # bundle (records.json). It is the canonical, intified episode.body.stage_sequence verbatim.
+        artifacts.append(write_canon(out_dir, "episode_stages.json", stage_sequence))
         if failure_env:
             artifacts.append(write_canon(out_dir, "failure.json", failure_env))
         artifacts.append(write_canon(out_dir, "records.json", bundle))
@@ -929,7 +992,7 @@ def run(request):
             "episode_record_id": episode_env["record_id"],
             "episode_version_id": episode_env["record_version_id"],
             "episode_final_status": episode_env["body"]["final_status"],
-            "stage_count": len(stage_records),
+            "stage_count": len(stage_sequence),
             "failure_emitted": failure_env is not None,
             "failure_record_id": failure_env["record_id"] if failure_env else None,
             "failure_signature": failure_env["body"]["failure_signature"] if failure_env else None,

@@ -48,15 +48,26 @@ $corpus    = Join-Path $fxDir 'failure-corpus.json'
 $querySuite = Join-Path $fxDir 'task-context-queries.json'
 
 # ---- KNOWN pins (hand-verified off-machine; the cross-env byte-identity anchors) ----
-$SUCC_RECORDS_DIGEST   = 'sha256:7d70109cae012843a90464b1d97b955f0a2508df37d07a03113b9bc34b015124'
-$SUCC_EPISODE_SHA      = 'a3c5b3b158c39669eb28894ab197737f1412093be947b94beb8a6f8d9f9b4952'
+# v0.1.1 (D-0085): ALL record ids/versions/digests/shas change vs 0.1.0 BY DESIGN -- the extractor bumped
+# 0.1.0 -> 0.1.1 AND the envelope status became a string + stages fold into episode.body.stage_sequence
+# (episode_stage retired). The LOGICAL ids (episode ep_..., failure fail_..., failure_signature) are
+# UNCHANGED (derived from ns/task/attempt and descriptor facets, not the extractor fingerprint).
+$SUCC_RECORDS_DIGEST   = 'sha256:ecfb7517a43f69acb63290251b769c8c28b1e1cdb3e66fdf7589ef55fddd2fbd'
+$SUCC_EPISODE_SHA      = 'ec0b62da00abb429def46f2f51acb95b8bf4634e6ad538e63e0d90bcefbc5389'
 $SUCC_EPISODE_ID       = 'ep_9416e689572bcc33ae38db45'
-$FAIL_RECORDS_DIGEST   = 'sha256:0edec639cdf7edaccacff32b2a130b0453098482cbb44c8fa5b6070af2f4b81e'
-$FAIL_EPISODE_SHA      = 'f3ab06dec64c9b95ffb057951c2d298b245b5a6ae316323034dcaa7c60411bfb'
-$FAIL_FAILURE_SHA      = 'e0dbec908cc6d536c39bb2e0d8ffb6783c7a3c2bae150db11be60eadf831ab5d'
+$FAIL_RECORDS_DIGEST   = 'sha256:7696727d240e740f04706938cef2ab20789c1ecd27561bf11073f160529a7739'
+$FAIL_EPISODE_SHA      = '6136a93313bcf450f4df10cb107fd1c4ed1d9155bf1c5a1b400a631e61d0be56'
+$FAIL_FAILURE_SHA      = 'fa973326493aaf1bb80f762ed9d351ef490519245593beb70cf851849d658b30'
 $FAIL_FAILURE_ID       = 'fail_da6b51ac7cb6ad22b2b2dc0c'
 $FAIL_FAILURE_SIG      = 'fsig1:media-decompose:a05ab6b03ecf365c454a'
-$CORPUS_RECORDS_DIGEST = 'sha256:e69a9f8b26c1a4eadc66f4bee4496d7cde5d5a58547df0d24887764751d8ceca'
+$CORPUS_RECORDS_DIGEST = 'sha256:e9ef0b854824e878c6dcdae0017e4395e8142b2e01f720354704c0ba1b4085fd'
+
+# The EXACT sets #36 0.2 `ingest_records` enforces (artifact_search STATUS_ENUM + TYPED_RECORD_KINDS) --
+# so a local #36-shape self-check proves the emitted records ingest with ZERO rejections (D-0077 fold).
+$S5_STATUS_ENUM = @('current','source_stale','derivation_stale','embedding_stale','relationship_stale',
+    'summary_stale','authority_stale','temporal_expiry','deleted','unverified')
+$TYPED_RECORD_KINDS = @('symbol','summary','decision','claim','episode','failure','procedure','skill',
+    'reminder','entity','relationship')
 
 $mode = if ($Live) { 'LIVE (on-device)' } else { 'cloud/real' }
 [Console]::Out.WriteLine("== episode.record tests ($mode); pwsh=$PwshPath python=$([string]::IsNullOrEmpty($PythonPath) ? '(auto)' : $PythonPath) ==")
@@ -85,6 +96,33 @@ function ReadArt([object]$env, [string]$name) {
     $sha = ([System.BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash($bytes))).Replace('-', '').ToLowerInvariant()
     $obj = $null; if ($name -match '\.json$') { $obj = ([System.Text.Encoding]::UTF8.GetString($bytes) | ConvertFrom-Json) }
     return [pscustomobject]@{ path = [string]$a.path; bytes = $bytes.Length; sha = $sha; declared_sha = [string]$a.sha256; obj = $obj }
+}
+
+# ---- LOCAL #36 0.2 `ingest_records` shape self-check (mirrors artifact_search._validate_record + the
+# status/kind gates EXACTLY, so a record that would be REJECTED by the real #36 is rejected here too).
+# Returns an array of { record_version_id, reason } rejections; empty == would ingest with 0 rejections.
+function Test-Ingest36Shape([object[]]$records) {
+    $rej = New-Object System.Collections.Generic.List[object]
+    foreach ($r in @($records)) {
+        $rvid = if (Has $r 'record_version_id') { [string]$r.record_version_id } else { $null }
+        $missing = $false
+        foreach ($req in @('record_id', 'record_version_id', 'record_kind')) {
+            if (-not (Has $r $req) -or [string]::IsNullOrWhiteSpace([string]$r.$req)) {
+                $rej.Add([pscustomobject]@{ record_version_id = $rvid; reason = 'missing_required_field' }); $missing = $true; break
+            }
+        }
+        if ($missing) { continue }
+        $kind = [string]$r.record_kind
+        if ($kind -eq 'source_chunk') { $rej.Add([pscustomobject]@{ record_version_id = $rvid; reason = 'reserved_record_kind' }); continue }
+        if ($TYPED_RECORD_KINDS -notcontains $kind) { $rej.Add([pscustomobject]@{ record_version_id = $rvid; reason = 'unknown_record_kind' }); continue }
+        $hasText = (Has $r 'text') -and -not [string]::IsNullOrWhiteSpace([string]$r.text)
+        $hasHash = (Has $r 'content_hash') -and -not [string]::IsNullOrWhiteSpace([string]$r.content_hash)
+        if (-not $hasText -and -not $hasHash) { $rej.Add([pscustomobject]@{ record_version_id = $rvid; reason = 'missing_content' }); continue }
+        # status is a SINGLE STRING from the s5 enum (an object stringifies to a non-enum value -> reject)
+        $st = if (Has $r 'status') { $r.status } elseif (Has $r 'currentness') { $r.currentness } else { 'current' }
+        if ($st -isnot [string] -or ($S5_STATUS_ENUM -notcontains [string]$st)) { $rej.Add([pscustomobject]@{ record_version_id = $rvid; reason = 'invalid_status' }); continue }
+    }
+    return $rej.ToArray()
 }
 
 # ---- resolve a python for the py_compile gate ----
@@ -127,7 +165,7 @@ Check 'manifest validates' ([bool]$mv.valid)
 if (-not $mv.valid) { $mv.errors | ForEach-Object { [Console]::Out.WriteLine("      - $_") } }
 $manifest = (Get-Content -LiteralPath $mf -Raw) | ConvertFrom-Json
 Check 'manifest skill_id episode.record' ($manifest.skill_id -eq 'episode.record')
-Check 'manifest version 0.1.0' ($manifest.version -eq '0.1.0')
+Check 'manifest version 0.1.1' ($manifest.version -eq '0.1.1')
 Check 'manifest deterministic' ($manifest.determinism -eq 'deterministic')
 Check 'manifest parallel_safe' ([bool]$manifest.parallel_safe)
 
@@ -144,7 +182,7 @@ if ($null -ne $e1) {
     Check 'succ: final_status ok' ($e1.result.episode_final_status -eq 'ok')
     Check 'succ: 3 stages' ($e1.result.stage_count -eq 3)
     Check 'succ: no candidate failure (clean run)' (-not $e1.result.failure_emitted)
-    Check 'succ: record_count 4 (episode + 3 stages)' ($e1.result.record_count -eq 4)
+    Check 'succ: record_count 1 (episode only; stages fold in-body, v0.1.1)' ($e1.result.record_count -eq 1)
     Check 'succ: all records valid' ([bool]$e1.result.all_valid)
     Check 'succ: records_digest pinned (deterministic + known)' ($e1.result.records_digest -eq $SUCC_RECORDS_DIGEST)
     [Console]::Out.WriteLine("CANONICAL-HASH succ-records_digest=$($e1.result.records_digest)")
@@ -163,14 +201,37 @@ if ($null -ne $e1) {
             Check "succ: episode envelope has s1 field '$f'" (Has $ep.obj $f)
         }
         Check 'succ: episode record_kind episode' ($ep.obj.record_kind -eq 'episode')
-        Check 'succ: episode status is a currentness object (not a bool)' ((Has $ep.obj.status 'state') -and (Has $ep.obj.status 'stale_reasons'))
+        # v0.1.1 (D-0085): envelope status is a SINGLE STRING from the s5 enum, NOT a {state,...} object
+        Check 'succ: episode status is a string in the s5 enum (not an object)' (($ep.obj.status -is [string]) -and ($S5_STATUS_ENUM -contains [string]$ep.obj.status))
+        Check 'succ: episode status == current (healthy baseline)' ($ep.obj.status -eq 'current')
         Check 'succ: episode body.complete true' ([bool]$ep.obj.body.complete)
-        Check 'succ: episode has 3 stage refs' (@($ep.obj.body.stage_sequence).Count -eq 3)
-        Check 'succ: episode child_edges has_stage x3' (@($ep.obj.child_edges | Where-Object { $_.edge_kind -eq 'has_stage' }).Count -eq 3)
+        # v0.1.1: stage_sequence carries FULL in-body stage detail (was lightweight refs -> separate records)
+        Check 'succ: episode stage_sequence has 3 full stage detail objects' (@($ep.obj.body.stage_sequence).Count -eq 3)
+        $s4 = @('stage_index','stage_name','role','status','closed_explicitly','duration_ms','tool_invocations','state_changes','test_results','reviewer_outcomes','human_interventions','errors','notes','model_provenance')
+        $allS4 = $true; foreach ($stg in @($ep.obj.body.stage_sequence)) { foreach ($sf in $s4) { if (-not (Has $stg $sf)) { $allS4 = $false } } }
+        Check 'succ: EVERY per-stage s4 field survives IN-BODY (no field lost vs 0.1.0)' $allS4
+        # the s4 VALUES survive too: the verify stage keeps its test_result + reviewer_outcome + model_provenance
+        $verify = (@($ep.obj.body.stage_sequence | Where-Object { $_.stage_name -eq 'verify' }) | Select-Object -First 1)
+        Check 'succ: verify stage retains test_results + reviewer_outcomes + model_provenance in-body' ($null -ne $verify -and @($verify.test_results).Count -ge 1 -and @($verify.reviewer_outcomes).Count -ge 1 -and @($verify.model_provenance).Count -ge 1)
+        Check 'succ: episode child_edges has_stage x3 (by in-body ordinal, not a stage record_id)' (@($ep.obj.child_edges | Where-Object { $_.edge_kind -eq 'has_stage' -and (Has $_ 'ordinal') -and -not (Has $_ 'child_record_id') }).Count -eq 3)
         Check 'succ: embedding_space_id null (unembedded)' ($null -eq $ep.obj.embedding_space_id)
     }
+    # episode_stages.json is now a HUMAN/DEBUG VIEW of the in-body stage detail (NOT separate records / NOT ingested)
     $st = ReadArt $e1 'episode_stages.json'
-    Check 'succ: 3 episode_stage child records with stage_of edges' ($null -ne $st -and @($st.obj).Count -eq 3 -and @($st.obj | Where-Object { $_.parent_edges[0].edge_kind -eq 'stage_of' }).Count -eq 3)
+    $stS4 = $false
+    if ($null -ne $st -and @($st.obj).Count -eq 3) {
+        $s4b = @('stage_index','stage_name','role','status','closed_explicitly','duration_ms','tool_invocations','state_changes','test_results','reviewer_outcomes','human_interventions','errors','notes','model_provenance')
+        $stS4 = $true; foreach ($stg in @($st.obj)) { foreach ($sf in $s4b) { if (-not (Has $stg $sf)) { $stS4 = $false } }; if (Has $stg 'record_kind') { $stS4 = $false } }
+    }
+    Check 'succ: episode_stages.json = 3 debug stage detail objects (no record envelope; not ingested)' $stS4
+
+    # ---- LOCAL #36 0.2 ingest_records self-check: the success bundle is episode-only, 0 rejections ----
+    $succBundle = ReadArt $e1 'records.json'
+    Check 'succ: ingest bundle is episode ONLY (no episode_stage records)' ($null -ne $succBundle -and (@($succBundle.obj.records | Where-Object { $_.record_kind -eq 'episode' }).Count -eq 1) -and (@($succBundle.obj.records).Count -eq 1))
+    if ($null -ne $succBundle) {
+        $rej = Test-Ingest36Shape @($succBundle.obj.records)
+        Check 'succ: emitted records ingest into a #36-shape sink with ZERO rejections' (@($rej).Count -eq 0)
+    }
 }
 
 # double-run byte identity (same machine)
@@ -226,7 +287,24 @@ Check 'validate: records.json bundle present' ($null -ne $recBundle)
 if ($null -ne $recBundle) {
     $ev5 = ParseEnv (RunOp @('-Op', 'validate', '-Records', ([string]$recBundle.path)))
     Check 'validate: clean bundle all_valid true' ($null -ne $ev5 -and [bool]$ev5.result.all_valid)
-    Check 'validate: num_records 4' ($null -ne $ev5 -and $ev5.result.num_records -eq 4)
+    Check 'validate: num_records 2 (episode + failure; NO episode_stage, v0.1.1)' ($null -ne $ev5 -and $ev5.result.num_records -eq 2)
+
+    # ---- LOCAL #36 0.2 ingest_records self-check on the FAILED-run bundle (episode + failure) ----
+    $failBundle = ReadArt $e2 'records.json'
+    if ($null -ne $failBundle) {
+        $kinds = @($failBundle.obj.records | ForEach-Object { $_.record_kind }) | Sort-Object -Unique
+        Check 'fold: failed-run bundle kinds are exactly {episode, failure}' (($kinds -join ',') -eq 'episode,failure')
+        $rejF = Test-Ingest36Shape @($failBundle.obj.records)
+        Check 'fold: episode + failure ingest into a #36-shape sink with ZERO rejections' (@($rejF).Count -eq 0)
+        # REGRESSION GUARD: the retired 0.1.0 shapes MUST be rejected by the same #36-shape gate.
+        $badKind = ($failBundle.obj.records[0] | ConvertTo-Json -Depth 60 | ConvertFrom-Json); $badKind.record_kind = 'episode_stage'
+        $rejK = Test-Ingest36Shape @($badKind)
+        Check 'fold guard: an episode_stage record IS rejected (unknown_record_kind)' (@($rejK | Where-Object { $_.reason -eq 'unknown_record_kind' }).Count -ge 1)
+        $badStatus = ($failBundle.obj.records[0] | ConvertTo-Json -Depth 60 | ConvertFrom-Json)
+        $badStatus.status = [pscustomobject]@{ state = 'current'; stale_reasons = @(); verified = $true }
+        $rejS = Test-Ingest36Shape @($badStatus)
+        Check 'fold guard: an OBJECT status IS rejected (invalid_status)' (@($rejS | Where-Object { $_.reason -eq 'invalid_status' }).Count -ge 1)
+    }
 
     # tamper: flip the episode final_status -> content_hash must no longer recompute
     $ep2obj = (ReadArt $e2 'episode.json').obj

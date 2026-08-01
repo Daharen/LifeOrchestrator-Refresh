@@ -14,6 +14,6 @@
     "parser_fingerprint", "chunker_fingerprint", "extractor_fingerprint", "schema_version",
     "token_count", "embedding_space_id", "parent_edges", "child_edges", "body"
   ],
-  "record_kinds": ["episode", "episode_stage", "failure"],
-  "acceptance": "Every record in `records` validates against the s1 envelope (op `validate` all_valid=true): required fields present, ids well-formed (kind-prefixed 24-hex), content_hash recomputes from canonical content (provenance valid), status is the currentness object (not a bare boolean), sensitivity_class present, parent/child edges are first-class arrays. #36 0.2 keys chunk-analog embeddings on embedding_space_id (null here -- episodes/failures are unembedded by this producer)."
+  "record_kinds": ["episode", "failure"],
+  "acceptance": "Every record in `records` validates against the s1 envelope (op `validate` all_valid=true): required fields present, ids well-formed (kind-prefixed 24-hex), content_hash recomputes from canonical content (provenance valid), status is a SINGLE STRING from the s5 enum (v0.1.1, D-0085 -- NOT a boolean, NOT an object), sensitivity_class present, parent/child edges are first-class arrays. record_kind is CLOSED to {episode, failure} for this producer -- episode_stage is retired (per-stage detail is structural, inside episode.body.stage_sequence). VERIFIED at fold: a real episode + failure ingest into #36 0.2 `ingest_records` with ZERO rejections (status STRING in artifact_search.STATUS_ENUM; record_kind in TYPED_RECORD_KINDS; content_hash present so no missing_content). #36 0.2 keys chunk-analog embeddings on embedding_space_id (null here -- episodes/failures are unembedded by this producer)."
 }

@@ -1,59 +1,59 @@
 {
   "schema": "lifeorch.skill.result/0.1",
   "skill_id": "episode.record",
-  "skill_version": "0.1.0",
+  "skill_version": "0.1.1",
   "contract_version": "0.2",
   "invocation_id": "example-0001",
   "status": "ok",
   "started_at_utc": "2026-08-01T09:07:30.0000000Z",
   "finished_at_utc": "2026-08-01T09:07:30.2500000Z",
   "duration_ms": 250,
-  "inputs_digest": "sha256:7d70109cae012843a90464b1d97b955f0a2508df37d07a03113b9bc34b015124",
+  "inputs_digest": "sha256:ecfb7517a43f69acb63290251b769c8c28b1e1cdb3e66fdf7589ef55fddd2fbd",
   "result": {
     "op": "record",
     "namespace": "life-orchestrator",
     "episode_record_id": "ep_9416e689572bcc33ae38db45",
-    "episode_version_id": "epv_a1721928541f88f39605d5c7",
+    "episode_version_id": "epv_d1550aa41e49a1438e8f5442",
     "episode_final_status": "ok",
     "stage_count": 3,
     "failure_emitted": false,
     "failure_record_id": null,
     "failure_signature": null,
-    "record_count": 4,
-    "records_digest": "sha256:7d70109cae012843a90464b1d97b955f0a2508df37d07a03113b9bc34b015124",
+    "record_count": 1,
+    "records_digest": "sha256:ecfb7517a43f69acb63290251b769c8c28b1e1cdb3e66fdf7589ef55fddd2fbd",
     "all_valid": true
   },
   "confidence": null,
   "artifacts": [
     {
-      "path": "C:\\\\Users\\\\just_\\\\LifeOrchestrator-Refresh\\\\modules\\\\39-episode-memory\\\\runtime\\\\artifacts\\\\example-0001\\\\episode.json",
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\39-episode-memory\\runtime\\artifacts\\example-0001\\episode.json",
       "kind": "json",
-      "bytes": 3235,
-      "sha256": "a3c5b3b158c39669eb28894ab197737f1412093be947b94beb8a6f8d9f9b4952"
+      "bytes": 4614,
+      "sha256": "ec0b62da00abb429def46f2f51acb95b8bf4634e6ad538e63e0d90bcefbc5389"
     },
     {
-      "path": "C:\\\\Users\\\\just_\\\\LifeOrchestrator-Refresh\\\\modules\\\\39-episode-memory\\\\runtime\\\\artifacts\\\\example-0001\\\\episode_stages.json",
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\39-episode-memory\\runtime\\artifacts\\example-0001\\episode_stages.json",
       "kind": "json",
-      "bytes": 5269,
-      "sha256": "fe4ef2947237dec8956880895335e6dd295a4f243bdabcf126eef7b1d90da6ac"
+      "bytes": 1786,
+      "sha256": "f0855bed8c558a4e8a9099a2ede550c0a060f8762fbff1c9c8895b2eaba5a5fe"
     },
     {
-      "path": "C:\\\\Users\\\\just_\\\\LifeOrchestrator-Refresh\\\\modules\\\\39-episode-memory\\\\runtime\\\\artifacts\\\\example-0001\\\\records.json",
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\39-episode-memory\\runtime\\artifacts\\example-0001\\records.json",
       "kind": "json",
-      "bytes": 8634,
-      "sha256": "c18945bb78baef8120c6dd7a7cca23c1b8d0c684696f5c1eff03adeac90a7a4d"
+      "bytes": 4746,
+      "sha256": "a22252c63c71522e3ef8d70d4199cd9b7802190c50ac7926e08917730ce2477f"
     },
     {
-      "path": "C:\\\\Users\\\\just_\\\\LifeOrchestrator-Refresh\\\\modules\\\\39-episode-memory\\\\runtime\\\\artifacts\\\\example-0001\\\\validation.json",
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\39-episode-memory\\runtime\\artifacts\\example-0001\\validation.json",
       "kind": "json",
-      "bytes": 598,
-      "sha256": "2855b9a3832aabebaad13547f265e4295889ce477ce5cd5c28bf8d868955968d"
+      "bytes": 280,
+      "sha256": "28bf70632612d6189b9b5661034ea7cf66534119a215552e93347bf9191e02a5"
     },
     {
-      "path": "C:\\\\Users\\\\just_\\\\LifeOrchestrator-Refresh\\\\modules\\\\39-episode-memory\\\\runtime\\\\artifacts\\\\example-0001\\\\worker-summary.json",
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\39-episode-memory\\runtime\\artifacts\\example-0001\\worker-summary.json",
       "kind": "json",
-      "bytes": 1085,
-      "sha256": "1ad7a282637f5bfbe45c68320c8ba16d4ed2c841c21bb021274e213b6b888719"
+      "bytes": 1413,
+      "sha256": "0bc25f8258a80bc1b6e89f59aba40f104018eedba01425b83b98c8fde7f0670b"
     }
   ],
   "model_provenance": [],
