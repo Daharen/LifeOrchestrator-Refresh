@@ -48,3 +48,4 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 - `i22-TRACK-STABLE-i22.md` | the filled CPU-lane brief (track.objects #33 stable-identity refinement) dispatched in i22 (plan fo-22-d2c492e7) | used brief archived on wave completion | 2026-07-31 | D-0077
 - `i22-VIDEO-TIMELINE-i22.md` | the filled coding-lane brief (NEW module #34 video.timeline) dispatched in i22 (plan fo-22-d2c492e7) | used brief archived on wave completion | 2026-07-31 | D-0077
 - `2026-07-31-FANOUT_ORCHESTRATOR_HANDOFF-i22.md` | snapshot of the FANOUT_ORCHESTRATOR_HANDOFF at the i22 close-out (before the i23 rewrite) | handoff snapshot per DOC_PROTOCOL section 5 | 2026-07-31 | D-0077
+- `2026-08-01-FANOUT_ORCHESTRATOR_HANDOFF-i25.md` | snapshot of the FANOUT_ORCHESTRATOR_HANDOFF at the i25 close-out (before the i26 rewrite; HEAD 98c2cd7) | handoff snapshot per DOC_PROTOCOL section 5 | 2026-08-01 | D-0083

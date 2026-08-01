@@ -22,7 +22,7 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
 - **Direction (extends D-0050):** the offload / verify-cost AUDIT LOOP still holds -- offload only what is
   cheaper to VERIFY than to do; deterministic modules are Claude's hands, model modules only where machine- or
   human-checkable. D-0080 adds the memory/retrieval/context substrate that makes it cumulative.
-- **Wave 1 (memory + retrieval substrate) SHIPPED (i25, plan fo-25-3b718a13, D-0082):** #35 embedding.local + #36 artifact.search + #37 retrieval.eval; the D-0077 embedding->artifact.search->benchmark fold smoke PASSED (real 1024-dim vectors stored, recall@K + provenance 1.0, digest stable, change detected). **NEXT = a retrieval-record/provenance CONTRACT FREEZE (memory red-team GO, D-0082) then Wave 2 (repo intelligence + episode/failure schema + recorder).**
+- **Wave 1 (memory + retrieval substrate) SHIPPED (i25, plan fo-25-3b718a13, D-0082):** #35 embedding.local + #36 artifact.search + #37 retrieval.eval; the D-0077 embedding->artifact.search->benchmark fold smoke PASSED (real 1024-dim vectors stored, recall@K + provenance 1.0, digest stable, change detected). **CONTRACT FREEZE DONE (i26, D-0083):** the retrieval-record/provenance contract is frozen in `core-docs/MEMORY_CONTRACT.md` (record-envelope v0.1 + embedding-provider 0.2 + retriever 0.2 + catalog/eval/scale-privacy gates). **NEXT = Wave 2 (repo intelligence + episode/failure schema + recorder), built to MEMORY_CONTRACT 0.2.**
   GPU = embedding adapter; coding = `artifact.search` deterministic MVP (SQLite + FTS + Markdown chunking +
   provenance); CPU = retrieval-evaluation harness; optional frontier = memory-architecture red-team.
   Orchestrator fold = a REAL embedding->artifact.search->benchmark producer/consumer smoke. Work orders:
@@ -127,7 +127,7 @@ registry facts: `TOOL_MODEL_REGISTRY.md`. Roster (all MVP-complete unless noted)
   oracle; `score_unit millionths`; pre-first-scene `scene_index -1`; #34 0.1.1 consumes that contract
   exactly -- proven on real bytes). Next: `video.interpret` (pos 22), Proposed; the dense-stream decision
   gate (Unresolved questions) precedes any live-composition input-contract freeze.
-- **Collective Agent memory substrate (Wave 1, D-0080/D-0082 — NEW):** **#35 embedding.local** (wires `embedding.qwen3-0p6b`, dim 1024, transient CUDA transformers worker; DEFINES the embedding-provider interface) · **#36 artifact.search** (deterministic SQLite catalog + FTS5 hybrid-lexical search; Markdown-aware chunking; result->source+content_hash+span provenance; incremental reconcile + DB integrity; mock+real embedding seam; PRODUCES the retriever interface) · **#37 retrieval.eval** (retrieval-quality benchmark: recall@K/MRR/stale/provenance; BM25-lite baseline; external-retriever fold seam). The D-0077 embedding->artifact.search->benchmark cross-module smoke PASSED. Governing: `research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md`; red-team `research/2026-08-01-frontier-memory-redteam.md`; ship-state `fanout/WAVE1-MEMORY-i25-SHIP-STATE.md`.
+- **Collective Agent memory substrate (Wave 1, D-0080/D-0082 — NEW):** **#35 embedding.local** (wires `embedding.qwen3-0p6b`, dim 1024, transient CUDA transformers worker; DEFINES the embedding-provider interface) · **#36 artifact.search** (deterministic SQLite catalog + FTS5 hybrid-lexical search; Markdown-aware chunking; result->source+content_hash+span provenance; incremental reconcile + DB integrity; mock+real embedding seam; PRODUCES the retriever interface) · **#37 retrieval.eval** (retrieval-quality benchmark: recall@K/MRR/stale/provenance; BM25-lite baseline; external-retriever fold seam). The D-0077 embedding->artifact.search->benchmark cross-module smoke PASSED. Governing: `research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md`; **contract `MEMORY_CONTRACT.md` (0.2 freeze, D-0083)**; red-team `research/2026-08-01-frontier-memory-redteam.md`; ship-state `fanout/WAVE1-MEMORY-i25-SHIP-STATE.md`.
 - **NOT built:** #26 agent.coding — designed + DEFERRED (D-0037; no safe code-exec substrate on this box).
 - **Widgets (native + `launch.bat`, D-0038):** 01 Local Agent Console · 02 Module Launcher · 03 Verification
   Console (**durable verdicts** — results sidecar keyed by `packet_id`; the packet file is never modified, D-0065) · **04 Fan-out Wave Dashboard** (read-only plan/worker/lease view; D-0067; live-GUI confirm DONE i15 D-0068).
@@ -402,7 +402,7 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 
 ## Next expected action
 
-**Wave 1 SHIPPED + folded (i25, D-0082); NEXT = Wave 2 after a retrieval-record/provenance contract freeze.**
+**Wave 1 SHIPPED (i25, D-0082); the CONTRACT FREEZE is DONE (i26, D-0083, `core-docs/MEMORY_CONTRACT.md`); NEXT = Wave 2.**
 The project now builds the Collective Agent memory/retrieval substrate. Wave 1 lanes + work orders live in
 **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4: GPU = embedding adapter; coding = `artifact.search` deterministic
 MVP; CPU = retrieval-evaluation harness; optional frontier = memory-architecture red-team (non-blocking). At
@@ -410,7 +410,7 @@ fold the orchestrator runs the REAL embedding->artifact.search->benchmark produc
 dispatch: fill the `FANOUT_AGENT_00N` slots from section 4, `plan` at `MaxParallel <=3`, confirm preflight,
 relay prompts as FILES, `status` -> `handoff` -> fold + mirror under the git lease.
 
-Outstanding: **(1)** Wave 1 is SHIPPED + FOLDED (i25, D-0082): #35/#36/#37 committed (99b6590 / 30ef7bd / 687edcd), the D-0077 smoke PASSED, the memory red-team folded (GO). NEXT = a retrieval-record/provenance CONTRACT FREEZE (embedding 0.2 + retriever 0.2 + catalog/eval/privacy gates per the red-team), then Wave 2 (repo intelligence + episode/failure schema + recorder); **(2)** the whole-project-direction frontier pack answer (`817e52e9`) is FOLDED (i25, D-0081) -- captured
+Outstanding: **(1)** Wave 1 is SHIPPED + FOLDED (i25, D-0082): #35/#36/#37 committed (99b6590 / 30ef7bd / 687edcd), the D-0077 smoke PASSED, the memory red-team folded (GO). the CONTRACT FREEZE is DONE (i26, D-0083 -- `core-docs/MEMORY_CONTRACT.md`: record-envelope v0.1 + embedding 0.2 + retriever 0.2 + catalog/eval/scale-privacy gates); NEXT = Wave 2 (repo intelligence + episode/failure schema + recorder), built to MEMORY_CONTRACT 0.2; **(2)** the whole-project-direction frontier pack answer (`817e52e9`) is FOLDED (i25, D-0081) -- captured
 (read-return valid), it RATIFIES D-0080 with no course change; **(3) FROZEN/deferred (D-0080):** further supervisor/warm-pool hardening (D-0079 GATE-NO stands;
 classic detached-warm is the trusted default), generator upgrades, `video.interpret` + live composition, deep
 real-time perception, broad training; **(4)** the widget-03 `model.gateway` GPU live-GUI pass (open since
@@ -419,5 +419,5 @@ after the D-0080 edits) are over budget -- a hot-doc slim pass is a named unit (
 
 ---
 
-**Last updated:** 2026-08-01 -- i25 (D-0082): Wave 1 of the Collective Agent memory substrate SHIPPED -- #35 embedding.local + #36 artifact.search + #37 retrieval.eval (commits 99b6590 / 30ef7bd / 687edcd; all `-Live` green; 0 orphans). The D-0077 cross-module smoke PASSED end-to-end (real 1024-dim embeddings stored, recall@K + provenance 1.0, digest stable, changed-file re-index). The memory-architecture frontier red-team folded (GO, conditional on a retrieval-record/provenance contract amendment; digest research/2026-08-01-frontier-memory-redteam.md). Slots 001/002/003 archived + reset. NEXT = a contract freeze, then Wave 2.
+**Last updated:** 2026-08-01 -- i26 (D-0083): the retrieval-record/provenance CONTRACT FREEZE shipped -- NEW `core-docs/MEMORY_CONTRACT.md` (record-envelope v0.1 + embedding-provider 0.2 + retriever 0.2 + catalog/eval/scale-privacy gates from the memory red-team); orchestrator-only, NO worker wave, no module code changed. NEXT = Wave 2 (repo intelligence + episode/failure schema + recorder) built to MEMORY_CONTRACT 0.2. (Doc debt: CURRENT_STATE / MODULE_ROADMAP / handoff / DECISION_LOG_INDEX over budget -- slim pass still deferred.)
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

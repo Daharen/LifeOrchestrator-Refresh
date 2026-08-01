@@ -31,6 +31,7 @@ describe NOW and stay ingestable whole; history is never deleted, it moves to la
 | PROJECT_DIRECTION.md | doctrine (stable) | 9 KB |
 | ARCHITECTURE_MAP.md | long-horizon spine (stable) | 15 KB |
 | SKILL_CONTRACT.md | the skill interface (versioned) | 12 KB |
+| MEMORY_CONTRACT.md | the Collective Agent memory/retrieval contract (versioned): record+provenance envelope, embedding 0.2, retriever 0.2, catalog/eval/privacy gates | 24 KB |
 | ADAPTIVE_RESOURCE_GOVERNOR.md | governor design + measured truth | 22 KB |
 | MODULE_WORK_ORDER_TEMPLATE.md | work-order template | 4 KB |
 | DOC_PROTOCOL.md | this contract | 10 KB |
@@ -105,7 +106,7 @@ D-refs, re-check size. Check sizes at every mirror: `wc -c core-docs/*.md` (devi
 - Mirror map: `CURRENT_STATE.md`, `DECISION_LOG.md`, `MODULE_ROADMAP.md`, `TOOL_MODEL_REGISTRY.md`,
   `REVIEW_QUEUE.md`, `PROJECT_DIRECTION.md`, `SKILL_CONTRACT.md`, `MODULE_WORK_ORDER_TEMPLATE.md`,
   `START_HERE.md` -> Project top-level. `FANOUT_ORCHESTRATOR_HANDOFF.md`, `ARCHITECTURE_MAP.md`,
-  `ADAPTIVE_RESOURCE_GOVERNOR.md`, `DOC_PROTOCOL.md`, `DECISION_LOG_INDEX.md` -> `claude/` (the Project
+  `ADAPTIVE_RESOURCE_GOVERNOR.md`, `DOC_PROTOCOL.md`, `DECISION_LOG_INDEX.md`, `MEMORY_CONTRACT.md` -> `claude/` (the Project
   places new agent-written docs under `claude/`). `research/*` -> `claude/research/`.
   `fanout/*` -> `claude/fanout/`. `archive/` -> NOT mirrored.
 - Mirror at session end (START_HERE checklist). Only the frontier agent touches the Project; the executor
