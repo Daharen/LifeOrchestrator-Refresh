@@ -22,7 +22,7 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
 - **Direction (extends D-0050):** the offload / verify-cost AUDIT LOOP still holds -- offload only what is
   cheaper to VERIFY than to do; deterministic modules are Claude's hands, model modules only where machine- or
   human-checkable. D-0080 adds the memory/retrieval/context substrate that makes it cumulative.
-- **Wave 1 (memory + retrieval substrate) DISPATCHED (i25, plan fo-25-3b718a13); slots 001/002/003 FILLED+READY; awaiting worker reports + the D-0077 fold smoke.**
+- **Wave 1 (memory + retrieval substrate) SHIPPED (i25, plan fo-25-3b718a13, D-0082):** #35 embedding.local + #36 artifact.search + #37 retrieval.eval; the D-0077 embedding->artifact.search->benchmark fold smoke PASSED (real 1024-dim vectors stored, recall@K + provenance 1.0, digest stable, change detected). **NEXT = a retrieval-record/provenance CONTRACT FREEZE (memory red-team GO, D-0082) then Wave 2 (repo intelligence + episode/failure schema + recorder).**
   GPU = embedding adapter; coding = `artifact.search` deterministic MVP (SQLite + FTS + Markdown chunking +
   provenance); CPU = retrieval-evaluation harness; optional frontier = memory-architecture red-team.
   Orchestrator fold = a REAL embedding->artifact.search->benchmark producer/consumer smoke. Work orders:
@@ -127,6 +127,7 @@ registry facts: `TOOL_MODEL_REGISTRY.md`. Roster (all MVP-complete unless noted)
   oracle; `score_unit millionths`; pre-first-scene `scene_index -1`; #34 0.1.1 consumes that contract
   exactly -- proven on real bytes). Next: `video.interpret` (pos 22), Proposed; the dense-stream decision
   gate (Unresolved questions) precedes any live-composition input-contract freeze.
+- **Collective Agent memory substrate (Wave 1, D-0080/D-0082 — NEW):** **#35 embedding.local** (wires `embedding.qwen3-0p6b`, dim 1024, transient CUDA transformers worker; DEFINES the embedding-provider interface) · **#36 artifact.search** (deterministic SQLite catalog + FTS5 hybrid-lexical search; Markdown-aware chunking; result->source+content_hash+span provenance; incremental reconcile + DB integrity; mock+real embedding seam; PRODUCES the retriever interface) · **#37 retrieval.eval** (retrieval-quality benchmark: recall@K/MRR/stale/provenance; BM25-lite baseline; external-retriever fold seam). The D-0077 embedding->artifact.search->benchmark cross-module smoke PASSED. Governing: `research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md`; red-team `research/2026-08-01-frontier-memory-redteam.md`; ship-state `fanout/WAVE1-MEMORY-i25-SHIP-STATE.md`.
 - **NOT built:** #26 agent.coding — designed + DEFERRED (D-0037; no safe code-exec substrate on this box).
 - **Widgets (native + `launch.bat`, D-0038):** 01 Local Agent Console · 02 Module Launcher · 03 Verification
   Console (**durable verdicts** — results sidecar keyed by `packet_id`; the packet file is never modified, D-0065) · **04 Fan-out Wave Dashboard** (read-only plan/worker/lease view; D-0067; live-GUI confirm DONE i15 D-0068).
@@ -263,6 +264,9 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 | widgets/03 Verification Console | 173/173 cloud mock + live STA SelfTests (`SELFTEST_VERDICT_PERSIST_OK`, `SELFTEST_AUTOLOAD_OK`) | `f3c1ec7` | 07-29 |
 | ops/setup portability | 161/161 cloud + 175/175 `-Live` (+interpreter shim) | `58870fb` | 07-30 |
 | widgets/04 Fan-out Wave Dashboard | 80/80 cloud + 91/91 `-Live` (+SELFTEST_LAYOUT_OK); live-GUI confirm DONE | `8c1da2e` | 07-30 |
+| #35 embedding.local | 0.1.0: 42/42 (26 off-machine mock-seam + 16 `-Live` GPU); det cos_dist 2.2e-16, batch==single 8.7e-13; 0 orphans; Module 7 re-verified 42/42 | `99b6590` | 08-01 |
+| #36 artifact.search | 0.1.0: 69/69 cloud + 69/69 `-Live` (sqlite3/FTS5); deterministic re-ingest + reconcile + DB integrity + provenance | `30ef7bd` | 08-01 |
+| #37 retrieval.eval | 0.1.0: 69/69 cloud + 69/69 `-Live`; benchmark schema + BM25-lite baseline + recall@K/MRR/stale/provenance; canonical reports | `687edcd` | 08-01 |
 
 ## Known failures / gotchas
 
@@ -373,7 +377,7 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 - **The executor file-lock crash root cause was never reproduced** — the class is self-healed, not explained.
 - **The 27B needs a long `-LoadTimeoutSec`** via `-Model`/X0 (a cold load ~90 s approaches the gateway's 120 s
   default); its `gpu_layers` is tuned to 32 (Module 9 sweep — see `TOOL_MODEL_REGISTRY.md`).
-- **`embedding.qwen3-0p6b` is staged but unwired** — awaits its owning module (artifact.search).
+- **`embedding.qwen3-0p6b` is WIRED (i25, D-0082)** into #35 embedding.local (dim 1024; the gateway entry stays `wired:false` by design). Vector/ANN search over the stored embeddings is a Wave-2 item (the artifact.search MVP is lexical/FTS + a real-vector store).
 - **Widget 03 Verification Console `model.gateway` GPU live-GUI pass is still open** (residual first noted
   in D-0060, never closed) — exercised CPU-only + live-GUI so far.
 - **Portability (i16, D-0069): `doc.io` #20 wired — the LAST non-model/non-infra walk-up leaf** (pure CPU leaves
@@ -398,7 +402,7 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 
 ## Next expected action
 
-**Direction reset complete (D-0080); Wave 1 DISPATCHED (i25, plan fo-25-3b718a13) -- slots 001/002/003 FILLED+READY, workers hand-dispatched by Nicholas.**
+**Wave 1 SHIPPED + folded (i25, D-0082); NEXT = Wave 2 after a retrieval-record/provenance contract freeze.**
 The project now builds the Collective Agent memory/retrieval substrate. Wave 1 lanes + work orders live in
 **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4: GPU = embedding adapter; coding = `artifact.search` deterministic
 MVP; CPU = retrieval-evaluation harness; optional frontier = memory-architecture red-team (non-blocking). At
@@ -406,7 +410,7 @@ fold the orchestrator runs the REAL embedding->artifact.search->benchmark produc
 dispatch: fill the `FANOUT_AGENT_00N` slots from section 4, `plan` at `MaxParallel <=3`, confirm preflight,
 relay prompts as FILES, `status` -> `handoff` -> fold + mirror under the git lease.
 
-Outstanding: **(1)** Wave 1 is DISPATCHED (i25, plan fo-25-3b718a13) -- poll -Action status -PlanId fo-25-3b718a13, then -Action handoff, then the D-0077 fold smoke + fold/mirror under the git lease; **(2)** the whole-project-direction frontier pack answer (`817e52e9`) is FOLDED (i25, D-0081) -- captured
+Outstanding: **(1)** Wave 1 is SHIPPED + FOLDED (i25, D-0082): #35/#36/#37 committed (99b6590 / 30ef7bd / 687edcd), the D-0077 smoke PASSED, the memory red-team folded (GO). NEXT = a retrieval-record/provenance CONTRACT FREEZE (embedding 0.2 + retriever 0.2 + catalog/eval/privacy gates per the red-team), then Wave 2 (repo intelligence + episode/failure schema + recorder); **(2)** the whole-project-direction frontier pack answer (`817e52e9`) is FOLDED (i25, D-0081) -- captured
 (read-return valid), it RATIFIES D-0080 with no course change; **(3) FROZEN/deferred (D-0080):** further supervisor/warm-pool hardening (D-0079 GATE-NO stands;
 classic detached-warm is the trusted default), generator upgrades, `video.interpret` + live composition, deep
 real-time perception, broad training; **(4)** the widget-03 `model.gateway` GPU live-GUI pass (open since
@@ -415,5 +419,5 @@ after the D-0080 edits) are over budget -- a hot-doc slim pass is a named unit (
 
 ---
 
-**Last updated:** 2026-07-31 -- i25 (D-0081): the whole-project-direction frontier pack (817e52e9) RETURNED and was captured (read-return valid) -- it RATIFIES the D-0080 direction reset (the answer IS the directive doc research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md; no course change); 817e52e9 PENDING flags cleared. D-0080 stands: pivot to the Collective Agent (cognitive virtual memory); supervisor/warm-pool hardening, generators, video.interpret, real-time perception, broad training frozen; Wave 1 DISPATCHED (i25, plan fo-25-3b718a13): slots 001/002/003 FILLED+READY, workers hand-dispatched; the orchestrator runs the D-0077 fold smoke at fold.
+**Last updated:** 2026-08-01 -- i25 (D-0082): Wave 1 of the Collective Agent memory substrate SHIPPED -- #35 embedding.local + #36 artifact.search + #37 retrieval.eval (commits 99b6590 / 30ef7bd / 687edcd; all `-Live` green; 0 orphans). The D-0077 cross-module smoke PASSED end-to-end (real 1024-dim embeddings stored, recall@K + provenance 1.0, digest stable, changed-file re-index). The memory-architecture frontier red-team folded (GO, conditional on a retrieval-record/provenance contract amendment; digest research/2026-08-01-frontier-memory-redteam.md). Slots 001/002/003 archived + reset. NEXT = a contract freeze, then Wave 2.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

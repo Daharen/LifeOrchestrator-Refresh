@@ -16,7 +16,7 @@ including the frontier lane (a human-couriered pack, not a driven session).
   Nicholas's directive the project pivots to the memory / retrieval / context / skill-activation substrate;
   supervisor/warm-pool hardening (D-0079 GATE-NO), generators, `video.interpret`, real-time perception + broad
   training are FROZEN. **NEXT = Wave 1** (section 4): embedding adapter + `artifact.search` MVP + retrieval-eval
-  harness (+ optional memory red-team) -- **DISPATCHED (i25, plan fo-25-3b718a13): slots 001/002/003 FILLED+READY; awaiting worker reports + the D-0077 fold smoke.** Directive:
+  harness (+ optional memory red-team) -- **SHIPPED + FOLDED (i25, D-0082): #35/#36/#37 committed; the D-0077 smoke PASSED; memory red-team GO. NEXT = a retrieval-record/provenance contract freeze -> Wave 2.** Directive:
   `research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md`.
 - Read section 2 (orient + verify the box), then run **iteration 24**. Iterations 1-23 are DONE +
   live-confirmed (ledger in section 3; rationale D-0055..D-0078). The 4-lane wave model is VALIDATED (up to 1 GPU
@@ -45,7 +45,7 @@ including the frontier lane (a human-couriered pack, not a driven session).
 - Deliver worker prompts + verification packets + frontier packs to Nicholas as FILES (SendUserFile). Worker
   briefs ALSO go into `core-docs/fanout/FANOUT_AGENT_00N.md` (mirrored to the Project) so Nicholas dispatches
   by telling a fresh session "read `claude/fanout/FANOUT_AGENT_00N.md` and execute it" (section 5). The slots
-  were RESET to EMPTY after i23; now FILLED+READY for i25 (001/002/003, plan fo-25-3b718a13).
+  were FILLED for i25 then archived + RESET to EMPTY after the i25 fold (D-0082; briefs at archive/fanout-agents/i25-*.md).
 - Box state at handoff: section 11.
 
 ## 1. Role + hard boundary (non-negotiable)
@@ -118,11 +118,16 @@ the DENSE-STREAM decision gate remain.
   AS-BUILT supervisor red-team pack (`ff24d3a4`, vs `d289ba9`) was emitted for GPT-5.x -- answer PENDING.
   default-ON is RE-GATED (D-0079): a full i24 deterministic-hardening wave (as-built red-team = GATE NO; see the digest) precedes it.
 
+- i24 (D-0079/D-0081): frontier-review iterations -- the as-built supervisor red-team folded (GATE NO) + the whole-project-direction pack 817e52e9 folded (ratifies D-0080); no local worker wave.
+- i25 `fo-25-3b718a13` (D-0082): the **WAVE 1 memory-substrate 3-lane wave** -- #35 embedding.local 0.1.0 (`99b6590`) + #36 artifact.search 0.1.0 (`30ef7bd`) + #37 retrieval.eval 0.1.0 (`687edcd`); the D-0077 embedding->artifact.search->benchmark cross-module smoke PASSED (real 1024-dim; recall/provenance 1.0; span object/string divergence bridged); memory red-team 12c8f539 folded GO.
+
 Runtime paths: plans `.../30-orchestrate-fanout/runtime/plans/<plan_id>/` · artifacts `.../runtime/artifacts/<id>/`
 · leases `.../29-resource-lease/runtime/leases/`. Waves + ad-hoc commits share one counter; **the next wave is
-iteration 24.**
+iteration 26** (i24 = the frontier-review lanes; i25 = the Wave 1 memory substrate).
 
-## 4. Current frontier: WAVE 1 (D-0080) -- the Collective Agent memory substrate
+## 4. Current frontier -- WAVE 1 SHIPPED (i25, D-0082); NEXT = contract freeze -> Wave 2
+
+**STATUS (i25, D-0082): WAVE 1 SHIPPED + FOLDED** -- #35 embedding.local + #36 artifact.search + #37 retrieval.eval (`99b6590` / `30ef7bd` / `687edcd`); the D-0077 cross-module smoke PASSED (real 1024-dim embed -> store -> search -> benchmark; recall/provenance 1.0; digest stable; change detected; span object/string divergence bridged); the memory red-team 12c8f539 folded GO (`research/2026-08-01-frontier-memory-redteam.md`). **NEXT = a retrieval-record/provenance CONTRACT FREEZE (embedding 0.2 + retriever 0.2 + catalog/eval/privacy gates from the red-team) THEN Wave 2 (repo intelligence + episode/failure schema + recorder).** The lane model + the now-shipped Wave-1 work orders below are kept for reference.
 
 Nicholas's directive: up to FOUR lanes per wave; any lane may be skipped. Every lane is human-dispatched.
 
@@ -304,16 +309,14 @@ reached natively by the Windows executor. Machine prerequisite: the executor run
 the watchdog), heartbeat fresh + `degraded:false`. Computer-use (Task Manager) is only for out-of-band wedge
 recovery.
 
-## 11. Box state at handoff (2026-07-31, D-0080 direction reset)
+## 11. Box state at handoff (2026-08-01, D-0082 -- Wave 1 shipped)
 
-Iterations 1-23 DONE + the i24 frontier lane (D-0079 fold + the whole-project-direction pack) + the D-0080
-reprioritization. HEAD = the D-0080 doc-reset commit (`master`; chain ... D-0079 `a584ba2` -> D-0080 record
-`ebef50c` -> this reset) -- confirm with `git log -1`. No LIVE `res.lease` held (durable `gpu-*.fence/.state/.txn`
+Iterations 1-23 DONE + i24 (frontier-review: D-0079 + D-0081) + **i25 = the WAVE 1 memory substrate SHIPPED (D-0082): #35 embedding.local + #36 artifact.search + #37 retrieval.eval; the D-0077 smoke PASSED** + the D-0080
+reprioritization. HEAD = the i25 Wave-1 D-0082 close commit (`master`; chain ... D-0081 `9397c08` -> i25 scoping `bb1710d` -> #36 `30ef7bd` -> #35 `99b6590` -> #37 `687edcd` -> this D-0082 close) -- confirm with `git log -1`. No LIVE `res.lease` held (durable `gpu-*.fence/.state/.txn`
 siblings persist by design -- NOT a held lease); heartbeat `degraded:false`; 0 UNMANAGED `llama-server`/python.
 
 **Direction = the Collective Agent (cognitive virtual memory), D-0080.** NEXT = **Wave 1** (section 4): embedding
-adapter + `artifact.search` MVP + retrieval-eval harness + optional memory red-team -- **DISPATCHED (i25, plan
-fo-25-3b718a13): slots 001/002/003 FILLED+READY (docs:[]; 3 dispatch_now, <=1 GPU, 0 doc contention); awaiting worker reports, then the D-0077 embedding->artifact.search->benchmark fold smoke.** **Warm pool + durable
+adapter + `artifact.search` MVP + retrieval-eval harness + optional memory red-team -- **SHIPPED + FOLDED (i25, D-0082):** #35 embedding.local (`99b6590`) + #36 artifact.search (`30ef7bd`) + #37 retrieval.eval (`687edcd`), all `-Live` green; the D-0077 embedding->artifact.search->benchmark cross-module smoke PASSED (real 1024-dim; recall/provenance 1.0; digest stable; change detected; 0 orphans); the memory red-team folded GO -> a retrieval-record/provenance contract freeze then Wave 2. Slots archived + reset.** **Warm pool + durable
 supervisor stay DEFAULT-OFF and FROZEN** (D-0079 GATE-NO stands; classic detached-warm is the trusted default;
 resume hardening only if a defect threatens the baseline or it blocks the memory work). Also frozen: generators,
 `video.interpret` + live composition, real-time perception (arch 27-49), broad training. **FOLDED (i25, D-0081):**

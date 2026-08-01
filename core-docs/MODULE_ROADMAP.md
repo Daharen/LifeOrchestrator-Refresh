@@ -26,7 +26,7 @@ full text → `archive/`. Per-module params/artifacts → `modules/<NN>-*/README
 > registry -> skill routing -> read-only Collective Agent slice -> sandbox coding worker -> sequential LOCAL
 > orchestrator -> domain slices -> unified UI. **FROZEN/deferred:** supervisor/warm-pool hardening (D-0079
 > GATE-NO stands; classic detached-warm is the trusted default), generators, `video.interpret` + live
-> composition, real-time perception (27-49), broad training. **Wave 1 = embedding adapter + `artifact.search`
+> composition, real-time perception (27-49), broad training. **Wave 1 SHIPPED i25 (D-0082): #35 embedding.local + #36 artifact.search + #37 retrieval.eval; D-0077 smoke PASSED; memory red-team GO -> a retrieval-record/provenance contract freeze then Wave 2. Original scope: embedding adapter + `artifact.search`
 > MVP + retrieval-eval harness** (+ optional memory red-team; `FANOUT_ORCHESTRATOR_HANDOFF.md` s4). 2080 Ti =
 > build target, RTX PRO 6000 = horizon. Modules 0-34 + 00.1 + Widgets 01-04 remain BUILT; live status
 > `CURRENT_STATE.md`.
