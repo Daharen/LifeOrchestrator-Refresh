@@ -1,0 +1,112 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "embedding.local",
+  "skill_version": "0.1.0",
+  "contract_version": "0.2",
+  "invocation_id": "example-mock-001",
+  "status": "partial",
+  "started_at_utc": "2026-08-01T00:29:19.7414908Z",
+  "finished_at_utc": "2026-08-01T00:29:20.1113581Z",
+  "duration_ms": 364,
+  "inputs_digest": "sha256:4d3e9d33eac0fc01f2d081591659ad850d83e939627f4ea75e1878dd8472ee4c",
+  "result": {
+    "op": "embed",
+    "model_id": "embedding.qwen3-0p6b",
+    "model_version": "mock",
+    "model_sha256": null,
+    "engine_build": "mock/numpy-2.4.4",
+    "pooling": "mock_seeded",
+    "dim": 8,
+    "normalized": true,
+    "count": 3,
+    "vectors": [
+      [
+        0.04091811519701463,
+        0.1296910383841399,
+        0.1158918324793812,
+        -0.10361792980759704,
+        0.1786472078222618,
+        -0.7700999584728202,
+        0.5412886288759154,
+        -0.1984343708776986
+      ],
+      null,
+      [
+        -0.6440087650208274,
+        -0.5755252464507912,
+        0.16342386694378425,
+        0.2521248569969649,
+        -0.12598470068751802,
+        0.005164006349452471,
+        -0.0975982582878289,
+        -0.37192050989665315
+      ]
+    ],
+    "per_input": [
+      {
+        "index": 0,
+        "status": "ok",
+        "n_tokens": 4
+      },
+      {
+        "index": 1,
+        "status": "empty",
+        "n_tokens": 0
+      },
+      {
+        "index": 2,
+        "status": "ok",
+        "n_tokens": 5
+      }
+    ],
+    "instruction": null,
+    "max_tokens": 32768,
+    "device": "mock",
+    "dtype": "mock",
+    "timings": {
+      "load_ms": 0,
+      "embed_ms": 10
+    },
+    "peak_vram_bytes": null,
+    "peak_ram_bytes": 122220544,
+    "lease": {
+      "requested": false,
+      "acquired": false,
+      "owned": false,
+      "already_held": false,
+      "lease_id": null,
+      "holder": "embedding.local:5106",
+      "held_by": null
+    }
+  },
+  "confidence": null,
+  "artifacts": [
+    {
+      "path": "/home/claude/m35/runtime/artifacts/example-mock-001/worker_out.json",
+      "kind": "json",
+      "bytes": 826,
+      "sha256": "8d1bf8ef56c114847cba106b862f14efdefc2d3e66e47e4651bda4b4c7b805df"
+    },
+    {
+      "path": "/home/claude/m35/runtime/artifacts/example-mock-001/worker_args.json",
+      "kind": "json",
+      "bytes": 359,
+      "sha256": "bd76947e342da4d4b20793f68d05208e9617fb608e8df5ef4e26708dd4229176"
+    },
+    {
+      "path": "/home/claude/m35/runtime/artifacts/example-mock-001/worker.log",
+      "kind": "log",
+      "bytes": 23,
+      "sha256": "f90897c215c14900efa643c7956463399c02c28bf2f8674df3f3c94426e4d966"
+    }
+  ],
+  "model_provenance": [],
+  "diagnostics": {
+    "log": "stderr.txt",
+    "artifact_dir": "/home/claude/m35/runtime/artifacts/example-mock-001"
+  },
+  "warnings": [
+    "1 of 3 input(s) skipped (empty/oversize)"
+  ],
+  "error": null
+}

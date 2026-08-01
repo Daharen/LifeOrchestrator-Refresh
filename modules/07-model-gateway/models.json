@@ -153,9 +153,11 @@
       "type": "embedding", "wired": false,
       "name": "Qwen3-Embedding-0.6B", "family": "qwen3", "format": "safetensors-dir",
       "path": "F:\\My_Programs\\LifeOrchestrator-Refresh_Large_Data\\23-artifact-search\\embedding\\Qwen3-Embedding-0.6B",
+      "model_sha256": "0437e45c94563b09e13cb7a64478fc406947a93cb34a7e05870fc8dcd48e23fd",
       "engine": "transformers",
+      "engine_env": "F:\\My_Programs\\Local_Computer_Speech_Large_Data\\python_env\\Scripts\\python.exe",
       "params": { "params_b": 0.6, "size_bytes": 1191500000 },
-      "notes": "DECLARED only. Discovered under an ACE-Step music suite; copied for portability. Wire in Module 23 (artifact.search). Could also run via llama.cpp llama-server --embedding if converted to GGUF."
+      "notes": "WIRED by Module 35 (embedding.local, i25): served via a transient transformers Python worker under the CUDA speech venv (last-token pooling, L2 norm; dim 1024). model_sha256 = sha256(model.safetensors), verified fail-closed each real call. wired:false stays for the GATEWAY on purpose (type=embedding, not an LLM) -- the owning module reads this entry directly (like detect.objects/ocr.layout). Discovered under an ACE-Step music suite; copied for portability. A GGUF + llama-server --embedding --pooling last backend is a documented follow-on."
     },
     {
       "model_id": "ocr.windows.media",

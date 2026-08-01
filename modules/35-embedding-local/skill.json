@@ -1,0 +1,43 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "embedding.local",
+  "name": "Local Text Embedding (Qwen3-Embedding-0.6B)",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "Embed text (single or batch) into L2-normalized dense vectors that serve as SEMANTIC ADDRESSES for the Collective Agent memory substrate (governing sec 6.3). Serves the pre-provisioned Qwen3-Embedding-0.6B (arch Qwen3Model, hidden_size 1024, max_position_embeddings 32768) through a TRANSIENT Python worker (embed_worker.py) under the CUDA speech venv (transformers + torch; last-token pooling + optional L2 normalize). Returns vectors in EXACT INPUT ORDER with full model/version/sha256/engine provenance and a per-input status; empty and oversize inputs are flagged and skipped (null vector) -- never a crash, never a silent truncated/garbage vector. GPU work runs under the res.lease `gpu` mutex (one heavyweight resident) which this skill self-manages. Defines the embedding-provider interface that artifact.search (Module 36) consumes (D-0077 shared contract). NOT a vector store / ingestion / retrieval / router -- just the adapter.",
+  "determinism": "mixed",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-EmbeddingLocal.ps1",
+    "args_spec": "Named params: -Text <string> | -Texts <string[]> (batch); -Normalize <bool=true>; -Instruction <string> (optional Qwen3-Embedding query-instruct prefix; default none = document/raw); -MaxTokens <int=32768> (oversize threshold); -Dtype <fp32|fp16|bf16=fp32>; -Device <cuda|cpu=cuda>; -Mock (deterministic numpy stub, no model/torch/GPU/lease); -ModelId <id=embedding.qwen3-0p6b>; -ModelPath/-ModelSha256/-Registry overrides; -PythonExe/-WorkerPath overrides; -GpuLease <auto|off|require=auto>; -GpuLeaseHolder/-GpuTtlSeconds/-GpuWaitSeconds; -ResLeasePath/-PwshPath; -ArtifactRoot/-InvocationId; -MockDim/-MockSeed. OR -InputsJson '<json {text|texts, normalize, instruction, max_tokens, dtype, device, mock, model_id, model_path, model_sha256, python_exe, mock_dim, mock_seed}>'.",
+    "python_worker": "embed_worker.py"
+  },
+  "inputs": [
+    { "name": "text", "type": "string", "required": false, "description": "A single text to embed. Provide this OR texts." },
+    { "name": "texts", "type": "array", "required": false, "description": "A batch of texts to embed; vectors are returned in EXACT input order (result[i] <-> input[i])." },
+    { "name": "normalize", "type": "bool", "required": false, "default": true, "description": "L2-normalize each vector (unit length -> cosine == dot). false returns raw pooled vectors." },
+    { "name": "instruction", "type": "string", "required": false, "description": "Optional Qwen3-Embedding query-instruct prefix ('Instruct: {instruction}\\nQuery: {text}'). Default none = document/raw embedding. QUERY-side callers should set the same instruction the corpus was NOT embedded with (asymmetric); documents stay raw." },
+    { "name": "max_tokens", "type": "int", "required": false, "default": 32768, "description": "Oversize threshold. An input whose real token count exceeds this is flagged status=oversize and skipped (vector null) -- never truncated silently. Default = the model's max_position_embeddings." },
+    { "name": "dtype", "type": "string", "required": false, "default": "fp32", "description": "Compute dtype: fp32 (default, most deterministic) | fp16 | bf16 (model native)." },
+    { "name": "device", "type": "string", "required": false, "default": "cuda", "description": "cuda (default; runs under the gpu lease) or cpu (the CPU-fallback path; no lease)." },
+    { "name": "mock", "type": "bool", "required": false, "default": false, "description": "Deterministic seeded-numpy stub with NO torch/model/GPU/lease -- exercises the schema/shape/normalization/input-order/empty-oversize seams off-machine." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ op:'embed', model_id, model_version, model_sha256, engine_build, pooling, dim:int, normalized:bool, count:int, vectors:[[float]|null] (EXACT input order; null for skipped), per_input:[{index,status:'ok'|'empty'|'oversize',n_tokens}], instruction, max_tokens, device, dtype, timings{load_ms,embed_ms}, peak_vram_bytes, peak_ram_bytes, lease{...} }. Full provenance in model_provenance[]. Deterministic within a documented tolerance (see SCHEMA_NOTES.md)."
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4", "python>=3.10 (CUDA speech venv, with transformers>=4.57 + torch + safetensors + numpy)", "res.lease (Module 29, for the gpu lease)"],
+    "models": ["embedding.qwen3-0p6b (Qwen3-Embedding-0.6B, safetensors dir; type=embedding; wired for this module)"],
+    "libraries": ["transformers>=4.57", "torch>=2.1 (+cuda for GPU)", "safetensors", "numpy"],
+    "cpu": "any", "gpu": "cuda (11GB sufficient; ~2.5GB fp32 peak; cpu fallback available)", "memory_mb": 4096,
+    "network": false, "filesystem": "read-write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 600, "on_timeout": "kill_tree_and_report" },
+  "batch": true,
+  "streaming": false,
+  "parallel_safe": false,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}
