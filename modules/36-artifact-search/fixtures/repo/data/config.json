@@ -1,0 +1,9 @@
+{
+  "schema": "zorble.config/1",
+  "max_flux": 42,
+  "frobnicator": {
+    "enabled": true,
+    "retry": 3
+  },
+  "notes": "config for the Zorble fixture; the token JSON_CONFIG_TOKEN is unique to this file"
+}

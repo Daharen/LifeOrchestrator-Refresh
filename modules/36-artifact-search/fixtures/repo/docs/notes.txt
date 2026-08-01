@@ -1,0 +1,9 @@
+Plain text notes for the Zorble fixture.
+
+This file has no Markdown headings, so it exercises the generic-text chunk fallback. It is split
+into paragraphs at blank lines.
+
+The frobnicator was named after an old engineering joke. The flux capacitor reference is likewise
+a joke. Neither is a real device. The token PLAINTEXT_ONLY_TOKEN appears only in this text file.
+
+End of notes.

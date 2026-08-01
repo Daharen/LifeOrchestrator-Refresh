@@ -1,0 +1,99 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "artifact.search",
+  "skill_version": "0.1.0",
+  "contract_version": "0.2",
+  "invocation_id": "227cff6d-c442-4fce-8e22-147489b7bd6a",
+  "status": "ok",
+  "started_at_utc": "2026-08-01T00:31:47.2097562Z",
+  "finished_at_utc": "2026-08-01T00:31:47.7287501Z",
+  "duration_ms": 513,
+  "inputs_digest": "sha256:c5f44f70a106df064ebc0af38981041739d485bb3cb8d72839b91f5b1f65b482",
+  "result": {
+    "op": "search",
+    "result": {
+      "query": "frobnicator flux",
+      "mode": "fts",
+      "k": 3,
+      "count": 3,
+      "filters": {},
+      "results": [
+        {
+          "source_path": "data/config.json",
+          "abs_path": "/home/claude/repo/modules/36-artifact-search/fixtures/repo/data/config.json",
+          "content_hash": "d87122341cac8b0063e28dba07e5f378005dfe066c97a68b4c6ba499ebfa299f",
+          "chunk_id": "chk_6b50bbb1035cd14574c9122a",
+          "span": {
+            "start": 0,
+            "end": 208
+          },
+          "section_path": null,
+          "heading": null,
+          "chunk_type": "text_block",
+          "source": "fixture",
+          "score": 0.810589,
+          "snippet": "{ \"schema\": \"zorble.config/1\", \"max_flux\": 42, \"frobnicator\": { \"enabled\": true, \"retry\": 3 }, \"notes\": \"config for the Zorble fixture; the token JSON_CONFI...",
+          "rank": 1
+        },
+        {
+          "source_path": "README.md",
+          "abs_path": "/home/claude/repo/modules/36-artifact-search/fixtures/repo/README.md",
+          "content_hash": "fa6e05a498e06ef002e55bbfb1d15b4b7344e1b4e80083ff9b62610ee41c19f6",
+          "chunk_id": "chk_cd5053e897cb03f2f0c5910e",
+          "span": {
+            "start": 203,
+            "end": 417
+          },
+          "section_path": "Zorble Project / Overview",
+          "heading": "Overview",
+          "chunk_type": "markdown_section",
+          "source": "fixture",
+          "score": 0.743834,
+          "snippet": "## Overview The `ZorbleWidget` is the central component. It coordinates the frobnicator and the flux capacitor. When it fails it raises the error string `E_FROBNICATE_FAILED`, which downstream too...",
+          "rank": 2
+        },
+        {
+          "source_path": "docs/notes.txt",
+          "abs_path": "/home/claude/repo/modules/36-artifact-search/fixtures/repo/docs/notes.txt",
+          "content_hash": "ec8540ba962c2dc0ed2ec935b1fcab20bf552535391699b98d9dd46df8a59305",
+          "chunk_id": "chk_3654991e9f3176f284aea72e",
+          "span": {
+            "start": 0,
+            "end": 382
+          },
+          "section_path": null,
+          "heading": null,
+          "chunk_type": "text_block",
+          "source": "fixture",
+          "score": 0.549791,
+          "snippet": "...no Markdown headings, so it exercises the generic-text chunk fallback. It is split into paragraphs at blank lines. The frobnicator was named after an old engineering joke. The flux capacitor reference is likewise a joke. Neither is a real...",
+          "rank": 3
+        }
+      ],
+      "db": "/tmp/tmp.7BRDbS4Luh/example.db"
+    },
+    "worker": {
+      "python": "3.11.15",
+      "sqlite": "3.45.1",
+      "worker_version": "0.1.0",
+      "schema_version": "1"
+    },
+    "runtime_ms": 14
+  },
+  "confidence": null,
+  "artifacts": [
+    {
+      "path": "/tmp/tmp.7BRDbS4Luh/art/227cff6d-c442-4fce-8e22-147489b7bd6a/search_results.json",
+      "kind": "json",
+      "bytes": 2375,
+      "sha256": "e42b01ac4e9cfc7fc154a2c2453f31989d6e655c157fec49838a475945b826e0"
+    }
+  ],
+  "model_provenance": [],
+  "diagnostics": {
+    "log": "stderr.txt",
+    "artifact_dir": "/tmp/tmp.7BRDbS4Luh/art/227cff6d-c442-4fce-8e22-147489b7bd6a"
+  },
+  "warnings": [],
+  "error": null
+}
