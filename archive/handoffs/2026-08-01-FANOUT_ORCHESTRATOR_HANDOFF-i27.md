@@ -16,10 +16,10 @@ including the frontier lane (a human-couriered pack, not a driven session).
   Nicholas's directive the project pivots to the memory / retrieval / context / skill-activation substrate;
   supervisor/warm-pool hardening (D-0079 GATE-NO), generators, `video.interpret`, real-time perception + broad
   training are FROZEN. **NEXT = Wave 1** (section 4): embedding adapter + `artifact.search` MVP + retrieval-eval
-  harness (+ optional memory red-team) -- **SHIPPED + FOLDED (i25, D-0082); the retrieval-record/provenance CONTRACT FREEZE is DONE (i26, D-0083 -- `core-docs/MEMORY_CONTRACT.md`: record-envelope v0.1 + embedding 0.2 + retriever 0.2 + catalog/eval/privacy gates). Wave 2 (memory RECORDS) is SHIPPED + FOLDED (i27, D-0084): #36 artifact.search 0.2 + NEW #38 repo.intel + NEW #39 episode.record; the D-0077 fold smoke PASSED (2 divergences bridged). NEXT = Wave 3 (context compiler + skill retrieval) OR the episode.record 0.1.1 conformance + a MEMORY_CONTRACT amendment first -- Nicholas's call.** Directive:
+  harness (+ optional memory red-team) -- **SHIPPED + FOLDED (i25, D-0082); the retrieval-record/provenance CONTRACT FREEZE is DONE (i26, D-0083 -- `core-docs/MEMORY_CONTRACT.md`: record-envelope v0.1 + embedding 0.2 + retriever 0.2 + catalog/eval/privacy gates). NEXT = Wave 2 (repo intelligence + episode/failure schema + recorder), built to MEMORY_CONTRACT 0.2.** Directive:
   `research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md`.
-- Read section 2 (orient + verify the box), then run **iteration 28**. Iterations 1-27 are DONE +
-  live-confirmed (ledger in section 3; rationale D-0055..D-0084). The 4-lane wave model is VALIDATED (up to 1 GPU
+- Read section 2 (orient + verify the box), then run **iteration 27**. Iterations 1-26 are DONE +
+  live-confirmed (ledger in section 3; rationale D-0055..D-0083). The 4-lane wave model is VALIDATED (up to 1 GPU
   + 1 CPU + 1 coding + 1 off-box frontier at MaxParallel 3; any lane may be skipped).
 - **i23 (D-0078) shipped the SUPERVISOR-HARDENING wave** (single-worker GPU): `model.gateway` #7 0.5.0->**0.6.0**
   (`d289ba9`) folded the i21 frontier red-team's **10 must-fixes** into the DEFAULT-OFF durable Job-Object
@@ -121,15 +121,14 @@ the DENSE-STREAM decision gate remain.
 - i24 (D-0079/D-0081): frontier-review iterations -- the as-built supervisor red-team folded (GATE NO) + the whole-project-direction pack 817e52e9 folded (ratifies D-0080); no local worker wave.
 - i25 `fo-25-3b718a13` (D-0082): the **WAVE 1 memory-substrate 3-lane wave** -- #35 embedding.local 0.1.0 (`99b6590`) + #36 artifact.search 0.1.0 (`30ef7bd`) + #37 retrieval.eval 0.1.0 (`687edcd`); the D-0077 embedding->artifact.search->benchmark cross-module smoke PASSED (real 1024-dim; recall/provenance 1.0; span object/string divergence bridged); memory red-team 12c8f539 folded GO.
 - i26 (D-0083): orchestrator-only, NO worker wave -- the retrieval-record/provenance CONTRACT FREEZE: NEW `core-docs/MEMORY_CONTRACT.md` freezes the record+provenance envelope v0.1, embedding-provider 0.2, retriever 0.2 (resolves the i25 span object-vs-string + skipped-input null-vs-zero divergences), and catalog/evaluation/scale-privacy gates from the memory red-team; governs Wave 2. No module commits; doc-debt slim pass still deferred.
-- i27 `fo-27-bab47060` (D-0084): the **WAVE 2 memory-RECORDS 3-lane CPU wave** -- #36 artifact.search 0.1.0->0.2.0 (`b57d328`; record-envelope + `ingest_records` SINK + schema_version 2 migration + retriever-0.2 hits + float32 BLOB vectors + catalog hardening; 113/113) + NEW #38 repo.intel 0.1.0 (`cd53565`; deterministic typed-record producer; 65/65+37/37) + NEW #39 episode.record 0.1.0 (`b381686`; episode+failure schema + recorder + failure-signature seam; 114/114); the D-0077 fold smoke PASSED (repo.intel 198 records + episode/failure -> #36 0.2 ingest_records -> retrieval + provenance + idempotent re-ingest) and CAUGHT+BRIDGED 2 divergences (episode.record `episode_stage` kind not in the s1 enum; status object-vs-string) -> follow-on: episode.record 0.1.1 conformance + a MEMORY_CONTRACT amendment.
 
 Runtime paths: plans `.../30-orchestrate-fanout/runtime/plans/<plan_id>/` · artifacts `.../runtime/artifacts/<id>/`
 · leases `.../29-resource-lease/runtime/leases/`. Waves + ad-hoc commits share one counter; **the next wave is
-iteration 28** (i24 = frontier-review; i25 = Wave 1 memory substrate; i26 = the contract freeze, no worker wave; i27 = Wave 2 memory records).
+iteration 27** (i24 = frontier-review; i25 = Wave 1 memory substrate; i26 = the contract freeze, no worker wave).
 
-## 4. Current frontier -- WAVE 2 SHIPPED (i27, D-0084); NEXT = Wave 3 (or the episode.record conformance fix)
+## 4. Current frontier -- CONTRACT FREEZE DONE (i26, D-0083); NEXT = Wave 2
 
-**STATUS (i27, D-0084): WAVE 2 (memory RECORDS) SHIPPED + FOLDED** -- #36 artifact.search 0.1.0->0.2.0 (`b57d328`; record-envelope + generic `ingest_records` SINK + records/record_edges + schema_version 2 in-place migration + parser/chunker/extractor fingerprints + retriever-0.2 hits [span object+label, per-channel scores, opaque score retired] + s5 staleness enum + float32 LE BLOB vectors + catalog hardening; 113/113) + NEW #38 repo.intel 0.1.0 (`cd53565`; deterministic typed-record producer -- symbol/entity/relationship/skill/summary; 65/65+37/37) + NEW #39 episode.record 0.1.0 (`b381686`; episode+failure schema + deterministic recorder + failure-signature seam; 114/114). The D-0077 cross-module fold smoke PASSED (repo.intel 198 records + episode/failure -> #36 0.2 `ingest_records` -> `list-records`/`search` resolve the s1 envelope + the retriever-0.2 hit shape; provenance validated [content_hash==file sha256; cited span reproduces source]; idempotent re-ingest, catalog_digest stable) and CAUGHT+BRIDGED 2 producer/consumer divergences: episode.record emits `record_kind: episode_stage` (NOT in the frozen s1 enum) + `status` as an OBJECT (consumer enforces the s5 STRING enum) -> the orchestrator dropped the redundant episode_stage records (stages also live in `episode.body.stage_sequence`) + coerced status->state; repo.intel conformed. NEITHER is a #36 defect. **FOLLOW-ON (Nicholas's call, before/with Wave 3):** episode.record 0.1.1 conformance (status -> the s5 string; stages as edges/body) AND/OR a MEMORY_CONTRACT s0 amendment (add `episode_stage`; freeze the status representation). **NEXT = Wave 3 (context compiler + skill-card/registry + retrieval reranker), or the conformance fix first.** The Wave-1 (i25) + the Wave-2 (i27) work orders below are kept for reference.
+**STATUS (i25, D-0082): WAVE 1 SHIPPED + FOLDED** -- #35 embedding.local + #36 artifact.search + #37 retrieval.eval (`99b6590` / `30ef7bd` / `687edcd`); the D-0077 cross-module smoke PASSED (real 1024-dim embed -> store -> search -> benchmark; recall/provenance 1.0; digest stable; change detected; span object/string divergence bridged); the memory red-team 12c8f539 folded GO (`research/2026-08-01-frontier-memory-redteam.md`). **CONTRACT FREEZE DONE (i26, D-0083):** the shared contract is frozen in `core-docs/MEMORY_CONTRACT.md` (record+provenance envelope v0.1 + embedding-provider 0.2 + retriever 0.2 + catalog/evaluation/scale-privacy gates). **NEXT = Wave 2 (repo intelligence + episode/failure schema + recorder); every producer/consumer split builds to MEMORY_CONTRACT 0.2 and names it as the shared contract for the D-0077 fold smoke.** The lane model + the now-shipped Wave-1 work orders below are kept for reference.
 
 Nicholas's directive: up to FOUR lanes per wave; any lane may be skipped. Every lane is human-dispatched.
 
@@ -311,25 +310,18 @@ reached natively by the Windows executor. Machine prerequisite: the executor run
 the watchdog), heartbeat fresh + `degraded:false`. Computer-use (Task Manager) is only for out-of-band wedge
 recovery.
 
-## 11. Box state at handoff (2026-08-01, D-0084 -- Wave 2 shipped)
+## 11. Box state at handoff (2026-08-01, D-0083 -- contract freeze)
 
-Iterations 1-26 DONE + **i27 = the WAVE 2 memory-RECORDS 3-lane CPU wave SHIPPED (D-0084):** #36 artifact.search
-0.1.0->0.2.0 (`b57d328`) + NEW #38 repo.intel 0.1.0 (`cd53565`) + NEW #39 episode.record 0.1.0 (`b381686`), all built
-to MEMORY_CONTRACT 0.2; the D-0077 cross-module fold smoke PASSED (repo.intel 198 records + episode/failure -> #36 0.2
-`ingest_records` -> retrieval + provenance + idempotent re-ingest) and CAUGHT+BRIDGED 2 producer/consumer divergences
-(episode.record `episode_stage` kind not in the frozen s1 enum; status object-vs-string). HEAD = `b57d328` (`master`;
-chain `804ec36` i27-scoping -> `cd53565` -> `b381686` -> `b57d328`; confirm with `git log -1`). No LIVE `res.lease`
-held (durable `gpu-*.fence/.state/.txn` siblings persist by design -- NOT a held lease); heartbeat `degraded:false`;
-0 UNMANAGED `llama-server`/python.
+Iterations 1-23 DONE + i24 (frontier-review: D-0079 + D-0081) + **i25 = the WAVE 1 memory substrate SHIPPED (D-0082): #35 embedding.local + #36 artifact.search + #37 retrieval.eval; the D-0077 smoke PASSED** + i26 = the retrieval-record/provenance CONTRACT FREEZE (D-0083: `core-docs/MEMORY_CONTRACT.md`; orchestrator-only, no worker wave) + the D-0080
+reprioritization. HEAD = the i26 D-0083 contract-freeze commit (`master`; the immediately-preceding chain head was the i25 D-0082 docs close `98c2cd7`; confirm with `git log -1`). No LIVE `res.lease` held (durable `gpu-*.fence/.state/.txn`
+siblings persist by design -- NOT a held lease); heartbeat `degraded:false`; 0 UNMANAGED `llama-server`/python.
 
-**Direction = the Collective Agent (cognitive virtual memory), D-0080.** Wave 1 (memory substrate, i25 D-0082) + the
-contract freeze (i26 D-0083, `MEMORY_CONTRACT.md`) + **Wave 2 (memory RECORDS, i27 D-0084)** are DONE. **NEXT = Wave 3
-(context compiler + skill-card/registry + retrieval reranker) OR, first, the episode.record 0.1.1 conformance + a
-MEMORY_CONTRACT s0 amendment** that resolves the two D-0077 divergences (add `episode_stage` to the s1 record_kind
-enum and/or model stages as edges; freeze the `status` representation) -- Nicholas's call. Every Wave-3
-producer/consumer split builds to MEMORY_CONTRACT 0.2 and gets the D-0077 cross-module smoke at fold. **Warm pool +
-durable supervisor stay DEFAULT-OFF + FROZEN** (D-0079 GATE-NO stands; classic detached-warm is the trusted default).
-Also frozen: generators, `video.interpret` + live composition, real-time perception (arch 27-49), broad training.
-**Doc debt:** the hot docs (CURRENT_STATE / MODULE_ROADMAP / this handoff / DECISION_LOG_INDEX) are over budget -- a
-slim pass is a named unit. Slots 001/002/003 EMPTY (i27 briefs archived at `archive/fanout-agents/i27-*.md`). Start at
-section 2, then Wave 3 (section 4) on Nicholas's approval.
+**Direction = the Collective Agent (cognitive virtual memory), D-0080.** NEXT = **Wave 1** (section 4): embedding
+adapter + `artifact.search` MVP + retrieval-eval harness + optional memory red-team -- **SHIPPED + FOLDED (i25, D-0082):** #35 embedding.local (`99b6590`) + #36 artifact.search (`30ef7bd`) + #37 retrieval.eval (`687edcd`), all `-Live` green; the D-0077 embedding->artifact.search->benchmark cross-module smoke PASSED (real 1024-dim; recall/provenance 1.0; digest stable; change detected; 0 orphans); the memory red-team folded GO -> the retrieval-record/provenance CONTRACT FREEZE is DONE (i26, D-0083, `core-docs/MEMORY_CONTRACT.md`). NEXT = Wave 2 (repo intelligence + episode/failure schema + recorder), built to MEMORY_CONTRACT 0.2. Slots EMPTY.** **Warm pool + durable
+supervisor stay DEFAULT-OFF and FROZEN** (D-0079 GATE-NO stands; classic detached-warm is the trusted default;
+resume hardening only if a defect threatens the baseline or it blocks the memory work). Also frozen: generators,
+`video.interpret` + live composition, real-time perception (arch 27-49), broad training. **FOLDED (i25, D-0081):**
+the whole-project-direction pack answer (`817e52e9`) RETURNED + was captured (read-return valid); it RATIFIES D-0080 (no course change). **Doc debt:**
+the hot docs (CURRENT_STATE / MODULE_ROADMAP / this handoff + PROJECT_DIRECTION / ARCHITECTURE_MAP after the
+D-0080 edits) are over budget -- a slim pass is a named unit. Start at section 2, then Wave 2 (section 4) on
+Nicholas's approval.

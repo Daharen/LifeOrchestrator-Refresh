@@ -22,11 +22,8 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
 - **Direction (extends D-0050):** the offload / verify-cost AUDIT LOOP still holds -- offload only what is
   cheaper to VERIFY than to do; deterministic modules are Claude's hands, model modules only where machine- or
   human-checkable. D-0080 adds the memory/retrieval/context substrate that makes it cumulative.
-- **Wave 1 (memory + retrieval substrate) SHIPPED (i25, plan fo-25-3b718a13, D-0082):** #35 embedding.local + #36 artifact.search + #37 retrieval.eval; the D-0077 embedding->artifact.search->benchmark fold smoke PASSED (real 1024-dim vectors stored, recall@K + provenance 1.0, digest stable, change detected). **CONTRACT FREEZE DONE (i26, D-0083):** the retrieval-record/provenance contract is frozen in `core-docs/MEMORY_CONTRACT.md` (record-envelope v0.1 + embedding-provider 0.2 + retriever 0.2 + catalog/eval/scale-privacy gates). **NEXT = Wave 2 (repo intelligence + episode/failure schema + recorder), built to MEMORY_CONTRACT 0.2.**
-  GPU = embedding adapter; coding = `artifact.search` deterministic MVP (SQLite + FTS + Markdown chunking +
-  provenance); CPU = retrieval-evaluation harness; optional frontier = memory-architecture red-team.
-  Orchestrator fold = a REAL embedding->artifact.search->benchmark producer/consumer smoke. Work orders:
-  **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4. Build order: **`MODULE_ROADMAP.md -> Build priority`**.
+- **Wave 1 (memory substrate) SHIPPED (i25, D-0082); CONTRACT FREEZE (i26, D-0083, `core-docs/MEMORY_CONTRACT.md`).** #35 embedding.local + #36 artifact.search + #37 retrieval.eval; the record+provenance envelope v0.1 + embedding 0.2 + retriever 0.2 + gates are frozen.
+- **Wave 2 (memory RECORDS) SHIPPED (i27, plan fo-27-bab47060, D-0084), built to MEMORY_CONTRACT 0.2:** #36 artifact.search 0.1.0->**0.2.0** (record-envelope + generic `ingest_records` SINK + records/record_edges + schema_version 2 in-place migration + parser/chunker/extractor fingerprints + retriever-0.2 hits [span object+label, per-channel scores, opaque score retired] + s5 staleness enum + float32 LE BLOB vectors keyed on embedding_space_id + catalog hardening) + NEW #38 repo.intel (deterministic typed-record PRODUCER: symbol/entity/relationship/skill/summary) + NEW #39 episode.record (episode+failure schemas + deterministic recorder + failure-signature seam). The D-0077 fold smoke PASSED (repo.intel 198 records + episode/failure -> #36 0.2 ingest_records -> retrieval + provenance [content_hash==file sha256; cited span reproduces source] + idempotent re-ingest, catalog_digest stable) and CAUGHT+BRIDGED 2 producer/consumer divergences (episode.record `episode_stage` kind not in the frozen s1 enum; status object-vs-string -- see Unresolved questions). **NEXT = Wave 3 (context compiler + skill retrieval) OR the episode.record 0.1.1 conformance + a MEMORY_CONTRACT amendment first (Nicholas's call).** Work orders: **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4.
 - **FROZEN / deferred (D-0080):** further durable-supervisor / warm-pool hardening (keep classic detached-warm
   as the trusted default; the D-0079 GATE-NO stands -- revisit only if a defect threatens the baseline or it
   blocks the memory work); generator upgrades; model-heavy `video.interpret` + live composition; deep real-time
@@ -127,7 +124,7 @@ registry facts: `TOOL_MODEL_REGISTRY.md`. Roster (all MVP-complete unless noted)
   oracle; `score_unit millionths`; pre-first-scene `scene_index -1`; #34 0.1.1 consumes that contract
   exactly -- proven on real bytes). Next: `video.interpret` (pos 22), Proposed; the dense-stream decision
   gate (Unresolved questions) precedes any live-composition input-contract freeze.
-- **Collective Agent memory substrate (Wave 1, D-0080/D-0082 — NEW):** **#35 embedding.local** (wires `embedding.qwen3-0p6b`, dim 1024, transient CUDA transformers worker; DEFINES the embedding-provider interface) · **#36 artifact.search** (deterministic SQLite catalog + FTS5 hybrid-lexical search; Markdown-aware chunking; result->source+content_hash+span provenance; incremental reconcile + DB integrity; mock+real embedding seam; PRODUCES the retriever interface) · **#37 retrieval.eval** (retrieval-quality benchmark: recall@K/MRR/stale/provenance; BM25-lite baseline; external-retriever fold seam). The D-0077 embedding->artifact.search->benchmark cross-module smoke PASSED. Governing: `research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md`; **contract `MEMORY_CONTRACT.md` (0.2 freeze, D-0083)**; red-team `research/2026-08-01-frontier-memory-redteam.md`; ship-state `fanout/WAVE1-MEMORY-i25-SHIP-STATE.md`.
+- **Collective Agent memory substrate (Wave 1, D-0080/D-0082 — NEW):** **#35 embedding.local** (wires `embedding.qwen3-0p6b`, dim 1024, transient CUDA transformers worker; DEFINES the embedding-provider interface) · **#36 artifact.search** (deterministic SQLite catalog + FTS5 hybrid-lexical search; Markdown-aware chunking; result->source+content_hash+span provenance; incremental reconcile + DB integrity; mock+real embedding seam; PRODUCES the retriever interface) · **#37 retrieval.eval** (retrieval-quality benchmark: recall@K/MRR/stale/provenance; BM25-lite baseline; external-retriever fold seam). The D-0077 embedding->artifact.search->benchmark cross-module smoke PASSED. Governing: `research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md`; **contract `MEMORY_CONTRACT.md` (0.2 freeze, D-0083)**; red-team `research/2026-08-01-frontier-memory-redteam.md`; ship-states `fanout/WAVE1-MEMORY-i25-SHIP-STATE.md` + `fanout/WAVE2-MEMORY-i27-SHIP-STATE.md`. **Wave 2 (i27, D-0084):** #36 -> **0.2.0** (record-envelope + `ingest_records` SINK + retriever-0.2 hits + float32 BLOB vectors + catalog hardening) + NEW **#38 repo.intel** (deterministic typed-record producer: symbol/entity/relationship/skill/summary; emits s1 record-envelope artifacts) + NEW **#39 episode.record** (episode+failure schema + deterministic recorder + failure-signature seam); the D-0077 Wave-2 fold PASSED (2 divergences bridged).
 - **NOT built:** #26 agent.coding — designed + DEFERRED (D-0037; no safe code-exec substrate on this box).
 - **Widgets (native + `launch.bat`, D-0038):** 01 Local Agent Console · 02 Module Launcher · 03 Verification
   Console (**durable verdicts** — results sidecar keyed by `packet_id`; the packet file is never modified, D-0065) · **04 Fan-out Wave Dashboard** (read-only plan/worker/lease view; D-0067; live-GUI confirm DONE i15 D-0068).
@@ -265,8 +262,10 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 | ops/setup portability | 161/161 cloud + 175/175 `-Live` (+interpreter shim) | `58870fb` | 07-30 |
 | widgets/04 Fan-out Wave Dashboard | 80/80 cloud + 91/91 `-Live` (+SELFTEST_LAYOUT_OK); live-GUI confirm DONE | `8c1da2e` | 07-30 |
 | #35 embedding.local | 0.1.0: 42/42 (26 off-machine mock-seam + 16 `-Live` GPU); det cos_dist 2.2e-16, batch==single 8.7e-13; 0 orphans; Module 7 re-verified 42/42 | `99b6590` | 08-01 |
-| #36 artifact.search | 0.1.0: 69/69 cloud + 69/69 `-Live` (sqlite3/FTS5); deterministic re-ingest + reconcile + DB integrity + provenance | `30ef7bd` | 08-01 |
+| #36 artifact.search | **0.2.0: 113/113 cloud + 113/113 `-Live`**; record-envelope + ingest_records SINK + records/record_edges + schema_version 2 in-place migration + parser/chunker/extractor fingerprints + retriever-0.2 hits (span object+label, per-channel) + s5 staleness enum + float32 LE BLOB vectors + catalog hardening (0.1.0 was 69/69) | `b57d328` | 08-01 |
 | #37 retrieval.eval | 0.1.0: 69/69 cloud + 69/69 `-Live`; benchmark schema + BM25-lite baseline + recall@K/MRR/stale/provenance; canonical reports | `687edcd` | 08-01 |
+| #38 repo.intel | 0.1.0: 65/65 pwsh + 37/37 python cloud + 65/65 `-Live`; deterministic typed-record producer (symbol/entity/relationship/skill/summary); s1 validator; edges resolve; byte-identical cross-env | `cd53565` | 08-01 |
+| #39 episode.record | 0.1.0: 114/114 cloud + 114/114 `-Live`; episode+failure schemas + deterministic recorder + failure-signature seam; byte-identical cross-env | `b381686` | 08-01 |
 
 ## Known failures / gotchas
 
@@ -368,6 +367,7 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 
 ## Unresolved questions
 
+- **MEMORY_CONTRACT amendment (Wave 2 D-0077 finding, D-0084):** episode.record #39 emits `record_kind: episode_stage` (NOT in the frozen s1 enum) and `status` as an OBJECT (the s5 taxonomy is a STRING enum); #36 0.2 correctly rejects both, and the fold bridged them (dropped episode_stage -- stages also live in the episode body; coerced status -> status.state). Resolve via episode.record 0.1.1 conformance AND/OR a MEMORY_CONTRACT s0 amendment (add `episode_stage`; freeze the status representation) before Wave 3 leans on episode/failure records.
 - **Install pwsh system-wide** (winget, needs UAC) vs. keep the per-user dotnet-tool build.
 - **Unattended scheduled orchestrator = IMPOSSIBLE on this build (D-0074):** a scheduled Cowork fire is a fresh session with no device bridge to the box (live gate FAILED 2026-07-30). Dropped; the future home for unattended iterative fan-out is the local baton-pass agent (R4/#26) when strong enough, not the scheduler.
 - **`model.gateway` semantic confidence** — confidence today is a *completeness* heuristic (stop/length/empty),
@@ -402,7 +402,7 @@ exception: #31 = `tests/Test-FrontierBridge.ps1`). Dates 2026.
 
 ## Next expected action
 
-**Wave 1 SHIPPED (i25, D-0082); the CONTRACT FREEZE is DONE (i26, D-0083, `core-docs/MEMORY_CONTRACT.md`); NEXT = Wave 2.**
+**Wave 2 (memory RECORDS) SHIPPED + FOLDED (i27, D-0084); NEXT = Wave 3 (context compiler + skill retrieval) OR the episode.record 0.1.1 conformance + a MEMORY_CONTRACT amendment first -- Nicholas's call.**
 The project now builds the Collective Agent memory/retrieval substrate. Wave 1 lanes + work orders live in
 **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4: GPU = embedding adapter; coding = `artifact.search` deterministic
 MVP; CPU = retrieval-evaluation harness; optional frontier = memory-architecture red-team (non-blocking). At
@@ -419,5 +419,5 @@ after the D-0080 edits) are over budget -- a hot-doc slim pass is a named unit (
 
 ---
 
-**Last updated:** 2026-08-01 -- i26 (D-0083): the retrieval-record/provenance CONTRACT FREEZE shipped -- NEW `core-docs/MEMORY_CONTRACT.md` (record-envelope v0.1 + embedding-provider 0.2 + retriever 0.2 + catalog/eval/scale-privacy gates from the memory red-team); orchestrator-only, NO worker wave, no module code changed. NEXT = Wave 2 (repo intelligence + episode/failure schema + recorder) built to MEMORY_CONTRACT 0.2. (Doc debt: CURRENT_STATE / MODULE_ROADMAP / handoff / DECISION_LOG_INDEX over budget -- slim pass still deferred.)
+**Last updated:** 2026-08-01 -- i27 (D-0084): WAVE 2 memory RECORDS shipped -- #36 artifact.search 0.2.0 (record-envelope + ingest_records SINK + retriever-0.2 + float32 BLOB vectors + catalog hardening) + NEW #38 repo.intel + NEW #39 episode.record, all built to MEMORY_CONTRACT 0.2; the D-0077 fold smoke PASSED (2 producer/consumer divergences bridged -> episode.record 0.1.1 conformance + a MEMORY_CONTRACT amendment named). NEXT = Wave 3 (context compiler + skill retrieval) or the conformance fix first. (Doc debt: CURRENT_STATE / MODULE_ROADMAP / handoff / DECISION_LOG_INDEX over budget -- slim pass still deferred.)
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*
