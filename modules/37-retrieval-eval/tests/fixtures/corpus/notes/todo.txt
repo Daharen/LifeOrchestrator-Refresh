@@ -1,0 +1,8 @@
+Benchmark backlog
+
+- add more retrieval benchmark queries with required source labels
+- record provenance for every source in the catalog
+
+Follow ups
+
+- review the lease acquire order before the next wave

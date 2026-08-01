@@ -1,0 +1,94 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "retrieval.eval",
+  "skill_version": "0.1.0",
+  "contract_version": "0.2",
+  "invocation_id": "00000000-0000-0000-0000-000000000000",
+  "status": "ok",
+  "started_at_utc": "2026-08-01T00:00:00.0000000Z",
+  "finished_at_utc": "2026-08-01T00:00:01.0000000Z",
+  "duration_ms": 1000,
+  "inputs_digest": "sha256:5d9ceb3b8e98ecf9ef4504e87827f80cf81d935070b4797e79ec623c8a999aa9",
+  "result": {
+    "benchmark_id": "lo-fixture-v1",
+    "retriever_kind": "lexical_baseline",
+    "num_queries": 7,
+    "k_values": [
+      1,
+      3,
+      5,
+      10
+    ],
+    "retrieval_depth": 10,
+    "ratio_unit": "ppm",
+    "aggregate": {
+      "forbidden_hit_rate_ppm": 142857,
+      "k_values": [
+        1,
+        3,
+        5,
+        10
+      ],
+      "mrr_ppm": 857143,
+      "num_queries": 7,
+      "provenance_completeness_ppm": 1000000,
+      "queries_all_required_present": 6,
+      "ratio_unit": "ppm",
+      "recall_at_k_micro_ppm": {
+        "1": 857143,
+        "10": 857143,
+        "3": 857143,
+        "5": 857143
+      },
+      "recall_at_k_ppm": {
+        "1": 857143,
+        "10": 857143,
+        "3": 857143,
+        "5": 857143
+      },
+      "retrieval_depth": 10,
+      "stale_source_rate_ppm": 142857,
+      "total_hits": 28,
+      "total_provenance_complete": 28,
+      "total_required": 7
+    },
+    "report_json": {
+      "path": "runtime/artifacts/<invocation_id>/report.json",
+      "sha256": "93af1960a80e00400dd0d9514459817176acdce070044612d14ce59c829a85c7",
+      "bytes": 12408
+    },
+    "report_md": {
+      "path": "runtime/artifacts/<invocation_id>/report.md",
+      "sha256": "57e94a581adc3a9087cfa912c5677a09b57c8a8ffdf4980fff30ed382c07ac3c",
+      "bytes": 5248
+    },
+    "input_digest": "sha256:5d9ceb3b8e98ecf9ef4504e87827f80cf81d935070b4797e79ec623c8a999aa9"
+  },
+  "confidence": null,
+  "artifacts": [
+    {
+      "path": "runtime/artifacts/<invocation_id>/report.json",
+      "kind": "json",
+      "bytes": 12408,
+      "sha256": "93af1960a80e00400dd0d9514459817176acdce070044612d14ce59c829a85c7"
+    },
+    {
+      "path": "runtime/artifacts/<invocation_id>/report.md",
+      "kind": "markdown",
+      "bytes": 5248,
+      "sha256": "57e94a581adc3a9087cfa912c5677a09b57c8a8ffdf4980fff30ed382c07ac3c"
+    },
+    {
+      "path": "runtime/artifacts/<invocation_id>/worker-summary.json",
+      "kind": "json",
+      "bytes": 1095,
+      "sha256": "5281d9bee79b13b933c3372ed8d1f694a64f1c2e98fbb18bfd61d61029de66a8"
+    }
+  ],
+  "model_provenance": [],
+  "diagnostics": {
+    "log": "worker-stderr.txt"
+  },
+  "warnings": [],
+  "error": null
+}

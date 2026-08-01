@@ -1,0 +1,39 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "retrieval.eval",
+  "name": "Retrieval Evaluation Harness",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "Make retrieval quality MEASURABLE before any vector integration (Wave 1 / D-0080). Runs a benchmark (schema lifeorch.retrieval_benchmark/0.1: each query carries REQUIRED-SOURCE labels -- the source(s)/span(s) a correct retrieval must surface -- plus optional stale/superseded and forbidden sources) against ANY retriever satisfying the D-0077 retriever interface (op search; inputs {query,k,filters?}; result = a ranked array of {source_path, content_hash, chunk_id, span, score, snippet} in deterministic order). Ships its OWN deterministic LEXICAL BASELINE (BM25-lite over a fully-known fixture corpus, score_unit millionths) for a known baseline AND an external_command adapter (the seam the orchestrator points at the real artifact.search at fold). A required source is MATCHED only when source_path AND (when labelled) content_hash match -- a right path with a STALE/superseded hash is a MISS (and is reported). Metrics: recall@K, MRR, stale-source rate, provenance completeness, forbidden-hit rate. Emits TWO deterministic reports -- report.json (machine, schema lifeorch.retrieval_eval_report/0.1) and report.md (human) -- both canonical (UTF-8 no BOM, sorted keys, integer-only: scores in millionths, ratios in ppm; no timestamps/invocation-ids/absolute-paths), byte-identical on a re-run across machines. content_hash is EOL-normalized so a CRLF vs LF checkout hashes identically. Thin pwsh wrapper over a stdlib-only Python worker (retrieval_eval.py). CPU-only, no model, no CUDA, no network -> parallel_safe:true.",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-RetrievalEval.ps1",
+    "args_spec": "Named params: -InputFile <benchmark.json> (a lifeorch.retrieval_benchmark/0.1 file) OR -InputsJson '<json {benchmark|input: path-or-inline-object, corpus_dir?, retriever?, k_values?, retrieval_depth?, base_dir?, python_path?, worker_path?}>'. Also: -CorpusDir, -RetrieverJson '<spec json>', -KValues <int[]>, -RetrievalDepth <int>, -BaseDir <dir>, -PythonPath, -WorkerPath, -ArtifactRoot, -InvocationId. Precedence: -InputFile > InputsJson.benchmark > InputsJson.input."
+  },
+  "inputs": [
+    { "name": "benchmark", "type": "string", "required": true, "description": "The benchmark: a JSON file path (via -InputFile) or an inline lifeorch.retrieval_benchmark/0.1 object (via -InputsJson.benchmark). {benchmark_id, corpus_dir?, retriever?, k_values?, retrieval_depth?, queries:[{query_id, query, required_sources:[{source_path, content_hash?, span?, require_span?}], stale_sources?:[{source_path, content_hash}], forbidden_sources?:[{source_path, content_hash?}], filters?}]}." },
+    { "name": "corpus_dir", "type": "string", "required": false, "description": "Override the lexical-baseline corpus directory (else benchmark.retriever.corpus_dir / benchmark.corpus_dir); resolved relative to base_dir." },
+    { "name": "retriever", "type": "object", "required": false, "description": "Override the retriever spec. kind=lexical_baseline {corpus_dir, k1?, b?, include_suffixes?, exclude_dir_names?} OR kind=external_command {argv:[...], request_via:stdin|file|arg, hits_pointer?='result.hits', timeout_seconds?}. argv tokens {PYTHON}/{BASE_DIR}/{MODULE_ROOT}/{REQUEST_FILE}/{REQUEST_JSON} are substituted at call time." },
+    { "name": "k_values", "type": "array", "required": false, "default": [1, 3, 5, 10], "description": "The K set for recall@K (ints)." },
+    { "name": "retrieval_depth", "type": "int", "required": false, "description": "Max hits requested from the retriever per query (raised to at least max(k_values))." },
+    { "name": "base_dir", "type": "string", "required": false, "description": "Directory used to resolve a relative corpus_dir and external-retriever argv paths (default = the benchmark file's directory)." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "{ benchmark_id, retriever_kind, num_queries, k_values, retrieval_depth, ratio_unit='ppm', aggregate{recall_at_k_ppm, recall_at_k_micro_ppm, mrr_ppm, stale_source_rate_ppm, forbidden_hit_rate_ppm, provenance_completeness_ppm, queries_all_required_present, total_hits, total_required, ...}, report_json{path,sha256,bytes}, report_md{path,sha256,bytes}, input_digest }. Artifacts: report.json (lifeorch.retrieval_eval_report/0.1 -- canonical, deterministic, machine-readable: aggregate + per_query with matched@K/recall@K/first_relevant_rank/missing_required/stale+wrong-version hits/forbidden hits/returned-with-provenance), report.md (human), worker-summary.json. On failure the envelope is status=error with a structured error and no reports." },
+  "requirements": {
+    "executables": ["pwsh>=7.4", "python>=3.8"],
+    "models": [],
+    "libraries": [],
+    "cpu": "any", "gpu": "none", "memory_mb": 256,
+    "network": false, "filesystem": "read-write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 120, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}
