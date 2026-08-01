@@ -1,85 +1,83 @@
-# Work Order: Artifact Search (`artifact.search`)
+# Work Order: Artifact Search (`artifact.search`) -- 0.1.0 -> 0.2.0
 
-**Contract version targeted:** 0.2 · **Author:** FANOUT_AGENT_002 (i25, plan fo-25-3b718a13) / 2026-08-01 ·
-**Roadmap entry:** `MODULE_ROADMAP.md#artifact.search` (Wave 1 coding lane, arch position 23)
+**Contract version targeted:** 0.2 (SKILL_CONTRACT) + **MEMORY_CONTRACT 0.2 (D-0083)** |
+**Author:** FANOUT_AGENT_001 (i27, plan fo-27-bab47060) / 2026-08-01 |
+**Roadmap entry:** `MODULE_ROADMAP.md#artifact.search` (Wave 2 CONSUMER lane, arch position 23)
 
 ### Problem being solved
-The Collective Agent (D-0080) needs an authoritative, queryable catalog of the repo's content with full
-provenance, before any vector integration or context compiler. Nothing today can answer "which file/section
-contains X" deterministically with a span back to the source.
+Wave 2 producers (repo.intel #38, episode.memory #39) must land TYPED memory records -- symbols, relationships,
+episodes, failures, summaries -- not just file chunks, and every retrievable object must satisfy ONE shared
+provenance envelope so file-chunks do not silently become the universal memory abstraction. artifact.search is
+the CONSUMER half: it adopts the FROZEN MEMORY_CONTRACT and exposes the generic `ingest_records` SINK.
 
 ### Immediate practical use
-The retrieval-eval harness (#37) points at `search` to measure retrieval quality; the fold smoke feeds real
-embeddings (#35) via `store-embeddings`. Later, the context compiler and skill router consume `search`.
+The orchestrator's D-0077 fold runs repo.intel/episode -> `ingest_records` -> retrieval smoke. The
+retrieval-eval harness (#37) points at `search` (retriever 0.2). The context compiler + skill router later
+consume `search` + `list-records`.
 
-### Explicit scope (in)
-- SQLite schema: sources / documents / document_versions / chunks / chunk_embeddings + provenance
-  (source_path, content_hash, byte span, parser, parser_version, created_at) -- SQLite owns ids/versions/hashes/status.
-- File inventory + content hash; new/changed/moved/deleted detection; parse failures SURFACED.
-- Markdown-aware chunking (headings/sections/code-fence-aware) + generic-text fallback.
-- SQLite FTS5 over chunk text; metadata filters (source/type/path/content_hash).
-- Embedding-provider seam with a DETERMINISTIC MOCK (D-0077 contract 1; provider_id + dim on every vector).
-- Result -> source_path + content_hash + span provenance (D-0077 contract 2, the retriever interface).
-- Incremental, DETERMINISTIC ingest (id/order stable), reconcile with NO dup chunks, a DB integrity check.
-- CLI/skill contract exposing at least `ingest` and `search` (+ embed/integrity/catalog/export/store).
+### Explicit scope (in) -- all DONE
+- The s1 record+provenance ENVELOPE + a `source_chunk` view/adapter (two-level chunk identity:
+  chunk_content_hash vs chunk_occurrence_id, occurrence id index-free).
+- The generic `ingest_records` SINK + `records`/`record_edges` tables + FTS; deterministic + idempotent;
+  malformed-record rejection surfaced.
+- schema_version 2 + forward MIGRATION of a shipped-0.1 db IN PLACE (no full re-ingest).
+- parser + chunker + extractor fingerprints on every derived record.
+- retriever 0.2 hit shape (span object + span_label; per-channel lexical/vector/fused ranks+scores; record
+  fields; opaque `score` retired).
+- s5 staleness ENUM (not a boolean).
+- s2 float32 LE BLOB vectors keyed on `embedding_space_id` (JSON vector column retired).
+- catalog hardening: transactional current-version swap + explicit stale fallback; tombstones;
+  physical/logical identity; crash-safety fault-injection.
 
 ### Non-goals (out -- do NOT build)
-AST/call-graph/symbol index; hierarchical summaries; episodes; failure memory; context compiler; UI; web
-search; REAL embeddings (mock only -- #35 ships the real adapter); filesystem watcher.
+A vector index / ANN / vector *search*; REAL embeddings (#35 owns; mock only); #38 parsers / #39 schemas; model
+summaries; the context compiler; UI; web search; models.json / model modules.
 
 ### Dependencies
-- Modules: none at build (Module 1 wrapper + SkillContract for tests). Tools: `pwsh>=7.4`, a `python>=3.8`
-  with stdlib `sqlite3`+FTS5. Contract features: `lifeorch.skill.manifest/0.1` + `lifeorch.skill.result/0.1`.
+Modules: none at build (Module 1 wrapper + SkillContract for tests). Tools: `pwsh>=7.4`, `python>=3.8` with
+stdlib `sqlite3`+FTS5. Contracts: `lifeorch.skill.manifest/0.1` + `lifeorch.skill.result/0.1`; **MEMORY_CONTRACT
+s1..s8**.
 
 ### Skill contract requirements
-`skill_id=artifact.search`, `version=0.1.0`, `determinism=deterministic`, `parallel_safe=false` (shared-db
-writes serialize; reads safe; distinct dbs independent), `batch=false`, `streaming=false`. `result` = object;
-`confidence=null`; `model_provenance=[]`; artifact kinds json/text.
+`skill_id=artifact.search`, `version=0.2.0`, `contract_version=0.2`, `determinism=deterministic`,
+`parallel_safe=false`, `batch=false`, `streaming=false`. `result`=object; `confidence=null`;
+`model_provenance=[]`; artifact kinds json/text.
 
 ### Inputs and outputs
-See `skill.json` (inputs) and `SCHEMA_NOTES.md` (schema + both interfaces + result shapes).
+See `skill.json` (inputs, incl. `records`/`ingest_run`/`filters`/`limit`/`target_kind`/`target_id`) and
+`SCHEMA_NOTES.md` (schema + envelope + `ingest_records` input + retriever-0.2 hit shape + migration +
+fingerprints).
 
-### Artifact structure
-`runtime/artifacts/<invocation_id>/`: `result.json`, `as_meta.json`, `as_args.json`, `worker.log`,
-`stderr.txt`, + per-op (`ingest_report.json`+`catalog_digest.txt` / `search_results.json` / `embeddings.json`
-/ `integrity.json` / `catalog.json` / `chunk_texts.json`). Catalog db: `runtime/catalog/artifact_search.db`.
-
-### Proposed implementation
-**Language:** PowerShell entrypoint + Python worker (the D-0021 worker+meta hand-off, as image.util #15).
-Python owns SQLite/FTS5/chunking/hashing (clean + deterministic); pwsh owns the envelope + artifact hashing +
-python resolution. Stdlib only -> no install.
-
-### External tools or models
-None to install. System python (Python312) already present (`CURRENT_STATE.md`).
+### MVP acceptance criteria -- all VERIFIED (113/113 off-machine)
+- [x] migrate a shipped-0.1 db to 0.2 (idempotent, no data loss; chunk_embeddings JSON -> float32 BLOB).
+- [x] `ingest_records` stores >=3 record_kinds deterministically + idempotently, retrievable by kind with
+      resolving provenance (record_version_id + source_version_id + span); malformed rejected with a reason.
+- [x] the `source_chunk` view reproduces the shipped chunk provenance.
+- [x] retriever-0.2 hits carry span{start,end}+span_label + per-channel diagnostics + record fields;
+      deterministic order preserved; `score` retired.
+- [x] float32 BLOB round-trips (byte-length validated) keyed on `embedding_space_id`.
+- [x] the staleness ENUM is exercised (source change -> source_stale; exclude_stale filters).
+- [x] catalog hardening: explicit stale-fallback; crash-safety fault-injection rolls back; integrity extended.
+- [x] shipped ingest/search/embed/integrity/catalog/export/store ops stay GREEN (regression).
+- [x] catalog_digest deterministic across a repeat run AND extended to cover records; canonical outputs
+      double-run byte-identical (digest + search order; run ids are provenance).
 
 ### Tests
-Direct + through the wrapper: `tests/Invoke-ArtifactSearchTests.ps1` runs the REAL wrapper -> worker over
-`fixtures/repo` + a bounded real `core-docs` slice. Off-machine (cloud pwsh 7.4.6 + python FTS5) FIRST, then
-`-Live` on the Windows executor.
-
-### MVP acceptance criteria
-- [x] index the bundled fixture repo AND a bounded real core-docs slice.
-- [x] exact + FTS retrieval, both provenance-complete (source_path + content_hash + span).
-- [x] DETERMINISTIC re-ingest (id/order stable; identical `catalog_digest` across fresh dbs; idempotent same-db).
-- [x] changed + deleted reconciliation with NO duplicate chunks; moved detection (report).
-- [x] a DB integrity check passes (PRAGMA + catalog invariants).
-- [x] provenance from every result to its source span (byte offsets verified against the file).
-- [x] mock-embedding contract tests (shape + input-order + dim + batch==single + determinism) that also pass
-      against the real adapter (shape-level).
-- [x] parse failures surfaced (never silently dropped).
-
-### Manual verification procedure
-Ingest core-docs; `search -Mode exact -Query "D-0080"`; open the returned `source_path` at `span` and confirm
-the text; re-ingest and confirm `unchanged` + identical digest.
+`tests/Invoke-ArtifactSearchTests.ps1` runs the REAL wrapper -> worker (fixtures/repo + core-docs slice) plus
+the 0.2 sections (17-24). Off-machine (cloud pwsh 7.4.6 + python FTS5) FIRST, then `-Live` on the Windows
+executor; canonical outputs double-run byte-identical. Migration test seeds a v1 db from the FROZEN
+`fixtures/artifact_search_v1.py`.
 
 ### Registry / state updates
 `docs:[]` -- the worker reports; the ORCHESTRATOR mirrors + folds all core-docs (MODULE_ROADMAP /
-CURRENT_STATE / TOOL_MODEL_REGISTRY / DECISION_LOG) at fold. Do NOT edit any core-doc here.
+CURRENT_STATE / MEMORY_CONTRACT adoption note / DECISION_LOG) at fold. Do NOT edit any core-doc here.
 
 ### Known follow-on work
-Repository intelligence (symbols/AST, Wave 2/3); the real embedding adapter fold (#35, D-0077); summaries;
-context compiler; a filesystem watcher for continuous update.
+Vector index / ANN + real-embedding fold (#35, D-0077); #38 repo intelligence + #39 episode/failure producers
+building to this `ingest_records` sink; hierarchical summaries; the context compiler; a filesystem watcher;
+full-corpus (~200 MB) CPU-only rehearsal (MEMORY_CONTRACT s7); the embedding-provider 0.2 `embed` envelope
+(#35's adoption item).
 
 ### STOP conditions
-Scope beyond the list above; a missing dependency; a contract gap -> stop + propose, don't freelance. MVP
-acceptance met -> stop.
+Scope beyond the list above; a missing dependency; a contract gap -> stop + propose (amend MEMORY_CONTRACT via
+its s0 protocol), don't freelance. MVP acceptance met -> stop.

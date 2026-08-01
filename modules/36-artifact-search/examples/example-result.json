@@ -1,98 +1,217 @@
 {
   "schema": "lifeorch.skill.result/0.1",
   "skill_id": "artifact.search",
-  "skill_version": "0.1.0",
+  "skill_version": "0.2.0",
   "contract_version": "0.2",
-  "invocation_id": "227cff6d-c442-4fce-8e22-147489b7bd6a",
+  "invocation_id": "36000002-0002-0002-0002-000000000002",
   "status": "ok",
-  "started_at_utc": "2026-08-01T00:31:47.2097562Z",
-  "finished_at_utc": "2026-08-01T00:31:47.7287501Z",
-  "duration_ms": 513,
-  "inputs_digest": "sha256:c5f44f70a106df064ebc0af38981041739d485bb3cb8d72839b91f5b1f65b482",
+  "started_at_utc": "2026-08-01T00:00:00.0000000Z",
+  "finished_at_utc": "2026-08-01T00:00:00.5000000Z",
+  "duration_ms": 500,
+  "inputs_digest": "sha256:1c59acb944fb437dd0ef5c68b78c095c7a8eee48aea6a87626df9b3805e27919",
   "result": {
     "op": "search",
     "result": {
-      "query": "frobnicator flux",
+      "query": "frobnicate",
       "mode": "fts",
       "k": 3,
       "count": 3,
       "filters": {},
+      "corpus_version": "32a9e6995b7ca8de3bf49090659c88800925a6e8fdb7830391a098dfb7fa55ae",
+      "fusion_algo": "lexical_only",
+      "fusion_version": "1",
+      "retrieval_channels": [
+        "lexical"
+      ],
       "results": [
         {
-          "source_path": "data/config.json",
-          "abs_path": "/home/claude/repo/modules/36-artifact-search/fixtures/repo/data/config.json",
-          "content_hash": "d87122341cac8b0063e28dba07e5f378005dfe066c97a68b4c6ba499ebfa299f",
-          "chunk_id": "chk_6b50bbb1035cd14574c9122a",
+          "record_id": "srec_f707a0240a91cf4b26851b08",
+          "record_version_id": "occ_3a5b242a13ba116ac8c6b901",
+          "record_kind": "source_chunk",
+          "chunk_id": "chk_b11986b99fd69636fcae38fa",
+          "source_path": "src/hello.py",
+          "abs_path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\core-docs\\src\\hello.py",
+          "content_hash": "680e4e8e87e6f3b0a3ea762c38e2fe4a9ee79257305ec214cfc06ba4f2d7baaf",
+          "chunk_content_hash": "680e4e8e87e6f3b0a3ea762c38e2fe4a9ee79257305ec214cfc06ba4f2d7baaf",
           "span": {
             "start": 0,
-            "end": 208
+            "end": 463
           },
+          "span_label": "bytes:0-463",
           "section_path": null,
           "heading": null,
           "chunk_type": "text_block",
-          "source": "fixture",
-          "score": 0.810589,
-          "snippet": "{ \"schema\": \"zorble.config/1\", \"max_flux\": 42, \"frobnicator\": { \"enabled\": true, \"retry\": 3 }, \"notes\": \"config for the Zorble fixture; the token JSON_CONFI...",
+          "status": "current",
+          "currentness": "current",
+          "authority_level": "source_material",
+          "namespace": "core-docs",
+          "source": "core-docs",
+          "embedding_space_id": "esp_ba2a41e15b441f3bae7cdf12",
+          "source_version_id": "ver_f338b1c14118c0eb3a467c01",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "lexical_rank": 1,
+          "lexical_score": 1.02571,
+          "vector_rank": null,
+          "vector_similarity": null,
+          "fused_rank": 1,
+          "fused_score": 1.02571,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "index_snapshot": "32a9e6995b7ca8de3bf49090659c88800925a6e8fdb7830391a098dfb7fa55ae",
+          "corpus_version": "32a9e6995b7ca8de3bf49090659c88800925a6e8fdb7830391a098dfb7fa55ae",
+          "filter_decisions": {
+            "mode": "fts",
+            "record_kind": null,
+            "source": null,
+            "type": null,
+            "path_prefix": null,
+            "content_hash": null,
+            "namespace": null,
+            "status": null,
+            "exclude_stale": false,
+            "channels": [
+              "lexical"
+            ]
+          },
+          "tie_break_key": "occ_3a5b242a13ba116ac8c6b901",
+          "snippet": "...Exercises text chunking of code and symbol/exact search.\"\"\" def zorble_main(): widget = build_widget() return frobnicate(widget) def build_widget(): # ZorbleWidget factory return {\"ready\": True, \"flux\": 21} def frobnic...",
           "rank": 1
         },
         {
+          "record_id": "srec_a6fac2044d6970f3dd42f6ba",
+          "record_version_id": "occ_2b9293aebe0281995eaea9f9",
+          "record_kind": "source_chunk",
+          "chunk_id": "chk_00a360e62a6e9c96ebc6c5eb",
           "source_path": "README.md",
-          "abs_path": "/home/claude/repo/modules/36-artifact-search/fixtures/repo/README.md",
+          "abs_path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\core-docs\\README.md",
           "content_hash": "fa6e05a498e06ef002e55bbfb1d15b4b7344e1b4e80083ff9b62610ee41c19f6",
-          "chunk_id": "chk_cd5053e897cb03f2f0c5910e",
+          "chunk_content_hash": "cbccfaaba82f5b87ab465e173396a0098aa2e9d0bd83ddba30c7a8657c25cb6a",
           "span": {
-            "start": 203,
-            "end": 417
+            "start": 915,
+            "end": 1162
           },
-          "section_path": "Zorble Project / Overview",
-          "heading": "Overview",
+          "span_label": "Zorble Project / Example",
+          "section_path": "Zorble Project / Example",
+          "heading": "Example",
           "chunk_type": "markdown_section",
-          "source": "fixture",
-          "score": 0.743834,
-          "snippet": "## Overview The `ZorbleWidget` is the central component. It coordinates the frobnicator and the flux capacitor. When it fails it raises the error string `E_FROBNICATE_FAILED`, which downstream too...",
+          "status": "current",
+          "currentness": "current",
+          "authority_level": "source_material",
+          "namespace": "core-docs",
+          "source": "core-docs",
+          "embedding_space_id": "esp_ba2a41e15b441f3bae7cdf12",
+          "source_version_id": "ver_ada7dbd8dc2260119275a2c9",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "lexical_rank": 2,
+          "lexical_score": 1.007892,
+          "vector_rank": null,
+          "vector_similarity": null,
+          "fused_rank": 2,
+          "fused_score": 1.007892,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "index_snapshot": "32a9e6995b7ca8de3bf49090659c88800925a6e8fdb7830391a098dfb7fa55ae",
+          "corpus_version": "32a9e6995b7ca8de3bf49090659c88800925a6e8fdb7830391a098dfb7fa55ae",
+          "filter_decisions": {
+            "mode": "fts",
+            "record_kind": null,
+            "source": null,
+            "type": null,
+            "path_prefix": null,
+            "content_hash": null,
+            "namespace": null,
+            "status": null,
+            "exclude_stale": false,
+            "channels": [
+              "lexical"
+            ]
+          },
+          "tie_break_key": "occ_2b9293aebe0281995eaea9f9",
+          "snippet": "## Example ```python def frobnicate(widget): # a fenced code block: headings inside it must NOT split the chunk # ## Not A Heading if...",
           "rank": 2
         },
         {
-          "source_path": "docs/notes.txt",
-          "abs_path": "/home/claude/repo/modules/36-artifact-search/fixtures/repo/docs/notes.txt",
-          "content_hash": "ec8540ba962c2dc0ed2ec935b1fcab20bf552535391699b98d9dd46df8a59305",
-          "chunk_id": "chk_3654991e9f3176f284aea72e",
+          "record_id": "srec_ca4d4003f905ef25d4289ce0",
+          "record_version_id": "occ_d44420732a119e604e5b7248",
+          "record_kind": "source_chunk",
+          "chunk_id": "chk_ba188a45fcabec6e7284a4ef",
+          "source_path": "docs/guide.md",
+          "abs_path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\core-docs\\docs\\guide.md",
+          "content_hash": "52f49d8eb8c9eb7b3fb4d3dc628821de572d3f6a50af7ff7af820c1cb679703c",
+          "chunk_content_hash": "42dd1f1313200c0761f8ce07d3b3290693c740f22889444526ce54d031b31000",
           "span": {
-            "start": 0,
-            "end": 382
+            "start": 317,
+            "end": 506
           },
-          "section_path": null,
-          "heading": null,
-          "chunk_type": "text_block",
-          "source": "fixture",
-          "score": 0.549791,
-          "snippet": "...no Markdown headings, so it exercises the generic-text chunk fallback. It is split into paragraphs at blank lines. The frobnicator was named after an old engineering joke. The flux capacitor reference is likewise a joke. Neither is a real...",
+          "span_label": "Zorble User Guide / Troubleshooting",
+          "section_path": "Zorble User Guide / Troubleshooting",
+          "heading": "Troubleshooting",
+          "chunk_type": "markdown_section",
+          "status": "current",
+          "currentness": "current",
+          "authority_level": "source_material",
+          "namespace": "core-docs",
+          "source": "core-docs",
+          "embedding_space_id": "esp_ba2a41e15b441f3bae7cdf12",
+          "source_version_id": "ver_757c4b66e810ead815c49ccc",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "lexical_rank": 3,
+          "lexical_score": 0.761757,
+          "vector_rank": null,
+          "vector_similarity": null,
+          "fused_rank": 3,
+          "fused_score": 0.761757,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "index_snapshot": "32a9e6995b7ca8de3bf49090659c88800925a6e8fdb7830391a098dfb7fa55ae",
+          "corpus_version": "32a9e6995b7ca8de3bf49090659c88800925a6e8fdb7830391a098dfb7fa55ae",
+          "filter_decisions": {
+            "mode": "fts",
+            "record_kind": null,
+            "source": null,
+            "type": null,
+            "path_prefix": null,
+            "content_hash": null,
+            "namespace": null,
+            "status": null,
+            "exclude_stale": false,
+            "channels": [
+              "lexical"
+            ]
+          },
+          "tie_break_key": "occ_d44420732a119e604e5b7248",
+          "snippet": "## Troubleshooting If you see `E_FROBNICATE_FAILED`, the frobnicator lost sync with the widget. Restart the daemon. For deeper issues consult decision `D...",
           "rank": 3
         }
-      ],
-      "db": "/tmp/tmp.7BRDbS4Luh/example.db"
+      ]
     },
     "worker": {
-      "python": "3.11.15",
-      "sqlite": "3.45.1",
-      "worker_version": "0.1.0",
-      "schema_version": "1"
+      "python": "3.12.x",
+      "sqlite": "3.45.x",
+      "worker_version": "0.2.0",
+      "schema_version": "2"
     },
-    "runtime_ms": 14
+    "runtime_ms": 18
   },
   "confidence": null,
   "artifacts": [
     {
-      "path": "/tmp/tmp.7BRDbS4Luh/art/227cff6d-c442-4fce-8e22-147489b7bd6a/search_results.json",
+      "path": "runtime/artifacts/36000002-0002-0002-0002-000000000002/search_results.json",
       "kind": "json",
-      "bytes": 2375,
-      "sha256": "e42b01ac4e9cfc7fc154a2c2453f31989d6e655c157fec49838a475945b826e0"
+      "bytes": 6718,
+      "sha256": "09fc2fb17636f7eba3acd5762cb784b290cbf74cad97ad11dc40deef540cd949"
     }
   ],
   "model_provenance": [],
   "diagnostics": {
     "log": "stderr.txt",
-    "artifact_dir": "/tmp/tmp.7BRDbS4Luh/art/227cff6d-c442-4fce-8e22-147489b7bd6a"
+    "artifact_dir": "runtime/artifacts/36000002-0002-0002-0002-000000000002"
   },
   "warnings": [],
   "error": null

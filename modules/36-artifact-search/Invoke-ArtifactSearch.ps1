@@ -48,6 +48,9 @@ param(
     [int]$MaxFiles,
     [int]$MaxChunkChars,
     [string]$EmbedProvider,
+    [int]$Limit,
+    [string]$TargetKind,
+    [string]$TargetId,
     [string]$PythonPath,
     [string]$WorkerPath,
     [string]$InputsJson,
@@ -58,7 +61,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$SKILL_ID = 'artifact.search'; $SKILL_VERSION = '0.1.0'; $CONTRACT = '0.2'
+$SKILL_ID = 'artifact.search'; $SKILL_VERSION = '0.2.0'; $CONTRACT = '0.2'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 $startedAt = [DateTime]::UtcNow
@@ -123,7 +126,9 @@ $status = 'ok'; $errorObj = $null; $result = $null; $inputsDigest = $null
 $confidence = $null; $modelProvenance = @(); $artifacts = @()
 $warnings = New-Object System.Collections.Generic.List[string]
 $invDir = Join-Path $ArtifactRoot $InvocationId
-$VALID_OPS = @('ingest','search','embed','integrity','catalog','export-chunk-texts','store-embeddings')
+$VALID_OPS = @('ingest','ingest-records','list-records','migrate','search','embed','integrity','catalog','export-chunk-texts','store-embeddings','get-vector')
+# ops that CREATE-or-open a db (no pre-existing db required); every other db-op requires the db to exist
+$CREATE_OPS = @('ingest','ingest-records','migrate')
 
 try {
     # ---- build the worker args: start from InputsJson (generic pass-through), then named params win ----
@@ -149,6 +154,9 @@ try {
     if ($bound.ContainsKey('MaxFiles'))      { $wargs['max_files'] = $MaxFiles }
     if ($bound.ContainsKey('MaxChunkChars')) { $wargs['max_chunk_chars'] = $MaxChunkChars }
     if ($bound.ContainsKey('EmbedProvider')) { $wargs['embed_provider'] = $EmbedProvider }
+    if ($bound.ContainsKey('Limit'))         { $wargs['limit'] = $Limit }
+    if ($bound.ContainsKey('TargetKind'))    { $wargs['target_kind'] = $TargetKind }
+    if ($bound.ContainsKey('TargetId'))      { $wargs['target_id'] = $TargetId }
 
     $Op = [string]$wargs['op']
     if ([string]::IsNullOrWhiteSpace($Op)) { $Op = 'search'; $wargs['op'] = $Op }
@@ -168,7 +176,7 @@ try {
             New-Item -ItemType Directory -Path $dbDir -Force | Out-Null
         }
         $wargs['db'] = $dbVal
-        if ($Op -ne 'ingest') {
+        if ($CREATE_OPS -notcontains $Op) {
             if (-not (Test-Path -LiteralPath $dbVal -PathType Leaf)) {
                 throw [PSCustomObject]@{ code='db_not_found'; message="catalog db not found: $dbVal (run op=ingest first)"; retryable=$false }
             }
