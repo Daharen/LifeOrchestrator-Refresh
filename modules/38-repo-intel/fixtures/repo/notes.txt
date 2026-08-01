@@ -1,0 +1,3 @@
+Plain notes file.
+PLAINTEXT_TOKEN_A appears here.
+Third line.

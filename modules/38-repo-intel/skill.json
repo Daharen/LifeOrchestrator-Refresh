@@ -1,0 +1,45 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "repo.intel",
+  "name": "Repository Intelligence (deterministic typed-record producer)",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "The Collective Agent's repository-intelligence PRODUCER (D-0080 Wave 2, arch position 38). A stdlib-only Python worker (repo_intel.py) parses the Life Orchestrator repo BY SOURCE TYPE and emits TYPED record-envelope artifacts conforming to core-docs/MEMORY_CONTRACT.md section 1 (the record + provenance envelope v0.1), so the catalog (#36 artifact.search 0.2) can ingest them as FIRST-CLASS records, NOT chunks. op 'index' walks ALLOWLISTED roots (default modules/ + core-docs/) with TESTED privacy exclusions (.git/runtime/artifacts/venvs/__pycache__/model files/DBs/binaries/media), content-hashes a deterministic inventory, surfaces parser failures (never silently omits), runs DETERMINISTIC type-aware parsers (Markdown ATX heading/section hierarchy with fence-aware breadcrumbs; PowerShell .ps1/.psm1 function+class defs and Import-Module/using/dot-source imports via regex; Python .py def/class symbols and imports via the stdlib ast; skill.json manifests; JSON/config top-level structure), derives repository-intelligence RELATIONSHIPS (file->symbol defines edges, imports/dependency edges, file->module, test<->module, schema producer/consumer) as first-class 'relationship' records plus parent_edges/child_edges on structural records, builds DETERMINISTIC structural summaries (per-file outline, per-folder index, Markdown sections -- NO LLM), stamps every record with full provenance + parser/extractor FINGERPRINTS + schema_version, and VALIDATES every emitted record against MEMORY_CONTRACT s1 (required fields, content-derived id integrity, span-or-derivation_refs, edge-endpoint integrity). record_kinds emitted: symbol | entity | relationship | skill | summary. op 'validate' re-checks an existing records artifact against s1. Determinism: all ids are content+path derived; 'created_by_ingest_run' is a DETERMINISTIC content-derived id (never wall-clock); canonical artifacts (records.jsonl, records.json, ingest_records.json, index_manifest.json, inventory.json) use repo-relative paths + byte spans and contain NO absolute paths/timestamps/random ids -> identical corpus content yields byte-identical artifacts across runs AND machines. CPU-only, no model, no network -> determinism=deterministic, confidence=null, empty model_provenance. This module EMITS artifacts only; it does NOT write the catalog DB (#36 owns storage). Non-goals (NOT built): AST call-graph / full reference resolution, LLM summaries, embeddings, episode/failure schema (#39), git-history parsing, the context compiler, any UI.",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-RepoIntel.ps1",
+    "args_spec": "Named params: -Op index|validate (default index); -Root <dir> (index; a single root) OR -Roots <dir[,dir...]> (index; multiple roots); -Namespace <label> (logical corpus identity, slugged); -SourceLabel <label> (alias for namespace); -FileBudget <int> (0 = no cap; a hit is surfaced); -ExcludeDirs <name[,...]>; -ExcludeGlobs <glob[,...]>; -IncludeGlobs <glob[,...]>; -RecordsPath <records.jsonl|records.json> (validate); -PythonPath <python>; -WorkerPath <repo_intel.py>. OR the generic -InputsJson '<json {op, root, roots[], namespace, source_label, file_budget, exclude_dirs[], exclude_globs[], include_globs[], records_path, python_path, worker_path}>' (named params override matching keys). Optional -ArtifactRoot, -InvocationId.",
+    "inputs_json_supported": true
+  },
+  "inputs": [
+    { "name": "op", "type": "string", "required": false, "default": "index", "description": "index|validate." },
+    { "name": "root", "type": "string", "required": false, "description": "index: a single directory root to walk (allowlisted)." },
+    { "name": "roots", "type": "array", "required": false, "description": "index: multiple directory roots (e.g. modules/ + core-docs/); rel paths are prefixed by each root's basename." },
+    { "name": "namespace", "type": "string", "required": false, "default": "life-orchestrator", "description": "index: a stable logical corpus identity (slugged); the machine-independent isolation scope carried on every record." },
+    { "name": "source_label", "type": "string", "required": false, "description": "index: alias for namespace." },
+    { "name": "file_budget", "type": "int", "required": false, "default": 0, "description": "index: per-root file budget (0 = no cap); a hit is surfaced as file_budget_hit + a warning." },
+    { "name": "exclude_dirs", "type": "array", "required": false, "description": "index: directory segment names to exclude (default: .git, runtime, artifacts, __pycache__, node_modules, venvs, bin, obj, _to_delete, ...)." },
+    { "name": "exclude_globs", "type": "array", "required": false, "description": "index: filename globs to exclude (default: *.db, model files, binaries, media, archives, *.lock)." },
+    { "name": "include_globs", "type": "array", "required": false, "description": "index: optional filename globs; when present, only matching files are included." },
+    { "name": "records_path", "type": "string", "required": false, "description": "validate: path to a records.jsonl or records.json (or an ingest_records.json) to re-validate against s1." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "envelope.result = { op, namespace, total_records, record_counts_by_kind{symbol,entity,relationship,skill,summary}, record_kinds[], records_digest (sha256 over sorted per-record lines; machine-independent), file_count, excluded_count, file_budget_hit, parse_failure_count, parse_failures[{rel,reason,detail}], validation{ok,checked,error_count,errors[]}, edge_summary{total,resolved_internal,external}, ingest_run_id, records_path, runtime_ms, worker }. Artifacts (envelope.artifacts[], each path/kind/bytes/sha256): records.jsonl (one canonical s1 record per line -- THE ingest payload, deterministic order), records.json (canonical array), ingest_records.json (the #36 0.2 ingest_records drop-in: {schema,namespace,created_by_ingest_run,record_count,records[]}), index_manifest.json (counts + records_digest + fingerprints + validation), inventory.json (path/source_type/size/content_hash per file), parse_failures.json, summary.md. validate: result.validation + edge_summary only."
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4", "python>=3.8 (stdlib ast/json/hashlib/re only)"],
+    "models": [],
+    "libraries": [],
+    "cpu": "any", "gpu": "none", "memory_mb": 256,
+    "network": false, "filesystem": "read-write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 600, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

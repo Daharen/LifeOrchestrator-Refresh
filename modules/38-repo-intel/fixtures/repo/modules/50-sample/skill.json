@@ -1,0 +1,18 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "sample.skill",
+  "name": "Sample Skill",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "A deterministic sample skill emitting lifeorch.sample.result/0.1.",
+  "determinism": "deterministic",
+  "invocation": { "method": "pwsh-file", "entrypoint": "Invoke-Sample.ps1", "args_spec": "see inputs" },
+  "inputs": [ { "name": "x", "type": "int", "required": true } ],
+  "outputs": { "result_shape": "object", "description": "emits lifeorch.sample.result/0.1" },
+  "requirements": { "executables": ["pwsh>=7.4"], "models": [], "libraries": [], "cpu": "any", "gpu": "none", "memory_mb": 64, "network": false, "filesystem": "read", "audio": false, "screen": false, "camera": false },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 60, "on_timeout": "kill_tree_and_report" },
+  "batch": false, "streaming": false, "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

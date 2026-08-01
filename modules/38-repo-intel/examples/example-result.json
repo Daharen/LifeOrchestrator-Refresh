@@ -1,0 +1,153 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "repo.intel",
+  "skill_version": "0.1.0",
+  "contract_version": "0.2",
+  "invocation_id": "<invocation_id>",
+  "status": "ok",
+  "started_at_utc": "2026-08-01T00:00:00.0000000Z",
+  "finished_at_utc": "2026-08-01T00:00:00.5000000Z",
+  "duration_ms": 790,
+  "inputs_digest": "sha256:033680c67b8fb7ce3a219b6e740280d952b081fd64eb9acff08af3c7f35af86d",
+  "result": {
+    "op": "index",
+    "namespace": "fixture",
+    "total_records": 64,
+    "record_counts_by_kind": {
+      "entity": 18,
+      "skill": 1,
+      "symbol": 9,
+      "summary": 19,
+      "relationship": 17
+    },
+    "record_kinds": [
+      "entity",
+      "relationship",
+      "skill",
+      "summary",
+      "symbol"
+    ],
+    "records_digest": "59e0adb4fee17f8aed030698bce0291369111e2e6bd594b1467a9beedb49b3ec",
+    "file_count": 10,
+    "excluded_count": 0,
+    "file_budget_hit": false,
+    "parse_failure_count": 0,
+    "parse_failures": null,
+    "validation": {
+      "ok": true,
+      "checked": 64,
+      "error_count": 0,
+      "errors": []
+    },
+    "edge_summary": {
+      "total": 113,
+      "resolved_internal": 106,
+      "external": 7
+    },
+    "ingest_run_id": "ingest_d6855dc7c933b8c68c59fb70",
+    "records_path": null,
+    "runtime_ms": 13,
+    "worker": {
+      "name": "repo.intel",
+      "version": "0.1.0",
+      "python": "3.11.15"
+    }
+  },
+  "confidence": null,
+  "artifacts": [
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\38-repo-intel\\runtime\\artifacts\\<invocation_id>\\records.jsonl",
+      "kind": "jsonl",
+      "bytes": 78319,
+      "sha256": "9c431b56c77facdad30e680d675225143ca8266e102504313c09a7f952268e4d"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\38-repo-intel\\runtime\\artifacts\\<invocation_id>\\records.json",
+      "kind": "json",
+      "bytes": 78320,
+      "sha256": "a6fe6c9ab27c4c3d72e6952d035b9c3fde6b41087d7efc06ce643705ebe462e1"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\38-repo-intel\\runtime\\artifacts\\<invocation_id>\\ingest_records.json",
+      "kind": "json",
+      "bytes": 78480,
+      "sha256": "bbd63b5ac504806399084bba5927f2f4eff4244c283b1b55cc083660430c9ab2"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\38-repo-intel\\runtime\\artifacts\\<invocation_id>\\index_manifest.json",
+      "kind": "json",
+      "bytes": 1202,
+      "sha256": "9697f049d09d1d5178efd0d5a0ff37067e43d98fe786a27802d7e150b375c1da"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\38-repo-intel\\runtime\\artifacts\\<invocation_id>\\inventory.json",
+      "kind": "json",
+      "bytes": 1707,
+      "sha256": "2ff4c72459566eda74fed6f3c756433ccca829d9aeee13cb27e90e5fba7088ec"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\38-repo-intel\\runtime\\artifacts\\<invocation_id>\\parse_failures.json",
+      "kind": "json",
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\38-repo-intel\\runtime\\artifacts\\<invocation_id>\\summary.md",
+      "kind": "markdown",
+      "bytes": 315,
+      "sha256": "e554236b6ef5e0c90c10a44c793a026645ceb2600fbe1709bdc1103ab9849c48"
+    }
+  ],
+  "model_provenance": [],
+  "diagnostics": {
+    "log": "stderr.txt",
+    "artifact_dir": "runtime/artifacts/<invocation_id>"
+  },
+  "warnings": [],
+  "error": null,
+  "_example_s1_record": {
+    "authority_level": "canonical_source",
+    "child_edges": [],
+    "chunker_fingerprint": null,
+    "content_hash": "d7308afe30ba2fd6d33e407987eea035664588ded58551588db31b93c1cf9560",
+    "created_by_ingest_run": "ingest_d6855dc7c933b8c68c59fb70",
+    "derivation_refs": [],
+    "embedding_space_id": null,
+    "extractor_fingerprint": null,
+    "namespace": "fixture",
+    "parent_edges": [
+      {
+        "edge_type": "defined_in",
+        "external": false,
+        "target_record_id": "ent_file_e45d2f86759f3b6fd100"
+      }
+    ],
+    "parser_fingerprint": "repo.intel.pwsh/0.1;regex;function+class+import+dotsource",
+    "payload": {
+      "language": "powershell",
+      "line": 6,
+      "name": "SampleThing",
+      "path": "modules/50-sample/Invoke-Sample.ps1",
+      "qualified_name": "SampleThing",
+      "signature": "",
+      "symbol_type": "class",
+      "text": "SampleThing"
+    },
+    "record_id": "sym_422f2603e6f24351941bcaaf",
+    "record_kind": "symbol",
+    "record_version_id": "rv_e0638741c2c8f9db100dbc66",
+    "schema": "lifeorch.repo_intel.record/0.1",
+    "schema_version": "lifeorch.repo_intel.record/0.1",
+    "sensitivity_class": "repo_internal",
+    "source_path": "modules/50-sample/Invoke-Sample.ps1",
+    "source_span": {
+      "end": 126,
+      "start": 106
+    },
+    "source_version_id": "ver_833d7a19f5305ffd7cbc470d",
+    "status": "current",
+    "token_count": 1,
+    "valid_from": null,
+    "valid_to": null
+  }
+}
