@@ -9,12 +9,21 @@ split (the analog of `SKILL_CONTRACT.md` for the memory substrate). Rationale li
 ## 0. Status, versioning, scope
 
 - **Contract set FROZEN 2026-08-01 (D-0083), for Wave 2 build.** Versions frozen here: retrieval-record +
-  provenance envelope **v0.1** (new); embedding-provider contract **0.2**; retriever contract **0.2**; plus
-  normative catalog / evaluation / scale+privacy **gates**. FROZEN = normative for every Wave 2+ module and for
-  the next revision of a Wave 1 module; it is NOT a redesign and it did NOT delay Wave 1 (which shipped at 0.1).
+  provenance envelope **v0.1** (new; amended to **v0.1.1** by D-0085, §0 A1); embedding-provider contract
+  **0.2**; retriever contract **0.2**; plus normative catalog / evaluation / scale+privacy **gates**. FROZEN =
+  normative for every Wave 2+ module and for the next revision of a Wave 1 module; it is NOT a redesign and it
+  did NOT delay Wave 1 (which shipped at 0.1).
 - **Amendment protocol.** Change a frozen field only via a new `DECISION_LOG` entry that bumps the affected
   contract version here, then re-verify each affected module (its `SCHEMA_NOTES.md` records the interpretation).
   Never silently edit a frozen field.
+- **Amendment A1 -- record-envelope v0.1 -> v0.1.1 (D-0085, i28).** Resolves the two Wave-2 (i27) D-0077
+  divergences the fold BRIDGED. (1) The envelope **`status`/`currentness` is a single STRING** from the §5 enum
+  (`current` baseline) -- NOT a boolean and NOT an object; the `{state, stale_reasons, verified}` object form is
+  RETIRED (§1, §5). (2) The `record_kind` enum is CLOSED; **`episode_stage` is NOT a kind** -- an episode's
+  per-stage detail is STRUCTURAL (in the `episode` record `body` + `child_edges`), not a separate ingestable
+  record (§1). Backward-compatible for every already-conformant module (#35/#36/#37/#38 built to the string
+  status + closed enum); re-verify list = **{#39 episode.record -> 0.1.1}** (its `SCHEMA_NOTES.md` records the
+  interpretation).
 - **Adoption.** Wave 1 modules keep running as shipped at 0.1; each adopts 0.2 on its NEXT named revision
   (§9). Wave 2 NEW modules build to 0.2 from day one.
 - **Grounding.** The frozen shapes reconcile the two shipped-0.1 interfaces (#35 embedding.local, #36
@@ -27,7 +36,11 @@ split (the analog of `SKILL_CONTRACT.md` for the memory substrate). Rationale li
 The single change that most protects the architecture: define ONE generic envelope every retrievable object
 will satisfy, so file-chunks do **not** silently become the universal memory abstraction. A source chunk is
 ONE `record_kind` among the kinds the architecture already anticipates: `symbol`, `summary`, `decision`,
-`claim`, `episode`, `failure`, `procedure`, `skill`, `reminder`, `entity`, `relationship`.
+`claim`, `episode`, `failure`, `procedure`, `skill`, `reminder`, `entity`, `relationship`. **This enum is
+CLOSED (D-0085):** a producer MUST NOT emit a kind outside it. In particular an episode's per-stage detail is
+STRUCTURAL -- it lives in the `episode` record `body` (a `stage_sequence` carrying the full stage detail)
+and/or `child_edges` (`has_stage`), NOT as a separate `episode_stage` record. Adding a kind requires a §0
+amendment with justification (do NOT build every future table now).
 
 Do NOT build every future table now. The existing `sources -> documents -> document_versions -> chunks` tables
 stay; expose chunks through this envelope via a **view/adapter** (no premature whole-DB generalization).
@@ -39,7 +52,11 @@ stay; expose chunks through this envelope via a **view/adapter** (no premature w
 - `record_kind` -- enum; Wave 1 = `source_chunk`.
 - `namespace` (a.k.a. `project_id`) -- isolation scope.
 - `content_hash` -- hash of the record's canonical bytes/text.
-- `status` / `currentness` -- the staleness taxonomy of §5 (NOT a single boolean).
+- `status` / `currentness` -- a single STRING from the §5 enum (`current` = healthy baseline); **NOT a boolean,
+  NOT an object** (D-0085). Multiple simultaneous stale reasons -> optional `attrs.stale_reasons:
+  [<§5 value>...]`; a provenance-check failure -> the `unverified` value (no separate `verified` flag). A
+  *domain/body* status (e.g. a failure's investigation state `unverified|hypothesized|confirmed|resolved`) is a
+  distinct `body`-level field, never the envelope `status`.
 - `authority_level` -- how authoritative this record is as a source of truth.
 - `sensitivity_class` -- privacy label (§7); present even when Wave 1 uses a single value.
 - `valid_from` / `valid_to` -- nullable temporal validity.
@@ -153,12 +170,15 @@ array position as rank (`rank = index + 1`) and NEVER re-sorts.
 
 ## 5. Staleness taxonomy (not one boolean)
 
-`status`/`currentness` represents at least: `source_stale` (superseded document version); `derivation_stale`
+`status`/`currentness` is a single STRING (D-0085): the healthy baseline **`current`**, or -- when stale --
+at least one of: `source_stale` (superseded document version); `derivation_stale`
 (parser/chunker/extractor changed); `embedding_stale` (active embedding space changed); `relationship_stale`
 (source version changed, edges need regeneration); `summary_stale` (a descendant changed); `authority_stale`
 (no longer governs current truth); `temporal_expiry` (`valid_to` passed); `deleted` (occurrence gone);
 `unverified` (ingestion/provenance check failed). Retrieval filters current-source queries on this without
 destroying historical memory; historical/version-specific queries (§6) may request stale/specific versions.
+The `{state, stale_reasons, verified}` OBJECT form is RETIRED (D-0085): the effective value is the single
+string `status`; any extra simultaneous reasons live in `attrs.stale_reasons`.
 
 ## 6. Evaluation gates (retrieval.eval 0.2)
 
