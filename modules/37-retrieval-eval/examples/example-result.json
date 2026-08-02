@@ -1,18 +1,19 @@
 {
   "schema": "lifeorch.skill.result/0.1",
   "skill_id": "retrieval.eval",
-  "skill_version": "0.1.0",
+  "skill_version": "0.2.0",
   "contract_version": "0.2",
-  "invocation_id": "00000000-0000-0000-0000-000000000000",
+  "invocation_id": "<invocation_id>",
   "status": "ok",
-  "started_at_utc": "2026-08-01T00:00:00.0000000Z",
-  "finished_at_utc": "2026-08-01T00:00:01.0000000Z",
-  "duration_ms": 1000,
-  "inputs_digest": "sha256:5d9ceb3b8e98ecf9ef4504e87827f80cf81d935070b4797e79ec623c8a999aa9",
+  "started_at_utc": "<iso8601>",
+  "finished_at_utc": "<iso8601>",
+  "duration_ms": 0,
+  "inputs_digest": "sha256:7d16bbaafe1568eee9ee211d8ad2ed1d0da45037692090dd0222a189d583c613",
   "result": {
-    "benchmark_id": "lo-fixture-v1",
-    "retriever_kind": "lexical_baseline",
-    "num_queries": 7,
+    "benchmark_id": "lo-mock2-v1",
+    "benchmark_schema": "lifeorch.retrieval_benchmark/0.2",
+    "retriever_kind": "external_command",
+    "num_queries": 4,
     "k_values": [
       1,
       3,
@@ -21,68 +22,181 @@
     ],
     "retrieval_depth": 10,
     "ratio_unit": "ppm",
+    "provenance_validated": true,
+    "vector_channel_status": "empty",
     "aggregate": {
-      "forbidden_hit_rate_ppm": 142857,
+      "duplicate_burden_ppm": 0,
+      "evidence_group_coverage_ppm": 1000000,
+      "forbidden_hit_rate_ppm": 500000,
+      "judged_irrelevant_rate_ppm": 291667,
       "k_values": [
         1,
         3,
         5,
         10
       ],
-      "mrr_ppm": 857143,
-      "num_queries": 7,
+      "label": "raw",
+      "mrr_ppm": 458333,
+      "ndcg_at_k_ppm": {
+        "1": 250000,
+        "10": 532732,
+        "3": 532732,
+        "5": 532732
+      },
+      "no_answer_false_positive_rate_ppm": 0,
+      "num_queries": 4,
+      "precision_at_k_ppm": {
+        "1": 250000,
+        "10": 458333,
+        "3": 458333,
+        "5": 458333
+      },
+      "privacy_hit_rate_ppm": 250000,
       "provenance_completeness_ppm": 1000000,
-      "queries_all_required_present": 6,
+      "provenance_validity_ppm": 875000,
+      "queries_all_required_present": 3,
       "ratio_unit": "ppm",
       "recall_at_k_micro_ppm": {
-        "1": 857143,
-        "10": 857143,
-        "3": 857143,
-        "5": 857143
+        "1": 250000,
+        "10": 750000,
+        "3": 750000,
+        "5": 750000
       },
       "recall_at_k_ppm": {
-        "1": 857143,
-        "10": 857143,
-        "3": 857143,
-        "5": 857143
+        "1": 250000,
+        "10": 750000,
+        "3": 750000,
+        "5": 750000
       },
+      "relevant_token_ratio_ppm": 449638,
       "retrieval_depth": 10,
-      "stale_source_rate_ppm": 142857,
-      "total_hits": 28,
-      "total_provenance_complete": 28,
-      "total_required": 7
+      "snippet_span_correctness_ppm": 875000,
+      "source_diversity_at_k_ppm": {
+        "1": 1000000,
+        "10": 1000000,
+        "3": 1000000,
+        "5": 1000000
+      },
+      "stale_hit_rate_ppm": 166667,
+      "stale_source_rate_ppm": 250000,
+      "total_hits": 8,
+      "total_provenance_complete": 8,
+      "total_provenance_valid": 7,
+      "total_required": 4
+    },
+    "aggregate_reranked": {
+      "duplicate_burden_ppm": 0,
+      "evidence_group_coverage_ppm": 1000000,
+      "forbidden_hit_rate_ppm": 500000,
+      "judged_irrelevant_rate_ppm": 291667,
+      "k_values": [
+        1,
+        3,
+        5,
+        10
+      ],
+      "label": "reranked",
+      "mrr_ppm": 750000,
+      "ndcg_at_k_ppm": {
+        "1": 750000,
+        "10": 750000,
+        "3": 750000,
+        "5": 750000
+      },
+      "no_answer_false_positive_rate_ppm": 0,
+      "num_queries": 4,
+      "precision_at_k_ppm": {
+        "1": 750000,
+        "10": 458333,
+        "3": 458333,
+        "5": 458333
+      },
+      "privacy_hit_rate_ppm": 250000,
+      "provenance_completeness_ppm": 1000000,
+      "provenance_validity_ppm": 875000,
+      "queries_all_required_present": 3,
+      "ratio_unit": "ppm",
+      "recall_at_k_micro_ppm": {
+        "1": 750000,
+        "10": 750000,
+        "3": 750000,
+        "5": 750000
+      },
+      "recall_at_k_ppm": {
+        "1": 750000,
+        "10": 750000,
+        "3": 750000,
+        "5": 750000
+      },
+      "relevant_token_ratio_ppm": 449638,
+      "retrieval_depth": 10,
+      "snippet_span_correctness_ppm": 875000,
+      "source_diversity_at_k_ppm": {
+        "1": 1000000,
+        "10": 1000000,
+        "3": 1000000,
+        "5": 1000000
+      },
+      "stale_hit_rate_ppm": 166667,
+      "stale_source_rate_ppm": 250000,
+      "total_hits": 8,
+      "total_provenance_complete": 8,
+      "total_provenance_valid": 7,
+      "total_required": 4
+    },
+    "rerank_ab": {
+      "deltas": {
+        "evidence_group_coverage_ppm": 0,
+        "forbidden_hit_rate_ppm": 0,
+        "mrr_ppm": 291667,
+        "ndcg_at_10_ppm": 217268,
+        "ndcg_at_1_ppm": 500000,
+        "ndcg_at_3_ppm": 217268,
+        "ndcg_at_5_ppm": 217268,
+        "precision_at_10_ppm": 0,
+        "precision_at_1_ppm": 500000,
+        "precision_at_3_ppm": 0,
+        "precision_at_5_ppm": 0,
+        "recall_at_10_ppm": 0,
+        "recall_at_1_ppm": 500000,
+        "recall_at_3_ppm": 0,
+        "recall_at_5_ppm": 0,
+        "stale_hit_rate_ppm": 0
+      },
+      "queries_with_demote": 2,
+      "queries_with_rescue": 2
     },
     "report_json": {
       "path": "runtime/artifacts/<invocation_id>/report.json",
-      "sha256": "93af1960a80e00400dd0d9514459817176acdce070044612d14ce59c829a85c7",
-      "bytes": 12408
+      "sha256": "70dc60e53e0d9668201a4373fe0b851b126100eb972f4716d2531cb22ce4f9b8",
+      "bytes": 24298
     },
     "report_md": {
       "path": "runtime/artifacts/<invocation_id>/report.md",
-      "sha256": "57e94a581adc3a9087cfa912c5677a09b57c8a8ffdf4980fff30ed382c07ac3c",
-      "bytes": 5248
+      "sha256": "d4bfac6c5ee57742411d8a6727e1dfac3095f559de6fdffbb960b60e1e96a3c7",
+      "bytes": 6191
     },
-    "input_digest": "sha256:5d9ceb3b8e98ecf9ef4504e87827f80cf81d935070b4797e79ec623c8a999aa9"
+    "input_digest": "sha256:7d16bbaafe1568eee9ee211d8ad2ed1d0da45037692090dd0222a189d583c613"
   },
   "confidence": null,
   "artifacts": [
     {
       "path": "runtime/artifacts/<invocation_id>/report.json",
       "kind": "json",
-      "bytes": 12408,
-      "sha256": "93af1960a80e00400dd0d9514459817176acdce070044612d14ce59c829a85c7"
+      "bytes": 24298,
+      "sha256": "70dc60e53e0d9668201a4373fe0b851b126100eb972f4716d2531cb22ce4f9b8"
     },
     {
       "path": "runtime/artifacts/<invocation_id>/report.md",
       "kind": "markdown",
-      "bytes": 5248,
-      "sha256": "57e94a581adc3a9087cfa912c5677a09b57c8a8ffdf4980fff30ed382c07ac3c"
+      "bytes": 6191,
+      "sha256": "d4bfac6c5ee57742411d8a6727e1dfac3095f559de6fdffbb960b60e1e96a3c7"
     },
     {
       "path": "runtime/artifacts/<invocation_id>/worker-summary.json",
       "kind": "json",
-      "bytes": 1095,
-      "sha256": "5281d9bee79b13b933c3372ed8d1f694a64f1c2e98fbb18bfd61d61029de66a8"
+      "bytes": 3284,
+      "sha256": "46c881efce7a67e378447cf02f7ca7d7c7ba896a05a224e6a29a3c0e66cc0ae6"
     }
   ],
   "model_provenance": [],

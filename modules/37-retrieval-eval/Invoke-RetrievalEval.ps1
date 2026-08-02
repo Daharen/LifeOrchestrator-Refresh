@@ -43,7 +43,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$SKILL_ID = 'retrieval.eval'; $SKILL_VERSION = '0.1.0'; $CONTRACT = '0.2'
+$SKILL_ID = 'retrieval.eval'; $SKILL_VERSION = '0.2.0'; $CONTRACT = '0.2'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 $bound = $PSBoundParameters
@@ -188,16 +188,21 @@ try {
         $inputsDigest = [string]$summary.input_digest
         $agg = $summary.aggregate
         $result = [ordered]@{
-            benchmark_id    = $(if (Has $summary 'benchmark_id') { [string]$summary.benchmark_id } else { $null })
-            retriever_kind  = [string]$summary.retriever_kind
-            num_queries     = [int]$summary.num_queries
-            k_values        = @($summary.k_values)
-            retrieval_depth = [int]$summary.retrieval_depth
-            ratio_unit      = [string]$summary.ratio_unit
-            aggregate       = $agg
-            report_json     = [ordered]@{ path = [string]$summary.report_json.path; sha256 = [string]$summary.report_json.sha256; bytes = [int]$summary.report_json.bytes }
-            report_md       = [ordered]@{ path = [string]$summary.report_md.path; sha256 = [string]$summary.report_md.sha256; bytes = [int]$summary.report_md.bytes }
-            input_digest    = $inputsDigest
+            benchmark_id         = $(if (Has $summary 'benchmark_id') { [string]$summary.benchmark_id } else { $null })
+            benchmark_schema     = $(if (Has $summary 'benchmark_schema') { [string]$summary.benchmark_schema } else { $null })
+            retriever_kind       = [string]$summary.retriever_kind
+            num_queries          = [int]$summary.num_queries
+            k_values             = @($summary.k_values)
+            retrieval_depth      = [int]$summary.retrieval_depth
+            ratio_unit           = [string]$summary.ratio_unit
+            provenance_validated = $(if (Has $summary 'provenance_validated') { [bool]$summary.provenance_validated } else { $null })
+            vector_channel_status = $(if (Has $summary 'vector_channel_status') { [string]$summary.vector_channel_status } else { $null })
+            aggregate            = $agg
+            aggregate_reranked   = $(if (Has $summary 'aggregate_reranked') { $summary.aggregate_reranked } else { $null })
+            rerank_ab            = $(if (Has $summary 'rerank_ab') { $summary.rerank_ab } else { $null })
+            report_json          = [ordered]@{ path = [string]$summary.report_json.path; sha256 = [string]$summary.report_json.sha256; bytes = [int]$summary.report_json.bytes }
+            report_md            = [ordered]@{ path = [string]$summary.report_md.path; sha256 = [string]$summary.report_md.sha256; bytes = [int]$summary.report_md.bytes }
+            input_digest         = $inputsDigest
         }
     }
 }

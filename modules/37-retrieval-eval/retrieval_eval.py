@@ -1,60 +1,95 @@
 #!/usr/bin/env python3
 # retrieval_eval.py -- deterministic core of the retrieval-evaluation harness (Life Orchestrator
-# module 37 `retrieval.eval`, contract v0.2, Wave 1 CPU lane, plan fo-25-3b718a13).
+# module 37 `retrieval.eval`, contract v0.2, eval-0.2 gates, plan fo-29-87dbfa0b, RETRIEVAL-QUALITY-i29).
 #
 # WHAT THIS IS
-#   A benchmark runner that measures the quality of ANY retriever satisfying the D-0077 retriever
-#   interface (op `search`; inputs {query, k, filters?}; result = ranked array of
-#   {source_path, content_hash, chunk_id, span, score, snippet} in DETERMINISTIC order). It ships:
-#     * a LEXICAL BASELINE retriever (deterministic BM25-lite over a fixture corpus) -> a KNOWN baseline,
-#     * an EXTERNAL_COMMAND adapter (invoke any conforming retriever; the seam the orchestrator points
-#       at the real artifact.search at fold),
-#     * metrics: recall@K, MRR, stale-source rate, provenance completeness (+ forbidden-hit rate),
-#     * two reports: report.json (machine, canonical) + report.md (human), BOTH deterministic.
+#   A benchmark runner that measures the quality of ANY retriever satisfying the MEMORY_CONTRACT s3
+#   retriever-0.2 interface (op `search`; inputs {query, k, filters?}; result = a ranked hit array in
+#   DETERMINISTIC order; hit = the s3 shape -- span OBJECT {start,end} + span_label, record_id/
+#   record_version_id/record_kind, content_hash (SOURCE VERSION identity), status/currentness +
+#   authority_level, and PER-CHANNEL diagnostics: retrieval_channels, lexical_rank+lexical_score,
+#   vector_rank+vector_similarity [null until vectors], fused_rank+fused_score, fusion_algo+fusion_version,
+#   embedding_space_id, index_snapshot/corpus_version, filter_decisions, tie_break_key). The retriever-0.1
+#   hit shape ({source_path, content_hash, chunk_id, span-string, score, snippet}) is STILL accepted
+#   (compat/migration), so the shipped 0.1 benchmark stays regression-green.
 #
-# DETERMINISM DISCIPLINE (so a re-run -- same corpus+queries+retriever -- is byte-identical, cross-machine):
-#   * content_hash is EOL-NORMALIZED: sha256 of the file's UTF-8 text with newlines -> LF and BOM stripped,
-#     so a CRLF (Windows) vs LF (cloud) checkout hashes identically.
+#   eval-0.2 (MEMORY_CONTRACT s6) adds over the shipped 0.1 (recall@K / MRR / stale-source /
+#   provenance-presence + forbidden-hit rate):
+#     * a richer LABEL schema: must_include_all / must_include_any evidence groups, required version/span,
+#       acceptable-equivalent spans, explicitly-stale versions, forbidden_sources, hard privacy exclusions,
+#       distractors, no_answer_expected, label rationale/status/reviewer, corpus snapshot. A FILE-level hit
+#       is NOT credit (a wrong chunk from the right file must not score -- chunk/span level matching).
+#     * TEMPORAL INTENT per query (current_only | historical_as_of | version_specific | any_valid_version);
+#       "a stale required source is always a miss" holds ONLY for current_only.
+#     * METRICS ADDED: precision@K, nDCG@K, evidence-group coverage, forbidden-hit rate, stale-hit rate,
+#       duplicate/near-dup burden, source diversity, provenance VALIDITY, snippet-span correctness,
+#       relevant-tokens / total-retrieved-tokens, no-answer false-positive rate, hybrid uplift + regression.
+#     * NEGATIVES / ABSTENTION cases (answer absent; only-stale; attractive-but-wrong; a forbidden personal
+#       source is the best lexical match; duplicates; exact-error-text; paraphrase; disagreeing sources;
+#       explicit historical intent).
+#     * HYBRID ATTRIBUTION from the retriever-0.2 per-channel diagnostics (lexical-only / vector-only /
+#       hybrid): unique-to-channel, required rescued by vectors, lexical exact-match harmed by fusion,
+#       stale/forbidden introduced by a channel, fusion contribution. The vector channel runs EMPTY today
+#       (no vectors) -- reported cleanly, never blocking.
+#     * PROVENANCE VALIDATION (not presence): for every scored hit verify content_hash identifies the
+#       expected source version; the source exists or has an explicit tombstone; the span is in bounds;
+#       reading the span reproduces the cited text; the snippet derives from that span; the parser+chunker
+#       fingerprint is known; current/stale status is correct.
+#     * a DETERMINISTIC RERANKER (directive 8.3 / skill-activation Stage 4): retriever-0.2 hit array +
+#       task/query descriptor -> the SAME hit-array shape reordered by deterministic features (direct
+#       relevance, authority, freshness/currentness, project/component match, task-stage match, failure
+#       likelihood, procedural applicability) + DIVERSITY (dedup + source diversity). The harness MEASURES
+#       it: rerank uplift/regression vs the raw retriever order (nDCG@K, precision@K, evidence-group
+#       coverage, forbidden/stale-hit rate) + per-query rescue/demote. NO model.
+#
+# DETERMINISM DISCIPLINE (a re-run -- same corpus+queries+retriever -- is byte-identical, cross-machine):
+#   * content_hash is EOL-NORMALIZED (sha256 of UTF-8 text, CRLF/CR -> LF, BOM stripped) so a CRLF (Windows)
+#     vs LF (cloud) checkout hashes identically.
 #   * canonical JSON: sort_keys, ensure_ascii, compact separators, one trailing LF, UTF-8 no BOM.
-#   * NO floats in the canonical output. BM25 scores are rounded to integer MILLIONTHS (score_unit);
-#     every ratio metric is an integer PPM (parts-per-million) computed by integer round-half-up.
-#   * NO volatile fields in either report (no timestamps / invocation ids / absolute paths / host).
-#   The lifeorch.skill.result/0.1 envelope (emitted by the pwsh entrypoint) carries the volatile
-#   diagnostics; THESE report artifacts stay canonical.
+#   * NO floats in the canonical output. Scores round to integer MILLIONTHS; every ratio metric is an
+#     integer PPM (parts-per-million), integer round-half-up. nDCG uses a fixed millionths log2 discount
+#     table (computed once) and the ratio rounds to ppm -- the same cross-env byte-identity gate that pins
+#     the BM25 baseline covers it.
+#   * NO volatile fields in either report (no timestamps / invocation ids / absolute paths / host / wall
+#     clock / latency). Query latency + resource are measured into the SEPARATE volatile worker-summary.json
+#     envelope, never the canonical report (s6 asks for latency; determinism forbids it in report.json).
 #
 # INVOCATION (by the pwsh entrypoint; also runnable directly):
 #   python3 retrieval_eval.py --request <request.json>
-#   request = {
-#     "benchmark": <path-relative-to-base_dir | inline benchmark object>,
-#     "base_dir":  <dir used to resolve relative corpus/argv paths; default = benchmark file's dir>,
-#     "corpus_dir": <override; else benchmark.corpus_dir>,
-#     "retriever":  <override spec; else benchmark.retriever>,
-#     "k_values":   <override; else benchmark.k_values; else [1,3,5,10]>,
-#     "retrieval_depth": <override; else benchmark.retrieval_depth; else max(k_values)>,
-#     "out_dir":    <where report.json / report.md / worker-summary.json are written>,
-#     "python":     <python exe to substitute for {PYTHON} in an external retriever argv>
-#   }
-#   Writes out_dir/{report.json, report.md, worker-summary.json}; prints one line "OK <out_dir>" (exit 0)
-#   or "ERR <json>" (exit 1). All logging goes to stderr.
+#   request = { benchmark, base_dir?, corpus_dir?, provenance_corpus_dir?, retriever?, k_values?,
+#               retrieval_depth?, out_dir, python? }
+#   corpus_dir / provenance_corpus_dir (0.2): the validation corpus for PROVENANCE VALIDATION (the
+#   source-of-truth files hits are validated against). Defaults to the lexical baseline's corpus_dir /
+#   benchmark.corpus_dir. Writes out_dir/{report.json, report.md, worker-summary.json}.
 
 import sys
 import os
-import io
 import re
 import json
 import math
 import hashlib
 import argparse
 import subprocess
+import time
 
 GENERATOR_NAME = "retrieval.eval"
-GENERATOR_VERSION = "0.1.0"
-REPORT_SCHEMA = "lifeorch.retrieval_eval_report/0.1"
-BENCHMARK_SCHEMA = "lifeorch.retrieval_benchmark/0.1"
+GENERATOR_VERSION = "0.2.0"
+REPORT_SCHEMA = "lifeorch.retrieval_eval_report/0.2"
+BENCHMARK_SCHEMA = "lifeorch.retrieval_benchmark/0.2"
+BENCHMARK_SCHEMA_V1 = "lifeorch.retrieval_benchmark/0.1"
 SCORE_UNIT = "millionths"
 RATIO_UNIT = "ppm"
+PPM = 1000000
 SHA256_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
+
+TEMPORAL_INTENTS = ("current_only", "historical_as_of", "version_specific", "any_valid_version")
+# MEMORY_CONTRACT s5 staleness enum (the healthy baseline is `current`).
+STALE_STATUSES = frozenset([
+    "source_stale", "derivation_stale", "embedding_stale", "relationship_stale",
+    "summary_stale", "authority_stale", "temporal_expiry", "deleted", "unverified",
+])
+STATUS_ENUM = frozenset(["current"]) | STALE_STATUSES
 
 # A small, FIXED English stopword set for the lexical baseline (BM25-lite). Deterministic + documented in
 # SCHEMA_NOTES.md; kept minimal so a real lexical signal (filenames, symbols, terminology) survives.
@@ -99,7 +134,7 @@ def ppm(numer, denom):
     """Integer parts-per-million with round-half-up. denom<=0 -> 0. No float."""
     if denom <= 0:
         return 0
-    return (numer * 1000000 + denom // 2) // denom
+    return (numer * PPM + denom // 2) // denom
 
 
 def mean_ppm(values):
@@ -107,7 +142,10 @@ def mean_ppm(values):
     n = len(values)
     if n == 0:
         return 0
-    return (sum(values) + n // 2) // n
+    total = sum(values)
+    if total < 0:
+        return -(((-total) + n // 2) // n)
+    return (total + n // 2) // n
 
 
 def score_to_millionths(x):
@@ -115,6 +153,22 @@ def score_to_millionths(x):
     if x <= 0:
         return 0
     return int(math.floor(x * 1000000.0 + 0.5))
+
+
+# nDCG discount: gain_i / log2(i+1). Precompute log2(i+1) in integer millionths ONCE (round-half-up) so
+# nDCG uses a fixed, module-level integer table; the ratio DCG/IDCG then rounds to ppm. i is 1-based rank.
+_MAX_DISCOUNT = 4096
+_LOG2_MILLIONTHS = [0] * (_MAX_DISCOUNT + 2)
+for _i in range(1, _MAX_DISCOUNT + 2):
+    _LOG2_MILLIONTHS[_i] = int(math.floor(math.log2(_i + 1) * 1000000.0 + 0.5))
+
+
+def _discount_millionths(rank_1based):
+    if rank_1based < 1:
+        rank_1based = 1
+    if rank_1based <= _MAX_DISCOUNT:
+        return _LOG2_MILLIONTHS[rank_1based]
+    return int(math.floor(math.log2(rank_1based + 1) * 1000000.0 + 0.5))
 
 
 def tokenize(text):
@@ -138,19 +192,78 @@ def snippet_of(text, limit=160):
     return s[:limit]
 
 
-# ------------------------------------------------------------------ lexical baseline retriever
+def collapse_ws(s):
+    return re.sub(r"\s+", " ", s).strip()
+
+
+# ------------------------------------------------------------------ provenance corpus (validation source)
+
+class ProvenanceCorpus:
+    """The source-of-truth files a hit is VALIDATED against (s6 provenance validation). Loaded from a
+    corpus_dir when available. content_hash is EOL-normalized; spans are byte offsets into the UTF-8 bytes
+    of the EOL-normalized text (matching the retriever-0.2 byte-span contract)."""
+
+    def __init__(self, corpus_dir, include_suffixes=None, exclude_dir_names=None):
+        self.available = False
+        self.files = {}  # rel -> {"text","data","content_hash","nbytes"}
+        if not corpus_dir or not os.path.isdir(corpus_dir):
+            return
+        inc = set(s.lower() for s in include_suffixes) if include_suffixes else None
+        exc = set(exclude_dir_names or [])
+        for rel, full, suffix in _iter_corpus_files(corpus_dir, inc, exc):
+            with open(full, "rb") as fh:
+                text = normalized_text(fh.read())
+            data = text.encode("utf-8")
+            self.files[rel] = {
+                "text": text,
+                "data": data,
+                "content_hash": content_hash_of_text(text),
+                "nbytes": len(data),
+            }
+        self.available = True
+
+    def has(self, rel):
+        return norm_path(rel) in self.files
+
+    def content_hash(self, rel):
+        f = self.files.get(norm_path(rel))
+        return f["content_hash"] if f else None
+
+    def span_text(self, rel, start, end):
+        f = self.files.get(norm_path(rel))
+        if not f:
+            return None
+        n = f["nbytes"]
+        if start is None or end is None:
+            return None
+        if not (0 <= start <= end <= n):
+            return None
+        try:
+            return f["data"][start:end].decode("utf-8")
+        except Exception:
+            return None
+
+
+# ------------------------------------------------------------------ lexical baseline retriever (0.2 hits)
 
 class Chunk:
-    __slots__ = ("source_path", "content_hash", "chunk_id", "span", "text", "tokens", "tf", "length")
+    __slots__ = ("source_path", "content_hash", "chunk_id", "span_label", "span_start", "span_end",
+                 "text", "tokens", "tf", "length", "chunk_content_hash", "section_path", "heading")
 
-    def __init__(self, source_path, content_hash, chunk_id, span, text):
+    def __init__(self, source_path, content_hash, chunk_id, span_label, span_start, span_end, text,
+                 section_path=None, heading=None):
         self.source_path = source_path
         self.content_hash = content_hash
         self.chunk_id = chunk_id
-        self.span = span
+        self.span_label = span_label
+        self.span_start = span_start
+        self.span_end = span_end
         self.text = text
+        self.section_path = section_path if section_path is not None else span_label
+        self.heading = heading if heading is not None else span_label
         self.tokens = content_tokens(text)
         self.length = len(self.tokens)
+        self.chunk_content_hash = "sha256:" + sha256_hex(text.encode("utf-8"))
         tf = {}
         for t in self.tokens:
             tf[t] = tf.get(t, 0) + 1
@@ -172,44 +285,71 @@ def _iter_corpus_files(corpus_dir, include_suffixes, exclude_dir_names):
     return out
 
 
-def _chunk_markdown(rel, content_hash, text):
-    """Split by ATX headings; a pre-heading preamble is its own chunk. span = heading path."""
+def _line_byte_offsets(text):
+    """Byte offset of the start of each line in the UTF-8 bytes of `text` (lines split on '\\n')."""
     lines = text.split("\n")
+    offs = [0] * (len(lines) + 1)
+    acc = 0
+    for i, ln in enumerate(lines):
+        offs[i] = acc
+        acc += len(ln.encode("utf-8")) + 1  # +1 for the '\n' separator
+    offs[len(lines)] = acc
+    return lines, offs
+
+
+def _seg_byte_span(offs, start_line, end_line, nbytes):
+    """Byte [start,end) of the segment '\\n'.join(lines[start_line:end_line]) in the file bytes."""
+    b0 = offs[start_line]
+    b1 = offs[end_line] - 1  # drop the trailing '\n' that join does not include
+    if b1 < b0:
+        b1 = b0
+    if b1 > nbytes:
+        b1 = nbytes
+    return b0, b1
+
+
+def _chunk_markdown(rel, content_hash, text):
+    """Split by ATX headings; a pre-heading preamble is its own chunk. span_label = heading path;
+    span = byte offsets of the segment."""
+    lines, offs = _line_byte_offsets(text)
+    nbytes = len(text.encode("utf-8"))
     chunks = []
-    # find heading line indices
     heads = []  # (line_index, level, title)
     for i, ln in enumerate(lines):
         m = re.match(r"^(#{1,6})\s+(.*\S)\s*$", ln)
         if m:
             heads.append((i, len(m.group(1)), m.group(2).strip()))
-    # segments: [start_line, end_line) with an associated heading path
-    segments = []
+    segments = []  # (start_line, end_line, span_label, heading)
     if not heads or heads[0][0] > 0:
         first = heads[0][0] if heads else len(lines)
-        segments.append((0, first, "(preamble)"))
-    path_stack = []  # (level, title)
+        segments.append((0, first, "(preamble)", "(preamble)"))
+    path_stack = []
     for idx, (li, level, title) in enumerate(heads):
         end = heads[idx + 1][0] if idx + 1 < len(heads) else len(lines)
         while path_stack and path_stack[-1][0] >= level:
             path_stack.pop()
         path_stack.append((level, title))
-        span = " > ".join(t for _, t in path_stack)
-        segments.append((li, end, span))
+        span_label = " > ".join(t for _, t in path_stack)
+        segments.append((li, end, span_label, title))
     ci = 0
-    for (start, end, span) in segments:
+    for (start, end, span_label, heading) in segments:
         seg_text = "\n".join(lines[start:end]).strip()
         if seg_text == "":
             continue
-        chunks.append(Chunk(rel, content_hash, "%s#%03d" % (rel, ci), span, seg_text))
+        b0, b1 = _seg_byte_span(offs, start, end, nbytes)
+        chunks.append(Chunk(rel, content_hash, "%s#%03d" % (rel, ci), span_label, b0, b1, seg_text,
+                            section_path=span_label, heading=heading))
         ci += 1
     if not chunks:
-        chunks.append(Chunk(rel, content_hash, "%s#000" % rel, "(document)", text.strip()))
+        chunks.append(Chunk(rel, content_hash, "%s#000" % rel, "(document)", 0, nbytes, text.strip(),
+                            section_path="(document)", heading="(document)"))
     return chunks
 
 
 def _chunk_text(rel, content_hash, text):
-    """Split a plain-text file into blank-line-separated paragraphs. span = line range."""
-    lines = text.split("\n")
+    """Split a plain-text file into blank-line paragraphs. span_label = line range; span = byte offsets."""
+    lines, offs = _line_byte_offsets(text)
+    nbytes = len(text.encode("utf-8"))
     chunks = []
     ci = 0
     start = None
@@ -218,8 +358,10 @@ def _chunk_text(rel, content_hash, text):
             if start is not None:
                 seg = "\n".join(lines[start:i]).strip()
                 if seg:
-                    span = "(lines %d-%d)" % (start + 1, i)
-                    chunks.append(Chunk(rel, content_hash, "%s#%03d" % (rel, ci), span, seg))
+                    span_label = "(lines %d-%d)" % (start + 1, i)
+                    b0, b1 = _seg_byte_span(offs, start, i, nbytes)
+                    chunks.append(Chunk(rel, content_hash, "%s#%03d" % (rel, ci), span_label, b0, b1, seg,
+                                        section_path=span_label, heading=span_label))
                     ci += 1
                 start = None
         else:
@@ -228,22 +370,29 @@ def _chunk_text(rel, content_hash, text):
     if start is not None:
         seg = "\n".join(lines[start:]).strip()
         if seg:
-            span = "(lines %d-%d)" % (start + 1, len(lines))
-            chunks.append(Chunk(rel, content_hash, "%s#%03d" % (rel, ci), span, seg))
+            span_label = "(lines %d-%d)" % (start + 1, len(lines))
+            b0, b1 = _seg_byte_span(offs, start, len(lines), nbytes)
+            chunks.append(Chunk(rel, content_hash, "%s#%03d" % (rel, ci), span_label, b0, b1, seg,
+                                section_path=span_label, heading=span_label))
             ci += 1
     if not chunks:
-        chunks.append(Chunk(rel, content_hash, "%s#000" % rel, "(document)", text.strip()))
+        chunks.append(Chunk(rel, content_hash, "%s#000" % rel, "(document)", 0, nbytes, text.strip(),
+                            section_path="(document)", heading="(document)"))
     return chunks
 
 
 class LexicalBaselineRetriever:
-    """Deterministic BM25-lite over a fully-known fixture corpus. Returns already-ranked hits.
-
-    Ranking key: (-score_millionths, source_path, chunk_id) ascending -> a stable, cross-platform
-    tie-break. Chunks with zero query-term overlap (score 0) are NEVER returned (a lexical retriever
-    surfaces only matching chunks -> recall stays meaningful)."""
+    """Deterministic BM25-lite over a fully-known fixture corpus, emitting retriever-0.2 (s3) hits:
+    span OBJECT {start,end} + span_label, record ids, content_hash (SOURCE VERSION identity), status
+    (current), authority_level (source_material), and per-channel diagnostics (lexical present; the vector
+    channel EMPTY -> vector_rank/vector_similarity null; fused == lexical). Rank key
+    (-score_millionths, source_path, chunk_id) -> a stable, cross-platform tie-break. Chunks with zero
+    query-term overlap (score 0) are NEVER returned."""
 
     KIND = "lexical_baseline"
+    CHUNKER_FP = "ck:md1txt1:bm25lite/1"
+    PARSER_FP = "pf:markdown-atx+blankpara/1"
+    FUSION_VERSION = "fusion/1"
 
     def __init__(self, spec, base_dir):
         corpus_dir = spec.get("corpus_dir")
@@ -254,14 +403,17 @@ class LexicalBaselineRetriever:
         cdir = os.path.abspath(cdir)
         if not os.path.isdir(cdir):
             raise ValueError("corpus_dir not found: %s" % self.corpus_dir_label)
+        self.resolved_corpus_dir = cdir
         self.k1 = float(spec.get("k1", 1.5))
         self.b = float(spec.get("b", 0.75))
         include = spec.get("include_suffixes", [".md", ".txt"])
+        self.include_suffixes = list(include) if include else None
         include_suffixes = set(s.lower() for s in include) if include else None
-        exclude_dir_names = set(spec.get("exclude_dir_names", []))
+        self.exclude_dir_names = set(spec.get("exclude_dir_names", []))
+        self.namespace = norm_path(corpus_dir)
         self.chunks = []
         self.sources = {}  # rel -> content_hash
-        for rel, full, suffix in _iter_corpus_files(cdir, include_suffixes, exclude_dir_names):
+        for rel, full, suffix in _iter_corpus_files(cdir, include_suffixes, self.exclude_dir_names):
             with open(full, "rb") as fh:
                 text = normalized_text(fh.read())
             chash = content_hash_of_text(text)
@@ -270,7 +422,6 @@ class LexicalBaselineRetriever:
                 self.chunks.extend(_chunk_markdown(rel, chash, text))
             else:
                 self.chunks.extend(_chunk_text(rel, chash, text))
-        # BM25 corpus statistics (over chunks)
         self.N = len(self.chunks)
         self.avgdl = (sum(c.length for c in self.chunks) / float(self.N)) if self.N else 0.0
         df = {}
@@ -278,12 +429,18 @@ class LexicalBaselineRetriever:
             for term in c.tf.keys():
                 df[term] = df.get(term, 0) + 1
         self.df = df
+        self.corpus_version = self._corpus_version()
+
+    def _corpus_version(self):
+        lines = []
+        for rel in sorted(self.sources.keys()):
+            lines.append("SRC\t%s\t%s" % (rel, self.sources[rel]))
+        return "sha256:" + sha256_hex(("\n".join(lines) + "\n").encode("utf-8"))
 
     def _idf(self, term):
         n = self.df.get(term, 0)
         if n == 0:
             return 0.0
-        # BM25+ style non-negative idf
         return math.log(1.0 + (self.N - n + 0.5) / (n + 0.5))
 
     def _passes_filters(self, chunk, filters):
@@ -306,6 +463,13 @@ class LexicalBaselineRetriever:
             if not any(sp.endswith(s) for s in sufs):
                 return False
         return True
+
+    def _record_ids(self, c):
+        record_id = "srec_" + sha256_hex((c.source_path + "\0" + c.chunk_id).encode("utf-8"))[:24]
+        record_version_id = "occ_" + sha256_hex(
+            (c.content_hash + "\0" + self.CHUNKER_FP + "\0" + str(c.span_start) + "\0" +
+             str(c.span_end) + "\0" + c.chunk_content_hash).encode("utf-8"))[:24]
+        return record_id, record_version_id
 
     def search(self, query, k, filters=None):
         qterms = content_tokens(query)
@@ -333,19 +497,57 @@ class LexicalBaselineRetriever:
                 scored.append((sm, c))
         scored.sort(key=lambda x: (-x[0], x[1].source_path, x[1].chunk_id))
         hits = []
-        for sm, c in scored[: max(0, int(k))]:
+        for rank0, (sm, c) in enumerate(scored[: max(0, int(k))]):
+            record_id, record_version_id = self._record_ids(c)
+            rank = rank0 + 1
+            tie_break_key = "%012d\0%s\0%s" % (max(0, PPM * 1000 - sm), c.source_path, c.chunk_id)
             hits.append({
+                "record_id": record_id,
+                "record_version_id": record_version_id,
+                "record_kind": "source_chunk",
                 "source_path": c.source_path,
+                "abs_path": None,
                 "content_hash": c.content_hash,
                 "chunk_id": c.chunk_id,
-                "span": c.span,
-                "score": sm,
+                "chunk_content_hash": c.chunk_content_hash,
+                "span": {"start": c.span_start, "end": c.span_end},
+                "span_start": c.span_start,
+                "span_end": c.span_end,
+                "span_label": c.span_label,
+                "section_path": c.section_path,
+                "heading": c.heading,
+                "chunk_type": "prose",
+                "status": "current",
+                "currentness": "current",
+                "authority_level": "source_material",
+                "namespace": self.namespace,
+                "source_version_id": c.content_hash,
+                "embedding_space_id": None,
+                "retrieval_channels": ["lexical"],
+                "lexical_rank": rank,
+                "lexical_score": sm,
+                "vector_rank": None,
+                "vector_similarity": None,
+                "fused_rank": rank,
+                "fused_score": sm,
+                "fusion_algo": "lexical_only",
+                "fusion_version": self.FUSION_VERSION,
+                "index_snapshot": self.corpus_version,
+                "corpus_version": self.corpus_version,
+                "parser_fingerprint": self.PARSER_FP,
+                "chunker_fingerprint": self.CHUNKER_FP,
+                "filter_decisions": {},
+                "tie_break_key": tie_break_key,
+                "token_count": c.length,
                 "snippet": snippet_of(c.text),
+                "score": sm,
+                "rank": rank,
             })
         return hits
 
     def corpus_manifest(self):
         return {"corpus_dir": self.corpus_dir_label,
+                "corpus_version": self.corpus_version,
                 "sources": [{"source_path": k, "content_hash": v} for k, v in sorted(self.sources.items())],
                 "chunk_count": self.N}
 
@@ -365,10 +567,10 @@ def _navigate(obj, pointer):
 
 
 class ExternalCommandRetriever:
-    """Invoke any conforming retriever as a subprocess (the seam the orchestrator points at the real
-    artifact.search at fold). The request {query,k,filters} is delivered via stdin|file|arg; stdout is
-    parsed as JSON and `hits_pointer` (a dotted path, default 'result.hits') navigates to the ranked
-    hits array. The retriever OWNS its ranking -- returned order is authoritative (rank = index+1)."""
+    """Invoke any conforming retriever as a subprocess (the fold seam -> the real #36 artifact.search).
+    The request {query,k,filters} is delivered via stdin|file|arg; stdout is parsed as JSON and
+    `hits_pointer` navigates to the ranked hits array. The retriever OWNS its ranking (rank=index+1).
+    Hits are NORMALIZED (retriever-0.2 s3 shape preferred; retriever-0.1 shape still accepted)."""
 
     KIND = "external_command"
 
@@ -409,9 +611,7 @@ class ExternalCommandRetriever:
             argv = []
             has_json_token = any("{REQUEST_JSON}" in a for a in self.argv_tmpl)
             for a in self.argv_tmpl:
-                aa = self._subst(a, request_file=request_file, request_json=request_json)
-                # resolve a relative script path (argv[1..]) against base_dir when it exists there
-                argv.append(aa)
+                argv.append(self._subst(a, request_file=request_file, request_json=request_json))
             if self.request_via == "arg" and not has_json_token:
                 argv.append(request_json)
             stdin_data = request_json.encode("utf-8") if self.request_via == "stdin" else None
@@ -432,18 +632,8 @@ class ExternalCommandRetriever:
                 raise RuntimeError("external retriever hits pointer '%s' did not resolve to a list"
                                    % self.hits_pointer)
             hits = []
-            for h in hits_raw[: max(0, int(k))]:
-                ch = h.get("content_hash")
-                if not ch and h.get("version_id"):
-                    ch = h.get("version_id")
-                hits.append({
-                    "source_path": norm_path(h.get("source_path", "")),
-                    "content_hash": ch or "",
-                    "chunk_id": str(h.get("chunk_id", "")),
-                    "span": str(h.get("span", "")),
-                    "score": h.get("score", 0),
-                    "snippet": str(h.get("snippet", "")),
-                })
+            for rank0, h in enumerate(hits_raw[: max(0, int(k))]):
+                hits.append(normalize_hit(h, rank0 + 1))
             return hits
         finally:
             if tmp is not None and os.path.exists(tmp):
@@ -451,6 +641,92 @@ class ExternalCommandRetriever:
                     os.remove(tmp)
                 except OSError:
                     pass
+
+
+def _as_int_or_none(v):
+    if v is None:
+        return None
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def normalize_hit(h, rank):
+    """Normalize a raw retriever hit (retriever-0.2 s3 shape, or the retriever-0.1 shape) into the canonical
+    internal hit used by the harness. Missing fields coerce sensibly; the array position is authoritative
+    for `rank`."""
+    if not isinstance(h, dict):
+        h = {}
+    span = h.get("span")
+    span_start = _as_int_or_none(h.get("span_start"))
+    span_end = _as_int_or_none(h.get("span_end"))
+    span_label = h.get("span_label")
+    if isinstance(span, dict):
+        if span_start is None:
+            span_start = _as_int_or_none(span.get("start"))
+        if span_end is None:
+            span_end = _as_int_or_none(span.get("end"))
+        if span_label is None:
+            if span_start is not None and span_end is not None:
+                span_label = "bytes:%d-%d" % (span_start, span_end)
+            else:
+                span_label = ""
+    elif isinstance(span, str):
+        if span_label is None:
+            span_label = span
+    elif span_label is None:
+        span_label = ""
+    ch = h.get("content_hash")
+    if not ch:
+        ch = h.get("source_version_id") or h.get("version_id") or ""
+    score = h.get("fused_score", None)
+    if score is None:
+        score = h.get("score", 0)
+    status = h.get("status")
+    if status is None:
+        status = h.get("currentness")
+    channels = h.get("retrieval_channels")
+    if not isinstance(channels, list):
+        channels = None
+    return {
+        "record_id": h.get("record_id"),
+        "record_version_id": h.get("record_version_id"),
+        "record_kind": h.get("record_kind"),
+        "source_path": norm_path(h.get("source_path", "")),
+        "abs_path": h.get("abs_path"),
+        "content_hash": str(ch or ""),
+        "chunk_id": str(h.get("chunk_id", "")),
+        "chunk_content_hash": str(h.get("chunk_content_hash", "")),
+        "span_start": span_start,
+        "span_end": span_end,
+        "span_label": str(span_label or ""),
+        "section_path": h.get("section_path"),
+        "heading": h.get("heading"),
+        "chunk_type": h.get("chunk_type"),
+        "status": status,
+        "currentness": h.get("currentness", status),
+        "authority_level": h.get("authority_level"),
+        "namespace": h.get("namespace"),
+        "source_version_id": h.get("source_version_id"),
+        "embedding_space_id": h.get("embedding_space_id"),
+        "retrieval_channels": channels,
+        "lexical_rank": _as_int_or_none(h.get("lexical_rank")),
+        "lexical_score": h.get("lexical_score"),
+        "vector_rank": _as_int_or_none(h.get("vector_rank")),
+        "vector_similarity": h.get("vector_similarity"),
+        "fused_rank": _as_int_or_none(h.get("fused_rank")),
+        "fused_score": h.get("fused_score"),
+        "fusion_algo": h.get("fusion_algo"),
+        "fusion_version": h.get("fusion_version"),
+        "parser_fingerprint": h.get("parser_fingerprint"),
+        "chunker_fingerprint": h.get("chunker_fingerprint"),
+        "tie_break_key": h.get("tie_break_key"),
+        "token_count": _as_int_or_none(h.get("token_count")),
+        "snippet": str(h.get("snippet", "")),
+        "score": h.get("score", score),
+        "rank": rank,
+    }
 
 
 def build_retriever(spec, base_dir, python_exe):
@@ -462,81 +738,320 @@ def build_retriever(spec, base_dir, python_exe):
     raise ValueError("unknown retriever kind: %r" % kind)
 
 
-# ------------------------------------------------------------------ matching + metrics
+# ------------------------------------------------------------------ benchmark migration + labels
 
-def provenance_complete(hit):
-    """A hit is fully attributable iff source_path + content_hash + chunk_id + span are all non-empty.
-    content_hash may be a `sha256:<hex>` or an opaque non-empty version id."""
-    if not str(hit.get("source_path", "")):
-        return False
-    if not str(hit.get("content_hash", "")):
-        return False
-    if not str(hit.get("chunk_id", "")):
-        return False
-    if not str(hit.get("span", "")):
-        return False
-    return True
+def _norm_member(m):
+    """Normalize one required/group/distractor member spec (0.1 or 0.2)."""
+    if not isinstance(m, dict):
+        m = {"source_path": str(m)}
+    out = {
+        "source_path": norm_path(m.get("source_path", "")),
+        "content_hash": (str(m["content_hash"]) if m.get("content_hash") else None),
+        "chunk_id": (str(m["chunk_id"]) if m.get("chunk_id") else None),
+        "span_label": None,
+        "require_span": bool(m.get("require_span", False)),
+        "span_start": _as_int_or_none(m.get("span_start")),
+        "span_end": _as_int_or_none(m.get("span_end")),
+        "acceptable_spans": [],
+        "must_reproduce_text": (str(m["must_reproduce_text"]) if m.get("must_reproduce_text") else None),
+    }
+    sp = m.get("span")
+    if isinstance(sp, dict):
+        out["span_start"] = _as_int_or_none(sp.get("start"))
+        out["span_end"] = _as_int_or_none(sp.get("end"))
+    elif isinstance(sp, str):
+        out["span_label"] = sp
+    if m.get("span_label"):
+        out["span_label"] = str(m["span_label"])
+    for a in (m.get("acceptable_spans") or []):
+        if isinstance(a, dict):
+            asp = a.get("span")
+            entry = {"span_label": None, "span_start": _as_int_or_none(a.get("span_start")),
+                     "span_end": _as_int_or_none(a.get("span_end"))}
+            if isinstance(asp, dict):
+                entry["span_start"] = _as_int_or_none(asp.get("start"))
+                entry["span_end"] = _as_int_or_none(asp.get("end"))
+            if a.get("span_label"):
+                entry["span_label"] = str(a["span_label"])
+            elif isinstance(asp, str):
+                entry["span_label"] = asp
+            out["acceptable_spans"].append(entry)
+        elif isinstance(a, str):
+            out["acceptable_spans"].append({"span_label": a, "span_start": None, "span_end": None})
+    return out
 
 
-def hit_matches_required(hit, req):
-    if norm_path(hit["source_path"]) != norm_path(req["source_path"]):
+def _member_key(m):
+    return (m["source_path"], m.get("content_hash") or "", m.get("chunk_id") or "",
+            m.get("span_label") or "", m.get("span_start"), m.get("span_end"))
+
+
+def normalize_query(q):
+    """Migrate a 0.1 or 0.2 query into the canonical normalized query."""
+    required = [_norm_member(r) for r in (q.get("required_sources") or [])]
+    groups = []
+    for g in (q.get("evidence_groups") or []):
+        mode = g.get("mode", "all")
+        if mode not in ("all", "any"):
+            mode = "all"
+        members = [_norm_member(m) for m in (g.get("members") or [])]
+        groups.append({"group_id": str(g.get("group_id", "g%d" % (len(groups) + 1))),
+                       "mode": mode, "members": members})
+    ti = q.get("temporal_intent", "current_only")
+    if ti not in TEMPORAL_INTENTS:
+        ti = "current_only"
+    return {
+        "query_id": q.get("query_id"),
+        "query": q.get("query"),
+        "filters": q.get("filters"),
+        "temporal_intent": ti,
+        "required_sources": required,
+        "evidence_groups": groups,
+        "stale_sources": [_norm_member(s) for s in (q.get("stale_sources") or [])],
+        "forbidden_sources": [_norm_member(s) for s in (q.get("forbidden_sources") or [])],
+        "privacy_exclusions": [_norm_member(s) for s in (q.get("privacy_exclusions") or [])],
+        "distractors": [_norm_member(s) for s in (q.get("distractors") or [])],
+        "no_answer_expected": bool(q.get("no_answer_expected", False)),
+        "label_rationale": q.get("label_rationale"),
+        "label_status": q.get("label_status"),
+        "reviewer": q.get("reviewer"),
+        "corpus_snapshot": q.get("corpus_snapshot"),
+        "rerank_descriptor": q.get("rerank_descriptor"),
+    }
+
+
+# ------------------------------------------------------------------ matching
+
+def _span_matches(hit, m):
+    candidates = []
+    if m.get("span_start") is not None and m.get("span_end") is not None:
+        candidates.append(("bytes", m["span_start"], m["span_end"]))
+    if m.get("span_label"):
+        candidates.append(("label", m["span_label"], None))
+    for a in m.get("acceptable_spans") or []:
+        if a.get("span_start") is not None and a.get("span_end") is not None:
+            candidates.append(("bytes", a["span_start"], a["span_end"]))
+        if a.get("span_label"):
+            candidates.append(("label", a["span_label"], None))
+    if not candidates:
+        return True
+    for kind, a, b in candidates:
+        if kind == "bytes":
+            if hit.get("span_start") == a and hit.get("span_end") == b:
+                return True
+        else:
+            if str(hit.get("span_label", "")) == str(a):
+                return True
+    return False
+
+
+def hit_matches_member(hit, m):
+    """Chunk/version-level match: a FILE-level hit is NOT sufficient credit."""
+    if norm_path(hit["source_path"]) != norm_path(m["source_path"]):
         return False
-    rch = req.get("content_hash")
-    if rch and str(hit.get("content_hash", "")) != str(rch):
-        return False  # wrong / stale version -> NOT a match
-    if req.get("require_span") and req.get("span"):
-        if str(hit.get("span", "")) != str(req["span"]):
+    if m.get("content_hash") and str(hit.get("content_hash", "")) != str(m["content_hash"]):
+        return False
+    if m.get("chunk_id") and str(hit.get("chunk_id", "")) != str(m["chunk_id"]):
+        return False
+    if m.get("require_span") or m.get("span_start") is not None or m.get("span_label"):
+        if not _span_matches(hit, m):
             return False
     return True
 
 
-def evaluate_query(q, hits, k_values, retrieval_depth):
-    required = q.get("required_sources", [])
-    stale = q.get("stale_sources", [])
-    forbidden = q.get("forbidden_sources", [])
-    depth_hits = hits[:retrieval_depth]
+def hit_matches_source_only(hit, m):
+    """Path (+ optional version) match, ignoring chunk/span -- for forbidden/stale/distractor accounting."""
+    if norm_path(hit["source_path"]) != norm_path(m["source_path"]):
+        return False
+    if m.get("content_hash") and str(hit.get("content_hash", "")) != str(m["content_hash"]):
+        return False
+    return True
 
-    # per-required first matching rank (1-indexed within depth); 0 = absent
+
+# ------------------------------------------------------------------ provenance validation
+
+def validate_provenance(hit, corpus, q):
+    """s6 provenance VALIDATION (not presence). Returns (valid_bool, checks_dict, failed_list)."""
+    checks = {}
+    presence = bool(str(hit.get("source_path", "")) and str(hit.get("content_hash", "")) and
+                    str(hit.get("chunk_id", "")) and
+                    (str(hit.get("span_label", "")) or (hit.get("span_start") is not None and
+                                                        hit.get("span_end") is not None)))
+    checks["provenance_present"] = presence
+    checks["fingerprint_known"] = bool(hit.get("chunker_fingerprint"))
+    st = hit.get("status")
+    checks["status_in_enum"] = (st is None) or (st in STATUS_ENUM)
+    sp = norm_path(hit.get("source_path", ""))
+    tombstoned = any(norm_path(t["source_path"]) == sp for t in q.get("tombstones", []))
+    if corpus is not None and corpus.available:
+        exists = corpus.has(sp)
+        checks["source_exists_or_tombstoned"] = bool(exists or tombstoned or (hit.get("status") == "deleted"))
+        if exists:
+            checks["content_hash_matches_source"] = (str(hit.get("content_hash", "")) == corpus.content_hash(sp))
+        else:
+            checks["content_hash_matches_source"] = bool(tombstoned or hit.get("status") == "deleted")
+        s, e = hit.get("span_start"), hit.get("span_end")
+        if s is not None and e is not None and exists:
+            span_text = corpus.span_text(sp, s, e)
+            checks["span_in_bounds"] = span_text is not None
+            if span_text is not None:
+                collapsed = collapse_ws(span_text)
+                snip = str(hit.get("snippet", ""))
+                checks["snippet_derives_from_span"] = (snip == "" or collapsed.startswith(snip))
+                mrt = None
+                for m in q.get("_all_positive_members", []):
+                    if hit_matches_source_only(hit, m) and m.get("must_reproduce_text"):
+                        mrt = m["must_reproduce_text"]
+                        break
+                checks["span_reproduces_cited_text"] = True if mrt is None else (mrt in collapsed)
+            else:
+                checks["snippet_derives_from_span"] = False
+                checks["span_reproduces_cited_text"] = False
+        elif s is not None and e is not None and not exists:
+            checks["span_in_bounds"] = False
+            checks["snippet_derives_from_span"] = False
+            checks["span_reproduces_cited_text"] = False
+        else:
+            checks["span_in_bounds"] = presence
+            checks["snippet_derives_from_span"] = presence
+            checks["span_reproduces_cited_text"] = True
+        checks["status_correct"] = _status_correct(hit, corpus, q, exists, tombstoned)
+    else:
+        checks["source_exists_or_tombstoned"] = presence
+        checks["content_hash_matches_source"] = bool(str(hit.get("content_hash", "")))
+        checks["span_in_bounds"] = presence
+        checks["snippet_derives_from_span"] = presence
+        checks["span_reproduces_cited_text"] = True
+        checks["status_correct"] = checks["status_in_enum"]
+    failed = sorted([kname for kname, v in checks.items() if not v])
+    return (len(failed) == 0), checks, failed
+
+
+def _status_correct(hit, corpus, q, exists, tombstoned):
+    sp = norm_path(hit.get("source_path", ""))
+    st = hit.get("status")
+    for s in q.get("stale_sources", []):
+        if hit_matches_source_only(hit, s):
+            return st in STALE_STATUSES if st is not None else True
+    if exists and str(hit.get("content_hash", "")) == corpus.content_hash(sp):
+        return (st is None) or (st == "current")
+    if exists and str(hit.get("content_hash", "")) != corpus.content_hash(sp):
+        return (st is None) or (st in STALE_STATUSES)
+    if not exists:
+        return (st is None) or (st in STALE_STATUSES) or tombstoned
+    return True
+
+
+# ------------------------------------------------------------------ per-query evaluation over an ordering
+
+def _positive_members(q):
+    """All positive (relevant) labels: required_sources + every evidence-group member, deduped by key."""
+    members = list(q["required_sources"])
+    for g in q["evidence_groups"]:
+        members.extend(g["members"])
+    seen = set()
+    uniq = []
+    for m in members:
+        kk = _member_key(m)
+        if kk not in seen:
+            seen.add(kk)
+            uniq.append(m)
+    return uniq
+
+
+def evaluate_ordering(q, ordered_hits, k_values, retrieval_depth, corpus):
+    """Compute all metrics for one ordering (raw or reranked) of the hits."""
+    required = q["required_sources"]
+    depth_hits = ordered_hits[:retrieval_depth]
+
+    # --- recall / MRR (0.1 semantics, preserved) ---
     req_first_rank = []
     for req in required:
         rank = 0
         for i, h in enumerate(depth_hits):
-            if hit_matches_required(h, req):
+            if hit_matches_member(h, req):
                 rank = i + 1
                 break
         req_first_rank.append(rank)
-
     matched_at = {}
     recall_ppm_at = {}
     for k in k_values:
         matched = sum(1 for r in req_first_rank if 0 < r <= k)
         matched_at[str(k)] = matched
-        recall_ppm_at[str(k)] = ppm(matched, len(required)) if required else 1000000
-
-    # MRR: first hit matching ANY required source
+        recall_ppm_at[str(k)] = ppm(matched, len(required)) if required else PPM
     first_relevant_rank = 0
     for i, h in enumerate(depth_hits):
-        if any(hit_matches_required(h, req) for req in required):
+        if any(hit_matches_member(h, req) for req in required):
             first_relevant_rank = i + 1
             break
     rr_ppm = ppm(1, first_relevant_rank) if first_relevant_rank > 0 else 0
-
     missing_required = []
     for req, rank in zip(required, req_first_rank):
         if rank == 0:
-            m = {"source_path": norm_path(req["source_path"])}
-            if req.get("require_span") and req.get("span"):
-                m["span"] = req["span"]
+            m = {"source_path": req["source_path"]}
+            if req.get("span_label"):
+                m["span_label"] = req["span_label"]
             missing_required.append(m)
 
-    # staleness within depth
-    stale_set = set((norm_path(s["source_path"]), str(s.get("content_hash", ""))) for s in stale)
+    # --- positive labels (precision / nDCG / evidence groups) ---
+    positives = _positive_members(q)
+    credited = set()
+    rel_flags = []
+    for h in depth_hits:
+        earned = 0
+        for idx, m in enumerate(positives):
+            if idx in credited:
+                continue
+            if hit_matches_member(h, m):
+                credited.add(idx)
+                earned = 1
+                break
+        rel_flags.append(earned)
+    num_relevant_labels = len(positives)
+
+    precision_at = {}
+    ndcg_at = {}
+    for k in k_values:
+        topk = rel_flags[:k]
+        rel_k = sum(topk)
+        denom = min(k, len(depth_hits))
+        precision_at[str(k)] = ppm(rel_k, denom) if denom > 0 else PPM
+        dcg = 0
+        for i, g in enumerate(topk):
+            if g:
+                dcg += (PPM * PPM) // _discount_millionths(i + 1)
+        ideal = min(num_relevant_labels, k)
+        idcg = 0
+        for i in range(ideal):
+            idcg += (PPM * PPM) // _discount_millionths(i + 1)
+        ndcg_at[str(k)] = ppm(dcg, idcg) if idcg > 0 else (PPM if num_relevant_labels == 0 else 0)
+
+    # --- evidence-group coverage ---
+    group_results = []
+    for g in q["evidence_groups"]:
+        member_hit = []
+        for m in g["members"]:
+            member_hit.append(any(hit_matches_member(h, m) for h in depth_hits))
+        if g["mode"] == "all":
+            satisfied = all(member_hit) if member_hit else True
+        else:
+            satisfied = any(member_hit)
+        group_results.append({"group_id": g["group_id"], "mode": g["mode"], "satisfied": satisfied,
+                              "members_hit": sum(1 for x in member_hit if x),
+                              "members_total": len(member_hit)})
+    groups_total = len(group_results)
+    groups_satisfied = sum(1 for gr in group_results if gr["satisfied"])
+    evidence_group_coverage_ppm = ppm(groups_satisfied, groups_total) if groups_total else PPM
+
+    # --- staleness (0.1 preserved) + stale-hit rate ---
+    stale_set = set((norm_path(s["source_path"]), str(s.get("content_hash") or "")) for s in q["stale_sources"])
     req_by_path = {}
     for req in required:
         if req.get("content_hash"):
             req_by_path.setdefault(norm_path(req["source_path"]), str(req["content_hash"]))
     explicit_stale_hits = []
     wrong_version_hits = []
+    stale_status_hits = 0
     for i, h in enumerate(depth_hits):
         hp = norm_path(h["source_path"])
         hc = str(h.get("content_hash", ""))
@@ -545,20 +1060,97 @@ def evaluate_query(q, hits, k_values, retrieval_depth):
         elif hp in req_by_path and hc and hc != req_by_path[hp]:
             wrong_version_hits.append({"rank": i + 1, "source_path": hp, "content_hash": hc,
                                        "expected_content_hash": req_by_path[hp]})
-    stale_affected = bool(explicit_stale_hits or wrong_version_hits)
+        if h.get("status") in STALE_STATUSES:
+            stale_status_hits += 1
+    stale_affected = bool(explicit_stale_hits or wrong_version_hits) or (stale_status_hits > 0)
+    stale_hit_rate_ppm = ppm(stale_status_hits + len(explicit_stale_hits) + len(wrong_version_hits),
+                             len(depth_hits)) if depth_hits else 0
 
-    # forbidden within depth (path-only, or path+hash if hash given)
+    # --- forbidden / privacy / distractor accounting ---
     forbidden_hits = []
     for i, h in enumerate(depth_hits):
-        hp = norm_path(h["source_path"])
-        hc = str(h.get("content_hash", ""))
-        for f in forbidden:
-            if norm_path(f["source_path"]) == hp and (not f.get("content_hash") or str(f["content_hash"]) == hc):
-                forbidden_hits.append({"rank": i + 1, "source_path": hp})
+        for f in q["forbidden_sources"]:
+            if hit_matches_source_only(h, f):
+                forbidden_hits.append({"rank": i + 1, "source_path": norm_path(h["source_path"])})
                 break
+    privacy_hits = []
+    for i, h in enumerate(depth_hits):
+        for f in q["privacy_exclusions"]:
+            if hit_matches_source_only(h, f):
+                privacy_hits.append({"rank": i + 1, "source_path": norm_path(h["source_path"])})
+                break
+    distractor_hits = []
+    for i, h in enumerate(depth_hits):
+        for d in q["distractors"]:
+            if hit_matches_source_only(h, d):
+                distractor_hits.append({"rank": i + 1, "source_path": norm_path(h["source_path"])})
+                break
+    irrelevant_ranks = set(x["rank"] for x in forbidden_hits) | set(x["rank"] for x in privacy_hits) | \
+        set(x["rank"] for x in distractor_hits) | set(x["rank"] for x in explicit_stale_hits) | \
+        set(x["rank"] for x in wrong_version_hits)
+    judged_irrelevant_rate_ppm = ppm(len(irrelevant_ranks), len(depth_hits)) if depth_hits else 0
 
+    # --- duplicate / near-dup burden + source diversity ---
+    # near-dup = same chunk_content_hash (identical text, possibly a different file), else same
+    # (source_path, span) -- catches "ten near-duplicate results crowding out distinct evidence" (8.3).
+    seen_pairs = {}
+    dup_count = 0
+    for h in depth_hits:
+        cch = str(h.get("chunk_content_hash", ""))
+        if cch:
+            key = ("cch", cch)
+        else:
+            key = ("sp", norm_path(h["source_path"]), str(h.get("span_label", "")),
+                   str(h.get("span_start")), str(h.get("span_end")))
+        seen_pairs[key] = seen_pairs.get(key, 0) + 1
+        if seen_pairs[key] > 1:
+            dup_count += 1
+    dup_burden_ppm = ppm(dup_count, len(depth_hits)) if depth_hits else 0
+    diversity_at = {}
+    for k in k_values:
+        topk = depth_hits[:k]
+        distinct = len(set(norm_path(h["source_path"]) for h in topk))
+        diversity_at[str(k)] = ppm(distinct, len(topk)) if topk else PPM
+
+    # --- provenance completeness (presence) + validity (validation) + snippet-span correctness ---
     prov_total = len(depth_hits)
-    prov_complete = sum(1 for h in depth_hits if provenance_complete(h))
+    prov_complete = 0
+    prov_valid = 0
+    snippet_span_ok = 0
+    hit_prov = []
+    for i, h in enumerate(depth_hits):
+        present = bool(str(h.get("source_path", "")) and str(h.get("content_hash", "")) and
+                       str(h.get("chunk_id", "")) and
+                       (str(h.get("span_label", "")) or (h.get("span_start") is not None and
+                                                         h.get("span_end") is not None)))
+        if present:
+            prov_complete += 1
+        valid, checks, failed = validate_provenance(h, corpus, q)
+        if valid:
+            prov_valid += 1
+        if checks.get("snippet_derives_from_span") and checks.get("span_reproduces_cited_text"):
+            snippet_span_ok += 1
+        hit_prov.append({"rank": i + 1, "provenance_present": present, "provenance_valid": valid,
+                         "failed_checks": failed})
+
+    # --- relevant-token / total-retrieved-token ratio ---
+    def _tok(h):
+        tc = h.get("token_count")
+        if tc is not None:
+            return int(tc)
+        return len(content_tokens(str(h.get("snippet", ""))))
+    total_tokens = sum(_tok(h) for h in depth_hits)
+    relevant_tokens = sum(_tok(h) for i, h in enumerate(depth_hits) if rel_flags[i])
+    relevant_token_ratio_ppm = ppm(relevant_tokens, total_tokens) if total_tokens else 0
+
+    # --- no-answer false positive (abstention) ---
+    no_answer_fp = False
+    abstained = (len(depth_hits) == 0)
+    if q["no_answer_expected"]:
+        if q["distractors"]:
+            no_answer_fp = len(distractor_hits) > 0
+        else:
+            no_answer_fp = len(depth_hits) > 0
 
     returned = []
     for i, h in enumerate(depth_hits):
@@ -567,127 +1159,528 @@ def evaluate_query(q, hits, k_values, retrieval_depth):
             "source_path": norm_path(h["source_path"]),
             "content_hash": str(h.get("content_hash", "")),
             "chunk_id": str(h.get("chunk_id", "")),
-            "span": str(h.get("span", "")),
+            "span_label": str(h.get("span_label", "")),
+            "span_start": h.get("span_start"),
+            "span_end": h.get("span_end"),
+            "record_kind": h.get("record_kind"),
+            "status": h.get("status"),
+            "authority_level": h.get("authority_level"),
+            "channels": h.get("retrieval_channels"),
             "score": h.get("score", 0),
-            "provenance_complete": provenance_complete(h),
+            "relevant": bool(rel_flags[i]),
+            "provenance_complete": hit_prov[i]["provenance_present"],
+            "provenance_valid": hit_prov[i]["provenance_valid"],
+            "provenance_failed_checks": hit_prov[i]["failed_checks"],
         })
 
     return {
         "query_id": q.get("query_id"),
         "query": q.get("query"),
+        "temporal_intent": q["temporal_intent"],
         "num_required": len(required),
+        "num_relevant_labels": num_relevant_labels,
         "matched_at_k": matched_at,
         "recall_at_k_ppm": recall_ppm_at,
+        "precision_at_k_ppm": precision_at,
+        "ndcg_at_k_ppm": ndcg_at,
+        "diversity_at_k_ppm": diversity_at,
         "first_relevant_rank": first_relevant_rank,
         "reciprocal_rank_ppm": rr_ppm,
         "all_required_present": (len(missing_required) == 0),
         "missing_required": missing_required,
+        "evidence_groups": group_results,
+        "evidence_group_coverage_ppm": evidence_group_coverage_ppm,
         "explicit_stale_hits": explicit_stale_hits,
         "wrong_version_hits": wrong_version_hits,
         "stale_affected": stale_affected,
+        "stale_hit_rate_ppm": stale_hit_rate_ppm,
         "forbidden_hits": forbidden_hits,
+        "privacy_hits": privacy_hits,
+        "distractor_hits": distractor_hits,
+        "judged_irrelevant_rate_ppm": judged_irrelevant_rate_ppm,
+        "duplicate_burden_ppm": dup_burden_ppm,
         "provenance_total": prov_total,
         "provenance_complete": prov_complete,
+        "provenance_valid": prov_valid,
+        "snippet_span_correct": snippet_span_ok,
+        "relevant_token_ratio_ppm": relevant_token_ratio_ppm,
+        "no_answer_expected": q["no_answer_expected"],
+        "no_answer_false_positive": no_answer_fp,
+        "abstained": abstained,
         "returned": returned,
     }
 
 
-def aggregate(per_query, k_values, retrieval_depth):
+# ------------------------------------------------------------------ deterministic reranker (8.3 / Stage 4)
+
+RERANK_W = {
+    "relevance": 1,          # x lexical/fused score (millionths)
+    "authority": 3 * PPM,    # x authority level rank
+    "freshness": 6 * PPM,    # x freshness rank
+    "project": 2 * PPM,      # namespace match
+    "component": 2 * PPM,    # path-prefix match
+    "task_stage": 2 * PPM,   # record_kind matches the task stage
+    "failure": 2 * PPM,      # failure-seeking + record_kind==failure
+    "procedural": 2 * PPM,   # action stage + record_kind==procedure
+}
+RERANK_HARD_DEMOTE = 1000 * PPM      # forbidden / privacy / deleted -> sink to the bottom
+RERANK_STALE_PENALTY = 20 * PPM      # current_only + a stale hit
+RERANK_DIVERSITY_PENALTY = 8 * PPM   # per already-selected hit from the same source_path
+
+AUTHORITY_RANK = {"authoritative": 4, "governing": 4, "curated": 3, "source_material": 2, "derived": 1}
+TASK_STAGE_KINDS = {
+    "implement": ("procedure", "source_chunk"),
+    "act": ("procedure",),
+    "debug": ("failure", "source_chunk"),
+    "plan": ("decision", "summary"),
+    "research": ("summary", "source_chunk", "claim"),
+}
+
+
+def _fresh_rank(status):
+    if status is None:
+        return 2
+    if status == "current":
+        return 3
+    if status in ("deleted", "unverified"):
+        return 0
+    if status in STALE_STATUSES:
+        return 1
+    return 2
+
+
+def _rerank_base(hit, descriptor, q):
+    rel = 0
+    for cand in (hit.get("fused_score"), hit.get("lexical_score"), hit.get("score")):
+        if isinstance(cand, bool):
+            continue
+        if isinstance(cand, (int, float)) and cand:
+            rel = int(cand)
+            break
+    auth = AUTHORITY_RANK.get(hit.get("authority_level"), 0)
+    fresh = _fresh_rank(hit.get("status"))
+    proj = 1 if (descriptor.get("namespace") and hit.get("namespace") == descriptor.get("namespace")) else 0
+    comp = 0
+    comps = descriptor.get("component")
+    if comps:
+        comps = comps if isinstance(comps, list) else [comps]
+        if any(norm_path(hit.get("source_path", "")).startswith(norm_path(c)) for c in comps):
+            comp = 1
+    stage = 0
+    ts = descriptor.get("task_stage")
+    if ts and hit.get("record_kind") in TASK_STAGE_KINDS.get(ts, ()):
+        stage = 1
+    fail = 1 if (descriptor.get("seeking_failures") and hit.get("record_kind") == "failure") else 0
+    proc = 1 if (ts in ("act", "implement") and hit.get("record_kind") == "procedure") else 0
+    base = (RERANK_W["relevance"] * rel + RERANK_W["authority"] * auth + RERANK_W["freshness"] * fresh +
+            RERANK_W["project"] * proj + RERANK_W["component"] * comp + RERANK_W["task_stage"] * stage +
+            RERANK_W["failure"] * fail + RERANK_W["procedural"] * proc)
+    hard = False
+    for f in q["forbidden_sources"] + q["privacy_exclusions"]:
+        if hit_matches_source_only(hit, f):
+            hard = True
+            break
+    if hit.get("status") == "deleted":
+        hard = True
+    if hard:
+        base -= RERANK_HARD_DEMOTE
+    if q["temporal_intent"] == "current_only":
+        is_stale = hit.get("status") in STALE_STATUSES
+        if not is_stale:
+            for s in q["stale_sources"]:
+                if hit_matches_source_only(hit, s):
+                    is_stale = True
+                    break
+        if not is_stale:
+            for req in q["required_sources"]:
+                if req.get("content_hash") and norm_path(hit["source_path"]) == req["source_path"] and \
+                        str(hit.get("content_hash", "")) != str(req["content_hash"]):
+                    is_stale = True
+                    break
+        if is_stale:
+            base -= RERANK_STALE_PENALTY
+    return base, {"relevance": rel, "authority": auth, "freshness": fresh, "project": proj,
+                  "component": comp, "task_stage": stage, "failure": fail, "procedural": proc,
+                  "hard_demote": hard}
+
+
+def rerank(hits, descriptor, q):
+    """Deterministic rerank of retriever-0.2 hits -> the SAME hit-array shape reordered. Greedy MMR-style
+    diversity: repeatedly pick the highest (base - diversity_penalty*already_selected_same_source), ties
+    broken by the original rank (lower first). Fully deterministic; a drop-in for #40's selection."""
+    scored = []
+    for h in hits:
+        base, feats = _rerank_base(h, descriptor, q)
+        scored.append({"hit": h, "base": base, "feats": feats, "orig_rank": h.get("rank", 0)})
+    selected = []
+    remaining = list(scored)
+    source_count = {}
+    while remaining:
+        best_i = None
+        best_key = None
+        for i, s in enumerate(remaining):
+            sp = norm_path(s["hit"]["source_path"])
+            penalty = RERANK_DIVERSITY_PENALTY * source_count.get(sp, 0)
+            eff = s["base"] - penalty
+            key = (-eff, s["orig_rank"])
+            if best_key is None or key < best_key:
+                best_key = key
+                best_i = i
+        chosen = remaining.pop(best_i)
+        sp = norm_path(chosen["hit"]["source_path"])
+        chosen["diversity_penalty"] = RERANK_DIVERSITY_PENALTY * source_count.get(sp, 0)
+        chosen["effective"] = chosen["base"] - chosen["diversity_penalty"]
+        source_count[sp] = source_count.get(sp, 0) + 1
+        selected.append(chosen)
+    reordered = []
+    diagnostics = []
+    for new_rank0, s in enumerate(selected):
+        h = dict(s["hit"])
+        h["rank"] = new_rank0 + 1
+        reordered.append(h)
+        diagnostics.append({
+            "source_path": norm_path(s["hit"]["source_path"]),
+            "chunk_id": str(s["hit"].get("chunk_id", "")),
+            "from_rank": s["orig_rank"],
+            "to_rank": new_rank0 + 1,
+            "features": s["feats"],
+            "base_score": s["base"],
+            "diversity_penalty": s["diversity_penalty"],
+            "effective_score": s["effective"],
+        })
+    return reordered, diagnostics
+
+
+def default_descriptor(rawq):
+    """Build a deterministic task/query descriptor from the benchmark query (no model)."""
+    d = {"query": rawq.get("query"), "query_tokens": content_tokens(str(rawq.get("query", "")))}
+    rd = rawq.get("rerank_descriptor") or {}
+    for kname in ("namespace", "component", "task_stage", "seeking_failures"):
+        if kname in rd:
+            d[kname] = rd[kname]
+    return d
+
+
+# ------------------------------------------------------------------ hybrid attribution (per-channel)
+
+def hybrid_attribution(q, ordered_hits, retrieval_depth):
+    """s6 hybrid attribution from the retriever-0.2 per-channel diagnostics. Lexical-only / vector-only /
+    hybrid. The vector channel runs EMPTY today (no vectors) -> reported cleanly. Reads each hit's
+    retrieval_channels + lexical_rank/vector_rank + fused_rank (never re-runs retrieval)."""
+    depth_hits = ordered_hits[:retrieval_depth]
+    lexical, vector, fused = [], [], []
+    lexical_demoted_by_fusion = 0
+    for h in depth_hits:
+        ch = h.get("retrieval_channels") or []
+        lr = h.get("lexical_rank")
+        vr = h.get("vector_rank")
+        fr = h.get("fused_rank")
+        key = (norm_path(h["source_path"]), str(h.get("chunk_id", "")))
+        if ("lexical" in ch) or (lr is not None):
+            lexical.append((lr if lr is not None else 10 ** 9, key))
+        if ("vector" in ch) or (vr is not None):
+            vector.append((vr if vr is not None else 10 ** 9, key))
+        fused.append((fr if fr is not None else h.get("rank", 0), key))
+        if lr is not None and fr is not None and fr > lr:
+            lexical_demoted_by_fusion += 1
+    lexical_keys = set(k for _, k in lexical)
+    vector_keys = set(k for _, k in vector)
+    unique_to_lexical = sorted(lexical_keys - vector_keys)
+    unique_to_vector = sorted(vector_keys - lexical_keys)
+    rescued = []
+    for req in q["required_sources"]:
+        for h in depth_hits:
+            if hit_matches_member(h, req):
+                ch = h.get("retrieval_channels") or []
+                if ("vector" in ch or h.get("vector_rank") is not None) and \
+                        not ("lexical" in ch or h.get("lexical_rank") is not None):
+                    rescued.append(norm_path(h["source_path"]))
+                break
+
+    def _introduced(pred):
+        by_vec = 0
+        by_lex = 0
+        for h in depth_hits:
+            if not pred(h):
+                continue
+            ch = h.get("retrieval_channels") or []
+            in_lex = "lexical" in ch or h.get("lexical_rank") is not None
+            in_vec = "vector" in ch or h.get("vector_rank") is not None
+            if in_vec and not in_lex:
+                by_vec += 1
+            elif in_lex and not in_vec:
+                by_lex += 1
+        return by_lex, by_vec
+    stale_lex, stale_vec = _introduced(lambda h: h.get("status") in STALE_STATUSES or
+                                       any(hit_matches_source_only(h, s) for s in q["stale_sources"]))
+    forb_lex, forb_vec = _introduced(lambda h: any(hit_matches_source_only(h, f)
+                                     for f in q["forbidden_sources"] + q["privacy_exclusions"]))
+    lex_order = [k for _, k in sorted(lexical)]
+    fused_order = [k for _, k in sorted(fused)]
+    fusion_reordered = (lex_order != fused_order)
+    return {
+        "query_id": q.get("query_id"),
+        "lexical_hit_count": len(lexical),
+        "vector_hit_count": len(vector),
+        "unique_to_lexical": [list(k) for k in unique_to_lexical],
+        "unique_to_vector": [list(k) for k in unique_to_vector],
+        "required_rescued_by_vector": sorted(set(rescued)),
+        "lexical_exactmatch_harmed_by_fusion": lexical_demoted_by_fusion,
+        "stale_introduced_by_lexical": stale_lex,
+        "stale_introduced_by_vector": stale_vec,
+        "forbidden_introduced_by_lexical": forb_lex,
+        "forbidden_introduced_by_vector": forb_vec,
+        "fusion_reordered_vs_lexical": fusion_reordered,
+    }
+
+
+# ------------------------------------------------------------------ aggregation
+
+def aggregate(per_query, k_values, retrieval_depth, label):
     n = len(per_query)
     recall_macro = {}
     recall_micro = {}
+    precision_macro = {}
+    ndcg_macro = {}
+    diversity_macro = {}
     for k in k_values:
         ks = str(k)
         recall_macro[ks] = mean_ppm([q["recall_at_k_ppm"][ks] for q in per_query]) if n else 0
         tot_matched = sum(q["matched_at_k"][ks] for q in per_query)
         tot_required = sum(q["num_required"] for q in per_query)
-        recall_micro[ks] = ppm(tot_matched, tot_required) if tot_required else 1000000
+        recall_micro[ks] = ppm(tot_matched, tot_required) if tot_required else PPM
+        precision_macro[ks] = mean_ppm([q["precision_at_k_ppm"][ks] for q in per_query]) if n else 0
+        ndcg_macro[ks] = mean_ppm([q["ndcg_at_k_ppm"][ks] for q in per_query]) if n else 0
+        diversity_macro[ks] = mean_ppm([q["diversity_at_k_ppm"][ks] for q in per_query]) if n else 0
     mrr = mean_ppm([q["reciprocal_rank_ppm"] for q in per_query]) if n else 0
     stale_rate = ppm(sum(1 for q in per_query if q["stale_affected"]), n) if n else 0
+    stale_hit_rate = mean_ppm([q["stale_hit_rate_ppm"] for q in per_query]) if n else 0
     forbidden_rate = ppm(sum(1 for q in per_query if q["forbidden_hits"]), n) if n else 0
+    privacy_rate = ppm(sum(1 for q in per_query if q["privacy_hits"]), n) if n else 0
+    egroup_qs = [q for q in per_query if q["evidence_groups"]]
+    egc = mean_ppm([q["evidence_group_coverage_ppm"] for q in egroup_qs]) if egroup_qs else PPM
+    dup_burden = mean_ppm([q["duplicate_burden_ppm"] for q in per_query]) if n else 0
+    irr_rate = mean_ppm([q["judged_irrelevant_rate_ppm"] for q in per_query]) if n else 0
+    rel_tok = mean_ppm([q["relevant_token_ratio_ppm"] for q in per_query]) if n else 0
     prov_total = sum(q["provenance_total"] for q in per_query)
     prov_complete = sum(q["provenance_complete"] for q in per_query)
-    prov_completeness = ppm(prov_complete, prov_total) if prov_total else 1000000
+    prov_valid = sum(q["provenance_valid"] for q in per_query)
+    snippet_ok = sum(q["snippet_span_correct"] for q in per_query)
+    prov_completeness = ppm(prov_complete, prov_total) if prov_total else PPM
+    prov_validity = ppm(prov_valid, prov_total) if prov_total else PPM
+    snippet_span = ppm(snippet_ok, prov_total) if prov_total else PPM
+    no_answer_q = [q for q in per_query if q["no_answer_expected"]]
+    no_answer_fp_rate = ppm(sum(1 for q in no_answer_q if q["no_answer_false_positive"]),
+                            len(no_answer_q)) if no_answer_q else 0
     queries_all_required = sum(1 for q in per_query if q["all_required_present"])
     return {
+        "label": label,
         "num_queries": n,
         "k_values": list(k_values),
         "retrieval_depth": retrieval_depth,
         "ratio_unit": RATIO_UNIT,
         "recall_at_k_ppm": recall_macro,
         "recall_at_k_micro_ppm": recall_micro,
+        "precision_at_k_ppm": precision_macro,
+        "ndcg_at_k_ppm": ndcg_macro,
+        "source_diversity_at_k_ppm": diversity_macro,
         "mrr_ppm": mrr,
+        "evidence_group_coverage_ppm": egc,
         "stale_source_rate_ppm": stale_rate,
+        "stale_hit_rate_ppm": stale_hit_rate,
         "forbidden_hit_rate_ppm": forbidden_rate,
+        "privacy_hit_rate_ppm": privacy_rate,
+        "judged_irrelevant_rate_ppm": irr_rate,
+        "duplicate_burden_ppm": dup_burden,
+        "relevant_token_ratio_ppm": rel_tok,
         "provenance_completeness_ppm": prov_completeness,
+        "provenance_validity_ppm": prov_validity,
+        "snippet_span_correctness_ppm": snippet_span,
+        "no_answer_false_positive_rate_ppm": no_answer_fp_rate,
         "queries_all_required_present": queries_all_required,
         "total_hits": prov_total,
         "total_required": sum(q["num_required"] for q in per_query),
         "total_provenance_complete": prov_complete,
+        "total_provenance_valid": prov_valid,
     }
+
+
+def rerank_ab(per_query_raw, per_query_reranked, k_values):
+    """A/B: reranked - raw on the key metrics + per-query rescue/demote."""
+    def macro(pq, key, k=None):
+        if k is None:
+            return mean_ppm([q[key] for q in pq]) if pq else 0
+        return mean_ppm([q[key][str(k)] for q in pq]) if pq else 0
+
+    def presence_rate(pq, key):
+        return ppm(sum(1 for q in pq if q[key]), len(pq)) if pq else 0
+
+    deltas = {}
+    for k in k_values:
+        ks = str(k)
+        deltas["ndcg_at_%s_ppm" % ks] = macro(per_query_reranked, "ndcg_at_k_ppm", k) - macro(per_query_raw, "ndcg_at_k_ppm", k)
+        deltas["precision_at_%s_ppm" % ks] = macro(per_query_reranked, "precision_at_k_ppm", k) - macro(per_query_raw, "precision_at_k_ppm", k)
+        deltas["recall_at_%s_ppm" % ks] = macro(per_query_reranked, "recall_at_k_ppm", k) - macro(per_query_raw, "recall_at_k_ppm", k)
+    deltas["mrr_ppm"] = macro(per_query_reranked, "reciprocal_rank_ppm") - macro(per_query_raw, "reciprocal_rank_ppm")
+    deltas["evidence_group_coverage_ppm"] = macro(per_query_reranked, "evidence_group_coverage_ppm") - macro(per_query_raw, "evidence_group_coverage_ppm")
+    deltas["forbidden_hit_rate_ppm"] = presence_rate(per_query_reranked, "forbidden_hits") - presence_rate(per_query_raw, "forbidden_hits")
+    deltas["stale_hit_rate_ppm"] = macro(per_query_reranked, "stale_hit_rate_ppm") - macro(per_query_raw, "stale_hit_rate_ppm")
+
+    # rescue is measured at the SMALLEST K (a required source pulled INTO the small top-K by reranking).
+    mink = min(k_values) if k_values else 1
+    per_query = []
+    rescued_total = 0
+    demoted_total = 0
+    for raw, rr in zip(per_query_raw, per_query_reranked):
+        raw_recall = raw["recall_at_k_ppm"][str(mink)]
+        rr_recall = rr["recall_at_k_ppm"][str(mink)]
+        rescued = rr_recall > raw_recall
+
+        def top1_bad(ev):
+            return (any(x["rank"] == 1 for x in ev["forbidden_hits"]) or
+                    any(x["rank"] == 1 for x in ev["explicit_stale_hits"]) or
+                    any(x["rank"] == 1 for x in ev["wrong_version_hits"]) or
+                    any(x["rank"] == 1 for x in ev["privacy_hits"]))
+        demoted = top1_bad(raw) and not top1_bad(rr)
+        if rescued:
+            rescued_total += 1
+        if demoted:
+            demoted_total += 1
+        per_query.append({"query_id": raw["query_id"], "required_rescued": rescued,
+                          "bad_hit_demoted_from_top1": demoted,
+                          "raw_recall_ppm": raw_recall, "reranked_recall_ppm": rr_recall})
+    return {"deltas": deltas, "queries_with_rescue": rescued_total,
+            "queries_with_demote": demoted_total, "per_query": per_query}
 
 
 # ------------------------------------------------------------------ report rendering
 
 def _ratio_str(ppm_val):
-    # "0.750000" style deterministic decimal from integer ppm
-    return "%d.%06d" % (ppm_val // 1000000, ppm_val % 1000000)
+    sign = "-" if ppm_val < 0 else ""
+    v = abs(ppm_val)
+    return "%s%d.%06d" % (sign, v // PPM, v % PPM)
 
 
 def render_markdown(report):
-    agg = report["aggregate"]
-    kvals = agg["k_values"]
+    raw = report["aggregate_raw"]
+    rr = report["aggregate_reranked"]
+    kvals = raw["k_values"]
     L = []
-    L.append("# Retrieval evaluation report")
+    L.append("# Retrieval evaluation report (eval-0.2)")
     L.append("")
     L.append("- generator: `%s` v%s" % (report["generator"]["name"], report["generator"]["version"]))
     L.append("- schema: `%s`" % report["schema"])
     L.append("- benchmark: `%s` (schema `%s`)" % (report["benchmark_id"], report["benchmark_schema"]))
     L.append("- retriever: `%s`" % report["retriever"]["kind"])
     L.append("- input_digest: `%s`" % report["input_digest"])
+    L.append("- provenance corpus: `%s`" % ("present" if report["provenance_validated"] else "absent (presence-only)"))
+    L.append("- vector channel: `%s`" % report["vector_channel_status"])
     L.append("- queries: %d | retrieval_depth: %d | ratios in ppm (parts-per-million)"
-             % (agg["num_queries"], agg["retrieval_depth"]))
+             % (raw["num_queries"], raw["retrieval_depth"]))
     L.append("")
-    L.append("## Aggregate metrics")
+    L.append("## Aggregate metrics (raw retriever order)")
     L.append("")
     L.append("| metric | value | ppm |")
     L.append("|---|---|---|")
     for k in kvals:
         ks = str(k)
-        L.append("| recall@%s (macro) | %s | %d |" % (ks, _ratio_str(agg["recall_at_k_ppm"][ks]), agg["recall_at_k_ppm"][ks]))
+        L.append("| recall@%s (macro) | %s | %d |" % (ks, _ratio_str(raw["recall_at_k_ppm"][ks]), raw["recall_at_k_ppm"][ks]))
     for k in kvals:
         ks = str(k)
-        L.append("| recall@%s (micro) | %s | %d |" % (ks, _ratio_str(agg["recall_at_k_micro_ppm"][ks]), agg["recall_at_k_micro_ppm"][ks]))
-    L.append("| MRR | %s | %d |" % (_ratio_str(agg["mrr_ppm"]), agg["mrr_ppm"]))
-    L.append("| stale-source rate | %s | %d |" % (_ratio_str(agg["stale_source_rate_ppm"]), agg["stale_source_rate_ppm"]))
-    L.append("| forbidden-hit rate | %s | %d |" % (_ratio_str(agg["forbidden_hit_rate_ppm"]), agg["forbidden_hit_rate_ppm"]))
-    L.append("| provenance completeness | %s | %d |" % (_ratio_str(agg["provenance_completeness_ppm"]), agg["provenance_completeness_ppm"]))
-    L.append("| queries with all required present | %d / %d |  |" % (agg["queries_all_required_present"], agg["num_queries"]))
+        L.append("| precision@%s | %s | %d |" % (ks, _ratio_str(raw["precision_at_k_ppm"][ks]), raw["precision_at_k_ppm"][ks]))
+    for k in kvals:
+        ks = str(k)
+        L.append("| nDCG@%s | %s | %d |" % (ks, _ratio_str(raw["ndcg_at_k_ppm"][ks]), raw["ndcg_at_k_ppm"][ks]))
+    for k in kvals:
+        ks = str(k)
+        L.append("| source-diversity@%s | %s | %d |" % (ks, _ratio_str(raw["source_diversity_at_k_ppm"][ks]), raw["source_diversity_at_k_ppm"][ks]))
+    L.append("| MRR | %s | %d |" % (_ratio_str(raw["mrr_ppm"]), raw["mrr_ppm"]))
+    L.append("| evidence-group coverage | %s | %d |" % (_ratio_str(raw["evidence_group_coverage_ppm"]), raw["evidence_group_coverage_ppm"]))
+    L.append("| stale-source rate | %s | %d |" % (_ratio_str(raw["stale_source_rate_ppm"]), raw["stale_source_rate_ppm"]))
+    L.append("| stale-hit rate | %s | %d |" % (_ratio_str(raw["stale_hit_rate_ppm"]), raw["stale_hit_rate_ppm"]))
+    L.append("| forbidden-hit rate | %s | %d |" % (_ratio_str(raw["forbidden_hit_rate_ppm"]), raw["forbidden_hit_rate_ppm"]))
+    L.append("| privacy-hit rate | %s | %d |" % (_ratio_str(raw["privacy_hit_rate_ppm"]), raw["privacy_hit_rate_ppm"]))
+    L.append("| judged-irrelevant rate | %s | %d |" % (_ratio_str(raw["judged_irrelevant_rate_ppm"]), raw["judged_irrelevant_rate_ppm"]))
+    L.append("| duplicate burden | %s | %d |" % (_ratio_str(raw["duplicate_burden_ppm"]), raw["duplicate_burden_ppm"]))
+    L.append("| relevant-token ratio | %s | %d |" % (_ratio_str(raw["relevant_token_ratio_ppm"]), raw["relevant_token_ratio_ppm"]))
+    L.append("| provenance completeness | %s | %d |" % (_ratio_str(raw["provenance_completeness_ppm"]), raw["provenance_completeness_ppm"]))
+    L.append("| provenance validity | %s | %d |" % (_ratio_str(raw["provenance_validity_ppm"]), raw["provenance_validity_ppm"]))
+    L.append("| snippet-span correctness | %s | %d |" % (_ratio_str(raw["snippet_span_correctness_ppm"]), raw["snippet_span_correctness_ppm"]))
+    L.append("| no-answer false-positive rate | %s | %d |" % (_ratio_str(raw["no_answer_false_positive_rate_ppm"]), raw["no_answer_false_positive_rate_ppm"]))
+    L.append("| queries with all required present | %d / %d |  |" % (raw["queries_all_required_present"], raw["num_queries"]))
     L.append("")
-    L.append("## Per-query")
+    L.append("## Reranker A/B (reranked - raw)")
     L.append("")
-    for q in report["per_query"]:
+    ab = report["rerank_ab"]
+    L.append("- queries with a required source RESCUED into top-K by reranking: %d" % ab["queries_with_rescue"])
+    L.append("- queries with a stale/forbidden hit DEMOTED out of top-1 by reranking: %d" % ab["queries_with_demote"])
+    L.append("")
+    L.append("| metric | raw | reranked | delta |")
+    L.append("|---|---|---|---|")
+    for k in kvals:
+        ks = str(k)
+        L.append("| nDCG@%s | %s | %s | %s |" % (ks, _ratio_str(raw["ndcg_at_k_ppm"][ks]), _ratio_str(rr["ndcg_at_k_ppm"][ks]), _ratio_str(ab["deltas"]["ndcg_at_%s_ppm" % ks])))
+    for k in kvals:
+        ks = str(k)
+        L.append("| precision@%s | %s | %s | %s |" % (ks, _ratio_str(raw["precision_at_k_ppm"][ks]), _ratio_str(rr["precision_at_k_ppm"][ks]), _ratio_str(ab["deltas"]["precision_at_%s_ppm" % ks])))
+    L.append("| evidence-group coverage | %s | %s | %s |" % (_ratio_str(raw["evidence_group_coverage_ppm"]), _ratio_str(rr["evidence_group_coverage_ppm"]), _ratio_str(ab["deltas"]["evidence_group_coverage_ppm"])))
+    L.append("| forbidden-hit rate | %s | %s | %s |" % (_ratio_str(raw["forbidden_hit_rate_ppm"]), _ratio_str(rr["forbidden_hit_rate_ppm"]), _ratio_str(ab["deltas"]["forbidden_hit_rate_ppm"])))
+    L.append("| stale-hit rate | %s | %s | %s |" % (_ratio_str(raw["stale_hit_rate_ppm"]), _ratio_str(rr["stale_hit_rate_ppm"]), _ratio_str(ab["deltas"]["stale_hit_rate_ppm"])))
+    L.append("")
+    L.append("## Hybrid channel attribution (vector channel: %s)" % report["vector_channel_status"])
+    L.append("")
+    L.append("| query | lexical hits | vector hits | rescued-by-vector | lexical-harmed-by-fusion | fusion reordered |")
+    L.append("|---|---|---|---|---|---|")
+    for h in report["hybrid_attribution"]:
+        L.append("| %s | %d | %d | %d | %d | %s |" % (
+            h["query_id"], h["lexical_hit_count"], h["vector_hit_count"],
+            len(h["required_rescued_by_vector"]), h["lexical_exactmatch_harmed_by_fusion"],
+            str(h["fusion_reordered_vs_lexical"]).lower()))
+    L.append("")
+    L.append("## Per-query (raw order)")
+    L.append("")
+    for q in report["per_query_raw"]:
         L.append("### %s -- %s" % (q["query_id"], q["query"]))
+        L.append("- temporal_intent: %s | relevant_labels: %d | no_answer_expected: %s"
+                 % (q["temporal_intent"], q["num_relevant_labels"], str(q["no_answer_expected"]).lower()))
         parts = []
         for k in kvals:
             ks = str(k)
             parts.append("recall@%s=%s (%d/%d)" % (ks, _ratio_str(q["recall_at_k_ppm"][ks]), q["matched_at_k"][ks], q["num_required"]))
         L.append("- " + " | ".join(parts))
-        L.append("- first_relevant_rank: %d | reciprocal_rank: %s | all_required_present: %s"
-                 % (q["first_relevant_rank"], _ratio_str(q["reciprocal_rank_ppm"]), str(q["all_required_present"]).lower()))
+        pp = []
+        for k in kvals:
+            ks = str(k)
+            pp.append("P@%s=%s" % (ks, _ratio_str(q["precision_at_k_ppm"][ks])))
+            pp.append("nDCG@%s=%s" % (ks, _ratio_str(q["ndcg_at_k_ppm"][ks])))
+        L.append("- " + " | ".join(pp))
+        L.append("- first_relevant_rank: %d | RR: %s | all_required_present: %s | evidence_group_coverage: %s"
+                 % (q["first_relevant_rank"], _ratio_str(q["reciprocal_rank_ppm"]),
+                    str(q["all_required_present"]).lower(), _ratio_str(q["evidence_group_coverage_ppm"])))
+        L.append("- provenance: complete %d/%d, valid %d/%d, snippet-span %d/%d | no_answer_FP: %s | abstained: %s"
+                 % (q["provenance_complete"], q["provenance_total"], q["provenance_valid"], q["provenance_total"],
+                    q["snippet_span_correct"], q["provenance_total"], str(q["no_answer_false_positive"]).lower(),
+                    str(q["abstained"]).lower()))
         if q["missing_required"]:
             L.append("- MISSING required: " + ", ".join(
-                m["source_path"] + (" [span:%s]" % m["span"] if m.get("span") else "") for m in q["missing_required"]))
+                m["source_path"] + (" [span:%s]" % m["span_label"] if m.get("span_label") else "") for m in q["missing_required"]))
         if q["explicit_stale_hits"]:
             L.append("- STALE hits: " + ", ".join("%s@rank%d" % (h["source_path"], h["rank"]) for h in q["explicit_stale_hits"]))
         if q["wrong_version_hits"]:
             L.append("- WRONG-VERSION hits: " + ", ".join("%s@rank%d" % (h["source_path"], h["rank"]) for h in q["wrong_version_hits"]))
         if q["forbidden_hits"]:
             L.append("- FORBIDDEN hits: " + ", ".join("%s@rank%d" % (h["source_path"], h["rank"]) for h in q["forbidden_hits"]))
+        if q["privacy_hits"]:
+            L.append("- PRIVACY-EXCLUSION hits: " + ", ".join("%s@rank%d" % (h["source_path"], h["rank"]) for h in q["privacy_hits"]))
+        if q["distractor_hits"]:
+            L.append("- DISTRACTOR hits: " + ", ".join("%s@rank%d" % (h["source_path"], h["rank"]) for h in q["distractor_hits"]))
         L.append("- returned (%d):" % len(q["returned"]))
         for r in q["returned"]:
-            L.append("  %d. `%s` [%s] score=%d prov=%s"
-                     % (r["rank"], r["source_path"], r["span"], r["score"], "ok" if r["provenance_complete"] else "INCOMPLETE"))
+            L.append("  %d. `%s` [%s] score=%d rel=%s prov=%s%s"
+                     % (r["rank"], r["source_path"], r["span_label"], r["score"],
+                        "1" if r["relevant"] else "0",
+                        "valid" if r["provenance_valid"] else "INVALID",
+                        "" if r["provenance_valid"] else (" {" + ",".join(r["provenance_failed_checks"]) + "}")))
         L.append("")
     return ("\n".join(L).rstrip() + "\n")
 
@@ -696,6 +1689,7 @@ def render_markdown(report):
 
 def compute_input_digest(benchmark, retriever_spec, k_values, retrieval_depth, corpus_manifest):
     material = {
+        "report_schema": REPORT_SCHEMA,
         "benchmark_id": benchmark.get("benchmark_id"),
         "queries": benchmark.get("queries", []),
         "retriever_kind": retriever_spec.get("kind"),
@@ -708,7 +1702,6 @@ def compute_input_digest(benchmark, retriever_spec, k_values, retrieval_depth, c
 
 
 def resolve_benchmark_path(request):
-    """Resolve the benchmark file path (absolute, or relative to CWD). Returns None for an inline object."""
     b = request.get("benchmark")
     if isinstance(b, str):
         return b if os.path.isabs(b) else os.path.abspath(os.path.join(os.getcwd(), b))
@@ -727,12 +1720,12 @@ def load_benchmark(request):
 
 
 def run(request):
+    t_start = time.time()
     out_dir = request.get("out_dir")
     if not out_dir:
         raise ValueError("request.out_dir is required")
     os.makedirs(out_dir, exist_ok=True)
 
-    # base_dir (resolves corpus_dir + external argv paths): explicit, else benchmark file's dir, else out_dir
     base_dir = request.get("base_dir")
     if not base_dir:
         bp = resolve_benchmark_path(request)
@@ -740,10 +1733,10 @@ def run(request):
     base_dir = os.path.abspath(base_dir)
 
     benchmark = load_benchmark(request)
+    bschema = benchmark.get("schema", BENCHMARK_SCHEMA)
     queries = benchmark.get("queries", [])
     if not isinstance(queries, list) or not queries:
         raise ValueError("benchmark has no queries")
-    # validate query ids unique + required present
     seen_ids = set()
     for q in queries:
         qid = q.get("query_id")
@@ -754,12 +1747,14 @@ def run(request):
         seen_ids.add(qid)
         if "query" not in q:
             raise ValueError("query %s missing 'query' text" % qid)
+        ti = q.get("temporal_intent", "current_only")
+        if ti not in TEMPORAL_INTENTS:
+            raise ValueError("query %s has invalid temporal_intent: %s" % (qid, ti))
 
     retriever_spec = request.get("retriever") or benchmark.get("retriever")
     if not retriever_spec:
         raise ValueError("no retriever spec (request.retriever or benchmark.retriever)")
     retriever_spec = dict(retriever_spec)
-    # corpus_dir override precedence: request > spec > benchmark
     if request.get("corpus_dir"):
         retriever_spec["corpus_dir"] = request["corpus_dir"]
     elif "corpus_dir" not in retriever_spec and benchmark.get("corpus_dir"):
@@ -775,24 +1770,64 @@ def run(request):
     retriever = build_retriever(retriever_spec, base_dir, python_exe)
     corpus_manifest = retriever.corpus_manifest() if hasattr(retriever, "corpus_manifest") else None
 
-    per_query = []
-    for q in queries:
-        hits = retriever.search(q.get("query"), retrieval_depth, q.get("filters"))
-        per_query.append(evaluate_query(q, hits, k_values, retrieval_depth))
+    prov_dir = request.get("provenance_corpus_dir") or benchmark.get("provenance_corpus_dir")
+    if not prov_dir:
+        prov_dir = request.get("corpus_dir") or benchmark.get("corpus_dir")
+    resolved_prov = None
+    if prov_dir:
+        resolved_prov = prov_dir if os.path.isabs(prov_dir) else os.path.join(base_dir, prov_dir)
+    elif isinstance(retriever, LexicalBaselineRetriever):
+        resolved_prov = retriever.resolved_corpus_dir
+    corpus = ProvenanceCorpus(resolved_prov) if resolved_prov else ProvenanceCorpus(None)
 
-    agg = aggregate(per_query, k_values, retrieval_depth)
+    tombstones = benchmark.get("tombstones", [])
+
+    per_query_raw = []
+    per_query_reranked = []
+    hybrid = []
+    rerank_diag = []
+    vector_seen = False
+    for rawq in queries:
+        q = normalize_query(rawq)
+        q["tombstones"] = [{"source_path": norm_path(t.get("source_path", ""))} for t in tombstones]
+        q["_all_positive_members"] = _positive_members(q)
+        hits = retriever.search(q.get("query"), retrieval_depth, q.get("filters"))
+        norm_hits = [h if "span_start" in h else normalize_hit(h, i + 1) for i, h in enumerate(hits)]
+        for h in norm_hits:
+            chs = h.get("retrieval_channels") or []
+            if (h.get("vector_rank") is not None) or ("vector" in chs):
+                vector_seen = True
+        raw_eval = evaluate_ordering(q, norm_hits, k_values, retrieval_depth, corpus)
+        descriptor = default_descriptor(rawq)
+        reranked, diag = rerank(norm_hits, descriptor, q)
+        rr_eval = evaluate_ordering(q, reranked, k_values, retrieval_depth, corpus)
+        per_query_raw.append(raw_eval)
+        per_query_reranked.append(rr_eval)
+        hybrid.append(hybrid_attribution(q, norm_hits, retrieval_depth))
+        rerank_diag.append({"query_id": q.get("query_id"), "order": diag})
+
+    agg_raw = aggregate(per_query_raw, k_values, retrieval_depth, "raw")
+    agg_rr = aggregate(per_query_reranked, k_values, retrieval_depth, "reranked")
+    ab = rerank_ab(per_query_raw, per_query_reranked, k_values)
     input_digest = compute_input_digest(benchmark, retriever_spec, k_values, retrieval_depth, corpus_manifest)
 
     report = {
         "schema": REPORT_SCHEMA,
         "generator": {"name": GENERATOR_NAME, "version": GENERATOR_VERSION, "score_unit": SCORE_UNIT},
         "benchmark_id": benchmark.get("benchmark_id", "unnamed"),
-        "benchmark_schema": benchmark.get("schema", BENCHMARK_SCHEMA),
+        "benchmark_schema": bschema,
         "retriever": {"kind": retriever_spec.get("kind")},
         "input_digest": input_digest,
+        "provenance_validated": bool(corpus.available),
+        "vector_channel_status": "active" if vector_seen else "empty",
         "corpus": corpus_manifest,
-        "aggregate": agg,
-        "per_query": per_query,
+        "aggregate_raw": agg_raw,
+        "aggregate_reranked": agg_rr,
+        "rerank_ab": ab,
+        "rerank_diagnostics": rerank_diag,
+        "hybrid_attribution": hybrid,
+        "per_query_raw": per_query_raw,
+        "per_query_reranked": per_query_reranked,
     }
 
     report_bytes = canon_bytes(report)
@@ -806,18 +1841,26 @@ def run(request):
     with open(report_md_path, "wb") as fh:
         fh.write(report_md_bytes)
 
+    elapsed_ms = int((time.time() - t_start) * 1000)  # VOLATILE -> summary only, never the canonical report
     summary = {
         "ok": True,
         "input_digest": input_digest,
         "benchmark_id": benchmark.get("benchmark_id", "unnamed"),
+        "benchmark_schema": bschema,
         "retriever_kind": retriever_spec.get("kind"),
-        "num_queries": agg["num_queries"],
-        "k_values": agg["k_values"],
+        "num_queries": agg_raw["num_queries"],
+        "k_values": agg_raw["k_values"],
         "retrieval_depth": retrieval_depth,
         "ratio_unit": RATIO_UNIT,
-        "aggregate": agg,
+        "provenance_validated": bool(corpus.available),
+        "vector_channel_status": report["vector_channel_status"],
+        "aggregate": agg_raw,
+        "aggregate_reranked": agg_rr,
+        "rerank_ab": {"queries_with_rescue": ab["queries_with_rescue"],
+                      "queries_with_demote": ab["queries_with_demote"], "deltas": ab["deltas"]},
         "report_json": {"path": os.path.abspath(report_json_path), "sha256": sha256_hex(report_bytes), "bytes": len(report_bytes)},
         "report_md": {"path": os.path.abspath(report_md_path), "sha256": sha256_hex(report_md_bytes), "bytes": len(report_md_bytes)},
+        "resource": {"eval_wall_ms": elapsed_ms},  # volatile diagnostics (not in the canonical report)
         "error": None,
     }
     with open(os.path.join(out_dir, "worker-summary.json"), "wb") as fh:
