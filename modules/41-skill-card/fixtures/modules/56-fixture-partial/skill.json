@@ -1,0 +1,6 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "fixture.partial",
+  "version": "0.1.0",
+  "contract_version": "0.2"
+}

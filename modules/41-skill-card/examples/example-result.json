@@ -1,0 +1,126 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "skill.card",
+  "skill_version": "0.1.0",
+  "contract_version": "0.2",
+  "invocation_id": "EXAMPLE-0000-0000-0000-000000000000",
+  "status": "partial",
+  "started_at_utc": "2026-08-02T00:00:00.0000000Z",
+  "finished_at_utc": "2026-08-02T00:00:00.0100000Z",
+  "duration_ms": 120,
+  "inputs_digest": "sha256:<normalized-inputs>",
+  "result": {
+    "op": "cards",
+    "namespace": "fixture",
+    "skill_count": 7,
+    "total_records": 7,
+    "record_counts_by_kind": {
+      "skill": 7
+    },
+    "card_status_counts": {
+      "ok": 5,
+      "partial": 1,
+      "degraded": 1
+    },
+    "degraded_count": 1,
+    "partial_count": 1,
+    "missing_field_summary": {
+      "artifacts": 2,
+      "example": 2,
+      "inputs": 2,
+      "latency_class": 2,
+      "name": 1,
+      "purpose": 1
+    },
+    "cards_digest": "5d0187dec78e8a1563872ae3c5753f4f1f5ed61cca94cf6d57b7ae5045c29822",
+    "records_digest": "abfcbc6af8671347b16cbc8cece937b6bb3e00658c80f4913886e14db0f24117",
+    "validation": {
+      "ok": true,
+      "checked": 7,
+      "error_count": 0,
+      "ingest_shape_ok": true,
+      "errors": []
+    },
+    "edge_summary": {
+      "total": 24,
+      "resolved_internal": 0,
+      "external": 24
+    },
+    "ingest_run_id": "ingest_a187bc5005c8a4da26c6869b",
+    "parse_failure_count": 1,
+    "parse_failures": [
+      {
+        "rel": "55-fixture-broken/skill.json",
+        "reason": "invalid_json",
+        "detail": "Expecting property name enclosed in double quotes: line 1 column 74 (char 73)"
+      }
+    ],
+    "worker": {
+      "name": "skill.card",
+      "version": "0.1.0",
+      "python": "3.12.x"
+    },
+    "runtime_ms": 7
+  },
+  "confidence": null,
+  "artifacts": [
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\41-skill-card\\runtime\\artifacts\\<invocation_id>/cards.json",
+      "kind": "json",
+      "bytes": 11902,
+      "sha256": "57edffbf1c4664c19b363eb345fdbec703debad54f8bc93330c32133c0f6a483"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\41-skill-card\\runtime\\artifacts\\<invocation_id>/cards.jsonl",
+      "kind": "jsonl",
+      "bytes": 11901,
+      "sha256": "5f0798c3ed8c258cb3a6ff6f462b13891d33b9832749a24ec889cc0e78d7f00a"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\41-skill-card\\runtime\\artifacts\\<invocation_id>/records.jsonl",
+      "kind": "jsonl",
+      "bytes": 22075,
+      "sha256": "7313cc0a2d690900ef6b5cca5d7df0e5ab50fe8953f4fee380a8c9dd8415be59"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\41-skill-card\\runtime\\artifacts\\<invocation_id>/records.json",
+      "kind": "json",
+      "bytes": 22076,
+      "sha256": "32a6bceb86c197d72f5967b1204cffe7af7e70378cffb7ea7055a2f78e79e3b8"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\41-skill-card\\runtime\\artifacts\\<invocation_id>/ingest_records.json",
+      "kind": "json",
+      "bytes": 22286,
+      "sha256": "68d95e25ac96e65a62f68d77a81526d551879e53bfe845523ab33f16adac203f"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\41-skill-card\\runtime\\artifacts\\<invocation_id>/index_manifest.json",
+      "kind": "json",
+      "bytes": 893,
+      "sha256": "d9d30be8661c74f108b7e58e170c32e919d7b15dd9ed6989ed748582b6952b7c"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\41-skill-card\\runtime\\artifacts\\<invocation_id>/card_warnings.json",
+      "kind": "json",
+      "bytes": 445,
+      "sha256": "f1a3c6b130e7854286b379b8f980f7c169c104378d1de1d37bea6bb768e56621"
+    },
+    {
+      "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\41-skill-card\\runtime\\artifacts\\<invocation_id>/summary.md",
+      "kind": "markdown",
+      "bytes": 664,
+      "sha256": "9ec06ef20b954122d641531dbb5e82047d5d6c7337b703be5ece291128fd8f67"
+    }
+  ],
+  "model_provenance": [],
+  "diagnostics": {
+    "log": "stderr.txt",
+    "artifact_dir": "...\\runtime\\artifacts\\<invocation_id>"
+  },
+  "warnings": [
+    "1 parse failure(s) surfaced",
+    "1 degraded card(s)"
+  ],
+  "error": null
+}

@@ -1,0 +1,29 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "fixture.ocr",
+  "name": "Fixture OCR Layout",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "Extract text, words, and layout bounding boxes from an image or scanned document, without taking screenshots. Deterministic reading-order lines.",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-FixtureOcr.ps1",
+    "args_spec": "-Image <path> [-Lang <code>]"
+  },
+  "inputs": [
+    {"name": "image", "type": "string", "required": true, "description": "Path to the image or scanned document."},
+    {"name": "lang", "type": "string", "required": false, "default": "en-US", "description": "OCR language."}
+  ],
+  "outputs": {"result_shape": "object", "description": "Words, bounding rects, and reading-order lines."},
+  "requirements": {
+    "executables": ["pwsh>=7.4"], "models": [], "libraries": [],
+    "cpu": "any", "gpu": "none", "memory_mb": 128,
+    "network": false, "filesystem": "read", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": {"root": "runtime/artifacts/<invocation_id>/"},
+  "timeout": {"default_seconds": 60, "on_timeout": "kill_tree_and_report"},
+  "batch": false, "streaming": false, "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

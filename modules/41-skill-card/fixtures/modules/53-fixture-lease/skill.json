@@ -1,0 +1,30 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "fixture.lease",
+  "name": "Fixture Resource Lease",
+  "version": "0.4.0",
+  "contract_version": "0.2",
+  "purpose": "Acquire, renew, and release exclusive resource leases to coordinate shared hardware between workers.",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-FixtureLease.ps1",
+    "args_spec": "-Op acquire|release|renew|status -Resource <name>"
+  },
+  "inputs": [
+    {"name": "op", "type": "string", "required": true, "description": "acquire|release|renew|status."},
+    {"name": "resource", "type": "string", "required": true, "description": "The resource name to lease."},
+    {"name": "ttl_seconds", "type": "int", "required": false, "default": 1800, "description": "Lease TTL."}
+  ],
+  "outputs": {"result_shape": "object", "description": "Lease id + fencing token + state."},
+  "requirements": {
+    "executables": ["pwsh>=7.4"], "models": [], "libraries": [],
+    "cpu": "any", "gpu": "none", "memory_mb": 128,
+    "network": false, "filesystem": "write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": {"root": "runtime/artifacts/<invocation_id>/"},
+  "timeout": {"default_seconds": 30, "on_timeout": "kill_tree_and_report"},
+  "batch": false, "streaming": false, "parallel_safe": false,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

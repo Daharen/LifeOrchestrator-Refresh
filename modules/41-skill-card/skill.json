@@ -1,0 +1,45 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "skill.card",
+  "name": "Skill Card (compact skill-card generator + skill index + Stage-1 eligibility + Stage-2 lexical retrieval seam)",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "The Collective Agent's skill-ACTIVATION substrate (D-0080 Wave 3, directive Priority 6 / section 9 'Skill card format'). A stdlib-only Python worker (skill_card.py) turns each module's skill.json (+ sibling README/WORK_ORDER) into a COMPACT, model-facing SKILL CARD carrying every section-9 field (purpose, supported operations, typed inputs, one valid example, preconditions, side effects, artifacts, latency/resource class, deterministic completion checks, common failure/refusal conditions, version + health), NEVER crashing on a malformed/partial manifest (it SURFACES the missing fields and emits a degraded card + a warning). It emits each card as a MEMORY_CONTRACT s1 `skill` record-envelope artifact (record_id 'sklcard_' + s1 provenance/fingerprints/sensitivity_class), a drop-in for #36 0.2 `ingest_records`, and records the #38 boundary (this is the RICHER ACTIVATION card, distinct from repo.intel's STRUCTURAL 'skl_' manifest record: distinct id namespace + authority_level 'derived' + an explicit describes_structural_skill cross-link). It ships a DETERMINISTIC Stage-1 eligibility filter (task descriptor -> eligible skills, excluding forbidden side-effects / unavailable dependencies / degraded health / GPU-unavailable / OS mismatch / non-parallel-safe) and a DETERMINISTIC Stage-2 lexical retrieval baseline over the card index (the semantic-retrieval SEAM: a task-intent query returns ranked candidate skills and EXCLUDES irrelevant ones; real embeddings + #36 hybrid search fold in at the retrieval wave). It lets the coordinator decide WHICH skill applies without loading every command into the 9B. Ops: 'cards' (default) walks roots and emits cards + s1 records + ingest_records drop-in + validation; 'eligible' Stage-1 filters the card set under a task; 'retrieve' Stage-2 ranks candidate skills for a query; 'validate' checks a records artifact against s1. Determinism: all ids are content+path derived; identical corpus content yields byte-identical canonical artifacts across runs AND machines. CPU-only, no model, no network, lexical baseline only (NO embeddings) -> determinism=deterministic, confidence=null, empty model_provenance. Non-goals (NOT built): the task classifier (Stage 3), the 9B preflight (Stage 5), deterministic plan validation (Stage 6) -- Priority 7; the procedure registry (Priority 6 procedure half); real embeddings/semantic retrieval; the catalog DB (#36 owns it -- EMIT records only); repo.intel's structural parsing (#38); the context compiler (#40); UI.",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-SkillCard.ps1",
+    "args_spec": "Named params: -Op cards|eligible|retrieve|validate (default cards); -Root <dir> / -Roots <dir[]> (the modules/ root(s) to scan for skill.json); -Namespace <label> (isolation scope; default life-orchestrator); -CardsPath <cards.json> (eligible/retrieve over a pre-generated card set instead of scanning); -RecordsPath <records.jsonl|json> (validate); -Query <string> (retrieve); -K <int, default 5> (retrieve top-k); -TaskJson '<json task descriptor>' (eligible/retrieve: {allow_side_effects, forbidden_side_effects[], permissions[], gpu_available, network_available, available_models[], available_executables[], unavailable_dependencies[], require_healthy, exclude_degraded, os, require_parallel_safe, required_domains[]}); -ExcludeDirs <name[]>; -PythonPath <python>; -WorkerPath <skill_card.py>. OR the generic -InputsJson '<json {op, root, roots[], namespace, cards_path, records_path, query, k, task{}, exclude_dirs[], python_path, worker_path}>' (explicit named params override matching keys). Optional -ArtifactRoot, -InvocationId.",
+    "inputs_json_supported": true
+  },
+  "inputs": [
+    { "name": "op", "type": "string", "required": false, "default": "cards", "description": "cards|eligible|retrieve|validate." },
+    { "name": "root", "type": "string", "required": false, "description": "cards/eligible/retrieve: a single modules/ root to scan for skill.json manifests." },
+    { "name": "roots", "type": "array", "required": false, "description": "cards/eligible/retrieve: multiple roots (paths prefixed by the root basename so they never collide)." },
+    { "name": "namespace", "type": "string", "required": false, "default": "life-orchestrator", "description": "isolation scope stamped on every record (a.k.a. project_id)." },
+    { "name": "cards_path", "type": "string", "required": false, "description": "eligible/retrieve: filter/rank a pre-generated cards.json instead of re-scanning." },
+    { "name": "records_path", "type": "string", "required": false, "description": "validate: the records.jsonl or records.json artifact to check against s1." },
+    { "name": "query", "type": "string", "required": false, "description": "retrieve: the task-intent query (lexical tokens over the card index)." },
+    { "name": "k", "type": "int", "required": false, "default": 5, "description": "retrieve: max candidate skills to return." },
+    { "name": "task", "type": "object", "required": false, "description": "eligible/retrieve: the task descriptor for Stage-1 eligibility (side-effect policy, permissions, gpu/network availability, dependency availability, health, os, parallel-safety, domains)." },
+    { "name": "exclude_dirs", "type": "array", "required": false, "description": "directory segment names to prune during discovery (default prunes .git/runtime/venvs/fixtures/tests/examples)." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "envelope.result = the op payload. cards -> { op, namespace, skill_count, total_records, record_counts_by_kind, card_status_counts, degraded_count, partial_count, missing_field_summary, cards_digest, records_digest, validation{ok,checked,error_count,ingest_shape_ok,errors[]}, edge_summary, ingest_run_id, parse_failure_count, parse_failures[{rel,reason,detail}], worker, runtime_ms }; artifacts[] = cards.json, cards.jsonl, records.jsonl, records.json, ingest_records.json (the #36 0.2 drop-in), index_manifest.json, card_warnings.json, summary.md. eligible -> { op, namespace, task, skill_count, eligible[skill_id], eligible_count, excluded[{skill_id,reasons[]}], excluded_count }. retrieve -> { op, namespace, query, query_tokens[], k, prefiltered_by_task, pool_size, retrieval_mode, count, results[{rank,skill_id,lexical_score,matched_terms[],record_id,purpose,domain,resource_class,card_status,tie_break_key}], seam{semantic_query_shape, artifact_search_call, candidate_kinds} }. validate -> { op, records_path, checked, validation{ok,checked,error_count,ingest_shape_ok,errors[]}, edge_summary }."
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4", "python>=3.8 (stdlib json/hashlib/re/os)"],
+    "models": [],
+    "libraries": [],
+    "cpu": "any", "gpu": "none", "memory_mb": 256,
+    "network": false, "filesystem": "read", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 300, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

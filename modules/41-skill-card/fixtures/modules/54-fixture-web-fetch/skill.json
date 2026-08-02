@@ -1,0 +1,28 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "fixture.web.fetch",
+  "name": "Fixture Web Fetch",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "Fetch a web page over the network and save the HTML to disk for later parsing.",
+  "determinism": "stochastic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-FixtureWebFetch.ps1",
+    "args_spec": "-Url <url>"
+  },
+  "inputs": [
+    {"name": "url", "type": "string", "required": true, "description": "The URL to fetch."}
+  ],
+  "outputs": {"result_shape": "object", "description": "Saved HTML path + HTTP status."},
+  "requirements": {
+    "executables": ["pwsh>=7.4"], "models": [], "libraries": [],
+    "cpu": "any", "gpu": "none", "memory_mb": 128,
+    "network": true, "filesystem": "write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": {"root": "runtime/artifacts/<invocation_id>/"},
+  "timeout": {"default_seconds": 120, "on_timeout": "kill_tree_and_report"},
+  "batch": false, "streaming": false, "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

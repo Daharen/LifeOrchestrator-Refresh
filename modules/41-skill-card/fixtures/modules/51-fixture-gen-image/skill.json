@@ -1,0 +1,29 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "fixture.gen.image",
+  "name": "Fixture Image Generator",
+  "version": "0.2.0",
+  "contract_version": "0.2",
+  "purpose": "Generate an image from a text prompt using a GPU-resident diffusion model, writing the result to disk.",
+  "determinism": "stochastic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-FixtureGenImage.ps1",
+    "args_spec": "-Prompt <string> [-Seed <int>]"
+  },
+  "inputs": [
+    {"name": "prompt", "type": "string", "required": true, "description": "The text prompt to render."},
+    {"name": "seed", "type": "int", "required": false, "description": "Deterministic seed for reproducibility."}
+  ],
+  "outputs": {"result_shape": "object", "description": "A generated PNG image artifact + model provenance."},
+  "requirements": {
+    "executables": ["pwsh>=7.4", "python>=3.10"], "models": ["sd15"], "libraries": ["diffusers"],
+    "cpu": "any", "gpu": "cuda", "memory_mb": 4096,
+    "network": false, "filesystem": "write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": {"root": "runtime/artifacts/<invocation_id>/"},
+  "timeout": {"default_seconds": 300, "on_timeout": "kill_tree_and_report"},
+  "batch": false, "streaming": false, "parallel_safe": false,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}
