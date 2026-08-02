@@ -24,6 +24,23 @@ split (the analog of `SKILL_CONTRACT.md` for the memory substrate). Rationale li
   record (§1). Backward-compatible for every already-conformant module (#35/#36/#37/#38 built to the string
   status + closed enum); re-verify list = **{#39 episode.record -> 0.1.1}** (its `SCHEMA_NOTES.md` records the
   interpretation).
+- **Amendment A2 -- provenance hash split + provenance modes (D-0087, i30).** Resolves the frontier Wave-3
+  red-team P0-2 (the single `content_hash` was overloaded: chunk-text hash vs source-version hash, and derived
+  records had no single span). The overloaded `content_hash` splits into DISTINCT provenance hashes:
+  **`record_content_hash`** (this record's own canonical bytes), **`source_content_hash`** (the SOURCE FILE
+  version bytes -- what s4 validation checks; the field an s3 hit called `content_hash`), and
+  **`excerpt_hash`** (the cited span bytes), alongside the unchanged `record_version_id` / `source_version_id`.
+  A **`provenance_mode`** enum -- `direct_span | derived_record | aggregate | tombstone` -- selects the
+  validation rule (s1/s4). Backward-compatible aliasing: legacy `content_hash` reads as `source_content_hash`
+  in an s3 hit / the chunk pipeline; `chunk_content_hash` reads as `excerpt_hash` for a `source_chunk`.
+  Re-verify list = {#36 on its next revision; #40/#37/#41 adopt the names as they conform this wave}.
+  Packet-side detail: `CONTEXT_PACKET_CONTRACT.md` s5.
+- **Amendment A3 -- skill.card emits `summary`, not a second `skill` (D-0087, i30).** Resolves P0-5: #38
+  repo.intel is the SOLE `record_kind = skill` producer (the structural manifest parse, `skl_`,
+  `canonical_source`). skill.card #41 emits **`record_kind = summary`** with `attrs.summary_type =
+  "skill_activation_card"` + a **`derives_from`** edge to #38's `skl_` record -- a navigational derivative
+  that fits the CLOSED s1 enum -- so a `record_kind = skill` search returns ONE owner. The card payload +
+  Stage-1/2 seams are unchanged; only the kind + the edge change. Re-verify list = {#41 -> summary (this wave)}.
 - **Adoption.** Wave 1 modules keep running as shipped at 0.1; each adopts 0.2 on its NEXT named revision
   (§9). Wave 2 NEW modules build to 0.2 from day one.
 - **Grounding.** The frozen shapes reconcile the two shipped-0.1 interfaces (#35 embedding.local, #36
@@ -51,7 +68,13 @@ stay; expose chunks through this envelope via a **view/adapter** (no premature w
 - `record_version_id` -- IMMUTABLE revision identity (one specific version of the record).
 - `record_kind` -- enum; Wave 1 = `source_chunk`.
 - `namespace` (a.k.a. `project_id`) -- isolation scope.
-- `content_hash` -- hash of the record's canonical bytes/text.
+- `content_hash` -- hash of the record's canonical bytes/text. **(A2, D-0087)** split into distinct
+  provenance hashes: `record_content_hash` (this record's canonical bytes), `source_content_hash` (the
+  source FILE version bytes -- what s4 validation checks), `excerpt_hash` (the cited span bytes). Legacy
+  `content_hash` aliases `source_content_hash` in an s3 hit / the chunk pipeline; `chunk_content_hash`
+  aliases `excerpt_hash` for a `source_chunk`.
+- `provenance_mode` (A2) -- `direct_span | derived_record | aggregate | tombstone`; selects s4's per-mode
+  validation (a derived record has no single source span; a tombstone carries deletion provenance).
 - `status` / `currentness` -- a single STRING from the §5 enum (`current` = healthy baseline); **NOT a boolean,
   NOT an object** (D-0085). Multiple simultaneous stale reasons -> optional `attrs.stale_reasons:
   [<§5 value>...]`; a provenance-check failure -> the `unverified` value (no separate `verified` flag). A
@@ -250,5 +273,10 @@ RTX PRO 6000 (96 GB) is a horizon CONFIG (rerun benchmarks), not a redesign.
 - **Wave 2 NEW modules build to 0.2 from day one:** repository intelligence (symbols/imports/manifests/tests
   as typed records via the envelope, not chunks); episode + failure schema; the recorder. Each producer/consumer
   split names THIS doc as its shared contract and gets the D-0077 orchestrator cross-module smoke at fold.
+- **Wave 3 / i30 conformance (D-0087):** the packet + selection layer is governed by the NEW
+  `core-docs/CONTEXT_PACKET_CONTRACT.md` (`context_packet/0.2` build target). #37 authors the versioned
+  `selpol_rrf_v1` selection-policy library (owned here, consumed by #40); #40 -> `context_packet/0.2`
+  (control/evidence separation, packet_disposition, consumer profile, A2 provenance names); #41 -> a
+  `summary` activation card (A3). D-0077 cross-module fold smoke at close.
 - **This doc is authoritative** for the memory substrate; a module's `SCHEMA_NOTES.md` records how it
   interpreted a frozen field, and any deviation is a defect to reconcile at fold (or an amendment via §0).
