@@ -1,0 +1,28 @@
+{
+  "authority": "worker",
+  "config": {
+    "candidate_k": 20,
+    "per_source_cap": 3,
+    "token_budget": 1200
+  },
+  "constraints": [
+    "docs:[] -- workers do not edit core-docs"
+  ],
+  "namespace": "core-docs",
+  "original_goal": "Ship the Wave 3 context compiler safely under the res.lease git lease.",
+  "relevant_entities": [
+    "res.lease",
+    "dev.ship",
+    "wedge",
+    "heartbeat"
+  ],
+  "relevant_paths": [
+    "CURRENT_STATE.md"
+  ],
+  "request_text": "How does res.lease fencing work, how do I ship a unit with dev.ship, and what is the executor wedge gotcha?",
+  "requested_side_effects": [
+    "git.commit"
+  ],
+  "task_type": "coding",
+  "time_horizon": "current_only"
+}

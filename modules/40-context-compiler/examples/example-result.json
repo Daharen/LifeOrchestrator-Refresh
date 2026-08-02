@@ -1,0 +1,883 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "context.compile",
+  "skill_version": "0.1.0",
+  "contract_version": "0.2",
+  "invocation_id": "c4cdaa85-eebd-40a4-94f2-59af3260b0ab",
+  "status": "ok",
+  "started_at_utc": "2026-08-02T04:26:51.0255737Z",
+  "finished_at_utc": "2026-08-02T04:26:51.5664863Z",
+  "duration_ms": 535,
+  "inputs_digest": "sha256:c931471c274eac9ceca44d376f789c9e0942233958f2009b0a9c8bb2b8996876",
+  "result": {
+    "op": "compile",
+    "retriever": "mock",
+    "result": {
+      "config": {
+        "candidate_k": 20,
+        "expand_max_tokens": 600,
+        "literals_cap": 6,
+        "max_excerpts": 40,
+        "max_queries": 12,
+        "paths_cap": 4,
+        "per_excerpt_overhead_tokens": 12,
+        "per_source_cap": 3,
+        "primary_terms_cap": 6,
+        "salient_terms_cap": 12,
+        "token_budget": 400
+      },
+      "metrics": {
+        "budget": 400,
+        "candidate_count": 6,
+        "distinct_kind_count": 4,
+        "distinct_source_count": 4,
+        "dropped_budget": 0,
+        "dropped_deleted": 0,
+        "dropped_diversity": 0,
+        "dropped_duplicate": 0,
+        "excerpt_count": 6,
+        "omitted_count": 0,
+        "packet_tokens": 180,
+        "provenance_reproduced_all": true,
+        "provenance_reproduced_count": 6
+      },
+      "packet": {
+        "candidate_skills": [
+          {
+            "authority_level": "derived",
+            "composite_score": 1540,
+            "currentness": "current",
+            "included_as_excerpt": true,
+            "namespace": "core-docs",
+            "rank_in_pool": 6,
+            "record_id": "skill.context.compile",
+            "record_kind": "skill",
+            "record_version_id": "skill.context.compile@0.1.0",
+            "skill_ref": "skill.context.compile",
+            "source_path": "core-docs/skill.md",
+            "span_label": "bytes:0-78"
+          }
+        ],
+        "compiler": {
+          "name": "context.compile",
+          "version": "0.1.0",
+          "worker": "context_compiler.py",
+          "worker_version": "0.1.0"
+        },
+        "completion_contract": {
+          "goal": "Ship the context compiler safely under the git lease.",
+          "note": "no explicit success contract supplied; caller must define closing predicate(s).",
+          "schema": "lifeorch.goal_verification/0.1",
+          "success_criteria": []
+        },
+        "constraints": [
+          "docs:[] -- do not edit core-docs"
+        ],
+        "current_state_refs": [],
+        "escalation_conditions": [
+          "required source could not be retrieved or provenance did not reproduce",
+          "token budget exhausted before a required source was included (truncated=true)",
+          "only stale versions of a required current source are available",
+          "the completion contract has no closing predicate"
+        ],
+        "evaluation_hooks": {
+          "packet_metrics": {
+            "budget": 400,
+            "candidate_count": 6,
+            "distinct_kind_count": 4,
+            "distinct_source_count": 4,
+            "dropped_budget": 0,
+            "dropped_deleted": 0,
+            "dropped_diversity": 0,
+            "dropped_duplicate": 0,
+            "excerpt_count": 6,
+            "omitted_count": 0,
+            "packet_tokens": 180,
+            "provenance_reproduced_all": true,
+            "provenance_reproduced_count": 6
+          },
+          "retrieved": [
+            {
+              "authority_level": "authoritative",
+              "composite_score": 1870,
+              "content_hash": "f20bc2371db3ebda4ffef5af00ecb1d9fbddf144c1cc438fa4ea65feef86a99f",
+              "currentness": "current",
+              "feature_points": {
+                "authority": 300,
+                "best_rank": 1,
+                "component_match": 100,
+                "freshness": 200,
+                "kind_priority": 150,
+                "matched_query_count": 1,
+                "namespace_match": 120,
+                "query_coverage": 0,
+                "relevance": 1000
+              },
+              "fused_score_micros": 1000000,
+              "included": true,
+              "matched_queries": [
+                0
+              ],
+              "omit_reason": null,
+              "rank_in_pool": 1,
+              "record_id": "srec_5a100d766ae110107aca5757",
+              "record_kind": "source_chunk",
+              "record_version_id": "occ_833d8c8e0c31e5134d117e23",
+              "source_path": "core-docs/alpha.md"
+            },
+            {
+              "authority_level": "source_material",
+              "composite_score": 1680,
+              "content_hash": "f20bc2371db3ebda4ffef5af00ecb1d9fbddf144c1cc438fa4ea65feef86a99f",
+              "currentness": "current",
+              "feature_points": {
+                "authority": 150,
+                "best_rank": 2,
+                "component_match": 100,
+                "freshness": 200,
+                "kind_priority": 150,
+                "matched_query_count": 1,
+                "namespace_match": 120,
+                "query_coverage": 0,
+                "relevance": 960
+              },
+              "fused_score_micros": 990000,
+              "included": true,
+              "matched_queries": [
+                0
+              ],
+              "omit_reason": null,
+              "rank_in_pool": 2,
+              "record_id": "srec_d19a08814c00c8062342020e",
+              "record_kind": "source_chunk",
+              "record_version_id": "occ_04c9436470fbc3291122c41e",
+              "source_path": "core-docs/alpha.md"
+            },
+            {
+              "authority_level": "source_material",
+              "composite_score": 1640,
+              "content_hash": "f20bc2371db3ebda4ffef5af00ecb1d9fbddf144c1cc438fa4ea65feef86a99f",
+              "currentness": "current",
+              "feature_points": {
+                "authority": 150,
+                "best_rank": 3,
+                "component_match": 100,
+                "freshness": 200,
+                "kind_priority": 150,
+                "matched_query_count": 1,
+                "namespace_match": 120,
+                "query_coverage": 0,
+                "relevance": 920
+              },
+              "fused_score_micros": 980000,
+              "included": true,
+              "matched_queries": [
+                0
+              ],
+              "omit_reason": null,
+              "rank_in_pool": 3,
+              "record_id": "srec_710d7170a561574a87f83959",
+              "record_kind": "source_chunk",
+              "record_version_id": "occ_d73b3615a58ba5f1ab226020",
+              "source_path": "core-docs/alpha.md"
+            },
+            {
+              "authority_level": "derived",
+              "composite_score": 1560,
+              "content_hash": "351ab253974f82a45a2e9e93a46556c54429532dfd23037c4ba51e778eeffca2",
+              "currentness": "current",
+              "feature_points": {
+                "authority": 100,
+                "best_rank": 1,
+                "component_match": 0,
+                "freshness": 200,
+                "kind_priority": 140,
+                "matched_query_count": 1,
+                "namespace_match": 120,
+                "query_coverage": 0,
+                "relevance": 1000
+              },
+              "fused_score_micros": 1000000,
+              "included": true,
+              "matched_queries": [
+                1
+              ],
+              "omit_reason": null,
+              "rank_in_pool": 4,
+              "record_id": "fail_devship_fn",
+              "record_kind": "failure",
+              "record_version_id": "fail_devship_fn_v1",
+              "source_path": "core-docs/fail.md"
+            },
+            {
+              "authority_level": "derived",
+              "composite_score": 1550,
+              "content_hash": "7686612728c9c9fbf6a16e115f6b63a5e0f448d23c5eaf55105e3e95a6f7ed49",
+              "currentness": "current",
+              "feature_points": {
+                "authority": 100,
+                "best_rank": 1,
+                "component_match": 0,
+                "freshness": 200,
+                "kind_priority": 130,
+                "matched_query_count": 1,
+                "namespace_match": 120,
+                "query_coverage": 0,
+                "relevance": 1000
+              },
+              "fused_score_micros": 1000000,
+              "included": true,
+              "matched_queries": [
+                2
+              ],
+              "omit_reason": null,
+              "rank_in_pool": 5,
+              "record_id": "prec_ship",
+              "record_kind": "procedure",
+              "record_version_id": "prec_ship_v1",
+              "source_path": "core-docs/proc.md"
+            },
+            {
+              "authority_level": "derived",
+              "composite_score": 1540,
+              "content_hash": "1b82067b3894c007547b81d141d054653e955d2564ac22db98e139a8e160eeab",
+              "currentness": "current",
+              "feature_points": {
+                "authority": 100,
+                "best_rank": 1,
+                "component_match": 0,
+                "freshness": 200,
+                "kind_priority": 120,
+                "matched_query_count": 1,
+                "namespace_match": 120,
+                "query_coverage": 0,
+                "relevance": 1000
+              },
+              "fused_score_micros": 1000000,
+              "included": true,
+              "matched_queries": [
+                3
+              ],
+              "omit_reason": null,
+              "rank_in_pool": 6,
+              "record_id": "skill.context.compile",
+              "record_kind": "skill",
+              "record_version_id": "skill.context.compile@0.1.0",
+              "source_path": "core-docs/skill.md"
+            }
+          ]
+        },
+        "excerpts": [
+          {
+            "authority_level": "authoritative",
+            "chunk_content_hash": "a93289baeed026a1a7884280b258499bc047d32bf82b2380a84610c600f6f0c4",
+            "chunk_type": "markdown_section",
+            "content_hash": "f20bc2371db3ebda4ffef5af00ecb1d9fbddf144c1cc438fa4ea65feef86a99f",
+            "currentness": "current",
+            "excerpt_id": "exc_268d6e9d31f61d66a119ca27",
+            "heading": null,
+            "namespace": "core-docs",
+            "provenance": {
+              "checked_against": "chunk_content_hash",
+              "reproduced": true,
+              "span_sha256": "a93289baeed026a1a7884280b258499bc047d32bf82b2380a84610c600f6f0c4",
+              "text_source": "source_texts"
+            },
+            "record_id": "srec_5a100d766ae110107aca5757",
+            "record_kind": "source_chunk",
+            "record_version_id": "occ_833d8c8e0c31e5134d117e23",
+            "section_path": "Resource Lease",
+            "selection": {
+              "best_query_rank": 1,
+              "composite_score": 1870,
+              "feature_points": {
+                "authority": 300,
+                "best_rank": 1,
+                "component_match": 100,
+                "freshness": 200,
+                "kind_priority": 150,
+                "matched_query_count": 1,
+                "namespace_match": 120,
+                "query_coverage": 0,
+                "relevance": 1000
+              },
+              "fused_score_micros": 1000000,
+              "matched_queries": [
+                0
+              ],
+              "rank_in_pool": 1
+            },
+            "source_path": "core-docs/alpha.md",
+            "source_version_id": "ver_ca75c6f0c6d5e6597c13a3e6",
+            "span": {
+              "end": 75,
+              "start": 18
+            },
+            "span_label": "Resource Lease",
+            "text": "The res.lease module #29 grants gpu, git, and doc leases.",
+            "token_estimate": 15
+          },
+          {
+            "authority_level": "source_material",
+            "chunk_content_hash": "a901bc9d90d600f27cbfcaa5a8320420f71e320fbcc0899d398c1c514f96d0de",
+            "chunk_type": "markdown_section",
+            "content_hash": "f20bc2371db3ebda4ffef5af00ecb1d9fbddf144c1cc438fa4ea65feef86a99f",
+            "currentness": "current",
+            "excerpt_id": "exc_22cbffb112ffb3d5bf132b95",
+            "heading": null,
+            "namespace": "core-docs",
+            "provenance": {
+              "checked_against": "chunk_content_hash",
+              "reproduced": true,
+              "span_sha256": "a901bc9d90d600f27cbfcaa5a8320420f71e320fbcc0899d398c1c514f96d0de",
+              "text_source": "source_texts"
+            },
+            "record_id": "srec_d19a08814c00c8062342020e",
+            "record_kind": "source_chunk",
+            "record_version_id": "occ_04c9436470fbc3291122c41e",
+            "section_path": "Resource Lease > Fencing",
+            "selection": {
+              "best_query_rank": 2,
+              "composite_score": 1680,
+              "feature_points": {
+                "authority": 150,
+                "best_rank": 2,
+                "component_match": 100,
+                "freshness": 200,
+                "kind_priority": 150,
+                "matched_query_count": 1,
+                "namespace_match": 120,
+                "query_coverage": 0,
+                "relevance": 960
+              },
+              "fused_score_micros": 990000,
+              "matched_queries": [
+                0
+              ],
+              "rank_in_pool": 2
+            },
+            "source_path": "core-docs/alpha.md",
+            "source_version_id": "ver_ca75c6f0c6d5e6597c13a3e6",
+            "span": {
+              "end": 153,
+              "start": 89
+            },
+            "span_label": "Resource Lease > Fencing",
+            "text": "Three-identity fencing rejects a stale holder deterministically.",
+            "token_estimate": 16
+          },
+          {
+            "authority_level": "source_material",
+            "chunk_content_hash": "fb6e1d68a66d6f4b44743b2785ec89cf4469023e2836402fcf52dcba8d9d048e",
+            "chunk_type": "markdown_section",
+            "content_hash": "f20bc2371db3ebda4ffef5af00ecb1d9fbddf144c1cc438fa4ea65feef86a99f",
+            "currentness": "current",
+            "excerpt_id": "exc_cc3d6b4fdb603aa5eb17b7db",
+            "heading": null,
+            "namespace": "core-docs",
+            "provenance": {
+              "checked_against": "chunk_content_hash",
+              "reproduced": true,
+              "span_sha256": "fb6e1d68a66d6f4b44743b2785ec89cf4469023e2836402fcf52dcba8d9d048e",
+              "text_source": "source_texts"
+            },
+            "record_id": "srec_710d7170a561574a87f83959",
+            "record_kind": "source_chunk",
+            "record_version_id": "occ_d73b3615a58ba5f1ab226020",
+            "section_path": "Resource Lease > Ship discipline",
+            "selection": {
+              "best_query_rank": 3,
+              "composite_score": 1640,
+              "feature_points": {
+                "authority": 150,
+                "best_rank": 3,
+                "component_match": 100,
+                "freshness": 200,
+                "kind_priority": 150,
+                "matched_query_count": 1,
+                "namespace_match": 120,
+                "query_coverage": 0,
+                "relevance": 920
+              },
+              "fused_score_micros": 980000,
+              "matched_queries": [
+                0
+              ],
+              "rank_in_pool": 3
+            },
+            "source_path": "core-docs/alpha.md",
+            "source_version_id": "ver_ca75c6f0c6d5e6597c13a3e6",
+            "span": {
+              "end": 232,
+              "start": 175
+            },
+            "span_label": "Resource Lease > Ship discipline",
+            "text": "Acquire gpu then git then doc; release in reverse order.\n",
+            "token_estimate": 15
+          },
+          {
+            "authority_level": "derived",
+            "chunk_content_hash": "351ab253974f82a45a2e9e93a46556c54429532dfd23037c4ba51e778eeffca2",
+            "chunk_type": "failure",
+            "content_hash": "351ab253974f82a45a2e9e93a46556c54429532dfd23037c4ba51e778eeffca2",
+            "currentness": "current",
+            "excerpt_id": "exc_7db7a56cc25e0d3f96af708c",
+            "heading": null,
+            "namespace": "core-docs",
+            "provenance": {
+              "checked_against": "chunk_content_hash",
+              "reproduced": true,
+              "span_sha256": "351ab253974f82a45a2e9e93a46556c54429532dfd23037c4ba51e778eeffca2",
+              "text_source": "source_texts"
+            },
+            "record_id": "fail_devship_fn",
+            "record_kind": "failure",
+            "record_version_id": "fail_devship_fn_v1",
+            "section_path": null,
+            "selection": {
+              "best_query_rank": 1,
+              "composite_score": 1560,
+              "feature_points": {
+                "authority": 100,
+                "best_rank": 1,
+                "component_match": 0,
+                "freshness": 200,
+                "kind_priority": 140,
+                "matched_query_count": 1,
+                "namespace_match": 120,
+                "query_coverage": 0,
+                "relevance": 1000
+              },
+              "fused_score_micros": 1000000,
+              "matched_queries": [
+                1
+              ],
+              "rank_in_pool": 4
+            },
+            "source_path": "core-docs/fail.md",
+            "source_version_id": "ver_9a3149a256e3c9be5a8dc718",
+            "span": {
+              "end": 80,
+              "start": 0
+            },
+            "span_label": "bytes:0-80",
+            "text": "dev.ship can FALSE-NEGATIVE committed; verify the real HEAD via native git log.\n",
+            "token_estimate": 20
+          },
+          {
+            "authority_level": "derived",
+            "chunk_content_hash": "80c38bbebf0e4f2fed410a5fd602855a5bec3960907a6fd669b65707d606551f",
+            "chunk_type": "procedure",
+            "content_hash": "7686612728c9c9fbf6a16e115f6b63a5e0f448d23c5eaf55105e3e95a6f7ed49",
+            "currentness": "current",
+            "excerpt_id": "exc_8f926f4e82362d0ba8fe9c43",
+            "heading": null,
+            "namespace": "core-docs",
+            "provenance": {
+              "checked_against": "chunk_content_hash",
+              "reproduced": true,
+              "span_sha256": "80c38bbebf0e4f2fed410a5fd602855a5bec3960907a6fd669b65707d606551f",
+              "text_source": "source_texts"
+            },
+            "record_id": "prec_ship",
+            "record_kind": "procedure",
+            "record_version_id": "prec_ship_v1",
+            "section_path": "Ship a unit",
+            "selection": {
+              "best_query_rank": 1,
+              "composite_score": 1550,
+              "feature_points": {
+                "authority": 100,
+                "best_rank": 1,
+                "component_match": 0,
+                "freshness": 200,
+                "kind_priority": 130,
+                "matched_query_count": 1,
+                "namespace_match": 120,
+                "query_coverage": 0,
+                "relevance": 1000
+              },
+              "fused_score_micros": 1000000,
+              "matched_queries": [
+                2
+              ],
+              "rank_in_pool": 5
+            },
+            "source_path": "core-docs/proc.md",
+            "source_version_id": "ver_af6296fbd6354ebe60424e24",
+            "span": {
+              "end": 101,
+              "start": 15
+            },
+            "span_label": "Ship a unit",
+            "text": "Run dev.ship: it verifies sha256 + AST + tests fail-closed, then commits named files.\n",
+            "token_estimate": 22
+          },
+          {
+            "authority_level": "derived",
+            "chunk_content_hash": "1b82067b3894c007547b81d141d054653e955d2564ac22db98e139a8e160eeab",
+            "chunk_type": "skill",
+            "content_hash": "1b82067b3894c007547b81d141d054653e955d2564ac22db98e139a8e160eeab",
+            "currentness": "current",
+            "excerpt_id": "exc_03ba82622f1a937ab5d42ff6",
+            "heading": null,
+            "namespace": "core-docs",
+            "provenance": {
+              "checked_against": "chunk_content_hash",
+              "reproduced": true,
+              "span_sha256": "1b82067b3894c007547b81d141d054653e955d2564ac22db98e139a8e160eeab",
+              "text_source": "source_texts"
+            },
+            "record_id": "skill.context.compile",
+            "record_kind": "skill",
+            "record_version_id": "skill.context.compile@0.1.0",
+            "section_path": null,
+            "selection": {
+              "best_query_rank": 1,
+              "composite_score": 1540,
+              "feature_points": {
+                "authority": 100,
+                "best_rank": 1,
+                "component_match": 0,
+                "freshness": 200,
+                "kind_priority": 120,
+                "matched_query_count": 1,
+                "namespace_match": 120,
+                "query_coverage": 0,
+                "relevance": 1000
+              },
+              "fused_score_micros": 1000000,
+              "matched_queries": [
+                3
+              ],
+              "rank_in_pool": 6
+            },
+            "source_path": "core-docs/skill.md",
+            "source_version_id": "ver_8ce46303e3a230938811e296",
+            "span": {
+              "end": 78,
+              "start": 0
+            },
+            "span_label": "bytes:0-78",
+            "text": "context.compile turns a task descriptor into a token-budgeted context packet.\n",
+            "token_estimate": 20
+          }
+        ],
+        "expansion_affordances": {
+          "op": "expand",
+          "request_shape": {
+            "budget": {
+              "max_tokens": 600
+            },
+            "target": "{ record_version_id | record_id | source_path | span{start,end} | symbol_ref }",
+            "type": [
+              "raw_source",
+              "more_evidence",
+              "related_symbol",
+              "failure_record",
+              "tool_contract",
+              "prior_episode"
+            ]
+          },
+          "schema": "lifeorch.context_expansion/0.1"
+        },
+        "namespace": "core-docs",
+        "normalized_task": "[coding] How does res.lease #29 fencing work and how do I ship a unit with dev.ship?",
+        "omitted_context": [],
+        "open_questions": [],
+        "original_goal": "Ship the context compiler safely under the git lease.",
+        "packet_id": "cpkt_e6f608d603084178dc70e66f26961bd7",
+        "permissions": {
+          "authority": "worker",
+          "requested_side_effects": [
+            "git.commit"
+          ]
+        },
+        "relevant_failures": [
+          {
+            "authority_level": "derived",
+            "composite_score": 1560,
+            "currentness": "current",
+            "included_as_excerpt": true,
+            "namespace": "core-docs",
+            "rank_in_pool": 4,
+            "record_id": "fail_devship_fn",
+            "record_kind": "failure",
+            "record_version_id": "fail_devship_fn_v1",
+            "source_path": "core-docs/fail.md",
+            "span_label": "bytes:0-80"
+          }
+        ],
+        "relevant_procedures": [
+          {
+            "authority_level": "derived",
+            "composite_score": 1550,
+            "currentness": "current",
+            "included_as_excerpt": true,
+            "namespace": "core-docs",
+            "rank_in_pool": 5,
+            "record_id": "prec_ship",
+            "record_kind": "procedure",
+            "record_version_id": "prec_ship_v1",
+            "source_path": "core-docs/proc.md",
+            "span_label": "Ship a unit"
+          }
+        ],
+        "retrieval_provenance": {
+          "candidate_count": 6,
+          "corpus_version": "digest_fixture_0001",
+          "embedding_space_id": null,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "index_snapshot": "digest_fixture_0001",
+          "per_query_hit_counts": {
+            "0": 3,
+            "1": 1,
+            "2": 1,
+            "3": 1
+          },
+          "query_set": [
+            {
+              "filters": {
+                "exclude_stale": true,
+                "namespace": "core-docs"
+              },
+              "k": 20,
+              "mode": "fts",
+              "purpose": "primary",
+              "query": "res lease fencing work ship unit",
+              "query_index": 0
+            },
+            {
+              "filters": {
+                "namespace": "core-docs"
+              },
+              "k": 20,
+              "mode": "exact",
+              "purpose": "literal",
+              "query": "#29",
+              "query_index": 1
+            },
+            {
+              "filters": {
+                "namespace": "core-docs"
+              },
+              "k": 20,
+              "mode": "exact",
+              "purpose": "literal",
+              "query": "res.lease",
+              "query_index": 2
+            },
+            {
+              "filters": {
+                "namespace": "core-docs"
+              },
+              "k": 20,
+              "mode": "exact",
+              "purpose": "literal",
+              "query": "dev.ship",
+              "query_index": 3
+            },
+            {
+              "filters": {
+                "namespace": "core-docs"
+              },
+              "k": 20,
+              "mode": "exact",
+              "purpose": "path",
+              "query": "alpha.md",
+              "query_index": 4
+            },
+            {
+              "filters": {
+                "exclude_stale": true,
+                "namespace": "core-docs",
+                "path_prefix": "core-docs/alpha.md"
+              },
+              "k": 20,
+              "mode": "fts",
+              "purpose": "path_scoped",
+              "query": "res lease fencing work ship unit",
+              "query_index": 5
+            },
+            {
+              "filters": {
+                "namespace": "core-docs",
+                "record_kind": "failure"
+              },
+              "k": 20,
+              "mode": "fts",
+              "purpose": "kind:failure",
+              "query": "res lease fencing work ship unit",
+              "query_index": 6
+            },
+            {
+              "filters": {
+                "namespace": "core-docs",
+                "record_kind": "procedure"
+              },
+              "k": 20,
+              "mode": "fts",
+              "purpose": "kind:procedure",
+              "query": "res lease fencing work ship unit",
+              "query_index": 7
+            },
+            {
+              "filters": {
+                "namespace": "core-docs",
+                "record_kind": "skill"
+              },
+              "k": 20,
+              "mode": "fts",
+              "purpose": "kind:skill",
+              "query": "res lease fencing work ship unit",
+              "query_index": 8
+            }
+          ],
+          "retriever": "mock",
+          "retriever_version": "fixture/1"
+        },
+        "schema": "lifeorch.context_packet/0.1",
+        "similar_episodes": [],
+        "task_descriptor_digest": "sha256:ff75fdd7eb9db2e6d0a1410d912ccf73d9b07ed2cea877b86c37f6a60cc8ac83",
+        "task_type": "coding",
+        "time_horizon": "current_only",
+        "token_budget": {
+          "budget": 400,
+          "budget_exhausted": false,
+          "excerpt_body_tokens": 108,
+          "excerpt_count": 6,
+          "max_excerpts": 40,
+          "omitted_count": 0,
+          "overhead_tokens": 72,
+          "per_excerpt_overhead_tokens": 12,
+          "per_source_cap": 3,
+          "remaining": 220,
+          "token_fn": "ceil(chars/4)",
+          "truncated": false,
+          "used": 180
+        }
+      },
+      "packet_id": "cpkt_e6f608d603084178dc70e66f26961bd7",
+      "query_set": [
+        {
+          "filters": {
+            "exclude_stale": true,
+            "namespace": "core-docs"
+          },
+          "k": 20,
+          "mode": "fts",
+          "purpose": "primary",
+          "query": "res lease fencing work ship unit",
+          "query_index": 0
+        },
+        {
+          "filters": {
+            "namespace": "core-docs"
+          },
+          "k": 20,
+          "mode": "exact",
+          "purpose": "literal",
+          "query": "#29",
+          "query_index": 1
+        },
+        {
+          "filters": {
+            "namespace": "core-docs"
+          },
+          "k": 20,
+          "mode": "exact",
+          "purpose": "literal",
+          "query": "res.lease",
+          "query_index": 2
+        },
+        {
+          "filters": {
+            "namespace": "core-docs"
+          },
+          "k": 20,
+          "mode": "exact",
+          "purpose": "literal",
+          "query": "dev.ship",
+          "query_index": 3
+        },
+        {
+          "filters": {
+            "namespace": "core-docs"
+          },
+          "k": 20,
+          "mode": "exact",
+          "purpose": "path",
+          "query": "alpha.md",
+          "query_index": 4
+        },
+        {
+          "filters": {
+            "exclude_stale": true,
+            "namespace": "core-docs",
+            "path_prefix": "core-docs/alpha.md"
+          },
+          "k": 20,
+          "mode": "fts",
+          "purpose": "path_scoped",
+          "query": "res lease fencing work ship unit",
+          "query_index": 5
+        },
+        {
+          "filters": {
+            "namespace": "core-docs",
+            "record_kind": "failure"
+          },
+          "k": 20,
+          "mode": "fts",
+          "purpose": "kind:failure",
+          "query": "res lease fencing work ship unit",
+          "query_index": 6
+        },
+        {
+          "filters": {
+            "namespace": "core-docs",
+            "record_kind": "procedure"
+          },
+          "k": 20,
+          "mode": "fts",
+          "purpose": "kind:procedure",
+          "query": "res lease fencing work ship unit",
+          "query_index": 7
+        },
+        {
+          "filters": {
+            "namespace": "core-docs",
+            "record_kind": "skill"
+          },
+          "k": 20,
+          "mode": "fts",
+          "purpose": "kind:skill",
+          "query": "res lease fencing work ship unit",
+          "query_index": 8
+        }
+      ]
+    },
+    "worker": {
+      "name": "context_compiler.py",
+      "version": "0.1.0"
+    },
+    "runtime_ms": 1
+  },
+  "confidence": null,
+  "artifacts": [
+    {
+      "path": "/home/claude/m40/modules/40-context-compiler/runtime/artifacts/c4cdaa85-eebd-40a4-94f2-59af3260b0ab/compile/context_packet.json",
+      "kind": "json",
+      "bytes": 15816,
+      "sha256": "419b1e1eaf8d3a09460991706f788cdd491e3c65467d10e8018c230d452f81cf"
+    }
+  ],
+  "model_provenance": [],
+  "diagnostics": {
+    "log": "stderr.txt",
+    "artifact_dir": "/home/claude/m40/modules/40-context-compiler/runtime/artifacts/c4cdaa85-eebd-40a4-94f2-59af3260b0ab"
+  },
+  "warnings": [],
+  "error": null
+}

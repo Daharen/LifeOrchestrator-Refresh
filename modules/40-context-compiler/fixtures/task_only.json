@@ -1,0 +1,25 @@
+{
+  "authority": "worker",
+  "config": {
+    "per_source_cap": 3,
+    "token_budget": 400
+  },
+  "constraints": [
+    "docs:[] -- do not edit core-docs"
+  ],
+  "namespace": "core-docs",
+  "original_goal": "Ship the context compiler safely under the git lease.",
+  "relevant_entities": [
+    "res.lease",
+    "dev.ship"
+  ],
+  "relevant_paths": [
+    "core-docs/alpha.md"
+  ],
+  "request_text": "How does res.lease #29 fencing work and how do I ship a unit with dev.ship?",
+  "requested_side_effects": [
+    "git.commit"
+  ],
+  "task_type": "coding",
+  "time_horizon": "current_only"
+}

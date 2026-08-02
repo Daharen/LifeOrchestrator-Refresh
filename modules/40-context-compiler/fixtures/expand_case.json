@@ -1,0 +1,127 @@
+{
+  "_raw_full_tokens": 248,
+  "compile_args": {
+    "retrieval_batches": [
+      {
+        "hits": [
+          {
+            "abs_path": null,
+            "authority_level": "derived",
+            "chunk_content_hash": "d4cc66a3622c59ba3a1a16cf24b72cecd0625db2fd4c810e30c1bf69154c0842",
+            "chunk_id": "chk_c2ca2b9482a2879979e95980",
+            "chunk_type": "summary",
+            "content_hash": "d4cc66a3622c59ba3a1a16cf24b72cecd0625db2fd4c810e30c1bf69154c0842",
+            "corpus_version": "digest_fixture_0001",
+            "currentness": "current",
+            "embedding_space_id": null,
+            "filter_decisions": {},
+            "fused_rank": 1,
+            "fused_score": 1.0,
+            "fusion_algo": "lexical_only",
+            "fusion_version": "1",
+            "heading": null,
+            "index_snapshot": "digest_fixture_0001",
+            "lexical_rank": 1,
+            "lexical_score": 1.0,
+            "namespace": "core-docs",
+            "rank": 1,
+            "record_id": "sum_spec",
+            "record_kind": "summary",
+            "record_version_id": "sum_spec_v1",
+            "retrieval_channels": [
+              "lexical"
+            ],
+            "section_path": null,
+            "snippet": "Summary: the context packet has goal, excerpts, omitted context, and expansion.\n",
+            "source": "core-docs",
+            "source_path": "core-docs/summary.md",
+            "source_version_id": "ver_194e18852bddc4f123d68f26",
+            "span": {
+              "end": 80,
+              "start": 0
+            },
+            "span_label": "bytes:0-80",
+            "status": "current",
+            "tie_break_key": "sum_spec_v1",
+            "vector_rank": null,
+            "vector_similarity": null
+          }
+        ],
+        "query_index": 0
+      }
+    ],
+    "retrieval_meta": {
+      "retriever": "mock"
+    },
+    "source_texts": {
+      "core-docs/spec.md": "# Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. \n",
+      "core-docs/summary.md": "Summary: the context packet has goal, excerpts, omitted context, and expansion.\n"
+    },
+    "task": {
+      "config": {
+        "token_budget": 200
+      },
+      "namespace": "core-docs",
+      "original_goal": "Explain the context packet spec.",
+      "request_text": "context packet spec summary",
+      "task_type": "research"
+    }
+  },
+  "expand_request": {
+    "budget": {
+      "max_tokens": 40
+    },
+    "target": {
+      "record_version_id": "chunk_spec_v1"
+    },
+    "type": "raw_source"
+  },
+  "expansion_candidates": [
+    {
+      "abs_path": null,
+      "authority_level": "source_material",
+      "chunk_content_hash": "9eef3f3d6b504f355f022602db06437f2672416d03955bdb87065b9bb4085671",
+      "chunk_id": "chk_5e8af55c4dbe349e8e9511ea",
+      "chunk_type": "markdown_section",
+      "content_hash": "9eef3f3d6b504f355f022602db06437f2672416d03955bdb87065b9bb4085671",
+      "corpus_version": "digest_fixture_0001",
+      "currentness": "current",
+      "embedding_space_id": null,
+      "filter_decisions": {},
+      "fused_rank": 1,
+      "fused_score": 1.0,
+      "fusion_algo": "lexical_only",
+      "fusion_version": "1",
+      "heading": null,
+      "index_snapshot": "digest_fixture_0001",
+      "lexical_rank": 1,
+      "lexical_score": 1.0,
+      "namespace": "core-docs",
+      "rank": 1,
+      "record_id": "chunk_spec",
+      "record_kind": "source_chunk",
+      "record_version_id": "chunk_spec_v1",
+      "retrieval_channels": [
+        "lexical"
+      ],
+      "section_path": "Detailed spec",
+      "snippet": "# Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. \n",
+      "source": "core-docs",
+      "source_path": "core-docs/spec.md",
+      "source_version_id": "ver_28baf959b9450c72497fb4c1",
+      "span": {
+        "end": 991,
+        "start": 0
+      },
+      "span_label": "Detailed spec",
+      "status": "current",
+      "tie_break_key": "chunk_spec_v1",
+      "vector_rank": null,
+      "vector_similarity": null
+    }
+  ],
+  "source_texts": {
+    "core-docs/spec.md": "# Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. \n",
+    "core-docs/summary.md": "Summary: the context packet has goal, excerpts, omitted context, and expansion.\n"
+  }
+}

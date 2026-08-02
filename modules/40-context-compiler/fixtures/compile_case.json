@@ -1,0 +1,316 @@
+{
+  "retrieval_batches": [
+    {
+      "hits": [
+        {
+          "abs_path": null,
+          "authority_level": "authoritative",
+          "chunk_content_hash": "a93289baeed026a1a7884280b258499bc047d32bf82b2380a84610c600f6f0c4",
+          "chunk_id": "chk_5a100d766ae110107aca5757",
+          "chunk_type": "markdown_section",
+          "content_hash": "f20bc2371db3ebda4ffef5af00ecb1d9fbddf144c1cc438fa4ea65feef86a99f",
+          "corpus_version": "digest_fixture_0001",
+          "currentness": "current",
+          "embedding_space_id": null,
+          "filter_decisions": {},
+          "fused_rank": 1,
+          "fused_score": 1.0,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "heading": null,
+          "index_snapshot": "digest_fixture_0001",
+          "lexical_rank": 1,
+          "lexical_score": 1.0,
+          "namespace": "core-docs",
+          "rank": 1,
+          "record_id": "srec_5a100d766ae110107aca5757",
+          "record_kind": "source_chunk",
+          "record_version_id": "occ_833d8c8e0c31e5134d117e23",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "section_path": "Resource Lease",
+          "snippet": "The res.lease module #29 grants gpu, git, and doc leases.",
+          "source": "core-docs",
+          "source_path": "core-docs/alpha.md",
+          "source_version_id": "ver_ca75c6f0c6d5e6597c13a3e6",
+          "span": {
+            "end": 75,
+            "start": 18
+          },
+          "span_label": "Resource Lease",
+          "status": "current",
+          "tie_break_key": "occ_833d8c8e0c31e5134d117e23",
+          "vector_rank": null,
+          "vector_similarity": null
+        },
+        {
+          "abs_path": null,
+          "authority_level": "source_material",
+          "chunk_content_hash": "a901bc9d90d600f27cbfcaa5a8320420f71e320fbcc0899d398c1c514f96d0de",
+          "chunk_id": "chk_d19a08814c00c8062342020e",
+          "chunk_type": "markdown_section",
+          "content_hash": "f20bc2371db3ebda4ffef5af00ecb1d9fbddf144c1cc438fa4ea65feef86a99f",
+          "corpus_version": "digest_fixture_0001",
+          "currentness": "current",
+          "embedding_space_id": null,
+          "filter_decisions": {},
+          "fused_rank": 2,
+          "fused_score": 0.99,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "heading": null,
+          "index_snapshot": "digest_fixture_0001",
+          "lexical_rank": 2,
+          "lexical_score": 0.99,
+          "namespace": "core-docs",
+          "rank": 2,
+          "record_id": "srec_d19a08814c00c8062342020e",
+          "record_kind": "source_chunk",
+          "record_version_id": "occ_04c9436470fbc3291122c41e",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "section_path": "Resource Lease > Fencing",
+          "snippet": "Three-identity fencing rejects a stale holder deterministically.",
+          "source": "core-docs",
+          "source_path": "core-docs/alpha.md",
+          "source_version_id": "ver_ca75c6f0c6d5e6597c13a3e6",
+          "span": {
+            "end": 153,
+            "start": 89
+          },
+          "span_label": "Resource Lease > Fencing",
+          "status": "current",
+          "tie_break_key": "occ_04c9436470fbc3291122c41e",
+          "vector_rank": null,
+          "vector_similarity": null
+        },
+        {
+          "abs_path": null,
+          "authority_level": "source_material",
+          "chunk_content_hash": "fb6e1d68a66d6f4b44743b2785ec89cf4469023e2836402fcf52dcba8d9d048e",
+          "chunk_id": "chk_710d7170a561574a87f83959",
+          "chunk_type": "markdown_section",
+          "content_hash": "f20bc2371db3ebda4ffef5af00ecb1d9fbddf144c1cc438fa4ea65feef86a99f",
+          "corpus_version": "digest_fixture_0001",
+          "currentness": "current",
+          "embedding_space_id": null,
+          "filter_decisions": {},
+          "fused_rank": 3,
+          "fused_score": 0.98,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "heading": null,
+          "index_snapshot": "digest_fixture_0001",
+          "lexical_rank": 3,
+          "lexical_score": 0.98,
+          "namespace": "core-docs",
+          "rank": 3,
+          "record_id": "srec_710d7170a561574a87f83959",
+          "record_kind": "source_chunk",
+          "record_version_id": "occ_d73b3615a58ba5f1ab226020",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "section_path": "Resource Lease > Ship discipline",
+          "snippet": "Acquire gpu then git then doc; release in reverse order.\n",
+          "source": "core-docs",
+          "source_path": "core-docs/alpha.md",
+          "source_version_id": "ver_ca75c6f0c6d5e6597c13a3e6",
+          "span": {
+            "end": 232,
+            "start": 175
+          },
+          "span_label": "Resource Lease > Ship discipline",
+          "status": "current",
+          "tie_break_key": "occ_d73b3615a58ba5f1ab226020",
+          "vector_rank": null,
+          "vector_similarity": null
+        }
+      ],
+      "query_index": 0
+    },
+    {
+      "hits": [
+        {
+          "abs_path": null,
+          "authority_level": "derived",
+          "chunk_content_hash": "351ab253974f82a45a2e9e93a46556c54429532dfd23037c4ba51e778eeffca2",
+          "chunk_id": "chk_77760fd8534358bf9f15ec3e",
+          "chunk_type": "failure",
+          "content_hash": "351ab253974f82a45a2e9e93a46556c54429532dfd23037c4ba51e778eeffca2",
+          "corpus_version": "digest_fixture_0001",
+          "currentness": "current",
+          "embedding_space_id": null,
+          "filter_decisions": {},
+          "fused_rank": 1,
+          "fused_score": 1.0,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "heading": null,
+          "index_snapshot": "digest_fixture_0001",
+          "lexical_rank": 1,
+          "lexical_score": 1.0,
+          "namespace": "core-docs",
+          "rank": 1,
+          "record_id": "fail_devship_fn",
+          "record_kind": "failure",
+          "record_version_id": "fail_devship_fn_v1",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "section_path": null,
+          "snippet": "dev.ship can FALSE-NEGATIVE committed; verify the real HEAD via native git log.\n",
+          "source": "core-docs",
+          "source_path": "core-docs/fail.md",
+          "source_version_id": "ver_9a3149a256e3c9be5a8dc718",
+          "span": {
+            "end": 80,
+            "start": 0
+          },
+          "span_label": "bytes:0-80",
+          "status": "current",
+          "tie_break_key": "fail_devship_fn_v1",
+          "vector_rank": null,
+          "vector_similarity": null
+        }
+      ],
+      "query_index": 1
+    },
+    {
+      "hits": [
+        {
+          "abs_path": null,
+          "authority_level": "derived",
+          "chunk_content_hash": "80c38bbebf0e4f2fed410a5fd602855a5bec3960907a6fd669b65707d606551f",
+          "chunk_id": "chk_a87faa34aee4298c3306f183",
+          "chunk_type": "procedure",
+          "content_hash": "7686612728c9c9fbf6a16e115f6b63a5e0f448d23c5eaf55105e3e95a6f7ed49",
+          "corpus_version": "digest_fixture_0001",
+          "currentness": "current",
+          "embedding_space_id": null,
+          "filter_decisions": {},
+          "fused_rank": 1,
+          "fused_score": 1.0,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "heading": null,
+          "index_snapshot": "digest_fixture_0001",
+          "lexical_rank": 1,
+          "lexical_score": 1.0,
+          "namespace": "core-docs",
+          "rank": 1,
+          "record_id": "prec_ship",
+          "record_kind": "procedure",
+          "record_version_id": "prec_ship_v1",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "section_path": "Ship a unit",
+          "snippet": "Run dev.ship: it verifies sha256 + AST + tests fail-closed, then commits named files.\n",
+          "source": "core-docs",
+          "source_path": "core-docs/proc.md",
+          "source_version_id": "ver_af6296fbd6354ebe60424e24",
+          "span": {
+            "end": 101,
+            "start": 15
+          },
+          "span_label": "Ship a unit",
+          "status": "current",
+          "tie_break_key": "prec_ship_v1",
+          "vector_rank": null,
+          "vector_similarity": null
+        }
+      ],
+      "query_index": 2
+    },
+    {
+      "hits": [
+        {
+          "abs_path": null,
+          "authority_level": "derived",
+          "chunk_content_hash": "1b82067b3894c007547b81d141d054653e955d2564ac22db98e139a8e160eeab",
+          "chunk_id": "chk_23535ef2d10b86ffc752bbf6",
+          "chunk_type": "skill",
+          "content_hash": "1b82067b3894c007547b81d141d054653e955d2564ac22db98e139a8e160eeab",
+          "corpus_version": "digest_fixture_0001",
+          "currentness": "current",
+          "embedding_space_id": null,
+          "filter_decisions": {},
+          "fused_rank": 1,
+          "fused_score": 1.0,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "heading": null,
+          "index_snapshot": "digest_fixture_0001",
+          "lexical_rank": 1,
+          "lexical_score": 1.0,
+          "namespace": "core-docs",
+          "rank": 1,
+          "record_id": "skill.context.compile",
+          "record_kind": "skill",
+          "record_version_id": "skill.context.compile@0.1.0",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "section_path": null,
+          "snippet": "context.compile turns a task descriptor into a token-budgeted context packet.\n",
+          "source": "core-docs",
+          "source_path": "core-docs/skill.md",
+          "source_version_id": "ver_8ce46303e3a230938811e296",
+          "span": {
+            "end": 78,
+            "start": 0
+          },
+          "span_label": "bytes:0-78",
+          "status": "current",
+          "tie_break_key": "skill.context.compile@0.1.0",
+          "vector_rank": null,
+          "vector_similarity": null
+        }
+      ],
+      "query_index": 3
+    }
+  ],
+  "retrieval_meta": {
+    "corpus_version": "digest_fixture_0001",
+    "embedding_space_id": null,
+    "fusion_algo": "lexical_only",
+    "fusion_version": "1",
+    "index_snapshot": "digest_fixture_0001",
+    "retriever": "mock",
+    "retriever_version": "fixture/1"
+  },
+  "source_texts": {
+    "core-docs/alpha.md": "# Resource Lease\n\nThe res.lease module #29 grants gpu, git, and doc leases.\n\n## Fencing\n\nThree-identity fencing rejects a stale holder deterministically.\n\n## Ship discipline\n\nAcquire gpu then git then doc; release in reverse order.\n",
+    "core-docs/fail.md": "dev.ship can FALSE-NEGATIVE committed; verify the real HEAD via native git log.\n",
+    "core-docs/proc.md": "# Ship a unit\n\nRun dev.ship: it verifies sha256 + AST + tests fail-closed, then commits named files.\n",
+    "core-docs/skill.md": "context.compile turns a task descriptor into a token-budgeted context packet.\n"
+  },
+  "task": {
+    "authority": "worker",
+    "config": {
+      "per_source_cap": 3,
+      "token_budget": 400
+    },
+    "constraints": [
+      "docs:[] -- do not edit core-docs"
+    ],
+    "namespace": "core-docs",
+    "original_goal": "Ship the context compiler safely under the git lease.",
+    "relevant_entities": [
+      "res.lease",
+      "dev.ship"
+    ],
+    "relevant_paths": [
+      "core-docs/alpha.md"
+    ],
+    "request_text": "How does res.lease #29 fencing work and how do I ship a unit with dev.ship?",
+    "requested_side_effects": [
+      "git.commit"
+    ],
+    "task_type": "coding",
+    "time_horizon": "current_only"
+  }
+}

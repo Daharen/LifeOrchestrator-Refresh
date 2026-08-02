@@ -1,0 +1,289 @@
+{
+  "expansion_candidates": [
+    {
+      "abs_path": null,
+      "authority_level": "source_material",
+      "chunk_content_hash": "9eef3f3d6b504f355f022602db06437f2672416d03955bdb87065b9bb4085671",
+      "chunk_id": "chk_5e8af55c4dbe349e8e9511ea",
+      "chunk_type": "markdown_section",
+      "content_hash": "9eef3f3d6b504f355f022602db06437f2672416d03955bdb87065b9bb4085671",
+      "corpus_version": "digest_fixture_0001",
+      "currentness": "current",
+      "embedding_space_id": null,
+      "filter_decisions": {},
+      "fused_rank": 1,
+      "fused_score": 1.0,
+      "fusion_algo": "lexical_only",
+      "fusion_version": "1",
+      "heading": null,
+      "index_snapshot": "digest_fixture_0001",
+      "lexical_rank": 1,
+      "lexical_score": 1.0,
+      "namespace": "core-docs",
+      "rank": 1,
+      "record_id": "chunk_spec",
+      "record_kind": "source_chunk",
+      "record_version_id": "chunk_spec_v1",
+      "retrieval_channels": [
+        "lexical"
+      ],
+      "section_path": "Detailed spec",
+      "snippet": "# Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. \n",
+      "source": "core-docs",
+      "source_path": "core-docs/spec.md",
+      "source_version_id": "ver_28baf959b9450c72497fb4c1",
+      "span": {
+        "end": 991,
+        "start": 0
+      },
+      "span_label": "Detailed spec",
+      "status": "current",
+      "tie_break_key": "chunk_spec_v1",
+      "vector_rank": null,
+      "vector_similarity": null
+    }
+  ],
+  "packet": {
+    "candidate_skills": [],
+    "compiler": {
+      "name": "context.compile",
+      "version": "0.1.0",
+      "worker": "context_compiler.py",
+      "worker_version": "0.1.0"
+    },
+    "completion_contract": {
+      "goal": "Explain the context packet spec.",
+      "note": "no explicit success contract supplied; caller must define closing predicate(s).",
+      "schema": "lifeorch.goal_verification/0.1",
+      "success_criteria": []
+    },
+    "constraints": [],
+    "current_state_refs": [],
+    "escalation_conditions": [
+      "required source could not be retrieved or provenance did not reproduce",
+      "token budget exhausted before a required source was included (truncated=true)",
+      "only stale versions of a required current source are available",
+      "the completion contract has no closing predicate"
+    ],
+    "evaluation_hooks": {
+      "packet_metrics": {
+        "budget": 200,
+        "candidate_count": 1,
+        "distinct_kind_count": 1,
+        "distinct_source_count": 1,
+        "dropped_budget": 0,
+        "dropped_deleted": 0,
+        "dropped_diversity": 0,
+        "dropped_duplicate": 0,
+        "excerpt_count": 1,
+        "omitted_count": 0,
+        "packet_tokens": 32,
+        "provenance_reproduced_all": true,
+        "provenance_reproduced_count": 1
+      },
+      "retrieved": [
+        {
+          "authority_level": "derived",
+          "composite_score": 1590,
+          "content_hash": "d4cc66a3622c59ba3a1a16cf24b72cecd0625db2fd4c810e30c1bf69154c0842",
+          "currentness": "current",
+          "feature_points": {
+            "authority": 100,
+            "best_rank": 1,
+            "component_match": 0,
+            "freshness": 200,
+            "kind_priority": 170,
+            "matched_query_count": 1,
+            "namespace_match": 120,
+            "query_coverage": 0,
+            "relevance": 1000
+          },
+          "fused_score_micros": 1000000,
+          "included": true,
+          "matched_queries": [
+            0
+          ],
+          "omit_reason": null,
+          "rank_in_pool": 1,
+          "record_id": "sum_spec",
+          "record_kind": "summary",
+          "record_version_id": "sum_spec_v1",
+          "source_path": "core-docs/summary.md"
+        }
+      ]
+    },
+    "excerpts": [
+      {
+        "authority_level": "derived",
+        "chunk_content_hash": "d4cc66a3622c59ba3a1a16cf24b72cecd0625db2fd4c810e30c1bf69154c0842",
+        "chunk_type": "summary",
+        "content_hash": "d4cc66a3622c59ba3a1a16cf24b72cecd0625db2fd4c810e30c1bf69154c0842",
+        "currentness": "current",
+        "excerpt_id": "exc_9114ef31fbdc36649d7380d8",
+        "heading": null,
+        "namespace": "core-docs",
+        "provenance": {
+          "checked_against": "chunk_content_hash",
+          "reproduced": true,
+          "span_sha256": "d4cc66a3622c59ba3a1a16cf24b72cecd0625db2fd4c810e30c1bf69154c0842",
+          "text_source": "source_texts"
+        },
+        "record_id": "sum_spec",
+        "record_kind": "summary",
+        "record_version_id": "sum_spec_v1",
+        "section_path": null,
+        "selection": {
+          "best_query_rank": 1,
+          "composite_score": 1590,
+          "feature_points": {
+            "authority": 100,
+            "best_rank": 1,
+            "component_match": 0,
+            "freshness": 200,
+            "kind_priority": 170,
+            "matched_query_count": 1,
+            "namespace_match": 120,
+            "query_coverage": 0,
+            "relevance": 1000
+          },
+          "fused_score_micros": 1000000,
+          "matched_queries": [
+            0
+          ],
+          "rank_in_pool": 1
+        },
+        "source_path": "core-docs/summary.md",
+        "source_version_id": "ver_194e18852bddc4f123d68f26",
+        "span": {
+          "end": 80,
+          "start": 0
+        },
+        "span_label": "bytes:0-80",
+        "text": "Summary: the context packet has goal, excerpts, omitted context, and expansion.\n",
+        "token_estimate": 20
+      }
+    ],
+    "expansion_affordances": {
+      "op": "expand",
+      "request_shape": {
+        "budget": {
+          "max_tokens": 600
+        },
+        "target": "{ record_version_id | record_id | source_path | span{start,end} | symbol_ref }",
+        "type": [
+          "raw_source",
+          "more_evidence",
+          "related_symbol",
+          "failure_record",
+          "tool_contract",
+          "prior_episode"
+        ]
+      },
+      "schema": "lifeorch.context_expansion/0.1"
+    },
+    "namespace": "core-docs",
+    "normalized_task": "[research] context packet spec summary",
+    "omitted_context": [],
+    "open_questions": [],
+    "original_goal": "Explain the context packet spec.",
+    "packet_id": "cpkt_e15e8ee22c8fb47952b0d312a9193858",
+    "permissions": {
+      "authority": null,
+      "requested_side_effects": []
+    },
+    "relevant_failures": [],
+    "relevant_procedures": [],
+    "retrieval_provenance": {
+      "candidate_count": 1,
+      "corpus_version": null,
+      "embedding_space_id": null,
+      "fusion_algo": null,
+      "fusion_version": null,
+      "index_snapshot": null,
+      "per_query_hit_counts": {
+        "0": 1
+      },
+      "query_set": [
+        {
+          "filters": {
+            "exclude_stale": true,
+            "namespace": "core-docs"
+          },
+          "k": 20,
+          "mode": "fts",
+          "purpose": "primary",
+          "query": "context packet spec summary",
+          "query_index": 0
+        },
+        {
+          "filters": {
+            "namespace": "core-docs",
+            "record_kind": "decision"
+          },
+          "k": 20,
+          "mode": "fts",
+          "purpose": "kind:decision",
+          "query": "context packet spec summary",
+          "query_index": 1
+        },
+        {
+          "filters": {
+            "namespace": "core-docs",
+            "record_kind": "summary"
+          },
+          "k": 20,
+          "mode": "fts",
+          "purpose": "kind:summary",
+          "query": "context packet spec summary",
+          "query_index": 2
+        },
+        {
+          "filters": {
+            "namespace": "core-docs",
+            "record_kind": "claim"
+          },
+          "k": 20,
+          "mode": "fts",
+          "purpose": "kind:claim",
+          "query": "context packet spec summary",
+          "query_index": 3
+        }
+      ],
+      "retriever": "mock",
+      "retriever_version": null
+    },
+    "schema": "lifeorch.context_packet/0.1",
+    "similar_episodes": [],
+    "task_descriptor_digest": "sha256:e8d087dd909bb0a1a173971cf7bda7646f46db92ad0c88515d97bc1c865bb1fe",
+    "task_type": "research",
+    "time_horizon": "current_only",
+    "token_budget": {
+      "budget": 200,
+      "budget_exhausted": false,
+      "excerpt_body_tokens": 20,
+      "excerpt_count": 1,
+      "max_excerpts": 40,
+      "omitted_count": 0,
+      "overhead_tokens": 12,
+      "per_excerpt_overhead_tokens": 12,
+      "per_source_cap": 3,
+      "remaining": 168,
+      "token_fn": "ceil(chars/4)",
+      "truncated": false,
+      "used": 32
+    }
+  },
+  "request": {
+    "budget": {
+      "max_tokens": 40
+    },
+    "target": {
+      "record_version_id": "chunk_spec_v1"
+    },
+    "type": "raw_source"
+  },
+  "source_texts": {
+    "core-docs/spec.md": "# Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. # Detailed spec\n\nThe context packet carries immutable goal, normalized task, excerpts with provenance, omitted context, token accounting, and expansion affordances. \n",
+    "core-docs/summary.md": "Summary: the context packet has goal, excerpts, omitted context, and expansion.\n"
+  }
+}
