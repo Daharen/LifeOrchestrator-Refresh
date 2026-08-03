@@ -24,7 +24,7 @@ describe NOW and stay ingestable whole; history is never deleted, it moves to la
 | FANOUT_ORCHESTRATOR_HANDOFF.md | THE one live handoff: orchestrator ops + current frontier | 24 KB |
 | CURRENT_STATE.md | reality NOW: phase, active work, box, deps, models, tests table, live gotchas | 34 KB |
 | DECISION_LOG.md | append-only rationale | no cap (indexed; tool-pull only) |
-| DECISION_LOG_INDEX.md | one row per decision (id, date, state, title) | 12 KB |
+| DECISION_LOG_INDEX.md | one compressed routing row per decision (id, date, state, one-line label; see its header rules) | 12 KB |
 | MODULE_ROADMAP.md | build order, per-module status, deferred follow-ons, portability backlog | 37 KB |
 | TOOL_MODEL_REGISTRY.md | tool/model/hardware/storage registry (lookup, not story) | 43 KB |
 | REVIEW_QUEUE.md | queue schema, conventions, producer/consumer table, open design flags | 15 KB |
@@ -64,7 +64,7 @@ D-refs, re-check size. Check sizes at every mirror: `wc -c core-docs/*.md` (devi
 
 - Append-only, newest last, IDs contiguous. Entry fields: id, date, decision, reason, alternatives,
   consequences, affects, state (provisional|locked), revisit-if. Keep an entry <= ~30 lines.
-- Every append ALSO appends the entry's one-row line to `DECISION_LOG_INDEX.md` (two edits, one per file).
+- Every append ALSO appends a COMPRESSED routing row to `DECISION_LOG_INDEX.md` (one distinctive fragment per that file's header rules -- NOT the entry's summary; two edits, one per file).
 - A decision that reverses/supersedes an earlier one gets a new entry; mark the old row in the index row
   `[superseded by D-00yy]` — scope the marker if only part of the decision was superseded. Never edit old entries beyond that annotation.
 - Consumers: read the index first; pull individual entries by ID. Never ingest the whole file.

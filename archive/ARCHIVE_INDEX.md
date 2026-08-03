@@ -25,6 +25,10 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 - `REVIEW_QUEUE.md` | 29,400 bytes, ten sequential producer narratives | slimmed to a producer/consumer table | 2026-07-29 | D-0066
 - `START_HERE.md` | 7,982 bytes, with the stale ACTIVE-WORK banner | banner replaced by routing; checklist -> DOC_PROTOCOL | 2026-07-29 | D-0066
 
+## doc-snapshots/2026-08-03/
+
+- `DECISION_LOG_INDEX.md` | 25,605 bytes, one detailed paragraph per decision (had become a second decision log) | reduced to routing-only labels + a maintenance-rules header | 2026-08-03 | DOC_PROTOCOL s2
+
 ## drafts/
 
 - `iter11-stage1-DRAFT.md` | the READY warm-pool Stage-1 dispatch package (existed only as a Project doc; filename predates the iter-11 renumbering) | renumbered + reformatted into `core-docs/fanout/FANOUT_AGENT_001.md` | 2026-07-29 | D-0066
