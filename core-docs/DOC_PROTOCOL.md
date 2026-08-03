@@ -24,7 +24,7 @@ describe NOW and stay ingestable whole; history is never deleted, it moves to la
 | FANOUT_ORCHESTRATOR_HANDOFF.md | THE one live handoff: orchestrator ops + current frontier | 24 KB |
 | CURRENT_STATE.md | reality NOW: phase, active work, box, deps, models, tests table, live gotchas | 34 KB |
 | DECISION_LOG.md | append-only rationale | no cap (indexed; tool-pull only) |
-| DECISION_LOG_INDEX.md | one compressed routing row per decision (id, date, state, one-line label; see its header rules) | 12 KB |
+| DECISION_LOG_INDEX.md | one compressed routing row per decision (id, date, state, one-line label; see its header rules) | 20 KB |
 | MODULE_ROADMAP.md | build order, per-module status, deferred follow-ons, portability backlog | 37 KB |
 | TOOL_MODEL_REGISTRY.md | tool/model/hardware/storage registry (lookup, not story) | 43 KB |
 | REVIEW_QUEUE.md | queue schema, conventions, producer/consumer table, open design flags | 15 KB |
@@ -33,6 +33,8 @@ describe NOW and stay ingestable whole; history is never deleted, it moves to la
 | SKILL_CONTRACT.md | the skill interface (versioned) | 12 KB |
 | MEMORY_CONTRACT.md | the Collective Agent memory/retrieval contract (versioned): record+provenance envelope, embedding 0.2, retriever 0.2, catalog/eval/privacy gates | 24 KB |
 | CONTEXT_PACKET_CONTRACT.md | the context-packet + selection contract (versioned): control/evidence separation, packet_disposition, consumer profile, the selection-policy library, packet identity/lineage | 22 KB |
+| MEMORY_ARCHITECTURE.md | the long-horizon memory design (governing doctrine): target + Tier-0 invariants + typed memory + bounded-fanout hierarchy + query-aware retrieval + consolidation + procedural promotion + reconstructability + T0-T3 roadmap | 30 KB |
+| MEMORY_BENCHMARK.md | the memory-quality + foreign-corpus validation architecture: corpora, independent mutation/withholding harness, executable + hidden ground truth, lifecycle measures | 14 KB |
 | ADAPTIVE_RESOURCE_GOVERNOR.md | governor design + measured truth | 22 KB |
 | MODULE_WORK_ORDER_TEMPLATE.md | work-order template | 4 KB |
 | DOC_PROTOCOL.md | this contract | 10 KB |
@@ -107,7 +109,7 @@ D-refs, re-check size. Check sizes at every mirror: `wc -c core-docs/*.md` (devi
 - Mirror map: `CURRENT_STATE.md`, `DECISION_LOG.md`, `MODULE_ROADMAP.md`, `TOOL_MODEL_REGISTRY.md`,
   `REVIEW_QUEUE.md`, `PROJECT_DIRECTION.md`, `SKILL_CONTRACT.md`, `MODULE_WORK_ORDER_TEMPLATE.md`,
   `START_HERE.md` -> Project top-level. `FANOUT_ORCHESTRATOR_HANDOFF.md`, `ARCHITECTURE_MAP.md`,
-  `ADAPTIVE_RESOURCE_GOVERNOR.md`, `DOC_PROTOCOL.md`, `DECISION_LOG_INDEX.md`, `MEMORY_CONTRACT.md`, `CONTEXT_PACKET_CONTRACT.md` -> `claude/` (the Project
+  `ADAPTIVE_RESOURCE_GOVERNOR.md`, `DOC_PROTOCOL.md`, `DECISION_LOG_INDEX.md`, `MEMORY_CONTRACT.md`, `CONTEXT_PACKET_CONTRACT.md`, `MEMORY_ARCHITECTURE.md`, `MEMORY_BENCHMARK.md` -> `claude/` (the Project
   places new agent-written docs under `claude/`). `research/*` -> `claude/research/`.
   `fanout/*` -> `claude/fanout/`. `archive/` -> NOT mirrored.
 - Mirror at session end (START_HERE checklist). Only the frontier agent touches the Project; the executor

@@ -3,6 +3,8 @@
 Owns the **long-horizon architecture spine** — the full module map we are building toward, the real-time
 control layers, and the operating hierarchy. This is the "where we are going" reference.
 
+**Memory spine (D-0090):** the Collective Agent's long-horizon memory design is `MEMORY_ARCHITECTURE.md` -- an immutable lossless substrate + typed memory + a bounded-fanout hierarchy + multi-path query-aware retrieval + consolidation + procedural promotion, with working context kept BOUNDED as storage grows and every derived view reconstructable to source; validated by `MEMORY_BENCHMARK.md`. Read it for the memory subsystem's target, invariants, and T0-T3 build order.
+
 **Read this only for orientation / long-range planning.** It is **not** the build order — the current,
 re-prioritized build order lives in `MODULE_ROADMAP.md` (see its "Build priority" section, D-0029). The
 module numbers below are **architectural positions, not a build sequence.**

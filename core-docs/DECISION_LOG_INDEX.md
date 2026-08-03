@@ -19,7 +19,7 @@ labels; full detail is in `DECISION_LOG.md`.
    + `[superseded by D-00yy]` / `[folded by D-00yy]` in the decision cell.
 5. **Compress at append time.** When you add a D-entry to `DECISION_LOG.md`, distill its index row to one
    fragment from the start -- do NOT paste the entry's summary. Re-bloat begins here.
-6. **Budget 12 KB (DOC_PROTOCOL s2).** An append-only index trends upward -- per-row discipline (rules 1-5) is
+6. **Budget 20 KB (DOC_PROTOCOL s2).** An append-only index trends upward -- per-row discipline (rules 1-5) is
    the real guard; snapshot to `archive/doc-snapshots/<date>/` before any slim (history is never deleted).
 | id | date | state | decision |
 |---|---|---|---|
@@ -112,3 +112,4 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0087 | 2026-08-02 | locked | Context-packet and memory contracts hardened for control/evidence separation and provenance |
 | D-0088 | 2026-08-03 | locked | Contract conformance shipped; selection-policy implementations found inconsistent |
 | D-0089 | 2026-08-03 | locked | Selection policy pinned to retrieval.eval canonical implementation; context.compiler must import it |
+| D-0090 | 2026-08-03 | locked | Adopt the full long-horizon memory architecture as the evidence-staged design target (NEW MEMORY_ARCHITECTURE.md + MEMORY_BENCHMARK.md + seam-audit digest): stored memory grows indefinitely while working context stays bounded; Tiers 0-3 (design-now vs build-now) with urgent Tier-0 seam repairs. |

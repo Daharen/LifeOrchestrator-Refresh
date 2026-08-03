@@ -5,6 +5,8 @@ Not technical specs — each active module gets a `WORK_ORDER.md` in its own fol
 **Provisional beyond the first few items on purpose:** we do not lock thirty modules before using the
 first five. Reorder freely as MVPs teach us what matters.
 
+**Memory-subsystem build order (D-0090):** the Collective Agent memory subsystem follows the tiered plan in `MEMORY_ARCHITECTURE.md` s10 -- Tier 0 (invariants + seam repairs, DESIGN NOW: namespace-as-hard-boundary, hierarchy seam, working-memory seam, current-over-stale ranking; see `research/2026-08-03-memory-architecture-seam-audit.md` s3), Tier 1 (anti-deterioration foundation, BUILD before substantial external work), Tier 2 (operational memory formation), Tier 3 (advanced scale mechanisms, activate on measured need). Memory waves draw from that plan; this menu holds the rest.
+
 **Status vocabulary:** Proposed · Ready · In progress · Blocked · MVP complete · Active · Needs refactor ·
 Deprecated · Replaced.
 

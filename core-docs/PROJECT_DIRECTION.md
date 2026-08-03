@@ -2,7 +2,7 @@
 
 Stable doctrine for the near-term track. Concise by design. This document owns **project purpose
 and direction**; it does not own status (`CURRENT_STATE.md`), module order (`MODULE_ROADMAP.md`),
-or interface rules (`SKILL_CONTRACT.md`).
+or interface rules (`SKILL_CONTRACT.md`). The long-horizon **memory architecture** that realizes cognitive virtual memory is `MEMORY_ARCHITECTURE.md` (governing design, D-0090), validated by `MEMORY_BENCHMARK.md`.
 
 ## Present goal (D-0080): the Collective Agent
 
