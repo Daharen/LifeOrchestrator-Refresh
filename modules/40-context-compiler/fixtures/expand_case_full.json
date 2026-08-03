@@ -46,9 +46,9 @@
   "packet": {
     "compiler": {
       "name": "context.compile",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "worker": "context_compiler.py",
-      "worker_version": "0.2.0"
+      "worker_version": "0.3.0"
     },
     "consumer_profile": {
       "chat_template_id": "qwen3p5-chatml-no-think",
@@ -168,6 +168,7 @@
           "lexical_rank": 1,
           "omit_reason": null,
           "reason_codes": [
+            "authority_boost",
             "fusion_rrf",
             "selected"
           ],
@@ -177,7 +178,7 @@
           "retrieval_rank": 1,
           "selected": true,
           "selection_rank": 1,
-          "selection_score": 29393,
+          "selection_score": 26000000,
           "source_content_hash": "d4cc66a3622c59ba3a1a16cf24b72cecd0625db2fd4c810e30c1bf69154c0842",
           "source_path": "core-docs/summary.md",
           "vector_rank": null
@@ -240,20 +241,28 @@
           "record_version_id": "sum_spec_v1",
           "section_path": null,
           "selection": {
-            "evidence_cluster_id": "clus_f5774c03b9b4788c2564",
+            "evidence_cluster_id": "ec_5e08761eb5602454",
             "fused_rank": 1,
             "lexical_rank": 1,
             "matched_queries": [
               0
             ],
             "reason_codes": [
+              "authority_boost",
               "fusion_rrf",
               "selected"
             ],
+            "retrieval_occurrences": [
+              {
+                "channel": "lexical",
+                "rank": 1
+              }
+            ],
             "retrieval_rank": 1,
+            "rrf_score": 16393,
             "selection_policy_id": "selpol_rrf_v1",
             "selection_rank": 1,
-            "selection_score": 29393,
+            "selection_score": 26000000,
             "vector_rank": null
           },
           "source_path": "core-docs/summary.md",
@@ -293,7 +302,7 @@
     },
     "identity": {
       "budget": 200,
-      "compiler_version": "0.2.0",
+      "compiler_version": "0.3.0",
       "consumer_profile": {
         "model_id": "llm.strong.qwen3p5-9b",
         "tokenizer_fingerprint": "unpinned_upper_bound_ceil_chars_div4",
@@ -309,14 +318,14 @@
       ],
       "selection_policy": {
         "id": "selpol_rrf_v1",
-        "version": "0.2.0-ref"
+        "version": "1.0.0"
       },
       "task_descriptor_digest": "sha256:e8d087dd909bb0a1a173971cf7bda7646f46db92ad0c88515d97bc1c865bb1fe",
       "task_id": "task_e8d087dd909bb0a1a173971cf7bda764"
     },
     "non_execution": true,
     "omission_manifest": [],
-    "packet_id": "cpkt_25656de7f02eee7334243c7dd2bdc47a",
+    "packet_id": "cpkt_1bb91240659af9c6e8e52ee3653d55a9",
     "rendering": {
       "evidence_delimiters": {
         "begin": "<<<EVIDENCE_BEGIN",
@@ -408,21 +417,42 @@
       },
       "features_by_candidate": {
         "sum_spec_v1": {
-          "authority_points": 100,
-          "component_points": 0,
-          "freshness_points": 200,
-          "hard_filter_reasons": [],
-          "hard_filtered": false,
-          "kind_stage_match": true,
-          "namespace_match": true,
-          "rrf_millionths": 16393,
-          "seeking_failure_match": false,
-          "stale_demoted": false
+          "authority": 1,
+          "base_score": 26000000,
+          "component": 0,
+          "diversity_penalty": 0,
+          "effective_score": 26000000,
+          "failure": 0,
+          "freshness": 3,
+          "hard_demote": false,
+          "occurrence_count": 1,
+          "procedural": 0,
+          "project": 1,
+          "reason_codes": [
+            "authority_boost",
+            "fusion_rrf",
+            "selected"
+          ],
+          "relevance": 1000000,
+          "rrf_score": 16393,
+          "selected": true,
+          "selection_rank": 1,
+          "stale": false,
+          "task_stage": 1
         }
       },
-      "note": "RRF over channel ranks; additive selection fields; retrieval order preserved (P1-1).",
+      "note": "IMPORTED from #37's canonical selpol_rrf_v1 (D-0089; the in-module reference stub is RETIRED). raw-fused-score-primary composite + AUTHORITY_RANK/freshness ranks + greedy source-MMR + occurrence-preserving display dedup; additive selection fields; the retrieval order is preserved (rank=index+1 untouched; selection is a separate ordering).",
+      "owner": "modules/37-retrieval-eval/lib/selpol_rrf_v1.py",
       "policy_id": "selpol_rrf_v1",
-      "policy_version": "0.2.0-ref"
+      "policy_version": "1.0.0",
+      "stages": [
+        "hard_filter",
+        "temporal",
+        "authority",
+        "rank_fusion_rrf",
+        "diversity",
+        "budget"
+      ]
     },
     "task_input": {
       "constraints": [],

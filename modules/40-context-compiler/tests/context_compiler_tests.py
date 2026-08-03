@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Off-machine deterministic test gate for context.compile 0.2 (Module 40, i30 CONTRACT-HARDENING).
+"""Off-machine deterministic test gate for context.compile 0.3 (Module 40, i31 SELECTION-POLICY SETTLE).
 
-CPU-only, stdlib-only, mock retriever seam (fixture 0.2 hits). Fail-closed: exits non-zero on any
+CPU-only, stdlib-only, mock retriever seam (fixture 0.2 hits). Imports #37's REAL canonical
+`selpol_rrf_v1` (D-0089; the in-module reference stub is RETIRED). Fail-closed: exits non-zero on any
 failure. Covers the work-order ACCEPTANCE items (a)-(g):
   (a) three regions structurally separated + a passing INJECTION unit test (P0-1)
   (b) packet_disposition correct across answerable / needs_expansion / abstain / conflicted /
       provenance_failed fixtures (P0-3)
   (c) consumer_profile + count_is_exact=false + fail-closed transport (oversize evidence -> omission,
       disposition=needs_expansion, control_plane + completion_contract intact) (P0-4)
-  (d) selection via the s4 selpol interface (reference impl): additive fields, retrieval order preserved (P1-1)
-  (e) A2 provenance modes present + each direct_span excerpt reproduces its source bytes (P0-2)
-  (f) BYTE-IDENTICAL on re-run + deterministic packet_id covering the new identity fields (P1-5)
-  (g) non_execution:true present
-plus: selpol/RRF, corpus_version pin (abort on drift), A3 summary skill cards, expand/0.2 immutable
-locked-snapshot delta, diversity cap, and fail-closed error paths.
+  (d) selection via the CANONICAL selpol_rrf_v1 (imported, not reimplemented): additive fields,
+      retrieval order preserved, canonical policy_version 1.0.0 + 6 stages (P1-1 / D-0089)
+  (e) #40's selection == a DIRECT selpol_rrf_v1.select() on the same candidates (the D-0077 byte-identity)
+  (f) A2 provenance modes present + each direct_span excerpt reproduces its source bytes (P0-2)
+  (g) BYTE-IDENTICAL on re-run + deterministic packet_id covering the identity fields (P1-5); non_execution:true
+plus: canonical stale-demote/dedup, corpus_version pin (abort on drift), A3 summary skill cards,
+expand/0.2 immutable locked-snapshot delta, diversity cap, and fail-closed error paths.
 """
 import os
 import sys
@@ -27,7 +29,9 @@ sys.path.insert(0, MOD)
 FIX = os.path.join(MOD, "fixtures")
 
 import context_compiler as cc  # noqa: E402
-import selpol_reference as selpol  # noqa: E402
+# P1-1 / D-0089: the ONE canonical selection library, IMPORTED by the compiler (not an in-module stub).
+# We test the EXACT module #40 uses, so the #40-vs-direct-select byte-identity is over the same library.
+selpol = cc.selpol  # noqa: E402
 
 _passed = 0
 _failed = 0
@@ -181,52 +185,108 @@ def test_consumer_profile_and_transport():
           pt["transport_accounting"]["control_plane_overflow"] is False)
     check("packet recovered to fit after shedding evidence", pt["transport_accounting"]["fits"] is True)
 
-# --------------------------------------------------- (P1-1) selpol s4 interface -----------------
+# --------------------------------------------------- (P1-1 / D-0089) canonical selpol -----------
 def test_selpol_interface():
-    print("[acceptance d: P1-1 selection via the s4 select() interface -- additive, order-preserving]")
+    print("[acceptance d: P1-1 selection via #37's CANONICAL selpol_rrf_v1 -- additive, order-preserving]")
     p = compile_case("compile_case.json")["result"]["packet"]
-    check("selection policy_id = selpol_rrf_v1", p["selection"]["policy_id"] == "selpol_rrf_v1")
-    check("selection policy_version present", bool(p["selection"]["policy_version"]))
+    check("selection policy_id = selpol_rrf_v1 (canonical)", p["selection"]["policy_id"] == "selpol_rrf_v1")
+    check("selection policy_version = 1.0.0 (from the imported lib, not a #40 constant)",
+          p["selection"]["policy_version"] == "1.0.0")
+    check("selection owner is #37's lib", p["selection"].get("owner", "").endswith("selpol_rrf_v1.py"))
+    check("selection carries the canonical 6 stages",
+          p["selection"].get("stages") == ["hard_filter", "temporal", "authority", "rank_fusion_rrf",
+                                            "diversity", "budget"])
     for e in p["evidence"]["excerpts"]:
         s = e["selection"]
-        check("excerpt selection has selection_rank+score+policy",
+        check("excerpt selection has selection_rank+score+policy+reason_codes",
               all(k in s for k in ("selection_rank", "selection_score", "selection_policy_id", "reason_codes")),
               str(list(s.keys())))
-        check("excerpt preserves retrieval_rank/lexical/vector/fused",
-              all(k in s for k in ("retrieval_rank", "lexical_rank", "vector_rank", "fused_rank")))
-    cands = [{"record_version_id": "r1", "authority_level": "source_material", "currentness": "current",
-              "retrieval_rank": 1, "lexical_rank": 1, "fused_rank": 1, "vector_rank": None,
-              "excerpt_hash": "h1", "retrieval_occurrences": [{"query_index": 0, "rank": 1, "fused_rank": 1}]},
-             {"record_version_id": "r2", "authority_level": "source_material", "currentness": "current",
-              "retrieval_rank": 2, "lexical_rank": 2, "fused_rank": 2, "vector_rank": None,
-              "excerpt_hash": "h2", "retrieval_occurrences": [{"query_index": 0, "rank": 2, "fused_rank": 2}]}]
-    out = selpol.select(cands, {"time_horizon": "current_only"})
-    check("select returns the frozen shape",
-          all(k in out for k in ("selected", "ranked", "policy_id", "policy_version", "features_by_candidate")))
+        check("excerpt preserves retrieval_rank/lexical/vector/fused + additive rrf_score",
+              all(k in s for k in ("retrieval_rank", "lexical_rank", "vector_rank", "fused_rank", "rrf_score")))
+        check("selection_policy_id stamps the canonical id", s["selection_policy_id"] == "selpol_rrf_v1")
+    # library-direct: the canonical returns hit COPIES (not id strings) + omission_manifest + stages.
+    cands = [{"record_version_id": "r1", "authority_level": "source_material", "status": "current",
+              "source_path": "a.md", "chunk_content_hash": "h1", "fused_score": 900000,
+              "rank": 1, "retrieval_rank": 1, "lexical_rank": 1, "fused_rank": 1, "vector_rank": None},
+             {"record_version_id": "r2", "authority_level": "source_material", "status": "current",
+              "source_path": "b.md", "chunk_content_hash": "h2", "fused_score": 800000,
+              "rank": 2, "retrieval_rank": 2, "lexical_rank": 2, "fused_rank": 2, "vector_rank": None}]
+    out = selpol.select(cands, {"time_horizon": "current_only"}, selpol.POLICY_ID, {"dedup_display": True})
+    check("select returns the frozen canonical shape",
+          all(k in out for k in ("selected", "ranked", "policy_id", "policy_version",
+                                 "features_by_candidate", "omission_manifest", "stages")))
     check("select preserves retrieval order (r1 before r2)",
           [r["record_version_id"] for r in out["ranked"]] == ["r1", "r2"])
-    check("select marks selected reps", out["selected"] == ["r1", "r2"])
-    dup = [dict(cands[0]), dict(cands[1])]; dup[1]["excerpt_hash"] = "h1"
-    out2 = selpol.select(dup, {"time_horizon": "current_only"})
-    capped = [r for r in out2["ranked"] if "diversity_capped" in r["reason_codes"]]
-    check("identical display text is diversity_capped (provenance kept)", len(capped) == 1)
-    fb = [dict(cands[0]), dict(cands[1])]
-    out3 = selpol.select(fb, {"forbidden_sources": [], "time_horizon": "current_only"})
-    check("no forbidden -> none hard-filtered", all(not r["hard_filtered"] for r in out3["ranked"]))
+    check("selected[] are hit COPIES in selection order",
+          [r["record_version_id"] for r in out["selected"]] == ["r1", "r2"])
+    check("ranked rows PRESERVE retrieval_rank (additive; never re-sorted in place)",
+          out["ranked"][0]["retrieval_rank"] == 1 and out["ranked"][0]["selection_rank"] == 1)
+    # identical DISPLAY text -> one display item; the folded member is display_duplicate (provenance kept).
+    dup = [dict(cands[0]), dict(cands[1])]; dup[1]["chunk_content_hash"] = "h1"
+    out2 = selpol.select(dup, {"time_horizon": "current_only"}, selpol.POLICY_ID, {"dedup_display": True})
+    folded = [r for r in out2["ranked"] if "display_duplicate" in r["reason_codes"]]
+    check("identical display text collapses to ONE display item (dedup, provenance kept)",
+          len(folded) == 1 and folded[0]["selected"] is False)
+    heads = [r for r in out2["ranked"] if r.get("occurrences")]
+    check("dedup head carries occurrences[] of both members", heads and len(heads[0]["occurrences"]) == 2)
+    # hard_filter comes from PARAMS (the P0-1 boundary), never a candidate field.
+    out3 = selpol.select([dict(cands[0])], {"time_horizon": "current_only"}, selpol.POLICY_ID,
+                         {"hard_filter": [{"source_path": "a.md", "reason": "forbidden"}]})
+    r = out3["ranked"][0]
+    check("params.hard_filter hard-demotes + not selected",
+          r["selected"] is False and any(c.startswith("hard_filter") for c in r["reason_codes"]))
+    out4 = selpol.select([dict(cands[0])], {"time_horizon": "current_only"}, selpol.POLICY_ID,
+                         {"hard_filter": []})
+    check("no hard_filter -> selected", out4["ranked"][0]["selected"] is True)
 
 def test_selpol_stale_demote():
     print("[P1-1: temporal demote -- current outranks a better-ranked stale under current_only]")
-    stale = {"record_version_id": "stale", "authority_level": "source_material", "currentness": "source_stale",
-             "retrieval_rank": 1, "fused_rank": 1, "excerpt_hash": "s",
-             "retrieval_occurrences": [{"query_index": 0, "rank": 1, "fused_rank": 1}]}
-    cur = {"record_version_id": "cur", "authority_level": "source_material", "currentness": "current",
-           "retrieval_rank": 2, "fused_rank": 2, "excerpt_hash": "c",
-           "retrieval_occurrences": [{"query_index": 0, "rank": 2, "fused_rank": 2}]}
+    stale = {"record_version_id": "stale", "authority_level": "source_material", "status": "source_stale",
+             "source_path": "s.md", "chunk_content_hash": "s", "fused_score": 900000,
+             "rank": 1, "retrieval_rank": 1, "fused_rank": 1, "lexical_rank": 1}
+    cur = {"record_version_id": "cur", "authority_level": "source_material", "status": "current",
+           "source_path": "c.md", "chunk_content_hash": "c", "fused_score": 800000,
+           "rank": 2, "retrieval_rank": 2, "fused_rank": 2, "lexical_rank": 2}
     out = selpol.select([stale, cur], {"time_horizon": "current_only"})
     order = [r["record_version_id"] for r in out["ranked"]]
     check("current ranks above stale despite worse retrieval rank", order.index("cur") < order.index("stale"), str(order))
     check("stale row carries stale_demote reason",
           any("stale_demote" in r["reason_codes"] for r in out["ranked"] if r["record_version_id"] == "stale"))
+
+def test_selection_byte_identity():
+    print("[acceptance e: #40's selection == a DIRECT selpol_rrf_v1.select() on the same candidates (D-0077)]")
+    # Rebuild EXACTLY what op_compile feeds the library from the case, call the canonical DIRECTLY, and
+    # assert the compiled packet's selection ordering is byte-identical -- proving #40 consumes the one
+    # canonical library faithfully (no #40-side re-ranking), the invariant the D-0077 fold repeats on #36.
+    case = load("compile_case.json")
+    m = cc.run(dict(case, op="compile"))
+    packet = m["result"]["packet"]
+    task = case["task"]
+    config = cc._resolve_config(task, {})
+    norm = cc.normalize_task(task, config)
+    batches = case["retrieval_batches"]
+    pool, _ = cc.build_candidate_pool(batches)
+    control_plane = cc.build_control_plane(task, norm["original_goal"])
+    descriptor = cc.build_selection_descriptor(task, norm)
+    params = cc.build_selection_params(control_plane, descriptor)
+    candidates = [cc._selection_candidate(e) for e in pool.values()]
+    direct = selpol.select(candidates, descriptor, selpol.POLICY_ID, params)
+    # the packet's per-candidate selection ordering (record_version_id -> selection_rank)
+    packet_order = {s["record_version_id"]: s["selection_rank"]
+                    for s in packet["evaluation_hooks"]["retrieved"]}
+    direct_order = {r["record_version_id"]: r["selection_rank"] for r in direct["ranked"]}
+    check("#40 selection order == direct canonical select() (byte-identical ranks)",
+          packet_order == direct_order, "packet=%s direct=%s" % (packet_order, direct_order))
+    # the packet's excerpt selection_score/reason_codes come straight from the canonical ranked rows
+    direct_by_rvid = {r["record_version_id"]: r for r in direct["ranked"]}
+    ok = True
+    for e in packet["evidence"]["excerpts"]:
+        dr = direct_by_rvid.get(e["record_version_id"], {})
+        if (e["selection"]["selection_score"] != dr.get("selection_score")
+                or e["selection"]["reason_codes"] != dr.get("reason_codes")):
+            ok = False
+    check("excerpt selection_score + reason_codes come straight from the canonical select()", ok)
+    check("direct select() carries the canonical policy_version", direct["policy_version"] == "1.0.0")
 
 # --------------------------------------------------- (P0-2) provenance modes --------------------
 def test_provenance_modes():
@@ -368,9 +428,9 @@ def main():
     print("== context.compile 0.2 off-machine test gate ==")
     for t in (test_primitives, test_normalize, test_three_regions, test_injection,
               test_dispositions, test_consumer_profile_and_transport, test_selpol_interface,
-              test_selpol_stale_demote, test_provenance_modes, test_identity_and_determinism,
-              test_corpus_pin, test_omission_and_diversity, test_a3_skill_cards, test_eval_hooks,
-              test_expand, test_error_paths):
+              test_selpol_stale_demote, test_selection_byte_identity, test_provenance_modes,
+              test_identity_and_determinism, test_corpus_pin, test_omission_and_diversity,
+              test_a3_skill_cards, test_eval_hooks, test_expand, test_error_paths):
         t()
     total = _passed + _failed
     print("\n== %d/%d passed, %d failed ==" % (_passed, total, _failed))

@@ -1,6 +1,6 @@
 #requires -Version 7.0
 <#
-  Test harness for context.compile 0.2 (Module 40, i30 CONTRACT-HARDENING). Exercises the
+  Test harness for context.compile 0.3 (Module 40, i31 SELECTION-POLICY SETTLE). Exercises the
   Invoke-ContextCompiler.ps1 entrypoint END-TO-END with the deterministic MOCK retriever (off-machine +
   -Live), and -- when -Db/-RepoRoot are supplied -- the REAL artifact.search #36 retriever-0.2 seam
   (-Live acceptance). Validates the lifeorch.context_packet/0.2 shape: three regions (control_plane /
@@ -42,12 +42,12 @@ function Run-CC([string[]]$ccArgs) {
     return $text | ConvertFrom-Json -Depth 60
 }
 
-Write-Host "== context.compile 0.2 entrypoint harness =="
+Write-Host "== context.compile 0.3 entrypoint harness =="
 Write-Host "[mock: compile end-to-end over fixtures/compile_case.json -> context_packet/0.2]"
 $env1 = Run-CC @('-Op','compile','-Retriever','mock','-CaseFile',(Join-Path $Fix 'compile_case.json'))
 Check "envelope status ok/partial" ($env1.status -in @('ok','partial')) "status=$($env1.status)"
 Check "skill_id context.compile" ($env1.skill_id -eq 'context.compile')
-Check "skill_version 0.2.0" ($env1.skill_version -eq '0.2.0') "ver=$($env1.skill_version)"
+Check "skill_version 0.3.0" ($env1.skill_version -eq '0.3.0') "ver=$($env1.skill_version)"
 $packet = $env1.result.result.packet
 Check "packet schema 0.2" ($packet.schema -eq 'lifeorch.context_packet/0.2')
 Check "packet_id present" ($packet.packet_id -like 'cpkt_*')

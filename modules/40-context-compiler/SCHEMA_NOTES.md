@@ -1,19 +1,27 @@
-# context.compile -- SCHEMA_NOTES (Module 40, skill `context.compile` 0.2.0, i30 CONTRACT-HARDENING)
+# context.compile -- SCHEMA_NOTES (Module 40, skill `context.compile` 0.3.0, i31 SELECTION-POLICY SETTLE)
 
 **Authority.** This file records EVERY schema/interface interpretation for the D-0077 cross-module fold.
-The orchestrator's fold smoke (this compiler's REAL packets -> retrieval.eval #37 0.2 + a fresh 9B, and
-#37's canonical `selpol_rrf_v1` wired behind #40's s4 seam) depends on it. context.compile 0.2 CONSUMES the
-FROZEN `core-docs/MEMORY_CONTRACT.md` retriever-0.2 hit (s3) + s5 staleness enum + s1/A2 provenance
-envelope AND the `core-docs/CONTEXT_PACKET_CONTRACT.md` s4 selection-policy interface, and PRODUCES
+The orchestrator's fold smoke (this compiler's REAL packets -> retrieval.eval #37 + a fresh 9B, and #40
+selecting via #37's canonical `selpol_rrf_v1`) depends on it. context.compile 0.3 CONSUMES the FROZEN
+`core-docs/MEMORY_CONTRACT.md` retriever-0.2 hit (s3) + s5 staleness enum + s1/A2 provenance envelope AND
+#37's CANONICAL `selpol_rrf_v1` (the s4 selection-policy library, PINNED, D-0089), and PRODUCES
 `lifeorch.context_packet/0.2`. On any conflict those contracts + their live gates win; a divergence is
-reconciled at fold, never silently. Governing: CONTEXT_PACKET_CONTRACT s0-s8 (D-0087); MEMORY_CONTRACT
-s1/s3/s5 + A2/A3; the directive `research/2026-07-31-...-cognitive-virtual-memory.md` s8; the frontier
-digest `research/2026-08-02-frontier-wave3-design-redteam.md` (P0-1..P0-5, P1-1); SKILL_CONTRACT 0.2;
-D-0080/D-0083/D-0085/D-0086/D-0087/D-0077.
+reconciled at fold, never silently. Governing: CONTEXT_PACKET_CONTRACT s0-s8 (s4 PINNED, D-0089; target
+D-0087); MEMORY_CONTRACT s1/s3/s5 + A2/A3; the directive `research/2026-07-31-...-cognitive-virtual-memory.md`
+s8; the frontier digest `research/2026-08-02-frontier-wave3-design-redteam.md` (P0-1..P0-5, P1-1);
+SKILL_CONTRACT; D-0089/D-0088/D-0087/D-0086/D-0080/D-0083/D-0085/D-0077.
 
-Worker: `context_compiler.py` (stdlib only) + `selpol_reference.py` (the s4 seam). Entrypoint:
-`Invoke-ContextCompiler.ps1` (pwsh-file). CPU-only, no model, no network. `worker_version=0.2.0`,
-`compiler_version=0.2.0`, `packet_schema=lifeorch.context_packet/0.2`,
+**i31 delta (D-0089 -- one selection owner; read s8 + s12 + s7 for the fold).** The ONLY behavioral change
+vs 0.2: #40 RETIRES the in-module `selpol_reference.py` (rank-RRF-primary) and IMPORTS #37's canonical
+`selpol_rrf_v1` (raw-fused-score-primary composite; `policy_version=1.0.0`) by a resolved portable path.
+The packet SCHEMA is unchanged (`context_packet/0.2`). Selection order/scores/`packet_id` CHANGE (the
+canonical composite differs from the retired reference), so every fixture is REGENERATED to the canonical
+selection; all P0-1/P0-3/P0-4/P1-5/A2 structural tests stay green (they assert STRUCTURE, not a specific
+selection order). `worker_version`/`compiler_version` bump `0.2.0 -> 0.3.0`.
+
+Worker: `context_compiler.py` (stdlib only); `_load_canonical_selpol()` imports #37's library. Entrypoint:
+`Invoke-ContextCompiler.ps1` (pwsh-file). CPU-only, no model, no network. `worker_version=0.3.0`,
+`compiler_version=0.3.0`, `packet_schema=lifeorch.context_packet/0.2`,
 `expansion_schema=lifeorch.context_expansion/0.2`.
 
 ---
@@ -26,10 +34,11 @@ Worker: `context_compiler.py` (stdlib only) + `selpol_reference.py` (the s4 seam
   `json.dumps(obj, sort_keys=True, ensure_ascii=False, separators=(",",":"))`. `context_packet.json` /
   `context_expansion.json` / `rendered_input.txt` are written canonical + a trailing `\n`, UTF-8, LF ->
   **byte-identical on re-run** (VERIFIED off-machine: python gate + the entrypoint harness compare the
-  artifact sha256 across two runs; 148/148 python assertions).
-- **NO floats in the packet.** Incoming retriever scores are folded to integer millionths
-  (`to_micros = int(round(x*1e6))`, None->None); every selection feature is INTEGER. selpol's RRF is
-  computed as a float internally then folded to millionths in ONE place (`selection_score` is integer).
+  artifact sha256 across two runs; 162/162 python assertions).
+- **NO floats in the packet.** Incoming retriever scores are folded to integer millionths BEFORE the
+  candidate is handed to the canonical library (`to_micros = int(round(x*1e6))`, None->None; s8 relevance
+  scale); the canonical `selpol_rrf_v1` is integer-only (RRF = round-half-up `PPM/(k+rank)`; `selection_score`
+  = integer effective score). Every selection feature in the packet is INTEGER.
 - **NO volatile fields.** No wall-clock, no run ids (`created_by_ingest_run`), no `abs_path` -- packets are
   byte-identical across machines. The skill.result ENVELOPE (entrypoint) carries timestamps; the PACKET
   ARTIFACT does not.
@@ -159,35 +168,83 @@ missing_requirements[], contradictions[], provenance_failed}`.
   INVARIANT (tested): `used <= budget` and `used == sum(excerpt token_estimate) + overhead*count`.
 - Compiler-owned budget/diversity stages (in selection order): drop selpol-flagged `deleted`/`hard_filter`/
   `duplicate_content`; `source_diversity_cap` (<= `per_source_cap` per `source_path` -- what stops N
-  near-dups crowding out a distinct required source, acceptance e); `max_excerpts`; `token_budget`.
+  near-dups crowding out a distinct required source); `max_excerpts`; `token_budget`.
+- **Budget composition with selpol's budget hook (D-0089).** The canonical library owns selection + an
+  OPTIONAL selection-budget hook (`max_selected`/`max_tokens` over the candidate pool). #40 passes NO library
+  budget, so `select()`'s `omission_manifest` is empty; #40's own FAIL-CLOSED TRANSPORT accounting (s5:
+  final-RENDERED tokens vs `consumer_profile.max_context`, drop-to-`omission_manifest`, abstain when
+  control_plane+task_input alone overflow) REMAINS #40's stage, composed ON TOP of `select()`'s output. So
+  the stage order that drops evidence is: canonical stages 1-5 (hard filter / temporal / authority / RRF /
+  diversity+dedup) -> #40 excerpt-fill (`source_diversity_cap`/`max_excerpts`/`token_budget`) -> #40 transport
+  (`transport_overflow`). selpol's budget NEVER silently truncates control_plane / completion_contract / a
+  required citation -- #40 owns that boundary. (Any future library-budget omission is MERGED into #40's
+  manifest, mapped `max_selected->max_excerpts`, `token_budget->token_budget`.)
 
-## 8. P1-1 -- the s4 selection-policy interface (I CONSUME; #37 owns the canonical lib)
-`select(candidates, descriptor, policy_id, params) -> {selected[], ranked[], policy_id, policy_version,
-features_by_candidate}`. **PURE + deterministic; ADDITIVE (never destroys the retrieval order).**
-- **Candidates** = the pooled retriever-0.2 candidates (merged by `record_version_id`, occurrence-preserving
-  for RRF), each carrying `retrieval_rank`/`lexical_rank`/`vector_rank`/`fused_rank` (PRESERVED from s3) +
-  `retrieval_occurrences[]` (per-query channel ranks) + `excerpt_hash` (chunk_content_hash) +
-  authority/currentness/namespace/source_path/filter_decisions.
-- **Descriptor** (the unified selection descriptor) `{namespace, component, relevant_paths, task_type,
-  task_stage, time_horizon, seeking_failures, permission_context, forbidden_sources, privacy_exclusions}` --
-  the reconciliation of #40's task fields and #37's `rerank_descriptor`.
-- **Stages** (reference impl `selpol_rrf_v1` / `0.2.0-ref`): (1) hard filters (forbidden/privacy/deleted sink
-  via `hard_filter_forbidden`); (2) temporal demote under current_only (`stale_demote`); (3) authority
-  weighting (`authority_boost`); (4) versioned RRF over CHANNEL RANKS across occurrences (`fusion_rrf`,
-  RRF_K=60, integer millionths); (5) diversity clustering that dedups IDENTICAL display text by
-  `excerpt_hash` into one representative + `evidence_cluster_id` (`diversity_capped`) -- provenance is NEVER
-  erased (the duplicate keeps its ids + a `duplicate_of` ref). Stage (6) budget is compiler-owned (s7),
-  adding `budget_omitted`/transport reasons. `selection_score` = integer (RRF + weighted authority/freshness
-  + descriptor boosts - penalties - hard-filter sink); order = `(-selection_score, tie_break_key, rvid)`.
-- **Additive output.** Per candidate: `retrieval_rank`/`lexical_rank`/`vector_rank`/`fused_rank` (PRESERVED)
-  + `selection_rank`/`selection_score`/`selection_policy_id`/`selected`/`reason_codes`/`evidence_cluster_id`.
-  The original retrieval array keeps `rank=index+1` UNTOUCHED (never re-sorted in place); selection is a
-  SEPARATE ordering expressed as new fields.
-- **Parallel-build seam (D-0077).** #40 builds to THIS frozen interface with `selpol_reference.py`; the
-  orchestrator swaps in #37's canonical `selpol_rrf_v1` (from `modules/37-retrieval-eval/lib/`) and asserts
-  BYTE-IDENTICAL selection on real #36 hits. Any divergence is reconciled at fold (the i22/i27 pattern) --
-  the reference impl follows the CONTRACT s4 stages, not #37's private i29 rerank weights, so the fold
-  reconciliation is against the shared contract, never a silent copy.
+## 8. P1-1 / D-0089 -- ONE selection owner: IMPORT #37's canonical `selpol_rrf_v1` (RETIRE the reference)
+**The i31 change.** `selpol_reference.py` is DELETED. `_load_canonical_selpol()` imports #37's ONE canonical
+library `modules/37-retrieval-eval/lib/selpol_rrf_v1.py` (`POLICY_ID='selpol_rrf_v1'`,
+`POLICY_VERSION='1.0.0'`) by a path RESOLVED from `__file__` (`../37-retrieval-eval/lib/selpol_rrf_v1.py`;
+`LIFEORCH_SELPOL_PATH` overrides; the dir is added to `sys.path` for the lib's own `__init__.py`; fail-closed
+`ImportError` if missing). BOTH the off-machine tests AND `-Live` import the REAL lib -- no stub, no
+fold-time swap. `select(candidates, descriptor, policy_id, params) -> {selected[], ranked[], policy_id,
+policy_version, features_by_candidate, omission_manifest[], stages}`. PURE + deterministic; ADDITIVE.
+
+- **Candidates** (`_selection_candidate`) = the pooled retriever-0.2 candidates (merged by
+  `record_version_id`), each a hit carrying `record_version_id`/`record_id`/`record_kind`/`source_path`/
+  `namespace`/`authority_level`, `status` (= the effective currentness; the canonical `_fresh_rank`/deleted
+  read `status`), `content_hash` (the source-version identity, for a hard_filter version match),
+  `chunk_content_hash` (the DISPLAY-dedup key), `chunk_id`/`span_start`/`span_end`, `retrieval_rank`
+  (PRESERVED) + `rank` (= best_rank, the canonical `orig_rank` tie-break) + `lexical_rank`/`vector_rank`/
+  `fused_rank`. **Relevance scale (load-bearing):** the canonical composite's direct-relevance term is the
+  retriever's `fused/lexical/score` via `int()`; #36 emits FLOATS in [0,~1] while the canonical (and #37's
+  own hits, e.g. `900000`) work in INTEGER MILLIONTHS (MEMORY_CONTRACT s3). #40 folds via `to_micros`
+  (`fused_score=to_micros(hit.fused_score)`, same as #40's occurrence RRF) so relevance is on-scale. The
+  canonical builds `retrieval_occurrences[]` from the hit's OWN channel ranks, so #40's multi-QUERY pooling
+  is NOT re-fused in selection (recorded per excerpt as `matched_queries`).
+- **Descriptor** (`build_selection_descriptor`) `{namespace, component, relevant_paths, task_type,
+  task_stage, time_horizon, seeking_failures, permission_context, forbidden_sources, privacy_exclusions}`.
+  The canonical reads namespace/component/relevant_paths/task_type/task_stage/time_horizon/seeking_failures;
+  `forbidden_sources`/`privacy_exclusions` are kept for transparency but do NOT drive selection -- they feed
+  `params.hard_filter` (next bullet). `component` = `relevant_paths[0]` (path-prefix matched by the canonical).
+- **params (`build_selection_params(control_plane, descriptor)`) -- the P0-1 boundary.** `hard_filter` =
+  matchers `[{source_path, reason}]` derived ONLY from control-plane / coordinator-authority fields:
+  the descriptor's coordinator-supplied `forbidden_sources` (`reason=forbidden`) + `privacy_exclusions`
+  (`reason=privacy`), PLUS `control_plane.permission_grants` (`_grant_exclusions`: a grant listing
+  forbidden/privacy/exclude sources, or a deny/forbid grant naming a path). **NEVER from a candidate/evidence
+  field** -- this is exactly the P0-1 gap the pin removes (the retired reference scanned `filter_decisions`/
+  `sensitivity_class` OFF the hit, letting an evidence record self-exclude/hard-demote). `current_only` =
+  (descriptor.time_horizon in current_only/current/""). `dedup_display=True`. **NO library budget** -- #40
+  owns the excerpt-fill + fail-closed TRANSPORT budget (s7), composed on top of `select()`'s output. `deleted`
+  status hard-filtering is the canonical's own (it reads candidate `status`), not a #40 signal.
+- **Canonical stages (PINNED, D-0089), in order:** `["hard_filter","temporal","authority","rank_fusion_rrf",
+  "diversity","budget"]`. Scoring: `base = 1*relevance + 3e6*AUTHORITY_RANK + 6e6*freshness_rank +
+  2e6*each descriptor match - 1000e6*hard_demote - 20e6*stale_penalty`, ordered by descending
+  `effective = base - 8e6*prior_same_source_hits` (greedy source-MMR), original retrieval rank as tie-break;
+  optional occurrence-preserving DISPLAY dedup by `chunk_content_hash` (`evidence_cluster_id`+`occurrences[]`).
+  `AUTHORITY_RANK {authoritative/governing:4, curated:3, source_material:2, derived:1}`; freshness
+  {current:3, unknown:2, stale:1, deleted/unverified:0}. `#40`'s retired AUTHORITY_POINTS(40-320)/
+  FRESHNESS_POINTS(0-200)/rank-RRF-primary are GONE.
+- **Additive output CONSUMED.** `select()` returns hit COPIES: `selected[]` (in selection order) and
+  `ranked[]` each PRESERVING `retrieval_rank`/`lexical_rank`/`vector_rank`/`fused_rank` and ADDING
+  `selection_rank`, `selection_score` (int millionths = effective), `selection_policy_id`, `selected`(bool),
+  `reason_codes[]` (`rescued, hard_filter_*, stale_demote, authority_boost, fusion_rrf, diversity_capped,
+  display_duplicate, budget_omitted, selected`), `retrieval_occurrences[]`, `rrf_score`, and on a cluster head
+  `evidence_cluster_id`+`occurrences[]`. #40 builds each excerpt's `selection{...}` FROM the ranked row
+  (adding `rrf_score`+`retrieval_occurrences`); the retrieval array keeps `rank=index+1` UNTOUCHED. The
+  packet's `selection` block stamps `policy_id`/`policy_version`(1.0.0)/`descriptor`/`features_by_candidate`/
+  `stages`/`owner`. `packet_id` (s6) covers `selection_policy{id,version}` (in the hashed body).
+- **reason_codes -> #40 omission reasons** (`select_into_budget`): a non-selected row with any `hard_filter_*`
+  -> `deleted` (if `status==deleted` or `hard_filter_deleted`) else `hard_filter`; `display_duplicate` ->
+  `duplicate_content` (carrying `evidence_cluster_id`); `budget_omitted` (only if a library budget were
+  passed -- #40 passes none) -> `token_budget`. The library's own `omission_manifest` (empty here) is MERGED
+  defensively.
+- **D-0077 byte-identity (acceptance e).** A #40-side test rebuilds the candidates/descriptor/params exactly
+  as `op_compile` does and calls `selpol_rrf_v1.select(...)` DIRECTLY, asserting the compiled packet's
+  per-candidate `selection_rank` + each excerpt's `selection_score`/`reason_codes` are IDENTICAL to the
+  direct call -- proving #40 does NO #40-side re-ranking. This is the invariant the orchestrator's D-0077
+  fold repeats on real #36 hits (feed #40's `_selection_candidate` projection to both sides).
+- **If the canonical cannot serve #40 (STOP rule).** It did serve -- no #37 change was needed. Had a genuine
+  gap appeared, the unit STOPS and reports a fold reconciliation naming the exact gap; #37 is never edited.
 
 ## 9. Adaptive-expansion seam (8.5) -- `lifeorch.context_expansion/0.2`, IMMUTABLE + LOCKED (P1-5)
 Request `{type in {raw_source, more_evidence, related_symbol, failure_record, tool_contract, prior_episode},
@@ -231,8 +288,10 @@ INJECTED / imported.
   (2) runs the REAL `artifact.search` #36 `search` per query (`envelope.result.result.results` as 0.2 hits),
   (3) calls `compile` with `{task, query_set, retrieval_batches, repo_root, retrieval_meta}`. Excerpt text is
   read from `repo_root/source_path[span]` and validated against `excerpt_hash`.
-- **selpol:** off-machine `selpol_reference.select` is imported in-module; the fold points `#40` at #37's
-  canonical `selpol_rrf_v1` and asserts identical selection.
+- **selpol (D-0089):** BOTH off-machine AND `-Live`, `_load_canonical_selpol()` imports #37's canonical
+  `selpol_rrf_v1` from `../37-retrieval-eval/lib/` (resolved from `__file__`; `LIFEORCH_SELPOL_PATH`
+  overrides). There is NO in-module stub and NO fold-time swap; the fold asserts #40's selection is
+  byte-identical to a DIRECT `select()` on #40's `_selection_candidate` projection of the real #36 hits (s8).
 - **pwsh array-unroll note (retained):** the entrypoint assigns PSCustomObjects/arrays DIRECTLY into the
   worker-args hashtable and serializes the TOP-LEVEL hashtable; it NEVER pipes an extracted array through
   `ConvertTo-Json` (the single-element unroll trap).
@@ -247,9 +306,12 @@ control_plane_source=descriptor_authority_fields_only, evidence_populated_contro
 only, byte-identical on re-run.
 
 ## 14. Non-goals + parallel-safety
-`parallel_safe=true` (distinct module; read-only). NOT built (owned elsewhere / a later wave): #37's
-canonical selpol library; real embeddings + vector search (the vector channel may be null); the retriever /
-catalog DB (#36); skill-card content (#41); the measured reranker + eval metrics (#37); the 9B / any model;
-episode recording (#39); the FULL P0-1 adversarial injection SUITE + the action-capable gate release;
-P1-2/P1-3 selection calibration; a real tokenizer (retire count_is_exact=false); skill routing / plan
-validation; UI; web search. Does NOT touch model modules / models.json or any core-doc (`docs:[]`).
+`parallel_safe=true` (distinct module; WRITE only under `modules/40-context-compiler/`; the SOLE cross-module
+touch is a READ-ONLY import of `modules/37-retrieval-eval/lib/selpol_rrf_v1.py`). NOT built (owned elsewhere /
+a later wave): ANY change to #37's `selpol_rrf_v1` or its eval (imported READ-ONLY -- if the canonical
+genuinely cannot serve #40, STOP + report a fold reconciliation, do NOT edit #37); pure-rank-RRF-as-PRIMARY
+(the deferred P1-2); near-dup-algorithm calibration (P1-3); real embeddings + vector search (the vector
+channel may be null); the retriever/catalog DB (#36); skill-card content (#41); the measured reranker + eval
+metrics (#37); the 9B / any model; episode recording (#39); the FULL P0-1 adversarial injection SUITE + the
+action-capable gate release; a real tokenizer (retire count_is_exact=false); skill routing / plan validation;
+UI; web search. Does NOT touch model modules / models.json or any core-doc (`docs:[]`).

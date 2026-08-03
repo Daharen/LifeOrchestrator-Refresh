@@ -1,17 +1,19 @@
-# Work Order: Context Compiler (`context.compile`) 0.2.0 -- i30 CONTRACT-HARDENING
+# Work Order: Context Compiler (`context.compile`) 0.3.0 -- i31 SELECTION-POLICY SETTLE
 
-**Contract targeted:** `CONTEXT_PACKET_CONTRACT.md` `context_packet/0.2` (D-0087) + `MEMORY_CONTRACT.md`
-A2/A3 · **Author:** CONTEXT-COMPILER-i30 (2026-08-03) · **Roadmap entry:**
-`MODULE_ROADMAP.md#40-context-compiler` · **Wave:** i30 (plan `fo-30-dd453156`)
+**Contract targeted:** `CONTEXT_PACKET_CONTRACT.md` `context_packet/0.2` with **s4 PINNED (D-0089)** +
+`MEMORY_CONTRACT.md` A2/A3 · **Author:** CONTEXT-COMPILER-SELPOL-i31 (2026-08-03) · **Roadmap entry:**
+`MODULE_ROADMAP.md#40-context-compiler` · **Wave:** i31 (plan `fo-31-eca37c08`) · **Supersedes:** the i30
+0.2.0 build (CONTEXT-COMPILER-i30, plan `fo-30-dd453156`).
 
 ### Problem being solved
-The i29 `context_packet/0.1` shipped read-only but the frontier Wave-3 design red-team returned NO-GO on
-freezing the contract: a deterministic, under-budget, provenance-shaped packet could look fully
-authoritative even when injected or incomplete. i30 conforms #40 to the hardened `context_packet/0.2`,
-folding the P0-1..P0-4 + P1-1 + P1-5 blockers (+ MEMORY_CONTRACT A2/A3) so the packet is the SAFE,
-self-describing working set the coordinator hands a disposable model. **P0-1 is a HARD GATE before any
-side-effecting integration** -- until it is enforced structurally AND proven adversarially,
-`non_execution:true` is mandatory and only read-only compile/eval consume the packet.
+i30 shipped `context_packet/0.2` with the s4 selection-policy interface consumed via an in-module
+`selpol_reference.py` (rank-RRF-primary). The D-0077 fold caught #40's reference and #37's canonical
+`selpol_rrf_v1` selecting DIFFERENTLY (neither a defect -- s4 had frozen the interface + stages but not the
+scoring). D-0089 PINS the s4 scoring as #37's canonical (raw-fused-score-primary composite + AUTHORITY_RANK/
+freshness ranks + greedy source-MMR + occurrence-preserving display dedup) and requires **one selection
+owner**: #40 RETIRES `selpol_reference.py` and IMPORTS #37's canonical library directly. The packet schema
+is unchanged (`context_packet/0.2`); only the selection SOURCE changes. **P0-1 stays a HARD GATE** -- the
+hard-filter authority is the control plane, never an evidence field; `non_execution:true` remains mandatory.
 
 ### Immediate practical use
 The orchestrator feeds this compiler's REAL packets into retrieval.eval #37 0.2 + a fresh 9B at the D-0077
@@ -31,8 +33,13 @@ demand -- but never side-effects while `non_execution` is true.
 3. **P0-4 `consumer_profile` + exact transport accounting** -- count on the FINAL RENDERED input,
    count_method + count_is_exact=false, fail-closed transport (drop to omission_manifest, never truncate
    control_plane/completion_contract/a required citation).
-4. **P1-1 consume `selpol_rrf_v1`** via the s4 `select(...)` interface (retire the i29 composite score);
-   additive selection fields preserve the retrieval order.
+4. **P1-1 / D-0089 -- one selection owner.** RETIRE `selpol_reference.py`; IMPORT #37's canonical
+   `selpol_rrf_v1` by a resolved portable path; build `params.hard_filter` from
+   `control_plane.permission_grants` (+ descriptor forbidden/privacy), NEVER from an evidence field; pass
+   `dedup_display=True`, no library budget; consume the canonical additive output (hit copies +
+   `selection_rank`/`selection_score`/`selection_policy_id`/`reason_codes`/`rrf_score`/`retrieval_occurrences`
+   + `omission_manifest` + `stages`); REGENERATE fixtures to the canonical selection; a #40-vs-direct-`select()`
+   byte-identity test (D-0077).
 5. **P0-2 provenance modes** (A2 hash names + direct_span|derived_record|aggregate|tombstone, per-mode
    validation; a provenance failure -> packet_disposition=provenance_failed).
 6. **P1-5 identity + snapshot + expansion lineage** -- distinct ids; ONE corpus_version per compile (abort
@@ -43,13 +50,13 @@ demand -- but never side-effects while `non_execution` is true.
 8. Extend `evaluation_hooks` (per-stage + packet_disposition + the P0-1 read-only injection probe).
 
 ### Non-goals (out -- do NOT build)
-#37's CANONICAL selpol library (consume the interface + a reference stub; the fold wires the real lib);
-the eval harness/metrics (#37); real embeddings / vector search (vector channel may be null); the
-retriever/catalog DB (#36); the skill-CARD generator (#41 -- carry summary refs only); the 9B / ANY model;
-the FULL P0-1 adversarial injection SUITE + the action-capable gate release (a later wave -- ship the
-STRUCTURAL separation + a basic injection test); the P1-2/P1-3 selection calibration beyond the frozen
-rank-RRF + occurrence-dedup baseline; UI. Do NOT touch model modules / models.json or any core-doc
-(`docs:[]`).
+ANY change to #37's `selpol_rrf_v1` or its eval (import READ-ONLY; if the canonical genuinely cannot serve
+#40's packet-build, STOP + report a fold reconciliation naming the exact gap -- do NOT edit #37); pure-rank-RRF
+as the PRIMARY sort (the deferred P1-2); near-dup-algorithm calibration (P1-3); the eval harness/metrics (#37);
+real embeddings / vector search (vector channel may be null); the retriever/catalog DB (#36); the skill-CARD
+generator (#41 -- carry summary refs only); the 9B / ANY model; the FULL P0-1 adversarial injection SUITE +
+the action-capable gate release (a later wave -- keep the STRUCTURAL separation + a basic injection test); UI.
+Do NOT touch model modules / models.json or any core-doc (`docs:[]`).
 
 ### Dependencies
 Modules: artifact.search #36 (the real retriever-0.2 `search` seam on `-Live`); retrieval.eval #37 (the s4
@@ -59,7 +66,7 @@ envelope + A2, s3 retriever-0.2 hit, s5 staleness enum. Tools: `pwsh>=7.4`, `pyt
 Models: none.
 
 ### Skill contract requirements
-`skill_id=context.compile`, `version=0.2.0`, `contract_version=0.2`, `determinism=deterministic`,
+`skill_id=context.compile`, `version=0.3.0`, `contract_version=0.3`, `determinism=deterministic`,
 `parallel_safe=true`, `batch=false`, `streaming=false`, `confidence=null`, empty `model_provenance`.
 Artifact kinds: `json` (`context_packet.json` / `context_expansion.json`) + `text` (`rendered_input.txt`).
 
@@ -68,12 +75,15 @@ See `skill.json` (inputs) + `SCHEMA_NOTES.md` (the packet/expansion/selection sh
 (default), `normalize`, `expand`.
 
 ### Proposed implementation
-Python (stdlib only) for ALL packet logic + the in-module `selpol_reference` s4 seam (sidesteps the
-pwsh-7.4.6 determinism traps). A thin pwsh entrypoint wraps it and owns the retriever seam (mock fixture
+Python (stdlib only) for ALL packet logic (sidesteps the pwsh-7.4.6 determinism traps); selection is
+DELEGATED to #37's canonical `selpol_rrf_v1`, imported by a resolved portable path (`_load_canonical_selpol`
+resolves `../37-retrieval-eval/lib/selpol_rrf_v1.py` from `__file__`; `LIFEORCH_SELPOL_PATH` overrides;
+fail-closed if missing). A thin pwsh entrypoint wraps it and owns the retriever seam (mock fixture
 off-machine; real #36 on `-Live`).
 
 ### Tests
-- **Off-machine:** `python tests/context_compiler_tests.py` (148 assertions covering acceptance a-g) +
+- **Off-machine:** `python tests/context_compiler_tests.py` (162 assertions covering acceptance a-g,
+  importing the REAL #37 canonical `selpol_rrf_v1`, incl. the #40-vs-direct-`select()` byte-identity) +
   `pwsh tests/Invoke-ContextCompilerTests.ps1` (entrypoint end-to-end, mock retriever).
 - **Through the executor (`-Live`):** ingest a bounded core-docs slice via #36, then
   `pwsh tests/Invoke-ContextCompilerTests.ps1 -DbPath <catalog.db> -RepoRoot <repo>` (real retriever-0.2).
@@ -83,11 +93,13 @@ off-machine; real #36 on `-Live`).
 cannot populate control_plane / alter completion_contract / change skill selection); (b) packet_disposition
 correct across answerable / needs_expansion / abstain / conflicted / provenance_failed fixtures; (c)
 consumer_profile + count_is_exact=false + fail-closed transport (oversize evidence -> omission_manifest,
-disposition=needs_expansion, control_plane + completion_contract intact); (d) selection via the s4 selpol
-interface (reference impl) with the additive fields + retrieval order preserved; (e) provenance modes
-present + each direct_span excerpt reproduces its source bytes; (f) byte-identical on re-run (deterministic
-packet_id covering the identity fields); (g) `non_execution:true` present. `-Live`: the real #36 retriever
-over a core-docs slice for >=3 LO benchmark questions -> required spans present + provenance-valid; `expand`
+disposition=needs_expansion, control_plane + completion_contract intact); (d) selection via #37's CANONICAL
+`selpol_rrf_v1` (imported; policy_version 1.0.0; the 6 stages) with the additive fields + retrieval order
+preserved; (e) #40's selection == a DIRECT `selpol_rrf_v1.select()` on the same candidates (the D-0077
+byte-identity); (f) provenance modes present + each direct_span excerpt reproduces its source bytes; (g)
+byte-identical on re-run (deterministic packet_id covering the identity fields) + `non_execution:true`
+present; `selpol_reference.py` DELETED + no residual code import. `-Live`: the real #36 retriever over a
+core-docs slice for >=3 LO benchmark questions -> required spans present + provenance-valid; `expand`
 returns a bounded immutable delta with a locked snapshot.
 
 ### Documentation requirements

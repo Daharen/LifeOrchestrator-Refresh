@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-context_compiler.py -- Life Orchestrator Module 40 (skill `context.compile` 0.2.0)
+context_compiler.py -- Life Orchestrator Module 40 (skill `context.compile` 0.3.0)
 
 The Collective Agent's context-packet compiler (directive Priority 4 / section 8). DETERMINISTIC,
 CPU-only, NO model, NO network. Turns a task descriptor into a versioned, token-budgeted, SAFE,
 self-describing `lifeorch.context_packet/0.2` artifact the coordinator hands a disposable model.
 
-0.2 (i30 CONTRACT-HARDENING, D-0087) conforms to core-docs/CONTEXT_PACKET_CONTRACT.md, folding the
-frontier Wave-3 red-team blockers:
+0.3 (i31 SELECTION-POLICY SETTLE, D-0089) realizes P1-1 "one selection owner": it RETIRES the in-module
+`selpol_reference.py` and IMPORTS #37's ONE CANONICAL `selpol_rrf_v1` directly (the s4 scoring is now
+PINNED). The packet schema stays `context_packet/0.2`; only the selection SOURCE changes -- from a second
+implementation to the single owned library. It continues to conform to core-docs/CONTEXT_PACKET_CONTRACT.md,
+folding the frontier Wave-3 red-team blockers:
 
   P0-1 (SAFETY-CRITICAL) -- three top-level regions with different trust origins: `control_plane`
         (authoritative; ONLY from the descriptor's authority fields, NEVER retrieval), `task_input`
@@ -22,9 +25,10 @@ frontier Wave-3 red-team blockers:
   P0-4 -- a mandatory `consumer_profile` + a count on the FINAL RENDERED input + count_is_exact=false
         + fail-closed transport (drop to the omission_manifest, never truncate control_plane /
         completion_contract / a required citation).
-  P1-1 -- RETIRE the self-contained composite score; select via the CONTEXT_PACKET_CONTRACT s4 frozen
-        `select(...)` interface (a spec-faithful in-module reference impl; the fold wires #37's
-        canonical `selpol_rrf_v1`). Additive selection fields preserve the retrieval order.
+  P1-1 -- ONE selection owner (D-0089): IMPORT #37's canonical `selpol_rrf_v1` via the CONTEXT_PACKET_CONTRACT
+        s4 frozen `select(candidates, descriptor, policy_id, params)` interface (the in-module reference
+        stub is RETIRED). `hard_filter` comes from `control_plane.permission_grants` (+ descriptor
+        forbidden/privacy), NEVER from an evidence field. Additive selection fields preserve the retrieval order.
   P0-2 -- A2 provenance hash names (record_content_hash/source_content_hash/excerpt_hash) +
         a provenance_mode enum (direct_span|derived_record|aggregate|tombstone) with per-mode validation.
   P1-5 -- packet identity/snapshot/expansion lineage; one corpus_version per compile (abort on drift);
@@ -33,9 +37,10 @@ frontier Wave-3 red-team blockers:
         recognised as skill candidates.
 
 CONSUMER of the FROZEN MEMORY_CONTRACT retriever-0.2 hit shape (s3, rank=index+1 NEVER re-sorted) +
-s5 staleness enum + s1 provenance envelope (A2). PRODUCER of packets consumed by retrieval.eval #37 0.2
-+ a fresh 9B at the orchestrator fold (D-0077). Stdlib only (json, hashlib, re, math, os, sys) + the
-in-module `selpol_reference` (the s4 seam). The retriever is INJECTED, never called from here.
+s5 staleness enum + s1 provenance envelope (A2) AND of #37's canonical `selpol_rrf_v1` (imported by a
+resolved portable path). PRODUCER of packets consumed by retrieval.eval #37 0.3 + a fresh 9B at the
+orchestrator fold (D-0077). Stdlib only (json, hashlib, re, math, os, sys, importlib). The retriever is
+INJECTED, never called from here; the selection library is IMPORTED, never reimplemented.
 
 Worker protocol (mirrors artifact_search.py): argv[1] is a JSON args file carrying the op inputs plus
 `output_dir` and `meta_path`. `run(args)` is importable for off-machine python tests.
@@ -47,12 +52,37 @@ import re
 import json
 import math
 import hashlib
+import importlib.util
 
-import selpol_reference as selpol
+# ------------------------------------------------------------------------------------------------
+# P1-1 / D-0089: import #37's ONE CANONICAL selection-policy library `selpol_rrf_v1` by a RESOLVED,
+# PORTABLE path. The i30 in-module `selpol_reference.py` stub is RETIRED -- there is exactly ONE
+# selection owner (CONTEXT_PACKET_CONTRACT s4, PINNED). The library is self-contained (stdlib only),
+# deterministic, no model/IO/network. Fail-closed with a clear error if it is missing/unimportable.
+# ------------------------------------------------------------------------------------------------
+
+def _load_canonical_selpol():
+    here = os.path.dirname(os.path.abspath(__file__))          # .../modules/40-context-compiler
+    lib_path = os.environ.get("LIFEORCH_SELPOL_PATH") or os.path.normpath(
+        os.path.join(here, os.pardir, "37-retrieval-eval", "lib", "selpol_rrf_v1.py"))
+    if not os.path.isfile(lib_path):
+        raise ImportError(
+            "canonical selpol_rrf_v1 not found at %r -- #40 IMPORTS #37's library (D-0089), it does "
+            "not reimplement selection. Set LIFEORCH_SELPOL_PATH or restore the repo layout "
+            "(modules/37-retrieval-eval/lib/selpol_rrf_v1.py)." % lib_path)
+    lib_dir = os.path.dirname(lib_path)
+    if lib_dir not in sys.path:
+        sys.path.insert(0, lib_dir)                            # the lib carries its own __init__.py
+    spec = importlib.util.spec_from_file_location("selpol_rrf_v1", lib_path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+selpol = _load_canonical_selpol()
 
 WORKER_NAME = "context_compiler.py"
-WORKER_VERSION = "0.2.0"
-COMPILER_VERSION = "0.2.0"
+WORKER_VERSION = "0.3.0"
+COMPILER_VERSION = "0.3.0"
 PACKET_SCHEMA = "lifeorch.context_packet/0.2"
 EXPANSION_SCHEMA = "lifeorch.context_expansion/0.2"
 
@@ -143,7 +173,8 @@ PROCEDURE_KINDS = {"procedure"}
 FAILURE_KINDS = {"failure"}
 EPISODE_KINDS = {"episode"}
 STATE_KINDS = {"decision", "summary"}       # authoritative current-state refs when authority is high
-STATE_AUTHORITY_MIN = 150                    # >= source_material
+STATE_AUTHORITY_MIN_RANK = 2                 # >= source_material on #37's canonical AUTHORITY_RANK
+                                             # {authoritative/governing:4, curated:3, source_material:2, derived:1}
 
 def _is_skill_candidate(hit):
     """A3: a skill candidate is a structural #38 `skill` record OR a #41 summary activation card
@@ -383,8 +414,21 @@ def _pin_corpus_version(retrieval_batches, retrieval_meta):
 # ------------------------------------------------------------------------------------------------
 
 def _selection_candidate(entry):
-    """Project a pooled entry into the s4 `select()` candidate shape (channel ranks PRESERVED from s3)."""
+    """Project a pooled entry into the CANONICAL `selpol_rrf_v1.select()` candidate shape (a
+    MEMORY_CONTRACT s3 retriever-0.2 hit; channel ranks PRESERVED). The canonical composite reads the
+    hit's OWN fields -- so the P0-1 policy signals (what to hard-filter / demote) are NOT read from the
+    candidate here; #40 supplies them via `params.hard_filter` (build_selection_params), never from an
+    evidence record. Notes on the canonical's expectations:
+      - freshness/temporal reads `status` (the s5 enum). We set `status` to the effective currentness so
+        a hit that only carried `currentness` is still classified (default `current`); `deleted` becomes
+        a hard filter inside the library.
+      - direct relevance = the retriever's fused/lexical/score. #36 emits FLOATS in [0,~1]; the canonical
+        composite consumes INTEGER MILLIONTHS (MEMORY_CONTRACT s3 scale, same as #40's occurrence RRF).
+        We fold via `to_micros` so the relevance term is on-scale (matching #37's own hits, e.g. 900000).
+      - the canonical builds `retrieval_occurrences[]` from the hit's per-channel ranks itself, so #40's
+        multi-QUERY pooling is not re-fused here (recorded per excerpt as `matched_queries` for eval)."""
     hit = entry["hit"]
+    span = _span_obj(hit)
     return {
         "record_version_id": entry["record_version_id"],
         "record_id": hit.get("record_id"),
@@ -392,18 +436,80 @@ def _selection_candidate(entry):
         "source_path": hit.get("source_path"),
         "namespace": hit.get("namespace"),
         "authority_level": hit.get("authority_level"),
-        "currentness": _currentness(hit),
-        "status": hit.get("status"),
-        "sensitivity_class": hit.get("sensitivity_class"),
-        "filter_decisions": hit.get("filter_decisions"),
-        "excerpt_hash": hit.get("chunk_content_hash") or hit.get("excerpt_hash"),
-        "chunk_content_hash": hit.get("chunk_content_hash"),
+        "status": _currentness(hit),                          # canonical `_fresh_rank`/deleted read `status`
+        "currentness": _currentness(hit),                     # kept for #40 provenance/debug parity
+        "content_hash": hit.get("content_hash") or hit.get("source_content_hash"),  # hard_filter version match
+        "chunk_content_hash": hit.get("chunk_content_hash") or hit.get("excerpt_hash"),  # display-dedup key
+        "chunk_id": hit.get("chunk_id"),
+        "span_start": (span["start"] if span else None),
+        "span_end": (span["end"] if span else None),
+        "span_label": hit.get("span_label"),
+        "token_count": hit.get("token_count"),
+        "snippet": hit.get("snippet"),
         "tie_break_key": hit.get("tie_break_key"),
-        "retrieval_rank": entry["best_rank"],
+        # raw relevance folded to integer millionths (see docstring): the canonical `_rel_of` takes int().
+        "fused_score": to_micros(hit.get("fused_score")),
+        "lexical_score": to_micros(hit.get("lexical_score")),
+        "score": to_micros(hit.get("score")),
+        "retrieval_rank": entry["best_rank"],                 # PRESERVED (additive; never re-sorted in place)
+        "rank": entry["best_rank"],                           # canonical orig_rank fallback tie-break
         "lexical_rank": _int_or_none(hit.get("lexical_rank")),
         "vector_rank": _int_or_none(hit.get("vector_rank")),
         "fused_rank": _int_or_none(hit.get("fused_rank")),
-        "retrieval_occurrences": entry["occurrences"],
+    }
+
+
+def _grant_exclusions(grant):
+    """Extract hard-filter matchers from ONE control_plane.permission_grant. A grant is coordinator/
+    user-authority material (NOT evidence), so an exclusion it names is an authoritative policy signal.
+    Handles a grant that lists forbidden/privacy/excluded sources, or a deny/forbid grant naming a path."""
+    out = []
+    if not isinstance(grant, dict):
+        return out
+    for key, reason in (("forbidden_sources", "forbidden"), ("privacy_exclusions", "privacy"),
+                        ("exclude_sources", "forbidden")):
+        for sp in (grant.get(key) or []):
+            if sp:
+                out.append({"source_path": sp, "reason": reason})
+    effect = str(grant.get("effect") or grant.get("decision") or "").strip().lower()
+    if effect in ("deny", "forbid", "exclude"):
+        sp = grant.get("source_path") or grant.get("path") or grant.get("resource")
+        if sp:
+            out.append({"source_path": sp, "reason": "forbidden"})
+    return out
+
+
+def build_selection_params(control_plane, descriptor):
+    """Build the CANONICAL `select()` `params`. The P0-1 boundary: `hard_filter` is derived ONLY from
+    control-plane / coordinator-authority fields (permission_grants + the descriptor's coordinator-supplied
+    forbidden_sources / privacy_exclusions), NEVER from a candidate/evidence field (that was the reference
+    stub's P0-1 gap this pin removes -- it scanned `filter_decisions`/`sensitivity_class` off the hit).
+    `dedup_display=True` so the library does occurrence-preserving DISPLAY dedup (evidence_cluster_id +
+    occurrences[]); NO library budget -- #40 OWNS the excerpt-fill + fail-closed TRANSPORT budget (P0-4),
+    composed on top of select()'s output (SCHEMA_NOTES s7)."""
+    hard_filter = []
+    seen = set()
+
+    def _add(sp, reason):
+        sp = str(sp or "").replace("\\", "/")
+        key = (sp, reason)
+        if sp and key not in seen:
+            seen.add(key)
+            hard_filter.append({"source_path": sp, "reason": reason})
+
+    for sp in (descriptor.get("forbidden_sources") or []):
+        _add(sp, "forbidden")
+    for sp in (descriptor.get("privacy_exclusions") or []):
+        _add(sp, "privacy")
+    for g in (control_plane.get("permission_grants") or []):
+        for m in _grant_exclusions(g):
+            _add(m["source_path"], m["reason"])
+
+    th = str(descriptor.get("time_horizon") or "current_only").strip().lower()
+    return {
+        "current_only": th in ("current_only", "current", ""),
+        "dedup_display": True,
+        "hard_filter": hard_filter,
     }
 
 def build_selection_descriptor(task, norm):
@@ -604,6 +710,8 @@ def make_excerpt(entry, sel_row, source_texts, repo_root, warnings):
             "selection_policy_id": sel_row.get("selection_policy_id"),
             "reason_codes": sel_row.get("reason_codes"),
             "evidence_cluster_id": sel_row.get("evidence_cluster_id"),
+            "rrf_score": sel_row.get("rrf_score"),
+            "retrieval_occurrences": sel_row.get("retrieval_occurrences"),
             "retrieval_rank": sel_row.get("retrieval_rank"),
             "lexical_rank": sel_row.get("lexical_rank"),
             "vector_rank": sel_row.get("vector_rank"),
@@ -651,19 +759,24 @@ def select_into_budget(sel_rows, pool, config, source_texts, repo_root, warnings
             "reason_codes": row.get("reason_codes"),
         }
 
-        # selpol already flagged hard filters + content duplicates (not `selected`).
+        # The canonical selpol already flagged hard filters + display duplicates (not `selected`); map its
+        # reason codes to #40's omission_manifest reasons. Canonical codes: hard_filter_<reason>
+        # (forbidden|privacy|deleted|source), display_duplicate (occurrence-preserving dedup), budget_omitted
+        # (its own budget hook -- #40 does NOT pass one, so this normally does not appear).
         if not row.get("selected"):
             rcs = row.get("reason_codes") or []
-            if "hard_filter_forbidden" in rcs:
+            if any(c.startswith("hard_filter_") for c in rcs):
                 cur = str(_currentness(hit)).strip().lower()
-                reason = "deleted" if cur == "deleted" else "hard_filter"
-            elif "diversity_capped" in rcs:
+                reason = "deleted" if (cur == "deleted" or "hard_filter_deleted" in rcs) else "hard_filter"
+            elif "display_duplicate" in rcs:
                 reason = "duplicate_content"
+            elif "budget_omitted" in rcs:
+                reason = "token_budget"
             else:
                 reason = "hard_filter"
             o = dict(base); o["reason"] = reason
-            if row.get("duplicate_of"):
-                o["duplicate_of"] = row["duplicate_of"]
+            if row.get("evidence_cluster_id"):
+                o["evidence_cluster_id"] = row["evidence_cluster_id"]
             o["expand_hint"] = {"type": "raw_source", "target": {"record_version_id": rvid}}
             omission.append(o)
             continue
@@ -825,8 +938,8 @@ def build_evidence_refs(sel_rows, pool, excerpt_rvids, config):
             relevant_failures.append(r)
         elif kind in EPISODE_KINDS and len(similar_episodes) < cap:
             similar_episodes.append(r)
-        if kind in STATE_KINDS and selpol.AUTHORITY_POINTS.get(
-                str(hit.get("authority_level") or "").strip().lower(), 0) >= STATE_AUTHORITY_MIN \
+        if kind in STATE_KINDS and selpol.AUTHORITY_RANK.get(
+                str(hit.get("authority_level") or "").strip().lower(), 0) >= STATE_AUTHORITY_MIN_RANK \
                 and len(current_state_refs) < cap:
             current_state_refs.append(r)
     return {
@@ -1098,12 +1211,21 @@ def op_compile(args, warnings):
 
     pool, per_query_counts = build_candidate_pool(batches or [])
 
-    # P1-1: select via the s4 selpol interface (reference impl; the fold wires #37's canonical lib).
+    # P0-1 three regions. control_plane is built FIRST (ONLY from descriptor authority fields, in a code
+    # path that cannot read retrieved records) because the P1-1 hard_filter's authority IS the control
+    # plane -- a retrieved record can never create/expand an exclusion.
+    original_goal = norm["original_goal"]
+    control_plane = build_control_plane(task, original_goal)
+    task_input = build_task_input(task, norm)
+
+    # P1-1 / D-0089: select via #37's CANONICAL selpol_rrf_v1 (IMPORTED, not reimplemented). `params`
+    # carry hard_filter from control_plane.permission_grants (+ descriptor forbidden/privacy) and
+    # dedup_display=True; #40 passes NO library budget -- it owns the excerpt-fill + transport budget (P0-4).
     descriptor = build_selection_descriptor(task, norm)
-    sel = selpol.select([_selection_candidate(e) for e in pool.values()], descriptor)
-    sel_rows = sel["ranked"]
-    for r in sel_rows:
-        r["selection_policy_id"] = sel["policy_id"]
+    params = build_selection_params(control_plane, descriptor)
+    candidates = [_selection_candidate(e) for e in pool.values()]
+    sel = selpol.select(candidates, descriptor, selpol.POLICY_ID, params)
+    sel_rows = sel["ranked"]   # hit COPIES with additive selection fields; retrieval_rank PRESERVED
 
     source_texts = args.get("source_texts")
     repo_root = args.get("repo_root")
@@ -1111,10 +1233,20 @@ def op_compile(args, warnings):
     excerpts, omission, accounting = select_into_budget(
         sel_rows, pool, config, source_texts, repo_root, warnings)
 
-    # P0-1 three regions.
-    original_goal = norm["original_goal"]
-    control_plane = build_control_plane(task, original_goal)
-    task_input = build_task_input(task, norm)
+    # Merge the canonical library's own omission_manifest (empty unless a library budget is passed -- #40
+    # passes none -- but merged defensively so a future library-budget knob still flows to #40's manifest).
+    for lo in (sel.get("omission_manifest") or []):
+        lr = str(lo.get("reason") or "")
+        omission.append({
+            "record_version_id": lo.get("record_version_id"),
+            "source_path": lo.get("source_path"),
+            "chunk_id": lo.get("chunk_id"),
+            "selection_rank": lo.get("selection_rank"),
+            "reason": ("token_budget" if lr == "token_budget"
+                       else "max_excerpts" if lr == "max_selected" else "hard_filter"),
+            "expand_hint": {"type": "raw_source",
+                            "target": {"record_version_id": lo.get("record_version_id")}},
+        })
     excerpt_rvids = set(e["record_version_id"] for e in excerpts)
     refs = build_evidence_refs(sel_rows, pool, excerpt_rvids, config)
 
@@ -1256,7 +1388,12 @@ def assemble_packet(task, norm, config, profile, control_plane, task_input, exce
         "policy_version": sel["policy_version"],
         "descriptor": build_selection_descriptor(task, norm),
         "features_by_candidate": sel["features_by_candidate"],
-        "note": "RRF over channel ranks; additive selection fields; retrieval order preserved (P1-1).",
+        "stages": sel.get("stages"),
+        "owner": "modules/37-retrieval-eval/lib/selpol_rrf_v1.py",
+        "note": ("IMPORTED from #37's canonical selpol_rrf_v1 (D-0089; the in-module reference stub is "
+                 "RETIRED). raw-fused-score-primary composite + AUTHORITY_RANK/freshness ranks + greedy "
+                 "source-MMR + occurrence-preserving display dedup; additive selection fields; the "
+                 "retrieval order is preserved (rank=index+1 untouched; selection is a separate ordering)."),
     }
 
     retrieval_provenance = {
