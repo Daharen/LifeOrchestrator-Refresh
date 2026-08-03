@@ -1,7 +1,7 @@
 {
   "schema": "lifeorch.skill.result/0.1",
   "skill_id": "skill.card",
-  "skill_version": "0.1.0",
+  "skill_version": "0.2.0",
   "contract_version": "0.2",
   "invocation_id": "EXAMPLE-0000-0000-0000-000000000000",
   "status": "partial",
@@ -15,7 +15,7 @@
     "skill_count": 7,
     "total_records": 7,
     "record_counts_by_kind": {
-      "skill": 7
+      "summary": 7
     },
     "card_status_counts": {
       "ok": 5,
@@ -33,7 +33,7 @@
       "purpose": 1
     },
     "cards_digest": "5d0187dec78e8a1563872ae3c5753f4f1f5ed61cca94cf6d57b7ae5045c29822",
-    "records_digest": "abfcbc6af8671347b16cbc8cece937b6bb3e00658c80f4913886e14db0f24117",
+    "records_digest": "124d439149fefc6b7483bdb80bdf467618cfd1a6901e23fcba627b683d2e073a",
     "validation": {
       "ok": true,
       "checked": 7,
@@ -57,7 +57,7 @@
     ],
     "worker": {
       "name": "skill.card",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "python": "3.12.x"
     },
     "runtime_ms": 7
@@ -79,26 +79,26 @@
     {
       "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\41-skill-card\\runtime\\artifacts\\<invocation_id>/records.jsonl",
       "kind": "jsonl",
-      "bytes": 22075,
-      "sha256": "7313cc0a2d690900ef6b5cca5d7df0e5ab50fe8953f4fee380a8c9dd8415be59"
+      "bytes": 22467,
+      "sha256": "cc0f8a9389135ef4b127ece94b3b12a46264340a3a78090356ff76905394e141"
     },
     {
       "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\41-skill-card\\runtime\\artifacts\\<invocation_id>/records.json",
       "kind": "json",
-      "bytes": 22076,
-      "sha256": "32a6bceb86c197d72f5967b1204cffe7af7e70378cffb7ea7055a2f78e79e3b8"
+      "bytes": 22468,
+      "sha256": "0386b81f847fc73724613b1287c74ac5e90b623fe4de43330be6f4dac6ed03c4"
     },
     {
       "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\41-skill-card\\runtime\\artifacts\\<invocation_id>/ingest_records.json",
       "kind": "json",
-      "bytes": 22286,
-      "sha256": "68d95e25ac96e65a62f68d77a81526d551879e53bfe845523ab33f16adac203f"
+      "bytes": 22678,
+      "sha256": "9dc892e75ed3c9614e79162177658c9bcf219018379223abf3dd2654f8d3ae11"
     },
     {
       "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\41-skill-card\\runtime\\artifacts\\<invocation_id>/index_manifest.json",
       "kind": "json",
-      "bytes": 893,
-      "sha256": "d9d30be8661c74f108b7e58e170c32e919d7b15dd9ed6989ed748582b6952b7c"
+      "bytes": 895,
+      "sha256": "cc6cc5340bf4c043c6afdbcca933fbc4319c314a26e12c833252a0ff4ce509c2"
     },
     {
       "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\41-skill-card\\runtime\\artifacts\\<invocation_id>/card_warnings.json",
@@ -110,7 +110,7 @@
       "path": "C:\\Users\\just_\\LifeOrchestrator-Refresh\\modules\\41-skill-card\\runtime\\artifacts\\<invocation_id>/summary.md",
       "kind": "markdown",
       "bytes": 664,
-      "sha256": "9ec06ef20b954122d641531dbb5e82047d5d6c7337b703be5ece291128fd8f67"
+      "sha256": "f3b503f04614ba57ffa081fa8f99b50043f4238e61a211ae3036d1b51a79d676"
     }
   ],
   "model_provenance": [],

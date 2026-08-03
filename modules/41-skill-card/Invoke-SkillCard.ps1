@@ -6,13 +6,15 @@
 .DESCRIPTION
   The skill-ACTIVATION substrate (directive Priority 6 / section 9 "Skill card format"): turns each
   module's skill.json (+ sibling README/WORK_ORDER) into a COMPACT, model-facing SKILL CARD, emits each
-  card as a MEMORY_CONTRACT s1 `skill` record-envelope artifact (a drop-in for #36 0.2 `ingest_records`),
-  and ships a DETERMINISTIC Stage-1 eligibility filter + a DETERMINISTIC Stage-2 lexical retrieval baseline
-  over the card index (the semantic-retrieval SEAM; real embeddings fold in at the retrieval wave). It lets
-  the coordinator decide WHICH skill applies without loading every command into the 9B. CPU-only,
-  stdlib-only Python worker (skill_card.py), no model, no network -> determinism=deterministic,
-  confidence=null, empty model_provenance. PRODUCER of `skill` records; the #38 boundary (this is the RICHER
-  ACTIVATION card, distinct id namespace `sklcard_` + authority_level `derived`) is recorded in SCHEMA_NOTES.
+  card as a MEMORY_CONTRACT s1 `summary` skill-activation record-envelope artifact (A3, D-0087 -- a drop-in
+  for #36 0.2 `ingest_records`), and ships a DETERMINISTIC Stage-1 eligibility filter + a DETERMINISTIC
+  Stage-2 lexical retrieval baseline over the card index (the semantic-retrieval SEAM; real embeddings fold
+  in at the retrieval wave). It lets the coordinator decide WHICH skill applies without loading every command
+  into the 9B. CPU-only, stdlib-only Python worker (skill_card.py), no model, no network ->
+  determinism=deterministic, confidence=null, empty model_provenance. PRODUCER of `summary` skill-activation
+  records (attrs.summary_type=skill_activation_card) that DERIVE FROM #38's structural `skill` record via a
+  `derives_from` edge -- so #38 stays the SOLE `record_kind=skill` owner (A3); the #38 boundary (distinct id
+  namespace `sklcard_` + authority_level `derived`) is recorded in SCHEMA_NOTES.
 
   Ops:
     cards    (default) walk roots, generate cards + emit s1 records + ingest_records drop-in + validate.
@@ -57,7 +59,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$SKILL_ID = 'skill.card'; $SKILL_VERSION = '0.1.0'; $CONTRACT = '0.2'
+$SKILL_ID = 'skill.card'; $SKILL_VERSION = '0.2.0'; $CONTRACT = '0.2'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 $startedAt = [DateTime]::UtcNow

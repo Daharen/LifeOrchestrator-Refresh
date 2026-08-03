@@ -103,7 +103,7 @@ Check 'manifest is schema-valid' ([bool]$mv.valid) (($mv.errors) -join '; ')
 $man = (Get-Content -LiteralPath $mf -Raw) | ConvertFrom-Json
 Check 'manifest determinism=deterministic' ($man.determinism -eq 'deterministic')
 Check 'manifest skill_id=skill.card' ($man.skill_id -eq 'skill.card')
-Check 'manifest version=0.1.0' ($man.version -eq '0.1.0')
+Check 'manifest version=0.2.0' ($man.version -eq '0.2.0')
 Check 'manifest parallel_safe=true & batch=false' (($man.parallel_safe -eq $true) -and ($man.batch -eq $false))
 
 # ---------- 2) cards op over the fixture set ----------
@@ -118,7 +118,7 @@ Check 'cards: model_provenance empty' ($null -ne $e -and @($e.model_provenance).
 $ix = Payload $r
 Check 'cards: 7 skills discovered' ($null -ne $ix -and [int]$ix.skill_count -eq 7) "skills=$($ix.skill_count)"
 Check 'cards: 7 records emitted' ([int]$ix.total_records -eq 7) "records=$($ix.total_records)"
-Check 'cards: only record_kind skill' ([int]$ix.record_counts_by_kind.skill -eq 7)
+Check 'cards: only record_kind summary (A3)' ([int]$ix.record_counts_by_kind.summary -eq 7) ($ix.record_counts_by_kind | ConvertTo-Json -Compress)
 Check 'cards: validation.ok true' ([bool]$ix.validation.ok) "errors=$($ix.validation.errors -join '; ')"
 Check 'cards: ingest_shape_ok' ([bool]$ix.validation.ingest_shape_ok)
 Check 'cards: records_digest 64 hex' ([string]$ix.records_digest -match '^[0-9a-f]{64}$')
@@ -141,7 +141,8 @@ if ($null -ne $ingP) {
     $r0 = @($ingObj.records)[0]
     Check 'ingest_records: record carries s1 fields + text' ((Has $r0 'record_id') -and (Has $r0 'record_version_id') -and (Has $r0 'record_kind') -and (Has $r0 'content_hash') -and (Has $r0 'parent_edges') -and (Has $r0 'text'))
     Check 'ingest_records: chunker_fingerprint null (typed not chunk)' ($null -eq $r0.chunker_fingerprint)
-    Check 'ingest_records: record_kind skill (not source_chunk)' ($r0.record_kind -eq 'skill')
+    Check 'ingest_records: record_kind summary (A3; not source_chunk)' ($r0.record_kind -eq 'summary')
+    Check 'ingest_records: attrs.summary_type skill_activation_card (A3)' ((Has $r0 'attrs') -and ($r0.attrs.summary_type -eq 'skill_activation_card'))
 }
 
 # ---------- 3) section-9 card fields (from cards.json) ----------
@@ -160,13 +161,17 @@ Check 'card partial: status partial + missing fields surfaced' ($part.card_statu
 $brk = @($cards | Where-Object { [string]$_.card_status -eq 'degraded' })[0]
 Check 'card broken: degraded card emitted (never crashed)' ($null -ne $brk -and ([string]$brk.skill_id) -match '^unresolved:')
 
-# ---------- 4) the #38 boundary (records.jsonl) ----------
+# ---------- 4) the #38 boundary + A3 (records.jsonl) ----------
 $recs = @(Get-Content -LiteralPath $rjl | ForEach-Object { $_ | ConvertFrom-Json })
 $gi = @($recs | Where-Object { $_.payload.skill_id -eq 'fixture.gen.image' })[0]
 Check 'boundary: record_id prefix sklcard_ (not skl_)' ([string]$gi.record_id -match '^sklcard_')
 Check 'boundary: authority_level derived (not canonical_source)' ($gi.authority_level -eq 'derived')
-$xl = @($gi.child_edges | Where-Object { $_.edge_type -eq 'describes_structural_skill' })
-Check 'boundary: explicit external cross-link to #38 structural record' (@($xl).Count -eq 1 -and [bool]$xl[0].external -and ([string]$xl[0].external_ref -match '^skl_'))
+Check 'A3: record_kind summary (not a 2nd skill)' ($gi.record_kind -eq 'summary')
+Check 'A3: attrs.summary_type skill_activation_card' ((Has $gi 'attrs') -and ($gi.attrs.summary_type -eq 'skill_activation_card'))
+$df = @($gi.child_edges | Where-Object { $_.edge_type -eq 'derives_from' })
+Check 'A3: derives_from external edge to #38 structural skl_ record' (@($df).Count -eq 1 -and [bool]$df[0].external -and ([string]$df[0].external_ref -match '^skl_'))
+Check 'A3: describes_structural_skill fully replaced' (@($gi.child_edges | Where-Object { $_.edge_type -eq 'describes_structural_skill' }).Count -eq 0)
+Check 'A3: NO emitted record is record_kind skill' (@($recs | Where-Object { $_.record_kind -eq 'skill' }).Count -eq 0)
 # provenance: source_span slices the manifest bytes
 $giSrc = Join-Path $fixRoot ([string]$gi.source_path)
 $giBytes = [System.IO.File]::ReadAllBytes($giSrc)

@@ -25,20 +25,24 @@ import hashlib
 import re
 import traceback
 
-WORKER_VERSION = "0.1.0"
+WORKER_VERSION = "0.2.0"
 RECORD_SCHEMA = "lifeorch.skill_card.record/0.1"
 INGEST_SCHEMA = "lifeorch.skill_card.ingest_records/0.1"
 CARD_SCHEMA = "lifeorch.skill_card.card/0.1"
 
-# The full frozen MEMORY_CONTRACT s1 record_kind enum (D-0085, CLOSED). skill.card EMITS only `skill`;
-# the validator accepts the whole enum for forward-compat / validating foreign records.
+# The full frozen MEMORY_CONTRACT s1 record_kind enum (D-0085, CLOSED). skill.card EMITS `summary`
+# (a skill-ACTIVATION card that DERIVES FROM #38's structural `skill` record -- Amendment A3, D-0087) so
+# repo.intel #38 stays the SOLE `record_kind=skill` owner; the validator accepts the whole enum for
+# forward-compat / validating foreign records.
 S1_RECORD_KINDS = ("symbol", "summary", "decision", "claim", "episode", "failure",
                    "procedure", "skill", "reminder", "entity", "relationship")
-EMITTED_KIND = "skill"
+EMITTED_KIND = "summary"                  # A3 (D-0087): skill.card is a `summary` producer, NOT a 2nd `skill`
+SUMMARY_TYPE = "skill_activation_card"    # attrs.summary_type (A3) -- distinguishes the card from #38's summaries
+EDGE_DERIVES_FROM = "derives_from"        # A3: navigational derivative edge to #38's structural `skl_` record
 
 # parser / extractor fingerprints (name;version;options) -- a version change invalidates derived records (s4)
 FP_MANIFEST = "skill.card.manifest/0.1;json"       # parses the skill.json manifest
-FP_CARDGEN = "skill.card.cardgen/0.1;section9"     # derives the section-9 card + s1 record
+FP_CARDGEN = "skill.card.cardgen/0.2;section9;summary-activation"  # A3 kind flip -> derivation version bump (s4)
 
 STATUS_CURRENT = "current"          # s5: a freshly-produced record is current (the STRING form, D-0085)
 AUTHORITY_DERIVED = "derived"       # s1: the card is a DERIVED activation view (BOUNDARY vs #38's "canonical_source")
@@ -675,9 +679,11 @@ def build_record(built, ns, ingest_run_id):
     # child_edges: skill -> each supported operation (external refs; ops are not separate records)
     child_edges = [edge("has_operation", external=True, external_ref="%s#op:%s" % (skill_id, op))
                    for op in card["operations"]]
-    # child_edges also link to #38's structural manifest record (BOUNDARY, external -- resolves only when
-    # both producers share the namespace at fold; informative, not required to resolve).
-    child_edges.append(edge("describes_structural_skill", external=True,
+    # A3 (D-0087): the card DERIVES FROM #38's structural `skill` record -- a `derives_from` navigational
+    # edge (external; external_ref = #38's recomputed `skl_` id; resolves only when both producers share the
+    # namespace at fold). REPLACES the 0.1 `describes_structural_skill` cross-link (byte-identical external_ref;
+    # the derivation is now expressed as derivation, per A3's navigational-derivative framing).
+    child_edges.append(edge(EDGE_DERIVES_FROM, external=True,
                             external_ref=id_struct_skill(ns, skill_id)))
     parent_edges = []
     if card["module"]:
@@ -687,7 +693,8 @@ def build_record(built, ns, ingest_run_id):
         "schema": RECORD_SCHEMA,
         "record_id": record_id,
         "record_version_id": record_version_id,
-        "record_kind": EMITTED_KIND,
+        "record_kind": EMITTED_KIND,               # A3: `summary` (activation card), NOT a 2nd `skill`
+        "attrs": {"summary_type": SUMMARY_TYPE},    # A3: marks this summary as a skill-activation card
         "namespace": ns,
         "content_hash": content_hash,
         "status": STATUS_CURRENT,
@@ -1000,15 +1007,21 @@ def do_retrieve(args):
                            "fold-in point; the real path embeds the task and searches the card index.",
             "semantic_query_shape": {
                 "query_text": "<task intent>", "task_type": "<optional>", "k": k,
-                "embedding_space_id": None, "filters": {"record_kind": "skill"},
-                "candidate_kinds": ["skill", "procedure", "episode", "failure"],
+                "embedding_space_id": None,
+                # A3 (D-0087): activation cards are record_kind=summary (summary_type=skill_activation_card).
+                # A record_kind=skill search returns #38's STRUCTURAL records, NOT these cards -> filter on the
+                # summary kind + summary_type so retrieval reaches the activation cards.
+                "filters": {"record_kind": EMITTED_KIND, "summary_type": SUMMARY_TYPE},
+                "candidate_kinds": [EMITTED_KIND, "procedure", "episode", "failure"],
             },
             "artifact_search_call": {
                 "op": "search", "query": "<task intent>", "k": k, "mode": "fts",
-                "filters": {"record_kind": "skill", "namespace": meta.get("namespace")},
+                "filters": {"record_kind": EMITTED_KIND, "summary_type": SUMMARY_TYPE,
+                            "namespace": meta.get("namespace")},
             },
-            "notes": "Records emitted here carry a top-level `text` field so #36 records_fts indexes them; "
-                     "the fused hybrid rank replaces lexical_score once vectors participate (#37 0.2).",
+            "notes": "Records emitted here are record_kind=summary (attrs.summary_type=skill_activation_card, "
+                     "A3), carrying a top-level `text` field so #36 records_fts indexes them; the fused hybrid "
+                     "rank replaces lexical_score once vectors participate (#37 0.2).",
         },
     }
     if meta.get("source") == "generated":
@@ -1031,6 +1044,15 @@ def validate_records(records):
             errors.append("%s: bad record_kind %r" % (rid, r.get("record_kind")))
         if r.get("record_kind") == "source_chunk":
             errors.append("%s: source_chunk is reserved (rejected by #36 ingest_records)" % rid)
+        # A3 (D-0087): a skill.card record (its own schema) MUST be `summary` -- NOT a 2nd `skill` -- and MUST
+        # carry attrs.summary_type='skill_activation_card'. Gated on the skill.card schema so this validator
+        # never falsely rejects a FOREIGN `summary` record (e.g. #38's structural summaries).
+        if r.get("schema_version") == RECORD_SCHEMA:
+            if r.get("record_kind") != EMITTED_KIND:
+                errors.append("%s: skill.card record_kind must be '%s' (A3), got %r"
+                              % (rid, EMITTED_KIND, r.get("record_kind")))
+            if ((r.get("attrs") or {}).get("summary_type")) != SUMMARY_TYPE:
+                errors.append("%s: skill.card summary missing attrs.summary_type=%r (A3)" % (rid, SUMMARY_TYPE))
         payload = r.get("payload")
         if payload is not None:
             ch = _h(canon(payload))

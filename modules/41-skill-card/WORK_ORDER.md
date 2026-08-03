@@ -1,5 +1,14 @@
 # WORK_ORDER -- Module 41 skill.card (Wave 3 SKILL-CARD lane, plan fo-29-87dbfa0b, worker SKILL-CARD-i29)
 
+> **i30 revision (CONTRACT-HARDENING, plan fo-30-dd453156, worker SKILL-SUMMARY-i30, D-0087):** 0.1.0 -> 0.2.0
+> conformed to `MEMORY_CONTRACT` **Amendment A3** (frontier Wave-3 red-team P0-5): skill.card now emits
+> `record_kind=summary` (a skill-ACTIVATION card, `attrs.summary_type=skill_activation_card`) that DERIVES
+> FROM #38's structural `skill` record via a `derives_from` edge -- so repo.intel #38 is the SOLE
+> `record_kind=skill` owner and a `record_kind=skill` search returns ONE owner. A MINIMAL ENVELOPE-level
+> change: the card payload, Stage-1 eligibility, and the Stage-2 lexical scoring are UNCHANGED;
+> `content_hash`/`record_id`/`record_version_id` stay STABLE. P1-6 (richer card fields + three-valued
+> eligibility + degraded fail-closed) is a NAMED follow-on, NOT this wave.
+
 ## Goal
 
 Build the Wave 3 **skill-activation substrate** (directive Priority 6 / section 9): a DETERMINISTIC
@@ -13,8 +22,9 @@ without loading every command into the 9B.
 
 1. **Skill card format + generator** (s9): deterministic; all section-9 fields; SURFACE missing fields;
    NEVER crash on a partial/malformed manifest (degraded card + warning); bounded card size.
-2. **Skill index**: emit each card as a `skill` s1 record-envelope artifact; deterministic ids; idempotent;
-   the `ingest_records.json` drop-in for #36 0.2; record the #38 boundary.
+2. **Skill index**: emit each card as a `summary` skill-activation s1 record-envelope artifact (A3:
+   `attrs.summary_type=skill_activation_card` + a `derives_from` edge to #38's `skl_` record); deterministic
+   ids; idempotent; the `ingest_records.json` drop-in for #36 0.2; record the #38 boundary.
 3. **Stage 1 -- deterministic eligibility filtering**: task descriptor -> eligible skills; pure rules.
 4. **Stage 2 -- semantic-retrieval seam**: define the query shape; ship a deterministic lexical baseline
    over the card index (right candidates ranked; irrelevant excluded).
@@ -37,8 +47,9 @@ without loading every command into the 9B.
 
 - **Consumes:** the `SKILL_CONTRACT` manifest (`skill.json`) of every scanned module (+ optional sibling
   `README.md` / `WORK_ORDER.md`).
-- **Produces:** `skill` s1 record-envelope artifacts (`records.jsonl` / `ingest_records.json`) to
-  `MEMORY_CONTRACT` s1 -- the drop-in for **#36 artifact.search 0.2 `ingest_records`**.
+- **Produces:** `summary` skill-activation s1 record-envelope artifacts (A3; `records.jsonl` /
+  `ingest_records.json`) to `MEMORY_CONTRACT` s1 -- the drop-in for **#36 artifact.search 0.2
+  `ingest_records`**.
 - **Governing contract:** `core-docs/MEMORY_CONTRACT.md` s1 (the `skill` record envelope) + s5 (the status
   string) + s7 (privacy: `sensitivity_class`, no egress). On any conflict, that contract + its live gates win.
 
@@ -57,11 +68,13 @@ without loading every command into the 9B.
 ## Gates (fail-closed)
 
 OFF-MACHINE FIRST (cloud python, deterministic, CPU-only) THEN `-Live` on the Windows executor. `skill.json`
-0.1.0 + README + WORK_ORDER + SCHEMA_NOTES to `SKILL_CONTRACT`. Double-run byte-identical. Ship via
-`dev.ship` (sha256 + AST + tests fail-closed, named files only, under the `git` lease); VERIFY the real HEAD
-via native `git`. Assert 0 UNMANAGED orphans + `review_queue.jsonl` before==after.
+0.2.0 (contract_version 0.2; `extractor_fingerprint` bumped for the A3 kind flip) + README + WORK_ORDER +
+SCHEMA_NOTES to `SKILL_CONTRACT`. Double-run byte-identical. Ship via `dev.ship` (sha256 + AST + tests
+fail-closed, named files only, under the `git` lease); VERIFY the real HEAD via native `git`. Assert 0
+UNMANAGED orphans + `review_queue.jsonl` before==after.
 
 ## Status
 
-Shipped i29 (SKILL-CARD-i29). See `CURRENT_STATE.md` / `MODULE_ROADMAP.md` (orchestrator-mirrored) + this
-module's report for the folded test counts.
+Shipped i29 (SKILL-CARD-i29) 0.1.0; **revised i30 (SKILL-SUMMARY-i30) -> 0.2.0 (A3 kind flip, D-0087).** See
+`CURRENT_STATE.md` / `MODULE_ROADMAP.md` (orchestrator-mirrored) + this module's report for the folded test
+counts.

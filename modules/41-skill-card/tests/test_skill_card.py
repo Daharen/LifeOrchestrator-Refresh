@@ -60,8 +60,8 @@ def main():
         p = cards_op(FIXROOT, "fixture", o1)
         check("cards: 7 skills discovered", p["skill_count"] == 7, str(p["skill_count"]))
         check("cards: 7 skill records emitted", p["total_records"] == 7, str(p["total_records"]))
-        check("cards: only record_kind 'skill'", list(p["record_counts_by_kind"].keys()) == ["skill"],
-              str(p["record_counts_by_kind"]))
+        check("cards: only record_kind 'summary' (A3: not a 2nd 'skill')",
+              list(p["record_counts_by_kind"].keys()) == ["summary"], str(p["record_counts_by_kind"]))
         check("cards: validation.ok", p["validation"]["ok"], str(p["validation"]["errors"][:3]))
         check("cards: ingest_shape_ok", p["validation"]["ingest_shape_ok"])
         check("cards: records_digest 64 hex",
@@ -140,24 +140,57 @@ def main():
               "schema" in ing and "namespace" in ing and ing["record_count"] == len(ing["records"]))
         ir0 = ing["records"][0]
         check("ingest_records: record has text AND content_hash", bool(ir0.get("text")) and bool(ir0.get("content_hash")))
-        check("ingest_records: record_kind 'skill' (in #36 typed enum, not source_chunk)",
-              ir0["record_kind"] == "skill")
+        check("ingest_records: record_kind 'summary' (A3; in #36 typed enum, not source_chunk)",
+              ir0["record_kind"] == "summary")
+        check("ingest_records: attrs.summary_type=skill_activation_card (A3)",
+              (ir0.get("attrs") or {}).get("summary_type") == "skill_activation_card", str(ir0.get("attrs")))
         check("ingest_records: chunker_fingerprint null (typed record not chunk)",
               ir0["chunker_fingerprint"] is None)
         check("ingest_records: producer stamped skill.card", ing.get("producer") == "skill.card")
 
-        # ---- 8) the #38 BOUNDARY: distinct id namespace + authority + explicit cross-link ----
+        # ---- 8) the #38 BOUNDARY + A3: a `summary` activation card that DERIVES FROM #38's structural skill ----
         gi = [r for r in recs if r["payload"]["skill_id"] == "fixture.gen.image"][0]
         check("boundary: record_id prefix 'sklcard_' (NOT #38's 'skl_')",
               gi["record_id"].startswith("sklcard_") and not gi["record_id"].startswith("skl_0"))
         check("boundary: authority_level 'derived' (NOT #38 'canonical_source')",
               gi["authority_level"] == "derived")
+        check("A3: record_kind 'summary' (NOT a 2nd 'skill')", gi["record_kind"] == "summary", gi["record_kind"])
+        check("A3: attrs.summary_type 'skill_activation_card'",
+              (gi.get("attrs") or {}).get("summary_type") == "skill_activation_card", str(gi.get("attrs")))
         struct_id = sc.id_struct_skill("fixture", "fixture.gen.image")
-        xlink = [e for e in gi["child_edges"] if e["edge_type"] == "describes_structural_skill"]
-        check("boundary: explicit external edge to #38's structural record id",
-              len(xlink) == 1 and xlink[0]["external_ref"] == struct_id and xlink[0]["external"] is True)
+        df = [e for e in gi["child_edges"] if e["edge_type"] == "derives_from"]
+        check("A3: a 'derives_from' external edge to #38's structural skl_ record",
+              len(df) == 1 and df[0]["external_ref"] == struct_id and df[0]["external"] is True
+              and struct_id.startswith("skl_"), str(df))
+        check("A3: the 0.1 'describes_structural_skill' cross-link is fully replaced",
+              not any(e["edge_type"] == "describes_structural_skill" for e in gi["child_edges"]))
         check("boundary: card id != structural id, same skill_id hash suffix",
               gi["record_id"] != struct_id and gi["record_id"][8:] == struct_id[4:])
+        # A3: NO emitted #41 record is record_kind='skill'; a record_kind=skill query returns ONLY #38's records
+        check("A3: NO emitted card record is record_kind='skill'",
+              all(r["record_kind"] == "summary" for r in recs)
+              and not any(r["record_kind"] == "skill" for r in recs))
+        skl38 = {**gi, "record_id": struct_id, "record_kind": "skill",
+                 "authority_level": "canonical_source", "schema_version": "lifeorch.repo_intel.record/0.1"}
+        combined = recs + [skl38]
+        skill_rows = [r for r in combined if r["record_kind"] == "skill"]
+        check("A3: record_kind=skill over the combined corpus returns ONLY #38's records",
+              len(skill_rows) == 1 and skill_rows[0]["record_id"].startswith("skl_"))
+        # A3: the validator REJECTS a skill.card record forced back to record_kind='skill' or stripped of attrs
+        bad = json.loads(json.dumps(recs)); bad[0]["record_kind"] = "skill"
+        vbad = sc.validate_records(bad)
+        check("A3: validator rejects a skill.card record forced to record_kind='skill'",
+              (not vbad["ok"]) and any("record_kind must be" in e for e in vbad["errors"]))
+        bad2 = json.loads(json.dumps(recs)); bad2[0].pop("attrs", None)
+        check("A3: validator rejects a skill.card summary missing attrs.summary_type",
+              (not sc.validate_records(bad2)["ok"]))
+        # A3: the seam filter points at record_kind=summary (else it would retrieve #38's structural records)
+        seam_probe = sc.do_retrieve({"cards_path": os.path.join(o1, "cards.json"),
+                                     "query": "extract text and layout from a scanned document image", "k": 3})
+        check("A3: Stage-2 seam filters record_kind=summary + summary_type=skill_activation_card",
+              seam_probe["seam"]["semantic_query_shape"]["filters"] ==
+              {"record_kind": "summary", "summary_type": "skill_activation_card"},
+              str(seam_probe["seam"]["semantic_query_shape"]["filters"]))
 
         # ---- 9) provenance: source_span slices the real manifest bytes ----
         check("provenance: source_path + source_version_id present",

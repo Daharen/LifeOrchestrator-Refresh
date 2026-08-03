@@ -17,10 +17,12 @@ CPU-only, **stdlib-only Python worker** (`skill_card.py`), no model, no network 
    version + health. It **NEVER crashes on a malformed/partial manifest** -- it SURFACES the missing
    fields and emits a degraded card + a warning. Cards are bounded (the compact view, not the full docs).
 
-2. **Skill index** (Priority 6 / 6.1). Emits each card as a `MEMORY_CONTRACT` s1 `skill` **record-envelope
-   artifact** (deterministic ids, idempotent) -- a drop-in for **#36 artifact.search 0.2 `ingest_records`**.
-   PRODUCER of `skill` records; records the **#38 boundary** (this is the RICHER ACTIVATION card, distinct
-   from repo.intel's STRUCTURAL manifest record).
+2. **Skill index** (Priority 6 / 6.1; Amendment A3, D-0087). Emits each card as a `MEMORY_CONTRACT` s1
+   `summary` skill-activation **record-envelope artifact** (`attrs.summary_type=skill_activation_card`;
+   deterministic ids, idempotent) -- a drop-in for **#36 artifact.search 0.2 `ingest_records`**. PRODUCER of
+   `summary` activation records that **DERIVE FROM** repo.intel #38's structural `skill` record via a
+   `derives_from` edge, so **#38 stays the SOLE `record_kind=skill` owner** and a `record_kind=skill` search
+   returns ONE owner (the #38 boundary: distinct id namespace `sklcard_` + `authority_level=derived`).
 
 3. **Stage 1 -- deterministic eligibility filtering** (s9 Stage 1). Given a task descriptor, deterministically
    filters the card set to ELIGIBLE skills, excluding forbidden side-effects / ungranted permissions /

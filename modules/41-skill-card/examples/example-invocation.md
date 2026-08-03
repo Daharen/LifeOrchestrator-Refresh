@@ -1,8 +1,9 @@
 # skill.card -- example invocations
 
 `skill.card` turns each module's `skill.json` (+ sibling README/WORK_ORDER) into a compact, model-facing
-SKILL CARD, emits each card as a MEMORY_CONTRACT s1 `skill` record (a drop-in for #36 0.2 `ingest_records`),
-and ships Stage-1 eligibility filtering + a Stage-2 lexical retrieval baseline over the card index.
+SKILL CARD, emits each card as a MEMORY_CONTRACT s1 `summary` skill-activation record (A3, D-0087 -- it
+DERIVES FROM #38's structural `skill` record; a drop-in for #36 0.2 `ingest_records`), and ships Stage-1
+eligibility filtering + a Stage-2 lexical retrieval baseline over the card index.
 
 ## Generate cards + the skill index over the real modules corpus
 
@@ -10,8 +11,8 @@ and ships Stage-1 eligibility filtering + a Stage-2 lexical retrieval baseline o
 pwsh -NoProfile -File .\Invoke-SkillCard.ps1 -Roots ..\..\modules -Namespace life-orchestrator
 ```
 
-Writes `cards.json` / `cards.jsonl` (the compact cards), `records.jsonl` / `records.json` (the s1 `skill`
-records), `ingest_records.json` (the #36 0.2 `ingest_records` drop-in), `index_manifest.json`, and
+Writes `cards.json` / `cards.jsonl` (the compact cards), `records.jsonl` / `records.json` (the s1 `summary`
+skill-activation records), `ingest_records.json` (the #36 0.2 `ingest_records` drop-in), `index_manifest.json`, and
 `summary.md` to the invocation artifact dir. Deterministic: identical corpus content -> byte-identical
 artifacts across runs and machines.
 

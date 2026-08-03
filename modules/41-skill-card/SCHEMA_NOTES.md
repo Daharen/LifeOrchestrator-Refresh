@@ -1,19 +1,26 @@
-# skill.card -- SCHEMA_NOTES (Module 41, skill `skill.card` 0.1.0)
+# skill.card -- SCHEMA_NOTES (Module 41, skill `skill.card` 0.2.0)
 
 **Authority.** This file records EVERY schema/interface interpretation this PRODUCER makes of the frozen
-`core-docs/MEMORY_CONTRACT.md` (D-0083, amended v0.1.1 by A1 / D-0085) and of directive section 9. The
-D-0077 cross-module fold (skill.card #41 -> artifact.search #36 0.2 `ingest_records`; surfaced in #40's
-packets) depends on it. Governing: `MEMORY_CONTRACT.md` s1/s5/s7 + the directive
+`core-docs/MEMORY_CONTRACT.md` (D-0083, amended v0.1.1 by A1 / D-0085; **Amendment A3 / D-0087** for this
+0.2.0 revision) and of directive section 9. The D-0077 cross-module fold (skill.card #41 -> artifact.search
+#36 0.2 `ingest_records`; surfaced in #40's packets) depends on it. Governing: `MEMORY_CONTRACT.md`
+s1/s5/s7 + **A3** + the directive
 `research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md` section 9 (skill activation) +
-Priority 6/6.1; D-0080/D-0083/D-0085.
+Priority 6/6.1; the frontier Wave-3 red-team `research/2026-08-02-frontier-wave3-design-redteam.md` (P0-5);
+D-0080/D-0083/D-0085/D-0087.
 
 Worker: `skill_card.py` (Python **stdlib only**: `json`, `hashlib`, `re`, `os`, `sys`, `time`, `traceback`
 -- NO third-party). Entrypoint: `Invoke-SkillCard.ps1` (pwsh-file). CPU-only, no model, no network.
-`worker_version` = `0.1.0`; `schema_version` on every record = `lifeorch.skill_card.record/0.1`.
+`worker_version` = `0.2.0`; `schema_version` on every record = `lifeorch.skill_card.record/0.1` (the WIRE
+schema id is UNCHANGED at 0.2.0 -- A3 changes only ENVELOPE values [`record_kind`, a `derives_from` edge, an
+`attrs.summary_type`, the extractor-fingerprint bump], all valid within the frozen s1 envelope; nothing in
+the record's shape needs a new schema id).
 
-skill.card is a **PRODUCER**: it EMITS `skill` record-envelope artifacts conforming to `MEMORY_CONTRACT` s1
-and VALIDATES them; it does **NOT** write the catalog DB (#36 owns storage). The orchestrator feeds the real
-`ingest_records.json` into #36 0.2 `ingest_records` at fold and surfaces the cards in #40's packets.
+skill.card is a **PRODUCER**: it EMITS `summary` skill-activation record-envelope artifacts (A3 -- an
+ACTIVATION card that DERIVES FROM #38's structural `skill` record, NOT a 2nd `skill`) conforming to
+`MEMORY_CONTRACT` s1 and VALIDATES them; it does **NOT** write the catalog DB (#36 owns storage). The
+orchestrator feeds the real `ingest_records.json` into #36 0.2 `ingest_records` at fold and surfaces the
+cards in #40's packets.
 
 ---
 
@@ -38,12 +45,23 @@ and VALIDATES them; it does **NOT** write the catalog DB (#36 owns storage). The
   card fields, eligibility, and retrieval scoring are all order-stable (sorted by `skill_id` / a stable
   `tie_break_key`).
 
-## 2. record_kind emitted (the s1 CLOSED enum, D-0085)
+## 2. record_kind emitted (the s1 CLOSED enum, D-0085; A3 flip, D-0087)
 
-skill.card emits exactly ONE kind: **`skill`**. The validator ACCEPTS the whole frozen s1 enum
+**A3 (D-0087, red-team P0-5): skill.card emits exactly ONE kind: `summary`** -- a skill-ACTIVATION card
+that DERIVES FROM #38's structural `skill` record -- with **`attrs.summary_type = "skill_activation_card"`**.
+This is the 0.2.0 change: 0.1.0 emitted a second `record_kind=skill`, so a `record_kind=skill` search
+returned BOTH #41 (activation) and #38 (structural). Now **repo.intel #38 is the SOLE `record_kind=skill`
+producer** and a `record_kind=skill` search returns ONE owner; skill.card's cards are navigational `summary`
+derivatives (which fit the CLOSED s1 enum). The validator ACCEPTS the whole frozen s1 enum
 (`symbol|summary|decision|claim|episode|failure|procedure|skill|reminder|entity|relationship`) for
-forward-compat and rejects `source_chunk` (reserved by #36's chunk pipeline). `chunker_fingerprint` is
-ALWAYS `null` (a card is a TYPED record, not a chunk).
+forward-compat, rejects `source_chunk` (reserved by #36's chunk pipeline), and -- for skill.card's OWN
+records (schema_version `lifeorch.skill_card.record/0.1`) -- REQUIRES `record_kind=summary` +
+`attrs.summary_type=skill_activation_card` (section 9). `chunker_fingerprint` is ALWAYS `null` (a card is a
+TYPED record, not a chunk). The card **payload, Stage-1 eligibility, and Stage-2 lexical scoring are
+UNCHANGED**: A3 is an ENVELOPE-level change (kind + a `derives_from` edge + a `summary_type` attr + the
+extractor-fingerprint bump); `content_hash = _h(canon(payload))` is UNCHANGED so `record_id` /
+`record_version_id` stay STABLE across the 0.1->0.2 flip (proven off-machine: `cards_digest` byte-identical
+to 0.1.0, `records_digest` changed).
 
 ## 3. Id derivation (LOGICAL vs IMMUTABLE-REVISION identity, per s1) -- and the #38 BOUNDARY
 
@@ -69,16 +87,23 @@ Three-way distinction so both land in the SAME namespace/db WITHOUT colliding:
 2. **Distinct `authority_level`:** `"derived"` (a derived activation view) vs #38's `"canonical_source"`
    (the authoritative structural manifest). A consumer choosing "the source of truth" prefers #38; one
    choosing "what to show the 9B for routing" prefers #41.
-3. **Explicit cross-link:** every card carries a `child_edge` `describes_structural_skill` (external) whose
-   `external_ref` is #38's recomputed `skl_...` id -- documents the relationship (resolves only when both
-   producers share the namespace at fold; informative, not required to resolve).
+3. **Explicit derivation edge (A3, D-0087):** every card carries a `child_edge` **`derives_from`** (external)
+   whose `external_ref` is #38's recomputed `skl_...` id -- a NAVIGATIONAL DERIVATIVE per A3 (the card is
+   derived FROM #38's structural manifest record; resolves only when both producers share the namespace at
+   fold; informative, not required to resolve). This **REPLACES** the 0.1.0 `describes_structural_skill`
+   cross-link (fully -- NOT kept as an alias): the `external_ref` is byte-identical (the same
+   `_h(ns "\0" skill_id)[:24]` suffix as #38's `skl_` id), only the `edge_type` changed from a "describes"
+   cross-link to the `derives_from` derivation A3 names. The joinable suffix + the distinct `sklcard_`/`skl_`
+   prefixes still make the two records for one skill trivially joinable. (Decision: fully replace, not
+   augment -- one boundary edge, expressed as derivation, keeps the change minimal and the edge_count stable.)
 
 ## 4. The s1 envelope -- field-by-field (every record)
 
 | s1 field | skill.card value / interpretation |
 |---|---|
 | `record_id` / `record_version_id` | section 3 (logical vs immutable-revision). |
-| `record_kind` | `"skill"` (section 2). |
+| `record_kind` | `"summary"` (A3, section 2). |
+| `attrs` | `{summary_type:"skill_activation_card"}` (A3) -- an ENVELOPE-level marker; it is NOT part of `payload`, so it does NOT feed `content_hash`/ids; #36 carries it in `attrs`/ignores it (unknown-field tolerant). |
 | `namespace` (a.k.a. `project_id`) | slugged corpus label (default `life-orchestrator`); isolation scope. |
 | `content_hash` | `_h(canon(payload))` (the card). |
 | `status` / `currentness` | `"current"` -- the single s5 STRING (D-0085); a producer never emits a stale reason (a CONSUMER assigns `source_stale`/... when a manifest/parser changes). NB: the CARD's own quality lives in `payload.card_status` (`ok|partial|degraded`) + `payload.version_health.health.status` -- a DOMAIN/body status, NOT the envelope `status` (s1 rule). |
@@ -92,12 +117,12 @@ Three-way distinction so both land in the SAME namespace/db WITHOUT colliding:
 | `derivation_refs` | the EXTRA sibling docs consulted, as `[{ref:<rel>, kind:"source_doc"}...]` (README/WORK_ORDER). NOT required to resolve to emitted records (they are source docs, not #41 records) -- the validator does not resolve them (only `relationship` records resolve derivation_refs, and #41 emits none). |
 | `parser_fingerprint` | `"skill.card.manifest/0.1;json"` (the manifest parse). |
 | `chunker_fingerprint` | **ALWAYS `null`** (typed record, not a chunk). |
-| `extractor_fingerprint` | `"skill.card.cardgen/0.1;section9"` (the section-9 card derivation). |
+| `extractor_fingerprint` | `"skill.card.cardgen/0.2;section9;summary-activation"` (the section-9 card derivation; the version BUMP records the A3 kind flip -- s4 "a derivation-version change invalidates derived records"; an envelope field, so it does NOT alter `content_hash`/ids). |
 | `schema_version` | `lifeorch.skill_card.record/0.1`. |
 | `token_count` | whitespace-token count of the card `text` (the compact searchable surrogate). |
 | `embedding_space_id` | `null` (nullable until embedded; skill.card does not embed -- s2). |
 | `parent_edges` | `[{skill_of_module, external, external_ref:"modules/<NN>-name"}]` when the skill lives under a module dir, else `[]`. |
-| `child_edges` | one `{has_operation, external, external_ref:"<skill_id>#op:<op>"}` per supported operation (ops are card FIELDS, not separate records -> external edges), PLUS the `describes_structural_skill` cross-link (section 3). |
+| `child_edges` | one `{has_operation, external, external_ref:"<skill_id>#op:<op>"}` per supported operation (ops are card FIELDS, not separate records -> external edges), PLUS the `derives_from` derivation edge to #38's `skl_` record (A3; REPLACES the 0.1 `describes_structural_skill`, section 3). |
 | `payload` | the CARD (section 5) -- feeds `content_hash` + `token_count`; what a consumer renders. Consumers tolerate this extra field (SKILL_CONTRACT s3 unknown-field rule). |
 | `text` | the compact card `text`, ADDED at the TOP LEVEL so #36 `records_fts` FTS-indexes the card (Stage-2 via the #36 retriever). Additive; NOT part of `content_hash` (the payload copy is). |
 
@@ -169,10 +194,15 @@ field never excludes). Rules:
   first and EXCLUDES OCR; an unrelated query returns nothing -- a test that FAILS if an irrelevant skill
   surfaces.)
 - **The SEMANTIC SEAM (`result.seam`):** defines the semantic query shape
-  `{query_text, task_type?, k, embedding_space_id, filters:{record_kind:"skill"}, candidate_kinds:
-  [skill,procedure,episode,failure]}` and the exact **#36 `search`** call
-  `{op:"search", query, k, mode:"fts", filters:{record_kind:"skill", namespace}}` that real embeddings +
-  #36 hybrid retrieval fold into at the retrieval wave (#37 0.2). Records carry a top-level `text` so #36
+  `{query_text, task_type?, k, embedding_space_id, filters:{record_kind:"summary",
+  summary_type:"skill_activation_card"}, candidate_kinds:[summary,procedure,episode,failure]}` and the exact
+  **#36 `search`** call `{op:"search", query, k, mode:"fts", filters:{record_kind:"summary",
+  summary_type:"skill_activation_card", namespace}}` that real embeddings + #36 hybrid retrieval fold into at
+  the retrieval wave (#37 0.2). **A3 (D-0087): the seam filter TRACKS the emitted kind** -- a
+  `record_kind=skill` search would now return #38's STRUCTURAL records, NOT these activation cards, so the
+  seam filters `record_kind=summary` + `summary_type=skill_activation_card`. The lexical SCORING/ranking
+  BEHAVIOUR is UNCHANGED (byte-identical: `score_card`/`do_retrieve` untouched); only the DESCRIPTIVE fold-in
+  filter changed, so the seam still points at the cards it produces. Records carry a top-level `text` so #36
   `records_fts` indexes them today; the fused hybrid rank replaces `lexical_score` once vectors participate.
 
 ## 8. `ingest_records` drop-in (the D-0077 fold seam) -- I PRODUCE; #36 0.2 CONSUMES
@@ -182,11 +212,21 @@ field never excludes). Rules:
   `{ schema:"lifeorch.skill_card.ingest_records/0.1", namespace, created_by_ingest_run, producer:"skill.card",
   producer_version, record_count, records:[<s1 record>...] }`.
 - **Shaped to #36 0.2 `ingest_records`** (SCHEMA_NOTES #36 s4): each record has `record_id`,
-  `record_version_id`, `record_kind` (=`skill`, in the typed enum, NOT `source_chunk`), BOTH `text` (FTS)
-  AND `content_hash`, s1 provenance + fingerprints, and `edges` via `parent_edges`/`child_edges`
-  (materialized as first-class `record_edges` by #36). Idempotent: identical card -> identical
-  `record_version_id` + `content_hash` (a re-ingest no-op); a changed card -> a NEW `record_version_id`
-  (a fresh revision, never a `record_version_conflict`).
+  `record_version_id`, `record_kind` (=`summary` per A3, in the typed enum, NOT `source_chunk`),
+  `attrs.summary_type=skill_activation_card`, BOTH `text` (FTS) AND `content_hash`, s1 provenance +
+  fingerprints, and `edges` via `parent_edges`/`child_edges` (materialized as first-class `record_edges`
+  by #36). Idempotent: identical card -> identical `record_version_id` + `content_hash` (a re-ingest
+  no-op); a changed card -> a NEW `record_version_id` (a fresh revision, never a `record_version_conflict`).
+- **The 0.1->0.2 kind flip vs #36 re-ingest (A3 fold concern -- record it):** because `content_hash` is
+  UNCHANGED (it hashes only `payload`, and the payload/card is byte-identical), a skill.card record keeps
+  its SAME `record_id` + `record_version_id` across the flip -- only the ENVELOPE `record_kind`
+  (`skill`->`summary`), `attrs`, the `derives_from` edge, and `extractor_fingerprint` differ. On a FRESH
+  catalog (the orchestrator's fold path -- it rebuilds the #36 catalog at fold, D-0077) the `summary` kind +
+  `summary_type` store cleanly. On a PRE-EXISTING catalog already holding the 0.1 `skill`-kind row at the
+  same `record_version_id`, #36's content-idempotency would treat the unchanged `content_hash` as a no-op
+  and might NOT rewrite the stored `record_kind`; reconciling the stored kind is an ENVELOPE migration the
+  orchestrator handles by rebuilding on a fresh catalog (the i30 fold runs on a fresh catalog, so no live
+  migration is required this wave).
 - **Divergences to reconcile at fold (record here):** (a) skill.card ADDS `source_path`, `payload`, and a
   top-level `text` to the s1 envelope (all additive; unknown-field-tolerant per SKILL_CONTRACT s3 -- #36
   reads `text` for FTS and stores `content_hash`; the extra `payload` is carried in `attrs`/ignored). (b)
@@ -196,10 +236,14 @@ field never excludes). Rules:
   validator (only `relationship` records resolve them; #41 emits none). If #36 0.2 keys records on a field
   #41 derived differently, reconcile via `record_id`/`source_version_id` (both documented above).
 
-## 9. Validator (s1 -- op `validate`, run inline on every `cards`)
+## 9. Validator (s1 + A3 -- op `validate`, run inline on every `cards`)
 
 `validate_records(records)` checks, per record: all s1 required fields present; `record_kind` in the frozen
-enum (and NOT `source_chunk`); `content_hash == _h(canon(payload))`; `record_version_id ==
+enum (and NOT `source_chunk`); **A3 (gated on the skill.card schema `lifeorch.skill_card.record/0.1`):
+`record_kind == "summary"` AND `attrs.summary_type == "skill_activation_card"`** -- so a skill.card record
+forced back to `skill` (or stripped of `summary_type`) is REJECTED, PROVING #38 stays the sole `skill`
+owner; the gate is BY SCHEMA so a FOREIGN `summary` record (e.g. #38's structural summaries) is NEVER
+falsely rejected; `content_hash == _h(canon(payload))`; `record_version_id ==
 "rv_"+_h(record_id "\0" content_hash)[:24]` (id integrity -> a tampered record is REJECTED); `source_span`
 is a `{start,end}` object with `start<=end` OR `derivation_refs` non-empty; every `parent_edges`/`child_edges`
 target resolves to an emitted `record_id` OR is `external` with an `external_ref`; and the **#36 ingest
@@ -221,9 +265,15 @@ edge_summary}`. A non-empty `errors` is a defect (the acceptance gate requires `
 
 ## 11. Non-goals (NOT built -- Priority 7 / other modules / later waves)
 
-The task classifier (Stage 3), the 9B preflight (Stage 5), deterministic plan validation (Stage 6) --
-Priority 7; the PROCEDURE schema/registry/promotion (Priority 6 procedure half -- a named follow-on); real
-embeddings / semantic retrieval (the retrieval wave -- lexical baseline only); the catalog DB (#36 owns
-storage -- EMIT records only); repo.intel's structural parsing (#38 -- consume the boundary, not the work);
-the context compiler (#40); the reranker/eval (#37); any UI; strong-preflight integration. Does NOT touch
-model modules / `models.json`.
+**P1-6 richer card fields for SAFE selection are DEFERRED (a NAMED follow-on, NOT this wave, D-0087):**
+`applicability` / `non_applicability` / `required_permission_scopes` / `input_schema_refs` /
+`output_schema_refs` / `effect_set` / `risk_class` / `idempotency` / `rollback` / `sandbox_class` /
+`dependency_constraints` / `health_ref`; a three-valued Stage-1 (`eligible|ineligible|indeterminate`;
+indeterminate -> ineligible for side-effecting tasks); a degraded card failing CLOSED (not remaining
+selectable); live-referenced health. i30 is the MINIMAL A3 ENVELOPE conformance (kind + `derives_from` edge
++ `summary_type` + validator) ONLY. Also NOT built: the task classifier (Stage 3), the 9B preflight
+(Stage 5), deterministic plan validation (Stage 6) -- Priority 7; the PROCEDURE schema/registry/promotion
+(Priority 6 procedure half -- a named follow-on); real embeddings / semantic retrieval (the retrieval wave
+-- lexical baseline only); the catalog DB (#36 owns storage -- EMIT records only); repo.intel's structural
+parsing (#38 -- consume the boundary, not the work); the context compiler (#40); the reranker/eval (#37);
+any UI; strong-preflight integration. Does NOT touch model modules / `models.json`.
