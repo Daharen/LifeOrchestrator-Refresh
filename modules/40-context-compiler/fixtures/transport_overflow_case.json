@@ -1,0 +1,77 @@
+{
+  "_expect_disposition": "needs_expansion",
+  "retrieval_batches": [
+    {
+      "hits": [
+        {
+          "abs_path": null,
+          "authority_level": "source_material",
+          "chunk_content_hash": "bd302e7f8136be279600e5349a2fa64933626f0a5112401be9e8900c8d95c77d",
+          "chunk_id": "chk_8bd8ad013f973f2516c6d138",
+          "chunk_type": "markdown_section",
+          "content_hash": "bd302e7f8136be279600e5349a2fa64933626f0a5112401be9e8900c8d95c77d",
+          "corpus_version": "digest_tx_0001",
+          "currentness": "current",
+          "embedding_space_id": null,
+          "filter_decisions": {},
+          "fused_rank": 1,
+          "fused_score": 1.0,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "heading": null,
+          "index_snapshot": "digest_tx_0001",
+          "lexical_rank": 1,
+          "lexical_score": 1.0,
+          "namespace": "core-docs",
+          "rank": 1,
+          "record_id": "big_rec",
+          "record_kind": "source_chunk",
+          "record_version_id": "big_rec_v1",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "section_path": null,
+          "snippet": "The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. \n",
+          "source": "core-docs",
+          "source_path": "core-docs/big.md",
+          "source_version_id": "ver_8bad09982c620b79e91e7f4c",
+          "span": {
+            "end": 3601,
+            "start": 0
+          },
+          "span_label": "bytes:0-3601",
+          "status": "current",
+          "tie_break_key": "big_rec_v1",
+          "vector_rank": null,
+          "vector_similarity": null
+        }
+      ],
+      "query_index": 0
+    }
+  ],
+  "retrieval_meta": {
+    "corpus_version": "digest_tx_0001",
+    "retriever": "mock"
+  },
+  "source_texts": {
+    "core-docs/big.md": "The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. The oversize required source. \n"
+  },
+  "task": {
+    "config": {
+      "token_budget": 5000
+    },
+    "consumer_profile": {
+      "max_context": 400,
+      "reserved_generation_tokens": 0,
+      "reserved_system_tokens": 0,
+      "reserved_tool_tokens": 0
+    },
+    "namespace": "core-docs",
+    "original_goal": "Answer from the big source.",
+    "relevant_paths": [
+      "core-docs/big.md"
+    ],
+    "request_text": "oversize required source",
+    "task_type": "documentation"
+  }
+}

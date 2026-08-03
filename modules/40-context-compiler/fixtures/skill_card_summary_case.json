@@ -1,0 +1,115 @@
+{
+  "_structural_skill_rvid": "skl_context_compile_v1",
+  "_summary_skill_rvid": "sklcard_context_compile_v1",
+  "retrieval_batches": [
+    {
+      "hits": [
+        {
+          "abs_path": null,
+          "attrs": {
+            "summary_type": "skill_activation_card"
+          },
+          "authority_level": "derived",
+          "chunk_content_hash": "91cafd74ba35cbcfa88c910b594d7fb7ed9110170974ee1eb1d038efd25706c2",
+          "chunk_id": "chk_61ca2ffd073ce304ca47b01e",
+          "chunk_type": "markdown_section",
+          "content_hash": "91cafd74ba35cbcfa88c910b594d7fb7ed9110170974ee1eb1d038efd25706c2",
+          "corpus_version": "digest_a3_0001",
+          "currentness": "current",
+          "embedding_space_id": null,
+          "filter_decisions": {},
+          "fused_rank": 1,
+          "fused_score": 1.0,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "heading": null,
+          "index_snapshot": "digest_a3_0001",
+          "lexical_rank": 1,
+          "lexical_score": 1.0,
+          "namespace": "core-docs",
+          "rank": 1,
+          "record_id": "sklcard_context_compile",
+          "record_kind": "summary",
+          "record_version_id": "sklcard_context_compile_v1",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "section_path": null,
+          "snippet": "context.compile activation card: use to build a token-budgeted context packet.\n",
+          "source": "core-docs",
+          "source_path": "core-docs/card.md",
+          "source_version_id": "ver_a7803c3a6ab16fb06983699d",
+          "span": {
+            "end": 79,
+            "start": 0
+          },
+          "span_label": "bytes:0-79",
+          "status": "current",
+          "tie_break_key": "sklcard_context_compile_v1",
+          "vector_rank": null,
+          "vector_similarity": null
+        },
+        {
+          "abs_path": null,
+          "authority_level": "derived",
+          "chunk_content_hash": "ee42862b3497cfcbc7f8b7bf13af253b76eab0959202cd79072c6ac6d7e9463b",
+          "chunk_id": "chk_f7adc5f8edbe33b38f3df5f5",
+          "chunk_type": "markdown_section",
+          "content_hash": "ee42862b3497cfcbc7f8b7bf13af253b76eab0959202cd79072c6ac6d7e9463b",
+          "corpus_version": "digest_a3_0001",
+          "currentness": "current",
+          "embedding_space_id": null,
+          "filter_decisions": {},
+          "fused_rank": 2,
+          "fused_score": 0.99,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "heading": null,
+          "index_snapshot": "digest_a3_0001",
+          "lexical_rank": 2,
+          "lexical_score": 0.99,
+          "namespace": "core-docs",
+          "rank": 2,
+          "record_id": "skl_context_compile",
+          "record_kind": "skill",
+          "record_version_id": "skl_context_compile_v1",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "section_path": null,
+          "snippet": "context.compile structural skill manifest entry.\n",
+          "source": "core-docs",
+          "source_path": "core-docs/manifest.md",
+          "source_version_id": "ver_426e4035298938776e243e4f",
+          "span": {
+            "end": 49,
+            "start": 0
+          },
+          "span_label": "bytes:0-49",
+          "status": "current",
+          "tie_break_key": "skl_context_compile_v1",
+          "vector_rank": null,
+          "vector_similarity": null
+        }
+      ],
+      "query_index": 0
+    }
+  ],
+  "retrieval_meta": {
+    "corpus_version": "digest_a3_0001",
+    "retriever": "mock"
+  },
+  "source_texts": {
+    "core-docs/card.md": "context.compile activation card: use to build a token-budgeted context packet.\n",
+    "core-docs/manifest.md": "context.compile structural skill manifest entry.\n"
+  },
+  "task": {
+    "config": {
+      "token_budget": 500
+    },
+    "namespace": "core-docs",
+    "original_goal": "Find a skill to compile context.",
+    "request_text": "context compile skill",
+    "task_type": "coding"
+  }
+}

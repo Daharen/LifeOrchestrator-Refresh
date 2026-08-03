@@ -1,0 +1,112 @@
+{
+  "_expect_disposition": "conflicted",
+  "retrieval_batches": [
+    {
+      "hits": [
+        {
+          "abs_path": null,
+          "authority_level": "source_material",
+          "chunk_content_hash": "b7919651d6fc831aeaab7b72726b14fc322a110c4a887be73a07e86af4f7ef18",
+          "chunk_id": "chk_37c64ebd38c17167ef759484",
+          "chunk_type": "markdown_section",
+          "content_hash": "b7919651d6fc831aeaab7b72726b14fc322a110c4a887be73a07e86af4f7ef18",
+          "corpus_version": "digest_disp_0004",
+          "currentness": "current",
+          "embedding_space_id": null,
+          "filter_decisions": {},
+          "fused_rank": 1,
+          "fused_score": 1.0,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "heading": null,
+          "index_snapshot": "digest_disp_0004",
+          "lexical_rank": 1,
+          "lexical_score": 1.0,
+          "namespace": "core-docs",
+          "rank": 1,
+          "record_id": "conf_rec",
+          "record_kind": "source_chunk",
+          "record_version_id": "conf_rec_v1",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "section_path": null,
+          "snippet": "Version A says the lease TTL is 1800 seconds.\n",
+          "source": "core-docs",
+          "source_path": "core-docs/conf_a.md",
+          "source_version_id": "ver_b2f661577b9dccb0cc177140",
+          "span": {
+            "end": 46,
+            "start": 0
+          },
+          "span_label": "bytes:0-46",
+          "status": "current",
+          "tie_break_key": "conf_rec_v1",
+          "vector_rank": null,
+          "vector_similarity": null
+        },
+        {
+          "abs_path": null,
+          "authority_level": "source_material",
+          "chunk_content_hash": "857de8c270fdc5a9bf732b8dc3bb0ea74bc21d8bde1e3c5e5bd03204db446944",
+          "chunk_id": "chk_d87485a28e270f0404b56b4f",
+          "chunk_type": "markdown_section",
+          "content_hash": "857de8c270fdc5a9bf732b8dc3bb0ea74bc21d8bde1e3c5e5bd03204db446944",
+          "corpus_version": "digest_disp_0004",
+          "currentness": "current",
+          "embedding_space_id": null,
+          "filter_decisions": {},
+          "fused_rank": 2,
+          "fused_score": 0.99,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "heading": null,
+          "index_snapshot": "digest_disp_0004",
+          "lexical_rank": 2,
+          "lexical_score": 0.99,
+          "namespace": "core-docs",
+          "rank": 2,
+          "record_id": "conf_rec",
+          "record_kind": "source_chunk",
+          "record_version_id": "conf_rec_v2",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "section_path": null,
+          "snippet": "Version B says the lease TTL is 900 seconds.\n",
+          "source": "core-docs",
+          "source_path": "core-docs/conf_b.md",
+          "source_version_id": "ver_494a8b6bd368e0b354144a35",
+          "span": {
+            "end": 45,
+            "start": 0
+          },
+          "span_label": "bytes:0-45",
+          "status": "current",
+          "tie_break_key": "conf_rec_v2",
+          "vector_rank": null,
+          "vector_similarity": null
+        }
+      ],
+      "query_index": 0
+    }
+  ],
+  "retrieval_meta": {
+    "corpus_version": "digest_disp_0004",
+    "retriever": "mock"
+  },
+  "source_texts": {
+    "core-docs/conf_a.md": "Version A says the lease TTL is 1800 seconds.\n",
+    "core-docs/conf_b.md": "Version B says the lease TTL is 900 seconds.\n"
+  },
+  "task": {
+    "config": {
+      "per_source_cap": 5,
+      "token_budget": 500
+    },
+    "namespace": "core-docs",
+    "original_goal": "State the lease TTL.",
+    "request_text": "lease TTL value",
+    "task_type": "documentation"
+  }
+}

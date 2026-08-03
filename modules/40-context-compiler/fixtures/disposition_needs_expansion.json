@@ -1,0 +1,121 @@
+{
+  "_expect_disposition": "needs_expansion",
+  "_required_literal": "ZORPTOKEN",
+  "retrieval_batches": [
+    {
+      "hits": [
+        {
+          "abs_path": null,
+          "authority_level": "source_material",
+          "chunk_content_hash": "9f8677580bba3972c18e2148ce4c5cc17d030ba1e53cda3adc6b3dabf8e68af5",
+          "chunk_id": "chk_eede992c1f6a45f58a544cac",
+          "chunk_type": "markdown_section",
+          "content_hash": "9f8677580bba3972c18e2148ce4c5cc17d030ba1e53cda3adc6b3dabf8e68af5",
+          "corpus_version": "digest_disp_0002",
+          "currentness": "current",
+          "embedding_space_id": null,
+          "filter_decisions": {},
+          "fused_rank": 1,
+          "fused_score": 1.0,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "heading": null,
+          "index_snapshot": "digest_disp_0002",
+          "lexical_rank": 1,
+          "lexical_score": 1.0,
+          "namespace": "core-docs",
+          "rank": 1,
+          "record_id": "filler_rec",
+          "record_kind": "source_chunk",
+          "record_version_id": "filler_rec_v1",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "section_path": null,
+          "snippet": "Filler paragraph that ranks first and eats the tiny token budget entirely here.\n",
+          "source": "core-docs",
+          "source_path": "core-docs/filler.md",
+          "source_version_id": "ver_4a31d19e7fb9049ebfc1b22c",
+          "span": {
+            "end": 80,
+            "start": 0
+          },
+          "span_label": "bytes:0-80",
+          "status": "current",
+          "tie_break_key": "filler_rec_v1",
+          "vector_rank": null,
+          "vector_similarity": null
+        },
+        {
+          "abs_path": null,
+          "authority_level": "source_material",
+          "chunk_content_hash": "ced49c7e704bae3bdc44ae39fb833a88a9110b4963f6908b75154084f1cdd04d",
+          "chunk_id": "chk_7f0370f9d15c869d22f1fdf2",
+          "chunk_type": "markdown_section",
+          "content_hash": "ced49c7e704bae3bdc44ae39fb833a88a9110b4963f6908b75154084f1cdd04d",
+          "corpus_version": "digest_disp_0002",
+          "currentness": "current",
+          "embedding_space_id": null,
+          "filter_decisions": {},
+          "fused_rank": 2,
+          "fused_score": 0.99,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "heading": null,
+          "index_snapshot": "digest_disp_0002",
+          "lexical_rank": 2,
+          "lexical_score": 0.99,
+          "namespace": "core-docs",
+          "rank": 2,
+          "record_id": "detail_rec",
+          "record_kind": "source_chunk",
+          "record_version_id": "detail_rec_v1",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "section_path": null,
+          "snippet": "The detail chunk that alone mentions ZORPTOKEN, the required literal answer.\n",
+          "source": "core-docs",
+          "source_path": "core-docs/detail.md",
+          "source_version_id": "ver_05ceec62c463a5395ca4e877",
+          "span": {
+            "end": 77,
+            "start": 0
+          },
+          "span_label": "bytes:0-77",
+          "status": "current",
+          "tie_break_key": "detail_rec_v1",
+          "vector_rank": null,
+          "vector_similarity": null
+        }
+      ],
+      "query_index": 0
+    }
+  ],
+  "retrieval_meta": {
+    "corpus_version": "digest_disp_0002",
+    "retriever": "mock"
+  },
+  "source_texts": {
+    "core-docs/detail.md": "The detail chunk that alone mentions ZORPTOKEN, the required literal answer.\n",
+    "core-docs/filler.md": "Filler paragraph that ranks first and eats the tiny token budget entirely here.\n"
+  },
+  "task": {
+    "config": {
+      "per_excerpt_overhead_tokens": 2,
+      "token_budget": 24
+    },
+    "evidence_requirements": [
+      {
+        "description": "the required detail literal",
+        "id": "need-zorp",
+        "type": "literal",
+        "value": "ZORPTOKEN"
+      }
+    ],
+    "namespace": "core-docs",
+    "original_goal": "Answer using the ZORPTOKEN detail.",
+    "request_text": "filler detail content",
+    "task_type": "documentation"
+  }
+}

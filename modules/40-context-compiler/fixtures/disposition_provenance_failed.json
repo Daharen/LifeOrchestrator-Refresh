@@ -1,0 +1,71 @@
+{
+  "_expect_disposition": "provenance_failed",
+  "retrieval_batches": [
+    {
+      "hits": [
+        {
+          "abs_path": null,
+          "authority_level": "source_material",
+          "chunk_content_hash": "fc3e0a6d8aec3870dbe0d38ee7c20d5788db8db51e68cf1454c950987a51615c",
+          "chunk_id": "chk_0d0b9dcf4e39bc3e51034480",
+          "chunk_type": "markdown_section",
+          "content_hash": "a0fb94669a5ba7c294dcddb662b22073e114963cb4d4c1173090bb5b282c5eaa",
+          "corpus_version": "digest_disp_0005",
+          "currentness": "current",
+          "embedding_space_id": null,
+          "filter_decisions": {},
+          "fused_rank": 1,
+          "fused_score": 1.0,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "heading": null,
+          "index_snapshot": "digest_disp_0005",
+          "lexical_rank": 1,
+          "lexical_score": 1.0,
+          "namespace": "core-docs",
+          "rank": 1,
+          "record_id": "bad_rec",
+          "record_kind": "source_chunk",
+          "record_version_id": "bad_rec_v1",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "section_path": null,
+          "snippet": "This text is present but the hit lies about its chunk hash.\n",
+          "source": "core-docs",
+          "source_path": "core-docs/bad.md",
+          "source_version_id": "ver_ebc53a3df82e63d54f62d32d",
+          "span": {
+            "end": 60,
+            "start": 0
+          },
+          "span_label": "bytes:0-60",
+          "status": "current",
+          "tie_break_key": "bad_rec_v1",
+          "vector_rank": null,
+          "vector_similarity": null
+        }
+      ],
+      "query_index": 0
+    }
+  ],
+  "retrieval_meta": {
+    "corpus_version": "digest_disp_0005",
+    "retriever": "mock"
+  },
+  "source_texts": {
+    "core-docs/bad.md": "This text is present but the hit lies about its chunk hash.\n"
+  },
+  "task": {
+    "config": {
+      "token_budget": 500
+    },
+    "namespace": "core-docs",
+    "original_goal": "Answer from the source.",
+    "relevant_paths": [
+      "core-docs/bad.md"
+    ],
+    "request_text": "text present",
+    "task_type": "documentation"
+  }
+}

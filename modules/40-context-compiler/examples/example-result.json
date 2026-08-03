@@ -1,20 +1,11 @@
 {
-  "schema": "lifeorch.skill.result/0.1",
-  "skill_id": "context.compile",
-  "skill_version": "0.1.0",
   "contract_version": "0.2",
-  "invocation_id": "c4cdaa85-eebd-40a4-94f2-59af3260b0ab",
-  "status": "ok",
-  "started_at_utc": "2026-08-02T04:26:51.0255737Z",
-  "finished_at_utc": "2026-08-02T04:26:51.5664863Z",
-  "duration_ms": 535,
-  "inputs_digest": "sha256:c931471c274eac9ceca44d376f789c9e0942233958f2009b0a9c8bb2b8996876",
   "result": {
     "op": "compile",
-    "retriever": "mock",
     "result": {
       "config": {
         "candidate_k": 20,
+        "expand_max_depth": 1,
         "expand_max_tokens": 600,
         "literals_cap": 6,
         "max_excerpts": 40,
@@ -23,553 +14,859 @@
         "per_excerpt_overhead_tokens": 12,
         "per_source_cap": 3,
         "primary_terms_cap": 6,
+        "ref_cap": 8,
         "salient_terms_cap": 12,
         "token_budget": 400
+      },
+      "consumer_profile": {
+        "chat_template_id": "qwen3p5-chatml-no-think",
+        "max_context": 8192,
+        "model_id": "llm.strong.qwen3p5-9b",
+        "reserved_generation_tokens": 1024,
+        "reserved_system_tokens": 384,
+        "reserved_tool_tokens": 0,
+        "tokenizer_fingerprint": "unpinned_upper_bound_ceil_chars_div4",
+        "tokenizer_id": "qwen3p5-9b"
       },
       "metrics": {
         "budget": 400,
         "candidate_count": 6,
+        "contradiction_count": 0,
         "distinct_kind_count": 4,
         "distinct_source_count": 4,
         "dropped_budget": 0,
         "dropped_deleted": 0,
         "dropped_diversity": 0,
         "dropped_duplicate": 0,
+        "dropped_hard_filter": 0,
+        "dropped_transport": 0,
         "excerpt_count": 6,
         "omitted_count": 0,
+        "packet_disposition": "answerable",
         "packet_tokens": 180,
         "provenance_reproduced_all": true,
-        "provenance_reproduced_count": 6
+        "provenance_reproduced_count": 6,
+        "provenance_valid_all": true,
+        "provenance_valid_count": 6,
+        "rendered_tokens": 795,
+        "requirements_missing": 0,
+        "requirements_satisfied": 4,
+        "requirements_total": 4
       },
       "packet": {
-        "candidate_skills": [
-          {
-            "authority_level": "derived",
-            "composite_score": 1540,
-            "currentness": "current",
-            "included_as_excerpt": true,
-            "namespace": "core-docs",
-            "rank_in_pool": 6,
-            "record_id": "skill.context.compile",
-            "record_kind": "skill",
-            "record_version_id": "skill.context.compile@0.1.0",
-            "skill_ref": "skill.context.compile",
-            "source_path": "core-docs/skill.md",
-            "span_label": "bytes:0-78"
-          }
-        ],
         "compiler": {
           "name": "context.compile",
-          "version": "0.1.0",
+          "version": "0.2.0",
           "worker": "context_compiler.py",
-          "worker_version": "0.1.0"
+          "worker_version": "0.2.0"
         },
-        "completion_contract": {
-          "goal": "Ship the context compiler safely under the git lease.",
-          "note": "no explicit success contract supplied; caller must define closing predicate(s).",
-          "schema": "lifeorch.goal_verification/0.1",
-          "success_criteria": []
+        "consumer_profile": {
+          "chat_template_id": "qwen3p5-chatml-no-think",
+          "max_context": 8192,
+          "model_id": "llm.strong.qwen3p5-9b",
+          "reserved_generation_tokens": 1024,
+          "reserved_system_tokens": 384,
+          "reserved_tool_tokens": 0,
+          "tokenizer_fingerprint": "unpinned_upper_bound_ceil_chars_div4",
+          "tokenizer_id": "qwen3p5-9b"
         },
-        "constraints": [
-          "docs:[] -- do not edit core-docs"
-        ],
-        "current_state_refs": [],
-        "escalation_conditions": [
-          "required source could not be retrieved or provenance did not reproduce",
-          "token budget exhausted before a required source was included (truncated=true)",
-          "only stale versions of a required current source are available",
-          "the completion contract has no closing predicate"
-        ],
+        "control_plane": {
+          "completion_contract": {
+            "goal": "Ship the context compiler safely under the git lease.",
+            "note": "no explicit success contract supplied; caller must define closing predicate(s).",
+            "schema": "lifeorch.goal_verification/0.1",
+            "success_criteria": []
+          },
+          "escalation_conditions": [
+            "a required source could not be retrieved or its provenance did not reproduce",
+            "the token budget or transport window was exhausted before a required source was included",
+            "only stale versions of a required current source are available",
+            "the completion contract has no closing predicate",
+            "packet_disposition is not 'answerable'"
+          ],
+          "grant_snapshot_ref": "sha256:40dc2cea42083166f8c49e0fdab44d640c0a7f1b10c8486e493311fe0d98a9e7",
+          "permission_grants": [],
+          "policy": "read_only_compile",
+          "provenance": "descriptor_authority_fields_only",
+          "request_authority": "worker",
+          "side_effect_policy": "deny_all"
+        },
+        "disposition": {
+          "answerable": true,
+          "contradictions": [],
+          "coverage_results": [
+            {
+              "id": "path:core-docs/alpha.md",
+              "satisfied": true,
+              "satisfied_by": [
+                "occ_833d8c8e0c31e5134d117e23",
+                "occ_04c9436470fbc3291122c41e",
+                "occ_d73b3615a58ba5f1ab226020"
+              ],
+              "type": "path",
+              "value": "core-docs/alpha.md"
+            },
+            {
+              "id": "literal:#29",
+              "satisfied": true,
+              "satisfied_by": [
+                "occ_833d8c8e0c31e5134d117e23"
+              ],
+              "type": "literal",
+              "value": "#29"
+            },
+            {
+              "id": "literal:res.lease",
+              "satisfied": true,
+              "satisfied_by": [
+                "occ_833d8c8e0c31e5134d117e23"
+              ],
+              "type": "literal",
+              "value": "res.lease"
+            },
+            {
+              "id": "literal:dev.ship",
+              "satisfied": true,
+              "satisfied_by": [
+                "fail_devship_fn_v1",
+                "prec_ship_v1"
+              ],
+              "type": "literal",
+              "value": "dev.ship"
+            }
+          ],
+          "evidence_requirements": [
+            {
+              "description": "evidence from the relevant path",
+              "id": "path:core-docs/alpha.md",
+              "type": "path",
+              "value": "core-docs/alpha.md"
+            },
+            {
+              "description": "evidence mentioning the literal",
+              "id": "literal:#29",
+              "type": "literal",
+              "value": "#29"
+            },
+            {
+              "description": "evidence mentioning the literal",
+              "id": "literal:res.lease",
+              "type": "literal",
+              "value": "res.lease"
+            },
+            {
+              "description": "evidence mentioning the literal",
+              "id": "literal:dev.ship",
+              "type": "literal",
+              "value": "dev.ship"
+            }
+          ],
+          "missing_requirements": [],
+          "packet_disposition": "answerable",
+          "provenance_failed": false,
+          "rule": "a normal answer is permitted ONLY when packet_disposition == answerable (P0-3)"
+        },
         "evaluation_hooks": {
+          "disposition_eval": {
+            "contradictions": [],
+            "missing_requirements": [],
+            "packet_disposition": "answerable",
+            "provenance_failed": false,
+            "requirements": [
+              {
+                "id": "path:core-docs/alpha.md",
+                "satisfied": true,
+                "satisfied_by": [
+                  "occ_833d8c8e0c31e5134d117e23",
+                  "occ_04c9436470fbc3291122c41e",
+                  "occ_d73b3615a58ba5f1ab226020"
+                ],
+                "type": "path",
+                "value": "core-docs/alpha.md"
+              },
+              {
+                "id": "literal:#29",
+                "satisfied": true,
+                "satisfied_by": [
+                  "occ_833d8c8e0c31e5134d117e23"
+                ],
+                "type": "literal",
+                "value": "#29"
+              },
+              {
+                "id": "literal:res.lease",
+                "satisfied": true,
+                "satisfied_by": [
+                  "occ_833d8c8e0c31e5134d117e23"
+                ],
+                "type": "literal",
+                "value": "res.lease"
+              },
+              {
+                "id": "literal:dev.ship",
+                "satisfied": true,
+                "satisfied_by": [
+                  "fail_devship_fn_v1",
+                  "prec_ship_v1"
+                ],
+                "type": "literal",
+                "value": "dev.ship"
+              }
+            ]
+          },
+          "injection_probe": {
+            "control_plane_provenance": "descriptor_authority_fields_only",
+            "control_plane_source": "descriptor_authority_fields_only",
+            "evidence_can_instruct": false,
+            "evidence_item_count": 6,
+            "evidence_populated_control_plane": false,
+            "grant_snapshot_ref": "sha256:40dc2cea42083166f8c49e0fdab44d640c0a7f1b10c8486e493311fe0d98a9e7"
+          },
           "packet_metrics": {
             "budget": 400,
             "candidate_count": 6,
+            "contradiction_count": 0,
             "distinct_kind_count": 4,
             "distinct_source_count": 4,
             "dropped_budget": 0,
             "dropped_deleted": 0,
             "dropped_diversity": 0,
             "dropped_duplicate": 0,
+            "dropped_hard_filter": 0,
+            "dropped_transport": 0,
             "excerpt_count": 6,
             "omitted_count": 0,
+            "packet_disposition": "answerable",
             "packet_tokens": 180,
             "provenance_reproduced_all": true,
-            "provenance_reproduced_count": 6
+            "provenance_reproduced_count": 6,
+            "provenance_valid_all": true,
+            "provenance_valid_count": 6,
+            "rendered_tokens": 795,
+            "requirements_missing": 0,
+            "requirements_satisfied": 4,
+            "requirements_total": 4
           },
           "retrieved": [
             {
-              "authority_level": "authoritative",
-              "composite_score": 1870,
-              "content_hash": "f20bc2371db3ebda4ffef5af00ecb1d9fbddf144c1cc438fa4ea65feef86a99f",
               "currentness": "current",
-              "feature_points": {
-                "authority": 300,
-                "best_rank": 1,
-                "component_match": 100,
-                "freshness": 200,
-                "kind_priority": 150,
-                "matched_query_count": 1,
-                "namespace_match": 120,
-                "query_coverage": 0,
-                "relevance": 1000
-              },
-              "fused_score_micros": 1000000,
+              "epistemic_authority": "authoritative",
+              "fused_rank": 1,
               "included": true,
-              "matched_queries": [
-                0
-              ],
+              "lexical_rank": 1,
               "omit_reason": null,
-              "rank_in_pool": 1,
+              "reason_codes": [
+                "fusion_rrf",
+                "authority_boost",
+                "selected"
+              ],
               "record_id": "srec_5a100d766ae110107aca5757",
               "record_kind": "source_chunk",
               "record_version_id": "occ_833d8c8e0c31e5134d117e23",
-              "source_path": "core-docs/alpha.md"
+              "retrieval_rank": 1,
+              "selected": true,
+              "selection_rank": 1,
+              "selection_score": 35593,
+              "source_content_hash": "f20bc2371db3ebda4ffef5af00ecb1d9fbddf144c1cc438fa4ea65feef86a99f",
+              "source_path": "core-docs/alpha.md",
+              "vector_rank": null
             },
             {
-              "authority_level": "source_material",
-              "composite_score": 1680,
-              "content_hash": "f20bc2371db3ebda4ffef5af00ecb1d9fbddf144c1cc438fa4ea65feef86a99f",
               "currentness": "current",
-              "feature_points": {
-                "authority": 150,
-                "best_rank": 2,
-                "component_match": 100,
-                "freshness": 200,
-                "kind_priority": 150,
-                "matched_query_count": 1,
-                "namespace_match": 120,
-                "query_coverage": 0,
-                "relevance": 960
-              },
-              "fused_score_micros": 990000,
+              "epistemic_authority": "source_material",
+              "fused_rank": 2,
               "included": true,
-              "matched_queries": [
-                0
-              ],
+              "lexical_rank": 2,
               "omit_reason": null,
-              "rank_in_pool": 2,
+              "reason_codes": [
+                "fusion_rrf",
+                "authority_boost",
+                "selected"
+              ],
               "record_id": "srec_d19a08814c00c8062342020e",
               "record_kind": "source_chunk",
               "record_version_id": "occ_04c9436470fbc3291122c41e",
-              "source_path": "core-docs/alpha.md"
+              "retrieval_rank": 2,
+              "selected": true,
+              "selection_rank": 2,
+              "selection_score": 30829,
+              "source_content_hash": "f20bc2371db3ebda4ffef5af00ecb1d9fbddf144c1cc438fa4ea65feef86a99f",
+              "source_path": "core-docs/alpha.md",
+              "vector_rank": null
             },
             {
-              "authority_level": "source_material",
-              "composite_score": 1640,
-              "content_hash": "f20bc2371db3ebda4ffef5af00ecb1d9fbddf144c1cc438fa4ea65feef86a99f",
               "currentness": "current",
-              "feature_points": {
-                "authority": 150,
-                "best_rank": 3,
-                "component_match": 100,
-                "freshness": 200,
-                "kind_priority": 150,
-                "matched_query_count": 1,
-                "namespace_match": 120,
-                "query_coverage": 0,
-                "relevance": 920
-              },
-              "fused_score_micros": 980000,
+              "epistemic_authority": "source_material",
+              "fused_rank": 3,
               "included": true,
-              "matched_queries": [
-                0
-              ],
+              "lexical_rank": 3,
               "omit_reason": null,
-              "rank_in_pool": 3,
+              "reason_codes": [
+                "fusion_rrf",
+                "authority_boost",
+                "selected"
+              ],
               "record_id": "srec_710d7170a561574a87f83959",
               "record_kind": "source_chunk",
               "record_version_id": "occ_d73b3615a58ba5f1ab226020",
-              "source_path": "core-docs/alpha.md"
+              "retrieval_rank": 3,
+              "selected": true,
+              "selection_rank": 3,
+              "selection_score": 30573,
+              "source_content_hash": "f20bc2371db3ebda4ffef5af00ecb1d9fbddf144c1cc438fa4ea65feef86a99f",
+              "source_path": "core-docs/alpha.md",
+              "vector_rank": null
             },
             {
-              "authority_level": "derived",
-              "composite_score": 1560,
-              "content_hash": "351ab253974f82a45a2e9e93a46556c54429532dfd23037c4ba51e778eeffca2",
               "currentness": "current",
-              "feature_points": {
-                "authority": 100,
-                "best_rank": 1,
-                "component_match": 0,
-                "freshness": 200,
-                "kind_priority": 140,
-                "matched_query_count": 1,
-                "namespace_match": 120,
-                "query_coverage": 0,
-                "relevance": 1000
-              },
-              "fused_score_micros": 1000000,
+              "epistemic_authority": "derived",
+              "fused_rank": 1,
               "included": true,
-              "matched_queries": [
-                1
-              ],
+              "lexical_rank": 1,
               "omit_reason": null,
-              "rank_in_pool": 4,
+              "reason_codes": [
+                "fusion_rrf",
+                "selected"
+              ],
               "record_id": "fail_devship_fn",
               "record_kind": "failure",
               "record_version_id": "fail_devship_fn_v1",
-              "source_path": "core-docs/fail.md"
+              "retrieval_rank": 1,
+              "selected": true,
+              "selection_rank": 4,
+              "selection_score": 30193,
+              "source_content_hash": "351ab253974f82a45a2e9e93a46556c54429532dfd23037c4ba51e778eeffca2",
+              "source_path": "core-docs/fail.md",
+              "vector_rank": null
             },
             {
-              "authority_level": "derived",
-              "composite_score": 1550,
-              "content_hash": "7686612728c9c9fbf6a16e115f6b63a5e0f448d23c5eaf55105e3e95a6f7ed49",
               "currentness": "current",
-              "feature_points": {
-                "authority": 100,
-                "best_rank": 1,
-                "component_match": 0,
-                "freshness": 200,
-                "kind_priority": 130,
-                "matched_query_count": 1,
-                "namespace_match": 120,
-                "query_coverage": 0,
-                "relevance": 1000
-              },
-              "fused_score_micros": 1000000,
+              "epistemic_authority": "derived",
+              "fused_rank": 1,
               "included": true,
-              "matched_queries": [
-                2
-              ],
+              "lexical_rank": 1,
               "omit_reason": null,
-              "rank_in_pool": 5,
+              "reason_codes": [
+                "fusion_rrf",
+                "selected"
+              ],
               "record_id": "prec_ship",
               "record_kind": "procedure",
               "record_version_id": "prec_ship_v1",
-              "source_path": "core-docs/proc.md"
+              "retrieval_rank": 1,
+              "selected": true,
+              "selection_rank": 5,
+              "selection_score": 29393,
+              "source_content_hash": "7686612728c9c9fbf6a16e115f6b63a5e0f448d23c5eaf55105e3e95a6f7ed49",
+              "source_path": "core-docs/proc.md",
+              "vector_rank": null
             },
             {
-              "authority_level": "derived",
-              "composite_score": 1540,
-              "content_hash": "1b82067b3894c007547b81d141d054653e955d2564ac22db98e139a8e160eeab",
               "currentness": "current",
-              "feature_points": {
-                "authority": 100,
-                "best_rank": 1,
-                "component_match": 0,
-                "freshness": 200,
-                "kind_priority": 120,
-                "matched_query_count": 1,
-                "namespace_match": 120,
-                "query_coverage": 0,
-                "relevance": 1000
-              },
-              "fused_score_micros": 1000000,
+              "epistemic_authority": "derived",
+              "fused_rank": 1,
               "included": true,
-              "matched_queries": [
-                3
-              ],
+              "lexical_rank": 1,
               "omit_reason": null,
-              "rank_in_pool": 6,
+              "reason_codes": [
+                "fusion_rrf",
+                "selected"
+              ],
               "record_id": "skill.context.compile",
               "record_kind": "skill",
               "record_version_id": "skill.context.compile@0.1.0",
-              "source_path": "core-docs/skill.md"
+              "retrieval_rank": 1,
+              "selected": true,
+              "selection_rank": 6,
+              "selection_score": 29393,
+              "source_content_hash": "1b82067b3894c007547b81d141d054653e955d2564ac22db98e139a8e160eeab",
+              "source_path": "core-docs/skill.md",
+              "vector_rank": null
             }
-          ]
-        },
-        "excerpts": [
-          {
-            "authority_level": "authoritative",
-            "chunk_content_hash": "a93289baeed026a1a7884280b258499bc047d32bf82b2380a84610c600f6f0c4",
-            "chunk_type": "markdown_section",
-            "content_hash": "f20bc2371db3ebda4ffef5af00ecb1d9fbddf144c1cc438fa4ea65feef86a99f",
-            "currentness": "current",
-            "excerpt_id": "exc_268d6e9d31f61d66a119ca27",
-            "heading": null,
-            "namespace": "core-docs",
-            "provenance": {
-              "checked_against": "chunk_content_hash",
-              "reproduced": true,
-              "span_sha256": "a93289baeed026a1a7884280b258499bc047d32bf82b2380a84610c600f6f0c4",
-              "text_source": "source_texts"
-            },
-            "record_id": "srec_5a100d766ae110107aca5757",
-            "record_kind": "source_chunk",
-            "record_version_id": "occ_833d8c8e0c31e5134d117e23",
-            "section_path": "Resource Lease",
-            "selection": {
-              "best_query_rank": 1,
-              "composite_score": 1870,
-              "feature_points": {
-                "authority": 300,
-                "best_rank": 1,
-                "component_match": 100,
-                "freshness": 200,
-                "kind_priority": 150,
-                "matched_query_count": 1,
-                "namespace_match": 120,
-                "query_coverage": 0,
-                "relevance": 1000
+          ],
+          "stages": {
+            "packet": [
+              {
+                "record_version_id": "occ_833d8c8e0c31e5134d117e23",
+                "selection_rank": 1
               },
-              "fused_score_micros": 1000000,
-              "matched_queries": [
-                0
-              ],
-              "rank_in_pool": 1
-            },
-            "source_path": "core-docs/alpha.md",
-            "source_version_id": "ver_ca75c6f0c6d5e6597c13a3e6",
-            "span": {
-              "end": 75,
-              "start": 18
-            },
-            "span_label": "Resource Lease",
-            "text": "The res.lease module #29 grants gpu, git, and doc leases.",
-            "token_estimate": 15
-          },
-          {
-            "authority_level": "source_material",
-            "chunk_content_hash": "a901bc9d90d600f27cbfcaa5a8320420f71e320fbcc0899d398c1c514f96d0de",
-            "chunk_type": "markdown_section",
-            "content_hash": "f20bc2371db3ebda4ffef5af00ecb1d9fbddf144c1cc438fa4ea65feef86a99f",
-            "currentness": "current",
-            "excerpt_id": "exc_22cbffb112ffb3d5bf132b95",
-            "heading": null,
-            "namespace": "core-docs",
-            "provenance": {
-              "checked_against": "chunk_content_hash",
-              "reproduced": true,
-              "span_sha256": "a901bc9d90d600f27cbfcaa5a8320420f71e320fbcc0899d398c1c514f96d0de",
-              "text_source": "source_texts"
-            },
-            "record_id": "srec_d19a08814c00c8062342020e",
-            "record_kind": "source_chunk",
-            "record_version_id": "occ_04c9436470fbc3291122c41e",
-            "section_path": "Resource Lease > Fencing",
-            "selection": {
-              "best_query_rank": 2,
-              "composite_score": 1680,
-              "feature_points": {
-                "authority": 150,
-                "best_rank": 2,
-                "component_match": 100,
-                "freshness": 200,
-                "kind_priority": 150,
-                "matched_query_count": 1,
-                "namespace_match": 120,
-                "query_coverage": 0,
-                "relevance": 960
+              {
+                "record_version_id": "occ_04c9436470fbc3291122c41e",
+                "selection_rank": 2
               },
-              "fused_score_micros": 990000,
-              "matched_queries": [
-                0
-              ],
-              "rank_in_pool": 2
-            },
-            "source_path": "core-docs/alpha.md",
-            "source_version_id": "ver_ca75c6f0c6d5e6597c13a3e6",
-            "span": {
-              "end": 153,
-              "start": 89
-            },
-            "span_label": "Resource Lease > Fencing",
-            "text": "Three-identity fencing rejects a stale holder deterministically.",
-            "token_estimate": 16
-          },
-          {
-            "authority_level": "source_material",
-            "chunk_content_hash": "fb6e1d68a66d6f4b44743b2785ec89cf4469023e2836402fcf52dcba8d9d048e",
-            "chunk_type": "markdown_section",
-            "content_hash": "f20bc2371db3ebda4ffef5af00ecb1d9fbddf144c1cc438fa4ea65feef86a99f",
-            "currentness": "current",
-            "excerpt_id": "exc_cc3d6b4fdb603aa5eb17b7db",
-            "heading": null,
-            "namespace": "core-docs",
-            "provenance": {
-              "checked_against": "chunk_content_hash",
-              "reproduced": true,
-              "span_sha256": "fb6e1d68a66d6f4b44743b2785ec89cf4469023e2836402fcf52dcba8d9d048e",
-              "text_source": "source_texts"
-            },
-            "record_id": "srec_710d7170a561574a87f83959",
-            "record_kind": "source_chunk",
-            "record_version_id": "occ_d73b3615a58ba5f1ab226020",
-            "section_path": "Resource Lease > Ship discipline",
-            "selection": {
-              "best_query_rank": 3,
-              "composite_score": 1640,
-              "feature_points": {
-                "authority": 150,
-                "best_rank": 3,
-                "component_match": 100,
-                "freshness": 200,
-                "kind_priority": 150,
-                "matched_query_count": 1,
-                "namespace_match": 120,
-                "query_coverage": 0,
-                "relevance": 920
+              {
+                "record_version_id": "occ_d73b3615a58ba5f1ab226020",
+                "selection_rank": 3
               },
-              "fused_score_micros": 980000,
-              "matched_queries": [
-                0
-              ],
-              "rank_in_pool": 3
-            },
-            "source_path": "core-docs/alpha.md",
-            "source_version_id": "ver_ca75c6f0c6d5e6597c13a3e6",
-            "span": {
-              "end": 232,
-              "start": 175
-            },
-            "span_label": "Resource Lease > Ship discipline",
-            "text": "Acquire gpu then git then doc; release in reverse order.\n",
-            "token_estimate": 15
-          },
-          {
-            "authority_level": "derived",
-            "chunk_content_hash": "351ab253974f82a45a2e9e93a46556c54429532dfd23037c4ba51e778eeffca2",
-            "chunk_type": "failure",
-            "content_hash": "351ab253974f82a45a2e9e93a46556c54429532dfd23037c4ba51e778eeffca2",
-            "currentness": "current",
-            "excerpt_id": "exc_7db7a56cc25e0d3f96af708c",
-            "heading": null,
-            "namespace": "core-docs",
-            "provenance": {
-              "checked_against": "chunk_content_hash",
-              "reproduced": true,
-              "span_sha256": "351ab253974f82a45a2e9e93a46556c54429532dfd23037c4ba51e778eeffca2",
-              "text_source": "source_texts"
-            },
-            "record_id": "fail_devship_fn",
-            "record_kind": "failure",
-            "record_version_id": "fail_devship_fn_v1",
-            "section_path": null,
-            "selection": {
-              "best_query_rank": 1,
-              "composite_score": 1560,
-              "feature_points": {
-                "authority": 100,
-                "best_rank": 1,
-                "component_match": 0,
-                "freshness": 200,
-                "kind_priority": 140,
-                "matched_query_count": 1,
-                "namespace_match": 120,
-                "query_coverage": 0,
-                "relevance": 1000
+              {
+                "record_version_id": "fail_devship_fn_v1",
+                "selection_rank": 4
               },
-              "fused_score_micros": 1000000,
-              "matched_queries": [
-                1
-              ],
-              "rank_in_pool": 4
-            },
-            "source_path": "core-docs/fail.md",
-            "source_version_id": "ver_9a3149a256e3c9be5a8dc718",
-            "span": {
-              "end": 80,
-              "start": 0
-            },
-            "span_label": "bytes:0-80",
-            "text": "dev.ship can FALSE-NEGATIVE committed; verify the real HEAD via native git log.\n",
-            "token_estimate": 20
-          },
-          {
-            "authority_level": "derived",
-            "chunk_content_hash": "80c38bbebf0e4f2fed410a5fd602855a5bec3960907a6fd669b65707d606551f",
-            "chunk_type": "procedure",
-            "content_hash": "7686612728c9c9fbf6a16e115f6b63a5e0f448d23c5eaf55105e3e95a6f7ed49",
-            "currentness": "current",
-            "excerpt_id": "exc_8f926f4e82362d0ba8fe9c43",
-            "heading": null,
-            "namespace": "core-docs",
-            "provenance": {
-              "checked_against": "chunk_content_hash",
-              "reproduced": true,
-              "span_sha256": "80c38bbebf0e4f2fed410a5fd602855a5bec3960907a6fd669b65707d606551f",
-              "text_source": "source_texts"
-            },
-            "record_id": "prec_ship",
-            "record_kind": "procedure",
-            "record_version_id": "prec_ship_v1",
-            "section_path": "Ship a unit",
-            "selection": {
-              "best_query_rank": 1,
-              "composite_score": 1550,
-              "feature_points": {
-                "authority": 100,
-                "best_rank": 1,
-                "component_match": 0,
-                "freshness": 200,
-                "kind_priority": 130,
-                "matched_query_count": 1,
-                "namespace_match": 120,
-                "query_coverage": 0,
-                "relevance": 1000
+              {
+                "record_version_id": "prec_ship_v1",
+                "selection_rank": 5
               },
-              "fused_score_micros": 1000000,
-              "matched_queries": [
-                2
-              ],
-              "rank_in_pool": 5
-            },
-            "source_path": "core-docs/proc.md",
-            "source_version_id": "ver_af6296fbd6354ebe60424e24",
-            "span": {
-              "end": 101,
-              "start": 15
-            },
-            "span_label": "Ship a unit",
-            "text": "Run dev.ship: it verifies sha256 + AST + tests fail-closed, then commits named files.\n",
-            "token_estimate": 22
-          },
-          {
-            "authority_level": "derived",
-            "chunk_content_hash": "1b82067b3894c007547b81d141d054653e955d2564ac22db98e139a8e160eeab",
-            "chunk_type": "skill",
-            "content_hash": "1b82067b3894c007547b81d141d054653e955d2564ac22db98e139a8e160eeab",
-            "currentness": "current",
-            "excerpt_id": "exc_03ba82622f1a937ab5d42ff6",
-            "heading": null,
-            "namespace": "core-docs",
-            "provenance": {
-              "checked_against": "chunk_content_hash",
-              "reproduced": true,
-              "span_sha256": "1b82067b3894c007547b81d141d054653e955d2564ac22db98e139a8e160eeab",
-              "text_source": "source_texts"
-            },
-            "record_id": "skill.context.compile",
-            "record_kind": "skill",
-            "record_version_id": "skill.context.compile@0.1.0",
-            "section_path": null,
-            "selection": {
-              "best_query_rank": 1,
-              "composite_score": 1540,
-              "feature_points": {
-                "authority": 100,
-                "best_rank": 1,
-                "component_match": 0,
-                "freshness": 200,
-                "kind_priority": 120,
-                "matched_query_count": 1,
-                "namespace_match": 120,
-                "query_coverage": 0,
-                "relevance": 1000
+              {
+                "record_version_id": "skill.context.compile@0.1.0",
+                "selection_rank": 6
+              }
+            ],
+            "post_filter": [
+              {
+                "record_version_id": "occ_833d8c8e0c31e5134d117e23",
+                "selection_rank": 1
               },
-              "fused_score_micros": 1000000,
-              "matched_queries": [
-                3
-              ],
-              "rank_in_pool": 6
-            },
-            "source_path": "core-docs/skill.md",
-            "source_version_id": "ver_8ce46303e3a230938811e296",
-            "span": {
-              "end": 78,
-              "start": 0
-            },
-            "span_label": "bytes:0-78",
-            "text": "context.compile turns a task descriptor into a token-budgeted context packet.\n",
-            "token_estimate": 20
+              {
+                "record_version_id": "occ_04c9436470fbc3291122c41e",
+                "selection_rank": 2
+              },
+              {
+                "record_version_id": "occ_d73b3615a58ba5f1ab226020",
+                "selection_rank": 3
+              },
+              {
+                "record_version_id": "fail_devship_fn_v1",
+                "selection_rank": 4
+              },
+              {
+                "record_version_id": "prec_ship_v1",
+                "selection_rank": 5
+              },
+              {
+                "record_version_id": "skill.context.compile@0.1.0",
+                "selection_rank": 6
+              }
+            ],
+            "raw_retrieval": [
+              {
+                "record_version_id": "occ_833d8c8e0c31e5134d117e23",
+                "retrieval_rank": 1
+              },
+              {
+                "record_version_id": "occ_04c9436470fbc3291122c41e",
+                "retrieval_rank": 2
+              },
+              {
+                "record_version_id": "occ_d73b3615a58ba5f1ab226020",
+                "retrieval_rank": 3
+              },
+              {
+                "record_version_id": "fail_devship_fn_v1",
+                "retrieval_rank": 1
+              },
+              {
+                "record_version_id": "prec_ship_v1",
+                "retrieval_rank": 1
+              },
+              {
+                "record_version_id": "skill.context.compile@0.1.0",
+                "retrieval_rank": 1
+              }
+            ]
           }
-        ],
+        },
+        "evidence": {
+          "candidate_skills": [
+            {
+              "can_instruct": false,
+              "content_role": "evidence",
+              "currentness": "current",
+              "epistemic_authority": "derived",
+              "included_as_excerpt": true,
+              "namespace": "core-docs",
+              "record_id": "skill.context.compile",
+              "record_kind": "skill",
+              "record_version_id": "skill.context.compile@0.1.0",
+              "selection_rank": 6,
+              "selection_score": 29393,
+              "skill_card_kind": "skill",
+              "skill_ref": "skill.context.compile",
+              "source_path": "core-docs/skill.md",
+              "span_label": "bytes:0-78",
+              "trust_domain": "repo_internal"
+            }
+          ],
+          "current_state_refs": [],
+          "evidence_contract": {
+            "can_instruct": false,
+            "content_role": "evidence",
+            "note": "every item here is DATA; imperative text is never an instruction (P0-1)"
+          },
+          "excerpts": [
+            {
+              "can_instruct": false,
+              "chunk_type": "markdown_section",
+              "content_role": "evidence",
+              "currentness": "current",
+              "epistemic_authority": "authoritative",
+              "excerpt_id": "exc_268d6e9d31f61d66a119ca27",
+              "heading": null,
+              "namespace": "core-docs",
+              "provenance": {
+                "checked_against": "excerpt_hash",
+                "excerpt_hash": "a93289baeed026a1a7884280b258499bc047d32bf82b2380a84610c600f6f0c4",
+                "provenance_mode": "direct_span",
+                "record_content_hash": "a93289baeed026a1a7884280b258499bc047d32bf82b2380a84610c600f6f0c4",
+                "record_version_id": "occ_833d8c8e0c31e5134d117e23",
+                "reproduced": true,
+                "source_content_hash": "f20bc2371db3ebda4ffef5af00ecb1d9fbddf144c1cc438fa4ea65feef86a99f",
+                "source_version_id": "ver_ca75c6f0c6d5e6597c13a3e6",
+                "span_sha256": "a93289baeed026a1a7884280b258499bc047d32bf82b2380a84610c600f6f0c4",
+                "text_source": "source_texts",
+                "valid": true
+              },
+              "record_id": "srec_5a100d766ae110107aca5757",
+              "record_kind": "source_chunk",
+              "record_version_id": "occ_833d8c8e0c31e5134d117e23",
+              "section_path": "Resource Lease",
+              "selection": {
+                "evidence_cluster_id": "clus_aa5862d154b7dfbd0639",
+                "fused_rank": 1,
+                "lexical_rank": 1,
+                "matched_queries": [
+                  0
+                ],
+                "reason_codes": [
+                  "fusion_rrf",
+                  "authority_boost",
+                  "selected"
+                ],
+                "retrieval_rank": 1,
+                "selection_policy_id": "selpol_rrf_v1",
+                "selection_rank": 1,
+                "selection_score": 35593,
+                "vector_rank": null
+              },
+              "source_path": "core-docs/alpha.md",
+              "source_version_id": "ver_ca75c6f0c6d5e6597c13a3e6",
+              "span": {
+                "end": 75,
+                "start": 18
+              },
+              "span_label": "Resource Lease",
+              "text": "The res.lease module #29 grants gpu, git, and doc leases.",
+              "token_estimate": 15,
+              "trust_domain": "repo_internal"
+            },
+            {
+              "can_instruct": false,
+              "chunk_type": "markdown_section",
+              "content_role": "evidence",
+              "currentness": "current",
+              "epistemic_authority": "source_material",
+              "excerpt_id": "exc_22cbffb112ffb3d5bf132b95",
+              "heading": null,
+              "namespace": "core-docs",
+              "provenance": {
+                "checked_against": "excerpt_hash",
+                "excerpt_hash": "a901bc9d90d600f27cbfcaa5a8320420f71e320fbcc0899d398c1c514f96d0de",
+                "provenance_mode": "direct_span",
+                "record_content_hash": "a901bc9d90d600f27cbfcaa5a8320420f71e320fbcc0899d398c1c514f96d0de",
+                "record_version_id": "occ_04c9436470fbc3291122c41e",
+                "reproduced": true,
+                "source_content_hash": "f20bc2371db3ebda4ffef5af00ecb1d9fbddf144c1cc438fa4ea65feef86a99f",
+                "source_version_id": "ver_ca75c6f0c6d5e6597c13a3e6",
+                "span_sha256": "a901bc9d90d600f27cbfcaa5a8320420f71e320fbcc0899d398c1c514f96d0de",
+                "text_source": "source_texts",
+                "valid": true
+              },
+              "record_id": "srec_d19a08814c00c8062342020e",
+              "record_kind": "source_chunk",
+              "record_version_id": "occ_04c9436470fbc3291122c41e",
+              "section_path": "Resource Lease > Fencing",
+              "selection": {
+                "evidence_cluster_id": "clus_7cb71bc3fc906250262a",
+                "fused_rank": 2,
+                "lexical_rank": 2,
+                "matched_queries": [
+                  0
+                ],
+                "reason_codes": [
+                  "fusion_rrf",
+                  "authority_boost",
+                  "selected"
+                ],
+                "retrieval_rank": 2,
+                "selection_policy_id": "selpol_rrf_v1",
+                "selection_rank": 2,
+                "selection_score": 30829,
+                "vector_rank": null
+              },
+              "source_path": "core-docs/alpha.md",
+              "source_version_id": "ver_ca75c6f0c6d5e6597c13a3e6",
+              "span": {
+                "end": 153,
+                "start": 89
+              },
+              "span_label": "Resource Lease > Fencing",
+              "text": "Three-identity fencing rejects a stale holder deterministically.",
+              "token_estimate": 16,
+              "trust_domain": "repo_internal"
+            },
+            {
+              "can_instruct": false,
+              "chunk_type": "markdown_section",
+              "content_role": "evidence",
+              "currentness": "current",
+              "epistemic_authority": "source_material",
+              "excerpt_id": "exc_cc3d6b4fdb603aa5eb17b7db",
+              "heading": null,
+              "namespace": "core-docs",
+              "provenance": {
+                "checked_against": "excerpt_hash",
+                "excerpt_hash": "fb6e1d68a66d6f4b44743b2785ec89cf4469023e2836402fcf52dcba8d9d048e",
+                "provenance_mode": "direct_span",
+                "record_content_hash": "fb6e1d68a66d6f4b44743b2785ec89cf4469023e2836402fcf52dcba8d9d048e",
+                "record_version_id": "occ_d73b3615a58ba5f1ab226020",
+                "reproduced": true,
+                "source_content_hash": "f20bc2371db3ebda4ffef5af00ecb1d9fbddf144c1cc438fa4ea65feef86a99f",
+                "source_version_id": "ver_ca75c6f0c6d5e6597c13a3e6",
+                "span_sha256": "fb6e1d68a66d6f4b44743b2785ec89cf4469023e2836402fcf52dcba8d9d048e",
+                "text_source": "source_texts",
+                "valid": true
+              },
+              "record_id": "srec_710d7170a561574a87f83959",
+              "record_kind": "source_chunk",
+              "record_version_id": "occ_d73b3615a58ba5f1ab226020",
+              "section_path": "Resource Lease > Ship discipline",
+              "selection": {
+                "evidence_cluster_id": "clus_461045c51bb7b066b14b",
+                "fused_rank": 3,
+                "lexical_rank": 3,
+                "matched_queries": [
+                  0
+                ],
+                "reason_codes": [
+                  "fusion_rrf",
+                  "authority_boost",
+                  "selected"
+                ],
+                "retrieval_rank": 3,
+                "selection_policy_id": "selpol_rrf_v1",
+                "selection_rank": 3,
+                "selection_score": 30573,
+                "vector_rank": null
+              },
+              "source_path": "core-docs/alpha.md",
+              "source_version_id": "ver_ca75c6f0c6d5e6597c13a3e6",
+              "span": {
+                "end": 232,
+                "start": 175
+              },
+              "span_label": "Resource Lease > Ship discipline",
+              "text": "Acquire gpu then git then doc; release in reverse order.\n",
+              "token_estimate": 15,
+              "trust_domain": "repo_internal"
+            },
+            {
+              "can_instruct": false,
+              "chunk_type": "failure",
+              "content_role": "evidence",
+              "currentness": "current",
+              "epistemic_authority": "derived",
+              "excerpt_id": "exc_7db7a56cc25e0d3f96af708c",
+              "heading": null,
+              "namespace": "core-docs",
+              "provenance": {
+                "checked_against": null,
+                "excerpt_hash": "351ab253974f82a45a2e9e93a46556c54429532dfd23037c4ba51e778eeffca2",
+                "provenance_mode": "derived_record",
+                "record_content_hash": "351ab253974f82a45a2e9e93a46556c54429532dfd23037c4ba51e778eeffca2",
+                "record_version_id": "fail_devship_fn_v1",
+                "reproduced": true,
+                "source_content_hash": "351ab253974f82a45a2e9e93a46556c54429532dfd23037c4ba51e778eeffca2",
+                "source_version_id": "ver_9a3149a256e3c9be5a8dc718",
+                "span_sha256": "351ab253974f82a45a2e9e93a46556c54429532dfd23037c4ba51e778eeffca2",
+                "text_source": "source_texts",
+                "valid": true
+              },
+              "record_id": "fail_devship_fn",
+              "record_kind": "failure",
+              "record_version_id": "fail_devship_fn_v1",
+              "section_path": null,
+              "selection": {
+                "evidence_cluster_id": "clus_40ec14173dfb0fe6c9f8",
+                "fused_rank": 1,
+                "lexical_rank": 1,
+                "matched_queries": [
+                  1
+                ],
+                "reason_codes": [
+                  "fusion_rrf",
+                  "selected"
+                ],
+                "retrieval_rank": 1,
+                "selection_policy_id": "selpol_rrf_v1",
+                "selection_rank": 4,
+                "selection_score": 30193,
+                "vector_rank": null
+              },
+              "source_path": "core-docs/fail.md",
+              "source_version_id": "ver_9a3149a256e3c9be5a8dc718",
+              "span": {
+                "end": 80,
+                "start": 0
+              },
+              "span_label": "bytes:0-80",
+              "text": "dev.ship can FALSE-NEGATIVE committed; verify the real HEAD via native git log.\n",
+              "token_estimate": 20,
+              "trust_domain": "repo_internal"
+            },
+            {
+              "can_instruct": false,
+              "chunk_type": "procedure",
+              "content_role": "evidence",
+              "currentness": "current",
+              "epistemic_authority": "derived",
+              "excerpt_id": "exc_8f926f4e82362d0ba8fe9c43",
+              "heading": null,
+              "namespace": "core-docs",
+              "provenance": {
+                "checked_against": null,
+                "excerpt_hash": "80c38bbebf0e4f2fed410a5fd602855a5bec3960907a6fd669b65707d606551f",
+                "provenance_mode": "derived_record",
+                "record_content_hash": "80c38bbebf0e4f2fed410a5fd602855a5bec3960907a6fd669b65707d606551f",
+                "record_version_id": "prec_ship_v1",
+                "reproduced": true,
+                "source_content_hash": "7686612728c9c9fbf6a16e115f6b63a5e0f448d23c5eaf55105e3e95a6f7ed49",
+                "source_version_id": "ver_af6296fbd6354ebe60424e24",
+                "span_sha256": "80c38bbebf0e4f2fed410a5fd602855a5bec3960907a6fd669b65707d606551f",
+                "text_source": "source_texts",
+                "valid": true
+              },
+              "record_id": "prec_ship",
+              "record_kind": "procedure",
+              "record_version_id": "prec_ship_v1",
+              "section_path": "Ship a unit",
+              "selection": {
+                "evidence_cluster_id": "clus_c308ee017f99930050d3",
+                "fused_rank": 1,
+                "lexical_rank": 1,
+                "matched_queries": [
+                  2
+                ],
+                "reason_codes": [
+                  "fusion_rrf",
+                  "selected"
+                ],
+                "retrieval_rank": 1,
+                "selection_policy_id": "selpol_rrf_v1",
+                "selection_rank": 5,
+                "selection_score": 29393,
+                "vector_rank": null
+              },
+              "source_path": "core-docs/proc.md",
+              "source_version_id": "ver_af6296fbd6354ebe60424e24",
+              "span": {
+                "end": 101,
+                "start": 15
+              },
+              "span_label": "Ship a unit",
+              "text": "Run dev.ship: it verifies sha256 + AST + tests fail-closed, then commits named files.\n",
+              "token_estimate": 22,
+              "trust_domain": "repo_internal"
+            },
+            {
+              "can_instruct": false,
+              "chunk_type": "skill",
+              "content_role": "evidence",
+              "currentness": "current",
+              "epistemic_authority": "derived",
+              "excerpt_id": "exc_03ba82622f1a937ab5d42ff6",
+              "heading": null,
+              "namespace": "core-docs",
+              "provenance": {
+                "checked_against": null,
+                "excerpt_hash": "1b82067b3894c007547b81d141d054653e955d2564ac22db98e139a8e160eeab",
+                "provenance_mode": "derived_record",
+                "record_content_hash": "1b82067b3894c007547b81d141d054653e955d2564ac22db98e139a8e160eeab",
+                "record_version_id": "skill.context.compile@0.1.0",
+                "reproduced": true,
+                "source_content_hash": "1b82067b3894c007547b81d141d054653e955d2564ac22db98e139a8e160eeab",
+                "source_version_id": "ver_8ce46303e3a230938811e296",
+                "span_sha256": "1b82067b3894c007547b81d141d054653e955d2564ac22db98e139a8e160eeab",
+                "text_source": "source_texts",
+                "valid": true
+              },
+              "record_id": "skill.context.compile",
+              "record_kind": "skill",
+              "record_version_id": "skill.context.compile@0.1.0",
+              "section_path": null,
+              "selection": {
+                "evidence_cluster_id": "clus_9665c7718f17c124a4d9",
+                "fused_rank": 1,
+                "lexical_rank": 1,
+                "matched_queries": [
+                  3
+                ],
+                "reason_codes": [
+                  "fusion_rrf",
+                  "selected"
+                ],
+                "retrieval_rank": 1,
+                "selection_policy_id": "selpol_rrf_v1",
+                "selection_rank": 6,
+                "selection_score": 29393,
+                "vector_rank": null
+              },
+              "source_path": "core-docs/skill.md",
+              "source_version_id": "ver_8ce46303e3a230938811e296",
+              "span": {
+                "end": 78,
+                "start": 0
+              },
+              "span_label": "bytes:0-78",
+              "text": "context.compile turns a task descriptor into a token-budgeted context packet.\n",
+              "token_estimate": 20,
+              "trust_domain": "repo_internal"
+            }
+          ],
+          "relevant_failures": [
+            {
+              "can_instruct": false,
+              "content_role": "evidence",
+              "currentness": "current",
+              "epistemic_authority": "derived",
+              "included_as_excerpt": true,
+              "namespace": "core-docs",
+              "record_id": "fail_devship_fn",
+              "record_kind": "failure",
+              "record_version_id": "fail_devship_fn_v1",
+              "selection_rank": 4,
+              "selection_score": 30193,
+              "source_path": "core-docs/fail.md",
+              "span_label": "bytes:0-80",
+              "trust_domain": "repo_internal"
+            }
+          ],
+          "relevant_procedures": [
+            {
+              "can_instruct": false,
+              "content_role": "evidence",
+              "currentness": "current",
+              "epistemic_authority": "derived",
+              "included_as_excerpt": true,
+              "namespace": "core-docs",
+              "record_id": "prec_ship",
+              "record_kind": "procedure",
+              "record_version_id": "prec_ship_v1",
+              "selection_rank": 5,
+              "selection_score": 29393,
+              "source_path": "core-docs/proc.md",
+              "span_label": "Ship a unit",
+              "trust_domain": "repo_internal"
+            }
+          ],
+          "similar_episodes": []
+        },
         "expansion_affordances": {
           "op": "expand",
           "request_shape": {
             "budget": {
               "max_tokens": 600
             },
-            "target": "{ record_version_id | record_id | source_path | span{start,end} | symbol_ref }",
+            "depth_bound": 1,
+            "target": "{ record_version_id | record_id | source_path + span{start,end} }",
             "type": [
               "raw_source",
               "more_evidence",
@@ -579,50 +876,54 @@
               "prior_episode"
             ]
           },
-          "schema": "lifeorch.context_expansion/0.1"
+          "schema": "lifeorch.context_expansion/0.2"
         },
-        "namespace": "core-docs",
-        "normalized_task": "[coding] How does res.lease #29 fencing work and how do I ship a unit with dev.ship?",
-        "omitted_context": [],
-        "open_questions": [],
-        "original_goal": "Ship the context compiler safely under the git lease.",
-        "packet_id": "cpkt_e6f608d603084178dc70e66f26961bd7",
-        "permissions": {
-          "authority": "worker",
-          "requested_side_effects": [
-            "git.commit"
-          ]
+        "identity": {
+          "budget": 400,
+          "compiler_version": "0.2.0",
+          "consumer_profile": {
+            "model_id": "llm.strong.qwen3p5-9b",
+            "tokenizer_fingerprint": "unpinned_upper_bound_ceil_chars_div4",
+            "tokenizer_id": "qwen3p5-9b"
+          },
+          "control_plane_grant_snapshot_ref": "sha256:40dc2cea42083166f8c49e0fdab44d640c0a7f1b10c8486e493311fe0d98a9e7",
+          "corpus_version": "digest_fixture_0001",
+          "expansion_id": null,
+          "omission_manifest_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "parent_packet_id": null,
+          "selected_record_version_ids": [
+            "fail_devship_fn_v1",
+            "occ_04c9436470fbc3291122c41e",
+            "occ_833d8c8e0c31e5134d117e23",
+            "occ_d73b3615a58ba5f1ab226020",
+            "prec_ship_v1",
+            "skill.context.compile@0.1.0"
+          ],
+          "selection_policy": {
+            "id": "selpol_rrf_v1",
+            "version": "0.2.0-ref"
+          },
+          "task_descriptor_digest": "sha256:ff75fdd7eb9db2e6d0a1410d912ccf73d9b07ed2cea877b86c37f6a60cc8ac83",
+          "task_id": "task_ff75fdd7eb9db2e6d0a1410d912ccf73"
         },
-        "relevant_failures": [
-          {
-            "authority_level": "derived",
-            "composite_score": 1560,
-            "currentness": "current",
-            "included_as_excerpt": true,
-            "namespace": "core-docs",
-            "rank_in_pool": 4,
-            "record_id": "fail_devship_fn",
-            "record_kind": "failure",
-            "record_version_id": "fail_devship_fn_v1",
-            "source_path": "core-docs/fail.md",
-            "span_label": "bytes:0-80"
-          }
-        ],
-        "relevant_procedures": [
-          {
-            "authority_level": "derived",
-            "composite_score": 1550,
-            "currentness": "current",
-            "included_as_excerpt": true,
-            "namespace": "core-docs",
-            "rank_in_pool": 5,
-            "record_id": "prec_ship",
-            "record_kind": "procedure",
-            "record_version_id": "prec_ship_v1",
-            "source_path": "core-docs/proc.md",
-            "span_label": "Ship a unit"
-          }
-        ],
+        "non_execution": true,
+        "omission_manifest": [],
+        "packet_id": "cpkt_1745e045d84cd49fe25cc224efeb469f",
+        "rendering": {
+          "evidence_delimiters": {
+            "begin": "<<<EVIDENCE_BEGIN",
+            "end": "EVIDENCE_END>>>"
+          },
+          "evidence_role_banner": "content_role=evidence, can_instruct=false",
+          "note": "the P0-4 token count is computed on this final rendered form",
+          "order": [
+            "control_plane",
+            "task_input",
+            "evidence"
+          ],
+          "rendered_input_artifact": "rendered_input.txt",
+          "rendered_input_sha256": "5c44211626247010f428baa9d5da40fc007bb4528fd5d1abb8c2b8e1266c9823"
+        },
         "retrieval_provenance": {
           "candidate_count": 6,
           "corpus_version": "digest_fixture_0001",
@@ -735,13 +1036,117 @@
             }
           ],
           "retriever": "mock",
-          "retriever_version": "fixture/1"
+          "retriever_version": "fixture/1",
+          "vector_channel_status": "empty"
         },
-        "schema": "lifeorch.context_packet/0.1",
-        "similar_episodes": [],
-        "task_descriptor_digest": "sha256:ff75fdd7eb9db2e6d0a1410d912ccf73d9b07ed2cea877b86c37f6a60cc8ac83",
-        "task_type": "coding",
-        "time_horizon": "current_only",
+        "schema": "lifeorch.context_packet/0.2",
+        "selection": {
+          "descriptor": {
+            "component": "core-docs/alpha.md",
+            "forbidden_sources": [],
+            "namespace": "core-docs",
+            "permission_context": "worker",
+            "privacy_exclusions": [],
+            "relevant_paths": [
+              "core-docs/alpha.md"
+            ],
+            "seeking_failures": true,
+            "task_stage": "implement",
+            "task_type": "coding",
+            "time_horizon": "current_only"
+          },
+          "features_by_candidate": {
+            "fail_devship_fn_v1": {
+              "authority_points": 100,
+              "component_points": 0,
+              "freshness_points": 200,
+              "hard_filter_reasons": [],
+              "hard_filtered": false,
+              "kind_stage_match": true,
+              "namespace_match": true,
+              "rrf_millionths": 16393,
+              "seeking_failure_match": true,
+              "stale_demoted": false
+            },
+            "occ_04c9436470fbc3291122c41e": {
+              "authority_points": 150,
+              "component_points": 1000,
+              "freshness_points": 200,
+              "hard_filter_reasons": [],
+              "hard_filtered": false,
+              "kind_stage_match": false,
+              "namespace_match": true,
+              "rrf_millionths": 16129,
+              "seeking_failure_match": false,
+              "stale_demoted": false
+            },
+            "occ_833d8c8e0c31e5134d117e23": {
+              "authority_points": 300,
+              "component_points": 1000,
+              "freshness_points": 200,
+              "hard_filter_reasons": [],
+              "hard_filtered": false,
+              "kind_stage_match": false,
+              "namespace_match": true,
+              "rrf_millionths": 16393,
+              "seeking_failure_match": false,
+              "stale_demoted": false
+            },
+            "occ_d73b3615a58ba5f1ab226020": {
+              "authority_points": 150,
+              "component_points": 1000,
+              "freshness_points": 200,
+              "hard_filter_reasons": [],
+              "hard_filtered": false,
+              "kind_stage_match": false,
+              "namespace_match": true,
+              "rrf_millionths": 15873,
+              "seeking_failure_match": false,
+              "stale_demoted": false
+            },
+            "prec_ship_v1": {
+              "authority_points": 100,
+              "component_points": 0,
+              "freshness_points": 200,
+              "hard_filter_reasons": [],
+              "hard_filtered": false,
+              "kind_stage_match": true,
+              "namespace_match": true,
+              "rrf_millionths": 16393,
+              "seeking_failure_match": false,
+              "stale_demoted": false
+            },
+            "skill.context.compile@0.1.0": {
+              "authority_points": 100,
+              "component_points": 0,
+              "freshness_points": 200,
+              "hard_filter_reasons": [],
+              "hard_filtered": false,
+              "kind_stage_match": true,
+              "namespace_match": true,
+              "rrf_millionths": 16393,
+              "seeking_failure_match": false,
+              "stale_demoted": false
+            }
+          },
+          "note": "RRF over channel ranks; additive selection fields; retrieval order preserved (P1-1).",
+          "policy_id": "selpol_rrf_v1",
+          "policy_version": "0.2.0-ref"
+        },
+        "task_input": {
+          "constraints": [
+            "docs:[] -- do not edit core-docs"
+          ],
+          "namespace": "core-docs",
+          "normalized_task": "[coding] How does res.lease #29 fencing work and how do I ship a unit with dev.ship?",
+          "open_questions": [],
+          "original_goal": "Ship the context compiler safely under the git lease.",
+          "requested_side_effects": [
+            "git.commit"
+          ],
+          "task_type": "coding",
+          "time_horizon": "current_only"
+        },
         "token_budget": {
           "budget": 400,
           "budget_exhausted": false,
@@ -754,11 +1159,33 @@
           "per_source_cap": 3,
           "remaining": 220,
           "token_fn": "ceil(chars/4)",
+          "token_fn_note": "HEURISTIC UPPER BOUND (not a tokenizer); the consumer_profile + rendered count gates answerable (P0-4)",
           "truncated": false,
           "used": 180
+        },
+        "transport_accounting": {
+          "control_plane_overflow": false,
+          "count_is_exact": false,
+          "count_method": "conservative_upper_bound",
+          "counted_on": "final_rendered_input",
+          "dropped_for_transport": 0,
+          "fits": true,
+          "max_context": 8192,
+          "rendered_char_count": 3179,
+          "rendered_input_sha256": "5c44211626247010f428baa9d5da40fc007bb4528fd5d1abb8c2b8e1266c9823",
+          "rendered_tokens": 795,
+          "reserved_generation_tokens": 1024,
+          "reserved_system_tokens": 384,
+          "reserved_tool_tokens": 0,
+          "reserved_total_tokens": 1408,
+          "token_fn": "ceil(chars/4)",
+          "transport_budget_tokens": 6784,
+          "transport_overflow": false
         }
       },
-      "packet_id": "cpkt_e6f608d603084178dc70e66f26961bd7",
+      "packet_content_hash": "sha256:1745e045d84cd49fe25cc224efeb469f9a2ca9c2a51641af8f80714f6879c345",
+      "packet_disposition": "answerable",
+      "packet_id": "cpkt_1745e045d84cd49fe25cc224efeb469f",
       "query_set": [
         {
           "filters": {
@@ -858,26 +1285,14 @@
         }
       ]
     },
+    "retriever": "mock",
     "worker": {
       "name": "context_compiler.py",
-      "version": "0.1.0"
-    },
-    "runtime_ms": 1
-  },
-  "confidence": null,
-  "artifacts": [
-    {
-      "path": "/home/claude/m40/modules/40-context-compiler/runtime/artifacts/c4cdaa85-eebd-40a4-94f2-59af3260b0ab/compile/context_packet.json",
-      "kind": "json",
-      "bytes": 15816,
-      "sha256": "419b1e1eaf8d3a09460991706f788cdd491e3c65467d10e8018c230d452f81cf"
+      "version": "0.2.0"
     }
-  ],
-  "model_provenance": [],
-  "diagnostics": {
-    "log": "stderr.txt",
-    "artifact_dir": "/home/claude/m40/modules/40-context-compiler/runtime/artifacts/c4cdaa85-eebd-40a4-94f2-59af3260b0ab"
   },
-  "warnings": [],
-  "error": null
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "context.compile",
+  "skill_version": "0.2.0",
+  "status": "ok"
 }

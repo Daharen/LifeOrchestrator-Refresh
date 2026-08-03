@@ -1,0 +1,71 @@
+{
+  "_expect_disposition": "abstain",
+  "retrieval_batches": [
+    {
+      "hits": [
+        {
+          "abs_path": null,
+          "authority_level": "source_material",
+          "chunk_content_hash": "18ce0b6334900e76d2fe72a1600ca47f31a28d514a864f7bafa64afeca6da1fc",
+          "chunk_id": "chk_e2bab44f7ccfc4f292507c4f",
+          "chunk_type": "markdown_section",
+          "content_hash": "18ce0b6334900e76d2fe72a1600ca47f31a28d514a864f7bafa64afeca6da1fc",
+          "corpus_version": "digest_disp_0003",
+          "currentness": "current",
+          "embedding_space_id": null,
+          "filter_decisions": {},
+          "fused_rank": 1,
+          "fused_score": 1.0,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "heading": null,
+          "index_snapshot": "digest_disp_0003",
+          "lexical_rank": 1,
+          "lexical_score": 1.0,
+          "namespace": "core-docs",
+          "rank": 1,
+          "record_id": "oth_rec",
+          "record_kind": "source_chunk",
+          "record_version_id": "oth_rec_v1",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "section_path": null,
+          "snippet": "Some retrieved but irrelevant content about the warm pool.\n",
+          "source": "core-docs",
+          "source_path": "core-docs/other.md",
+          "source_version_id": "ver_f46a0e507ded9c80f8873967",
+          "span": {
+            "end": 59,
+            "start": 0
+          },
+          "span_label": "bytes:0-59",
+          "status": "current",
+          "tie_break_key": "oth_rec_v1",
+          "vector_rank": null,
+          "vector_similarity": null
+        }
+      ],
+      "query_index": 0
+    }
+  ],
+  "retrieval_meta": {
+    "corpus_version": "digest_disp_0003",
+    "retriever": "mock"
+  },
+  "source_texts": {
+    "core-docs/other.md": "Some retrieved but irrelevant content about the warm pool.\n"
+  },
+  "task": {
+    "config": {
+      "token_budget": 500
+    },
+    "namespace": "core-docs",
+    "original_goal": "Answer only from the missing source.",
+    "relevant_paths": [
+      "core-docs/never_retrieved.md"
+    ],
+    "request_text": "content that is not in the corpus",
+    "task_type": "documentation"
+  }
+}

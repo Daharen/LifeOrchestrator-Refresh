@@ -1,0 +1,71 @@
+{
+  "_expect_disposition": "answerable",
+  "retrieval_batches": [
+    {
+      "hits": [
+        {
+          "abs_path": null,
+          "authority_level": "source_material",
+          "chunk_content_hash": "3cbcfe3d4f8b31c419672cf4b82d832751dc3831a0457d8fa03cb949c55ced2b",
+          "chunk_id": "chk_24791cb8d694f78a903b45a5",
+          "chunk_type": "markdown_section",
+          "content_hash": "3cbcfe3d4f8b31c419672cf4b82d832751dc3831a0457d8fa03cb949c55ced2b",
+          "corpus_version": "digest_disp_0001",
+          "currentness": "current",
+          "embedding_space_id": null,
+          "filter_decisions": {},
+          "fused_rank": 1,
+          "fused_score": 1.0,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "heading": null,
+          "index_snapshot": "digest_disp_0001",
+          "lexical_rank": 1,
+          "lexical_score": 1.0,
+          "namespace": "core-docs",
+          "rank": 1,
+          "record_id": "ans_rec",
+          "record_kind": "source_chunk",
+          "record_version_id": "ans_rec_v1",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "section_path": null,
+          "snippet": "The answerable fact: res.lease grants gpu, git, and doc leases in order.\n",
+          "source": "core-docs",
+          "source_path": "core-docs/ans.md",
+          "source_version_id": "ver_b07e2655e466ca589ae9eff4",
+          "span": {
+            "end": 73,
+            "start": 0
+          },
+          "span_label": "bytes:0-73",
+          "status": "current",
+          "tie_break_key": "ans_rec_v1",
+          "vector_rank": null,
+          "vector_similarity": null
+        }
+      ],
+      "query_index": 0
+    }
+  ],
+  "retrieval_meta": {
+    "corpus_version": "digest_disp_0001",
+    "retriever": "mock"
+  },
+  "source_texts": {
+    "core-docs/ans.md": "The answerable fact: res.lease grants gpu, git, and doc leases in order.\n"
+  },
+  "task": {
+    "config": {
+      "token_budget": 500
+    },
+    "namespace": "core-docs",
+    "original_goal": "State the lease order.",
+    "relevant_paths": [
+      "core-docs/ans.md"
+    ],
+    "request_text": "res.lease lease order",
+    "task_type": "documentation"
+  }
+}

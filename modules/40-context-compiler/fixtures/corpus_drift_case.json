@@ -1,0 +1,102 @@
+{
+  "retrieval_batches": [
+    {
+      "hits": [
+        {
+          "abs_path": null,
+          "authority_level": "source_material",
+          "chunk_content_hash": "23eb50371470b3860686d07d48fafdb89e45a9da7701fc694311e2608900a15b",
+          "chunk_id": "chk_e8089d183cdac9cf57e72faf",
+          "chunk_type": "markdown_section",
+          "content_hash": "23eb50371470b3860686d07d48fafdb89e45a9da7701fc694311e2608900a15b",
+          "corpus_version": "SNAP_A",
+          "currentness": "current",
+          "embedding_space_id": null,
+          "filter_decisions": {},
+          "fused_rank": 1,
+          "fused_score": 1.0,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "heading": null,
+          "index_snapshot": "digest_fixture_0001",
+          "lexical_rank": 1,
+          "lexical_score": 1.0,
+          "namespace": "core-docs",
+          "rank": 1,
+          "record_id": "a",
+          "record_kind": "source_chunk",
+          "record_version_id": "a_v1",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "section_path": null,
+          "snippet": "snapshot one content.\n",
+          "source": "core-docs",
+          "source_path": "core-docs/a.md",
+          "source_version_id": "ver_357aa6083644497900c90751",
+          "span": {
+            "end": 22,
+            "start": 0
+          },
+          "span_label": "bytes:0-22",
+          "status": "current",
+          "tie_break_key": "a_v1",
+          "vector_rank": null,
+          "vector_similarity": null
+        },
+        {
+          "abs_path": null,
+          "authority_level": "source_material",
+          "chunk_content_hash": "5296ccc6514e000ec16899d4f424ecd6b330f09c5563029ffe7c5d55882d63d3",
+          "chunk_id": "chk_2441c5f20eda8e5de70cea17",
+          "chunk_type": "markdown_section",
+          "content_hash": "5296ccc6514e000ec16899d4f424ecd6b330f09c5563029ffe7c5d55882d63d3",
+          "corpus_version": "SNAP_B",
+          "currentness": "current",
+          "embedding_space_id": null,
+          "filter_decisions": {},
+          "fused_rank": 1,
+          "fused_score": 1.0,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "heading": null,
+          "index_snapshot": "digest_fixture_0001",
+          "lexical_rank": 1,
+          "lexical_score": 1.0,
+          "namespace": "core-docs",
+          "rank": 1,
+          "record_id": "b",
+          "record_kind": "source_chunk",
+          "record_version_id": "b_v1",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "section_path": null,
+          "snippet": "snapshot two content.\n",
+          "source": "core-docs",
+          "source_path": "core-docs/b.md",
+          "source_version_id": "ver_69963b4a799183e7286e58b3",
+          "span": {
+            "end": 22,
+            "start": 0
+          },
+          "span_label": "bytes:0-22",
+          "status": "current",
+          "tie_break_key": "b_v1",
+          "vector_rank": null,
+          "vector_similarity": null
+        }
+      ],
+      "query_index": 0
+    }
+  ],
+  "source_texts": {
+    "core-docs/a.md": "snapshot one content.\n",
+    "core-docs/b.md": "snapshot two content.\n"
+  },
+  "task": {
+    "namespace": "core-docs",
+    "original_goal": "g",
+    "request_text": "content"
+  }
+}

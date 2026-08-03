@@ -5,7 +5,7 @@
   The Collective Agent's context-compilation centerpiece (directive Priority 4 / section 8).
 .DESCRIPTION
   A thin PowerShell entrypoint over a stdlib-only Python worker (context_compiler.py) that turns a task
-  descriptor into a versioned, token-budgeted lifeorch.context_packet/0.1 artifact:
+  descriptor into a versioned, token-budgeted lifeorch.context_packet/0.2 artifact:
 
     normalize (8.1) -> candidate retrieval via a DEFINED seam (8.2) -> deterministic rerank + diversity
     (8.3) -> token budget with exact accounting (8.4/16.3) -> context_packet/0.1 with full source
@@ -48,7 +48,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$SKILL_ID = 'context.compile'; $SKILL_VERSION = '0.1.0'; $CONTRACT = '0.2'
+$SKILL_ID = 'context.compile'; $SKILL_VERSION = '0.2.0'; $CONTRACT = '0.2'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 $startedAt = [DateTime]::UtcNow
