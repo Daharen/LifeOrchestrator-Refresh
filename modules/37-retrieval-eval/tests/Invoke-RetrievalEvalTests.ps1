@@ -50,20 +50,30 @@ $wrapper = Join-Path $modulesDir '01-skill-bootstrap/Invoke-Skill.ps1'
 $fxDir   = Join-Path $moduleRoot 'tests/fixtures'
 $benchmark  = Join-Path $fxDir 'benchmark.json'
 $benchmark2 = Join-Path $fxDir 'benchmark2.json'
+$benchmark3 = Join-Path $fxDir 'benchmark3.json'
 $mockBench  = Join-Path $fxDir 'mock-benchmark.json'
 $mock2Bench = Join-Path $fxDir 'mock2-benchmark.json'
 $mockRetr   = Join-Path $fxDir 'mock-retriever.py'
+$selpolLib  = Join-Path $moduleRoot 'lib/selpol_rrf_v1.py'
+$selpolTest = Join-Path $moduleRoot 'tests/test_selpol.py'
 
-# ---- KNOWN pins (hand-verified; also the cross-env byte-identity pins) ----
-$BASELINE_REPORT_JSON_SHA = '598dc1be78f97bfff06f1784f16f1a01d3ac3dbe2398c2818f726575d726779a'
-$BASELINE_REPORT_MD_SHA   = '6264cb1b31ac173ccbd085313a11d5ef29a6711aac9f9180e6819021c30ff481'
-$BASELINE_INPUT_DIGEST    = 'sha256:aff6a477f6be0ca7c7cc2ed174a9e28ff72c34683fa6dd4464a52ceb6ea6d1ae'
-$B2_REPORT_JSON_SHA       = '06878847284bd93743c85d2e8768170f62cb666c1f78e69961a2f6d3371fd51e'
-$B2_REPORT_MD_SHA         = '1c9ae9314a60a5b7f081a73d67b037c0f964d37e99e84fe1a9682e2529c287b5'
-$B2_INPUT_DIGEST          = 'sha256:58569e41667d07d660ec6f842b120e140d26362fc2830da43ac872aeb566bc79'
-$MOCK_REPORT_JSON_SHA     = 'b5d55da9277ecc2922df2827a9439abc618aba2e5d2301d9795388de670cea3a'
-$MOCK2_REPORT_JSON_SHA    = '70dc60e53e0d9668201a4373fe0b851b126100eb972f4716d2531cb22ce4f9b8'
-$MOCK2_INPUT_DIGEST       = 'sha256:7d16bbaafe1568eee9ee211d8ad2ed1d0da45037692090dd0222a189d583c613'
+# ---- KNOWN pins (hand-verified; also the cross-env byte-identity pins). eval-0.3 / report schema 0.3:
+#      selpol_rrf_v1 selection library + per-stage + packet_disposition + additive selection fields. Every
+#      shipped-0.2 metric VALUE is preserved (asserted below); only the report SHAPE grew, so the pins are
+#      re-computed. Verified byte-identical cloud CPython 3.11 == the pinned values (double-run + the -Live
+#      executor re-assert cross-env). ----
+$BASELINE_REPORT_JSON_SHA = 'ba7e972a655bd54d83cc875721cf39d33d6402acfbb6d48459804c5c9b858111'
+$BASELINE_REPORT_MD_SHA   = '1217146b279843e1cce078ec675f99ec1206ef98e104f593c899bcc99eb1090b'
+$BASELINE_INPUT_DIGEST    = 'sha256:ad7c86b3626ce465f82c788103b07246a0035fc9ed0944b9992d16704b450252'
+$B2_REPORT_JSON_SHA       = '3625248a6a06b597d67da3b1a6ca2204f649234e6d3cf71914c8cdbec3ab03c1'
+$B2_REPORT_MD_SHA         = 'b59578bff3376c09198825ccd967aff2f968f4b9cd5a497e0876febd78fe1d59'
+$B2_INPUT_DIGEST          = 'sha256:00b8c1f6f09cb58a079cc0e10c68fef8f8a15c6122ecefcea40dcbdb60ecc5db'
+$MOCK_REPORT_JSON_SHA     = '6beb2a5c6c05eaee949273f335dd7e8f8ea2debe7a1e6cb0ee11427b67a2c1f8'
+$MOCK2_REPORT_JSON_SHA    = '6c161982a8d11ffb76f7ecd7b143757f55dc5c0b0c3decb5c02cfb8a91581981'
+$MOCK2_INPUT_DIGEST       = 'sha256:a1a1f4bb8d277eb09f75b4968aae3a079385627d044a921c3cee5767f0f96c86'
+$B3_REPORT_JSON_SHA       = 'b36431a3fcfca256042fa375c034b3f103e6bc32e97e081c3f45dd17be9baf4d'
+$B3_REPORT_MD_SHA         = '676ac4ef202500088b642f54e1841749833766314aef63ea80c1952ed10ac633'
+$B3_INPUT_DIGEST          = 'sha256:a2baceeb6cd0946af06b4cf0e14523099c4d863bf7d42c5ccf45531105d782d7'
 
 $mode = if ($Live) { 'LIVE (on-device)' } else { 'cloud/real' }
 $pyLabel = if ([string]::IsNullOrEmpty($PythonPath)) { '(auto)' } else { $PythonPath }
@@ -119,12 +129,25 @@ Check 'AST parses: this test harness' (($null -eq $errs) -or (@($errs).Count -eq
 
 Check 'python 3 available for py_compile' ($null -ne $py)
 if ($null -ne $py) {
-    foreach ($pyf in @($worker, $mockRetr)) {
+    foreach ($pyf in @($worker, $mockRetr, $selpolLib, $selpolTest)) {
         $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
         & $py -c "import py_compile,sys; py_compile.compile(sys.argv[1], doraise=True)" $pyf 2>$null | Out-Null
         $ok = ($LASTEXITCODE -eq 0); $ErrorActionPreference = $prev
         Check "py_compile OK: $(Split-Path -Leaf $pyf)" $ok
     }
+}
+
+# ================================================================= selpol_rrf_v1 library-direct unit gate
+# The ONE selection-policy library (CONTEXT_PACKET_CONTRACT s4 / P1-1): s4 interface, purity, determinism,
+# ADDITIVE output, rescue+demote preserving retrieval_rank, RRF over channel ranks, occurrence-preserving
+# display dedup, budget. Pure stdlib -> runs identically in the cloud gate and on -Live.
+if ($null -ne $py) {
+    $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+    $selOut = & $py $selpolTest 2>&1 | Out-String
+    $selOk = ($LASTEXITCODE -eq 0); $ErrorActionPreference = $prev
+    Check 'selpol_rrf_v1: library-direct unit suite passes' $selOk
+    if (-not $selOk) { ($selOut -split "`r?`n" | Select-Object -Last 8) | ForEach-Object { [Console]::Out.WriteLine("      $_") } }
+    Check 'selpol_rrf_v1: unit suite reports ALL PASS' ($selOut -match 'ALL PASS \(selpol_rrf_v1 unit\)')
 }
 
 # ---- manifest ----
@@ -134,8 +157,8 @@ Check 'manifest validates' ([bool]$mv.valid)
 if (-not $mv.valid) { $mv.errors | ForEach-Object { [Console]::Out.WriteLine("      - $_") } }
 $manifest = (Get-Content -LiteralPath $mf -Raw) | ConvertFrom-Json
 Check 'manifest skill_id retrieval.eval' ($manifest.skill_id -eq 'retrieval.eval')
-Check 'manifest version 0.2.0' ($manifest.version -eq '0.2.0')
-Check 'manifest contract_version 0.2' ($manifest.contract_version -eq '0.2')
+Check 'manifest version 0.3.0' ($manifest.version -eq '0.3.0')
+Check 'manifest contract_version 0.3' ($manifest.contract_version -eq '0.3')
 Check 'manifest deterministic' ($manifest.determinism -eq 'deterministic')
 Check 'manifest parallel_safe' ([bool]$manifest.parallel_safe)
 
@@ -148,7 +171,7 @@ if ($null -ne $env1) {
     Check 'baseline: envelope validates against contract' ([bool]$ev.valid)
     if (-not $ev.valid) { $ev.errors | ForEach-Object { [Console]::Out.WriteLine("      - $_") } }
     Check 'baseline: status ok' ($env1.status -eq 'ok')
-    Check 'baseline: skill_version 0.2.0' ($env1.skill_version -eq '0.2.0')
+    Check 'baseline: skill_version 0.3.0' ($env1.skill_version -eq '0.3.0')
     Check 'baseline: retriever_kind lexical_baseline' ($env1.result.retriever_kind -eq 'lexical_baseline')
     Check 'baseline: input_digest pinned' ($env1.result.input_digest -eq $BASELINE_INPUT_DIGEST)
     Check 'baseline: vector_channel_status empty' ($env1.result.vector_channel_status -eq 'empty')
@@ -164,7 +187,12 @@ if ($null -ne $env1) {
         Check 'baseline: report.json declared sha == file sha' ($rep.sha -eq $rep.declared_sha)
         Check 'baseline: report.json sha == pinned (deterministic + known bytes)' ($rep.sha -eq $BASELINE_REPORT_JSON_SHA)
         Check 'baseline: report.md sha == pinned' ($repMd.sha -eq $BASELINE_REPORT_MD_SHA)
-        Check 'baseline: report schema 0.2' ($rep.obj.schema -eq 'lifeorch.retrieval_eval_report/0.2')
+        Check 'baseline: report schema 0.3' ($rep.obj.schema -eq 'lifeorch.retrieval_eval_report/0.3')
+        # eval-0.3 additive surface present + selection library stamped
+        Check 'baseline: selection_policy selpol_rrf_v1' ($rep.obj.selection_policy.policy_id -eq 'selpol_rrf_v1')
+        Check 'baseline: hybrid_applicability not_applicable (vector channel empty; P1-4)' ($rep.obj.hybrid_applicability.status -eq 'not_applicable')
+        Check 'baseline: per-stage metrics present (raw/post_filter/packet)' ((Has $rep.obj.stage_metrics 'raw') -and (Has $rep.obj.stage_metrics 'post_filter') -and (Has $rep.obj.stage_metrics 'packet'))
+        Check 'baseline: aggregate_packet present' (Has $rep.obj 'aggregate_packet')
 
         $agg = $rep.obj.aggregate_raw
         # KNOWN 0.1 numbers PRESERVED (regression-green)
@@ -345,9 +373,70 @@ if ($null -ne $env4) {
         Check 'mock2 mq-d: RERANKED recall@1 = 1 (required promoted to top)' ($mqdRe.recall_at_k_ppm.'1' -eq 1000000)
         Check 'mock2 mq-d: RERANKED top-1 not forbidden' (@($mqdRe.forbidden_hits | Where-Object { $_.rank -eq 1 }).Count -eq 0)
 
+        # ADDITIVE selection fields (CONTEXT_PACKET_CONTRACT s4 / P1-1): the reranked hit PRESERVES its
+        # retrieval_rank and ADDS selection_rank/selection_policy_id/reason_codes -- the retrieval array is
+        # never re-sorted in place. mq-d's promoted required source was at retrieval_rank 3.
+        $mqdTop = (@($mqdRe.returned) | Where-Object { $_.rank -eq 1 } | Select-Object -First 1)
+        Check 'mock2 mq-d: reranked top-1 preserves retrieval_rank 3 (additive, not re-sorted)' ($null -ne $mqdTop -and $mqdTop.retrieval_rank -eq 3 -and $mqdTop.selection_rank -eq 1)
+        Check 'mock2 mq-d: reranked top-1 stamped selection_policy_id selpol_rrf_v1' ($mqdTop.selection_policy_id -eq 'selpol_rrf_v1')
+        Check 'mock2 mq-d: reranked top-1 reason_codes include rescued + selected' (@($mqdTop.reason_codes | Where-Object { $_ -eq 'rescued' }).Count -ge 1 -and @($mqdTop.reason_codes | Where-Object { $_ -eq 'selected' }).Count -ge 1)
+
         # hybrid attribution: vector channel empty; a stale hit is attributed as lexical-introduced
         Check 'mock2: vector channel reported empty' ($rep4.obj.vector_channel_status -eq 'empty')
+        Check 'mock2: hybrid_applicability not_applicable (P1-4)' ($rep4.obj.hybrid_applicability.status -eq 'not_applicable')
     }
+}
+
+# ================================================================= eval-0.3 selpol packet stage (benchmark3)
+# selpol_rrf_v1 PACKET stage through the harness: occurrence-preserving DISPLAY dedup, budget -> needs_expansion,
+# and packet_disposition scoring (computed + a supplied #40 packet). KNOWN fixture values.
+$env8 = ParseEnv (RunEntry @($benchmark3))
+Check 'eval03: envelope parses' ($null -ne $env8)
+if ($null -ne $env8) {
+    Check 'eval03: status ok' ($env8.status -eq 'ok')
+    Check 'eval03: input_digest pinned' ($env8.result.input_digest -eq $B3_INPUT_DIGEST)
+    $rep8 = ReadReport $env8 'report.json'
+    $rep8Md = ReadReport $env8 'report.md'
+    if ($null -ne $rep8) {
+        [Console]::Out.WriteLine("CANONICAL-HASH eval03-report.json=$($rep8.sha)")
+        [Console]::Out.WriteLine("CANONICAL-HASH eval03-report.md=$($rep8Md.sha)")
+        Check 'eval03: report.json sha == pinned (deterministic)' ($rep8.sha -eq $B3_REPORT_JSON_SHA)
+        Check 'eval03: report.md sha == pinned' ($rep8Md.sha -eq $B3_REPORT_MD_SHA)
+
+        # packet_disposition scoring: 6 labelled, 5 correct (the supplied wrong-answerable packet is caught)
+        $de = $rep8.obj.packet_disposition_eval
+        Check 'eval03: packet_disposition scored' ([bool]$de.scored)
+        Check 'eval03: 6 labelled dispositions' ($de.num_labeled -eq 6)
+        Check 'eval03: 5 correct dispositions' ($de.num_correct -eq 5)
+        Check 'eval03: disposition accuracy 833333 ppm (5/6)' ($de.accuracy_ppm -eq 833333)
+        $d6 = (@($de.per_query | Where-Object { $_.query_id -eq 'd6-supplied-wrong' }) | Select-Object -First 1)
+        Check 'eval03 d6: supplied packet disposition scored from the packet (source=packet)' ($null -ne $d6 -and $d6.source -eq 'packet')
+        Check 'eval03 d6: WRONG answerable caught (expected abstain, correct=false)' ($d6.expected -eq 'abstain' -and $d6.actual -eq 'answerable' -and (-not $d6.correct))
+        $d1 = (@($de.per_query | Where-Object { $_.query_id -eq 'd1-dedup-answerable' }) | Select-Object -First 1)
+        Check 'eval03 d1: computed disposition answerable (source=computed)' ($d1.source -eq 'computed' -and $d1.actual -eq 'answerable')
+        $d3 = (@($de.per_query | Where-Object { $_.query_id -eq 'd3-needsexp-budget' }) | Select-Object -First 1)
+        Check 'eval03 d3: budget -> computed needs_expansion' ($d3.actual -eq 'needs_expansion')
+
+        # occurrence-preserving DISPLAY dedup: raw duplicate burden > 0 collapses to 0 at the packet stage,
+        # and the display head carries occurrences[] of BOTH byte-identical members (provenance NOT erased).
+        $d1raw = QById $rep8.obj 'd1-dedup-answerable'
+        $d1pk  = (@($rep8.obj.per_query_packet | Where-Object { $_.query_id -eq 'd1-dedup-answerable' }) | Select-Object -First 1)
+        Check 'eval03 d1: RAW duplicate burden > 0 (both byte-identical dupes retrieved)' ($d1raw.duplicate_burden_ppm -gt 0)
+        Check 'eval03 d1: PACKET duplicate burden 0 (occurrence-preserving dedup collapsed them)' ($d1pk.duplicate_burden_ppm -eq 0)
+        $dupeHit = (@($d1pk.returned | Where-Object { $_.evidence_cluster_id -and $_.occurrence_count -ge 2 }) | Select-Object -First 1)
+        Check 'eval03 d1: one display item carries occurrences of 2 members (dedup DISPLAY, keep provenance)' ($null -ne $dupeHit -and $dupeHit.occurrence_count -eq 2)
+
+        # budget -> omission_manifest (max_selected=1 drops the required Approval chunk)
+        $d3pk = (@($rep8.obj.per_query_packet | Where-Object { $_.query_id -eq 'd3-needsexp-budget' }) | Select-Object -First 1)
+        Check 'eval03 d3: packet size 1 + omitted (budget)' ($null -ne $d3pk -and $d3pk.packet_size -eq 1 -and @($d3pk.omission_manifest).Count -ge 1)
+
+        # per-stage metrics computed for the packet stage
+        Check 'eval03: stage_metrics packet present' (Has $rep8.obj.stage_metrics 'packet')
+    }
+    # double-run identity
+    $env8b = ParseEnv (RunEntry @($benchmark3))
+    $rep8b = ReadReport $env8b 'report.json'
+    Check 'eval03: double-run report.json byte-identical' ($null -ne $rep8b -and $rep8b.sha -eq $B3_REPORT_JSON_SHA)
 }
 
 # ================================================================= fail-closed error paths

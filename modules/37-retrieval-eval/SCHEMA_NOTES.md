@@ -1,10 +1,14 @@
-# SCHEMA_NOTES -- retrieval.eval (Module 37, contract v0.2 / eval-0.2, plan fo-29-87dbfa0b, RETRIEVAL-QUALITY-i29)
+# SCHEMA_NOTES -- retrieval.eval (Module 37, contract v0.3 / eval-0.3 + selpol_rrf_v1, plan fo-30-dd453156, SELECTION-POLICY-i30)
 
-**REQUIRED by D-0077.** This module is the CONSUMER side of a schema producer/consumer pair: it calls a
-retriever (the producer -- the real `artifact.search` #36 retriever-0.2 at fold; its own lexical baseline
-now) and scores its ranked hits + (at fold) the context compiler #40's packets. This doc records EVERY
-schema + interface interpretation the harness codes against, so the orchestrator's cross-module fold can
-wire the real `artifact.search` behind this harness and consume the reranker seam without guessing.
+**REQUIRED by D-0077.** This module is BOTH the CONSUMER side of a retriever pair (it calls the real
+`artifact.search` #36 retriever-0.2 at fold / its own lexical baseline now, and scores the ranked hits + #40's
+packets) AND, as of i30, the PRODUCER of the ONE versioned selection-policy library `selpol_rrf_v1`
+(CONTEXT_PACKET_CONTRACT s4 / P1-1) that the context compiler #40 consumes. This doc records EVERY schema +
+interface interpretation the harness + library code against, so the orchestrator's cross-module fold can wire
+the real `artifact.search` behind this harness, consume the reranker seam, and assert
+#40-with-its-reference-impl == #40-with-this-canonical-`selpol_rrf_v1` (byte-identical selection) without
+guessing. **i30 sections 9-13 (selpol_rrf_v1 + eval-0.3) are the load-bearing D-0087 record; sections 1-8 are
+the shipped eval-0.2 record, unchanged in behavior.**
 
 Governing (FROZEN, D-0083; on any conflict this contract + its live gates win, never silently edited):
 `core-docs/MEMORY_CONTRACT.md` -- **s6 (evaluation gates)** = the primary spec here, plus **s3** (the
@@ -229,3 +233,153 @@ the packet's selected hits are retriever-0.2 hits -> the same metrics + provenan
 hit omits a byte span or mislabels status, provenance validity reports it below 1.0 -- the intended signal.
 The reranker seam (`rerank()`; retriever-0.2 hit array in -> reordered out) is the drop-in #40's selection and
 a later retrieval wave consume.
+
+---
+
+## 9. `selpol_rrf_v1` -- the ONE selection-policy library (CONTEXT_PACKET_CONTRACT s4, P1-1) -- i30
+
+**File:** `lib/selpol_rrf_v1.py` (self-contained; stdlib `hashlib` only). **Owner:** #37. **Consumers:** #40
+(the context compiler) + this harness's own reranker A/B. This removes the two-reranker problem: there is
+exactly ONE selection implementation.
+
+**Frozen s4 signature (verbatim):**
+`select(candidates, descriptor, policy_id="selpol_rrf_v1", params=None) -> { selected[], ranked[], policy_id,
+policy_version, features_by_candidate, omission_manifest[], stages }`. `policy_id='selpol_rrf_v1'`,
+`policy_version='1.0.0'`; an unknown `policy_id` fails closed (ValueError).
+
+- **Inputs.** `candidates` = the MEMORY_CONTRACT s3 retriever-0.2 hit array (normalized: each hit carries
+  `rank` [retrieval rank], `lexical_rank`, `vector_rank`, `fused_rank` + scores, `status`, `authority_level`,
+  `namespace`, `record_kind`, `source_path`, `chunk_id`, `chunk_content_hash`, `span_start/end`, `token_count`,
+  `snippet`, `retrieval_channels`). `descriptor` = the UNIFIED selection descriptor (the s4 reconciliation of
+  #40's task fields + #37's `rerank_descriptor`): `{namespace?, component?, relevant_paths?, task_type?,
+  task_stage?, time_horizon?, seeking_failures?, permission_context?}`.
+- **PURITY (load-bearing).** No model, no I/O, no state, no wall-clock, no randomness. `candidates` is NEVER
+  mutated -- every returned hit is a COPY. The library reads ONLY its arguments, so it stays pure: the caller's
+  POLICY SIGNALS (what it is permitted / labelled to demote) come in via `params`, NOT via a scan of ground
+  truth. #40 supplies `hard_filter` from `control_plane.permission_grants` / `permission_context` and relies on
+  the candidate's OWN s5 `status` for temporal demote; #37's eval wrapper maps its benchmark labels into the
+  same `params` (section 11). Determinism is byte-verified (double-run identity + the cross-env pins).
+- **`params` (policy knobs + signals):** `rrf_k(int=60)`, `weights{}`, `authority_rank{}`, `hard_demote`,
+  `stale_penalty`, `diversity_penalty`, `current_only(bool)`, `dedup_display(bool=False)`,
+  `hard_filter[{source_path, content_hash?, reason}]`, `stale[{source_path, content_hash?}]`,
+  `required_versions[{source_path, content_hash}]`, `budget{max_selected?, max_tokens?, per_item_overhead?}`.
+  `descriptor.time_horizon == "current_only"` also enables the temporal stage.
+
+**STAGES (deterministic, versioned baseline), in order, each accruing `reason_codes[]` + features:**
+1. **hard filters** -- a candidate matching `hard_filter` (forbidden/privacy) OR `status=="deleted"` is
+   hard-demoted (`-hard_demote`, default 1000 ppm-points) and `selected=False`; reason `hard_filter_<reason>`.
+2. **temporal** -- under `current_only`, a candidate whose `status` is in the s5 stale enum, OR matches
+   `stale`, OR is a wrong version of a `required_versions` source, is demoted (`-stale_penalty`, 20 ppm-points);
+   reason `stale_demote`.
+3. **authority** -- `epistemic_authority` weighting via `AUTHORITY_RANK` (a TRUST signal, never execution
+   authority); reason `authority_boost`.
+4. **rank fusion (RRF over CHANNEL RANKS -- P1-2).** `retrieval_occurrences[]` = the candidate's per-channel
+   ranks (`lexical`/`vector`; else one `retrieval` occurrence from `fused_rank`/`rank`). `rrf_score` =
+   sum over occurrences of round-half-up(`PPM / (rrf_k + rank)`), integer. Reason `fusion_rrf` on every
+   candidate. When a candidate carries >1 occurrence (multi-channel, or the dedup cluster of stage 5) the RRF
+   genuinely fuses multiple ranks -- the P1-2 problem (raw FTS scores from different queries/kinds are not one
+   scale, so fuse RANKS, keeping occurrences).
+5. **diversity + occurrence-preserving dedup (P1-3).** Greedy source-diversity ordering (a per-source penalty,
+   `diversity_penalty` 8 ppm-points per already-selected same-source hit; ties -> original rank). When
+   `dedup_display=True`, identical TEXT (`dedup_key` = `chunk_content_hash`, else source+span) collapses into
+   ONE display item carrying `occurrences[]` (each folded member's `{record_version_id, source_path, chunk_id,
+   content_hash, retrieval_rank, channels}`) + a stable `evidence_cluster_id` (`ec_`+sha16(dedup_key)); the
+   cluster's `rrf_score` is re-fused over the UNION of member channel ranks. **Provenance is NEVER erased** --
+   folded members stay in `ranked[]` flagged `selected=False` + reason `display_duplicate`, and their
+   provenance lives in the head's `occurrences[]`.
+6. **budget.** `max_selected` / `max_tokens` (cost = `token_count` or ceil(chars/4) of the snippet +
+   `per_item_overhead`); overflow -> `selected=False` + reason `budget_omitted` + an `omission_manifest[]`
+   entry `{record_version_id, source_path, chunk_id, reason(max_selected|token_budget), selection_rank}`.
+
+**ADDITIVE output (never re-sorts the retrieval array in place).** Each `ranked[]` item is a COPY that
+PRESERVES `retrieval_rank` + `lexical_rank`/`vector_rank`/`fused_rank` and ADDS `selection_rank`,
+`selection_score` (= the effective score = base - diversity penalty; integer, monotonic with selection_rank),
+`selection_policy_id`, `selected`(bool), `reason_codes[]` (deterministic, de-duplicated, stable stage order:
+`rescued, hard_filter_*, stale_demote, authority_boost, fusion_rrf, diversity_capped, display_duplicate,
+budget_omitted, selected`), `retrieval_occurrences[]`, `rrf_score`, and (a cluster head) `occurrences[]` +
+`evidence_cluster_id`. `reason_codes` gains `rescued` when `selection_rank < retrieval_rank`. `selected[]` =
+the display items within budget, in selection order. `features_by_candidate[key]` = the per-hit feature
+breakdown (`relevance, authority, freshness, project, component, task_stage, failure, procedural, hard_demote,
+stale, rrf_score, occurrence_count, base_score, diversity_penalty, effective_score, selection_rank, selected,
+reason_codes`) -- what #40's eval hooks + this A/B consume.
+
+## 10. How the shipped `rerank()` maps onto the library (baseline-compat -- the regression freeze)
+
+The shipped standalone `rerank()` is RETIRED and re-expressed as `selpol.rerank_compat(candidates, descriptor,
+params)` = `select(..., dedup_display=False)` adapted back to `(reordered_hits, diagnostics)`. The DEFAULT
+policy scoring IS the shipped `_rerank_base` composite EXACTLY: direct relevance = the retriever's `fused_score`
+(else `lexical_score`/`score`), weight 1; + authority x3 ppm x `AUTHORITY_RANK`; + freshness x6 ppm x
+`_fresh_rank(status)`; + project/component/task_stage/failure/procedural x2 ppm each; - hard_demote (forbidden/
+privacy/deleted); - stale_penalty (current_only); greedy source-diversity. Because that scoring, the greedy
+loop, and the tie-break `(-effective, original_rank)` are ported byte-for-byte, `select(dedup_display=False)`
+reproduces the shipped reranked ORDER, and `rerank_compat` reconstructs `rerank_diagnostics`
+(`source_path, chunk_id, from_rank, to_rank, features{the 9 legacy keys}, base_score, diversity_penalty,
+effective_score`) IDENTICALLY. VERIFIED: the shipped-0.2 `aggregate_raw / aggregate_reranked / rerank_ab /
+rerank_diagnostics / hybrid_attribution / per_query_raw / per_query_reranked` are byte-identical after the
+refactor (only the report SCHEMA version + additive fields changed).
+
+**Baseline-compat interpretation (recorded for the fold).** i30 freezes the rank-based RRF fusion +
+occurrence-preserving dedup as the BASELINE; the DEFAULT policy's direct-relevance term stays the retriever's
+`fused_score` (itself the retriever's fused output per s3) so the frozen baseline order is preserved and the
+regression is green. `rrf_score` is emitted as a first-class feature + `fusion_rrf` reason code and IS the
+fusion rule when a candidate carries >1 occurrence (multi-channel or a dedup cluster); in the single-occurrence
+lexical-only wave it is a strictly rank-monotonic restatement of the retriever order, so it never contradicts
+the baseline. **Replacing the raw-score direct-relevance term with pure rank-RRF as the PRIMARY sort -- which
+changes ordering -- is the named P1-2 score-comparability follow-on**, exactly as CONTEXT_PACKET_CONTRACT s4
+defers it (with P1-3 near-dup calibration + P1-9 the synthetic precomputed-vector fixture that would exercise
+multi-channel RRF end-to-end).
+
+## 11. The eval wrapper's label -> policy-signal mapping (`_policy_params_from_query`)
+
+The eval reranker measures an oracle-ish upper bound off the benchmark LABELS, so the harness maps them into the
+library's pure `params` (it does NOT leak labels into the library): `forbidden_sources`+`privacy_exclusions`
+-> `hard_filter` (with `reason`); `stale_sources` -> `stale`; each `required_source` with a `content_hash` ->
+`required_versions` (wrong-version staleness); `temporal_intent=="current_only"` -> `current_only`. `deleted`
+staleness comes from the candidate's own `status`. This is the ONLY place benchmark ground truth touches
+selection; #40 will instead pass `hard_filter` from `control_plane.permission_grants` and rely on candidate
+`status` -- the SAME library, a different signal source, so the D-0077 fold's byte-identity assertion holds.
+
+## 12. eval-0.3 refinement -- per-stage + `packet_disposition` (P0-3 / P1-4 subset)
+
+- **Per-stage metrics.** `stage_metrics{raw, post_filter, packet}` + full `aggregate_packet`. `raw` = the raw
+  retriever order (`aggregate_raw`); `post_filter` = the reranked order (`aggregate_reranked` -- hard filter +
+  temporal + authority + RRF + diversity, NO display dedup, NO budget); `packet` = the PACKET-stage selection
+  (`select_packet` = `select(dedup_display=True, budget)` -> `selected[]`). The packet stage is where the
+  occurrence dedup + budget bite: e.g. two byte-identical near-duplicates score `duplicate_burden > 0` at raw
+  and `0` at packet.
+- **`packet_disposition` (P0-3).** `PACKET_DISPOSITIONS = answerable | needs_expansion | abstain | conflicted |
+  provenance_failed`. `packet_disposition_eval` scores the disposition against a query's
+  `expected_packet_disposition` label. The `actual` disposition is READ from a supplied #40 packet
+  (`query.context_packet.packet_disposition`) when present -- the fold path -- ELSE computed deterministically
+  from the packet-stage selection (CONTEXT_PACKET_CONTRACT s2 mapping, i30 subset): any provenance-invalid
+  selected hit -> `provenance_failed`; a `no_answer_expected` query with a non-empty packet -> `needs_expansion`
+  (empty -> `abstain`); an unmet required requirement -> `needs_expansion` when the source appears in raw
+  retrieval (expandable) else `abstain`; otherwise `answerable`. `conflicted` is a reserved hook (no
+  current-vs-current contradiction labels in the i30 fixtures). Aggregate = `{scored, num_labeled, num_correct,
+  accuracy_ppm, per_query[{query_id, expected, actual, computed, supplied, source, correct}]}`.
+- **Hybrid `not_applicable` (P1-4).** `hybrid_applicability = {vector_channel, status:
+  not_applicable|applicable, note}`. While the vector channel is EMPTY the status is `not_applicable` (NOT zero
+  uplift) -- the existing per-query `hybrid_attribution` counts stay (vector_hit_count=0) so the shipped VALUE
+  assertions are preserved; the applicability marker is additive.
+- **Report schema.** `lifeorch.retrieval_eval_report/0.3`. Additive top-level fields over 0.2:
+  `selection_policy`, `hybrid_applicability`, `aggregate_packet`, `stage_metrics`, `packet_disposition_eval`,
+  `per_query_packet`; `returned[]` gains the additive selection fields (`retrieval_rank`, `selection_rank`,
+  `selection_score`, `selection_policy_id`, `selected`, `reason_codes`, `evidence_cluster_id`,
+  `occurrence_count`). Every shipped-0.2 metric VALUE is unchanged; the canonical pins are re-computed for the
+  larger shape (byte-identical cross-env; double-run gate).
+
+## 13. Fold + #40 consumption recipe (D-0077)
+
+- **#40 imports the library by a resolved path** (it is self-contained stdlib): e.g.
+  `importlib.util.spec_from_file_location("selpol_rrf_v1", "<repo>/modules/37-retrieval-eval/lib/selpol_rrf_v1.py")`.
+  #40 retires its i29 self-contained composite score and calls `select(candidates, descriptor,
+  'selpol_rrf_v1', params)` with `dedup_display=True` + its token budget to build the packet's `excerpts[]` +
+  `omitted_context`/`omission_manifest` + the additive selection fields; `descriptor` carries #40's task fields
+  (namespace/component/relevant_paths/task_type/time_horizon/permission_context) and `hard_filter` comes from
+  `control_plane.permission_grants`. The fold asserts BYTE-IDENTICAL selection between #40's reference impl and
+  this canonical library on real #36 hits.
+- **What P1-4 is DEFERRED (named follow-on, not i30):** graded `relevance_grade` / judged `judgment_status`
+  precision + nDCG; the `required_stage` / `provenance_mode` label plumbing beyond the i30 subset; the held-out
+  fresh-9B acceptance suite (P1-8); the synthetic precomputed-vector fixture that would exercise multi-channel
+  RRF + vector-rescue end-to-end (P1-9). The eval accepts these labels additively (ignored when absent) so the
+  follow-on is plumbing, not a schema break.

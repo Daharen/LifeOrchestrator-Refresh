@@ -1,87 +1,77 @@
-# Work Order: Retrieval Evaluation Harness (`retrieval.eval`) -- 0.1.0 -> 0.2.0 (eval-0.2)
+# Work Order: retrieval.eval -- 0.2.0 -> 0.3.0 (selpol_rrf_v1 + eval-0.3)
 
-**Contract version targeted:** 0.2 (eval-0.2 gates) · **Author:** FANOUT_AGENT_002 (RETRIEVAL-QUALITY-i29) /
-2026-08-02 · **Roadmap:** Wave 3 CPU lane (plan fo-29-87dbfa0b; D-0083 MEMORY_CONTRACT s6; directive 8.3/11.1;
-Priority 2). Predecessor: 0.1.0 (RETRIEVAL-EVAL-i25, plan fo-25-3b718a13).
+**Contract version targeted:** 0.3 · **Author:** FANOUT_AGENT_002 (SELECTION-POLICY-i30) / 2026-08-03 ·
+**Roadmap:** Wave 3 CONTRACT-HARDENING, CPU lane (plan fo-30-dd453156; D-0087 CONTEXT_PACKET_CONTRACT s4 +
+MEMORY_CONTRACT A2/A3; P1-1). Predecessor: 0.2.0 (RETRIEVAL-QUALITY-i29, plan fo-29-87dbfa0b).
 
 ### Problem being solved
 
-Wave 3 builds the context compiler (#40) and skill retrieval. Before those layers are accepted, retrieval +
-packet quality must be MEASURABLE against the FROZEN MEMORY_CONTRACT s6 evaluation gates, and there must be a
-deterministic reranker seam #40 (and a later retrieval wave) can consume. This revision adopts eval-0.2 and
-adds that reranker.
-
-### Immediate practical use
-
-At the Wave-3 fold (D-0077): point the `external_command` retriever at the real `artifact.search` #36
-retriever-0.2, run the benchmark, and read measured retrieval quality (raw + reranked) with source-resolved
-provenance VALIDITY. The orchestrator also scores REAL #40 `context_packet/0.1` packets with this 0.2 harness
-at fold (D-0077) -- the packet's selected hits are retriever-0.2 hits, so the same metrics + validation apply.
+Two selection implementations diverged: #37 shipped a standalone deterministic `rerank()`; #40 shipped a
+self-contained composite score. The frontier Wave-3 red-team's **P1-1** requires exactly ONE versioned
+deterministic selection-policy library, OWNED by #37 and CONSUMED by #40 + #37's own eval A/B. This revision
+authors that library (`selpol_rrf_v1`) extracted from `rerank()`, and refines the eval harness to score
+per-stage + `packet_disposition` (the P1-4 subset i30 needs).
 
 ### Explicit scope (in) -- touch ONLY `modules/37-retrieval-eval`
 
-- Benchmark schema `lifeorch.retrieval_benchmark/0.2`: evidence groups (must_include_all / must_include_any),
-  required version/span, acceptable-equivalent spans, explicitly-stale versions, forbidden sources, hard
-  privacy exclusions, distractors, no_answer_expected, temporal intent, label rationale/status/reviewer,
-  corpus snapshot. Chunk/span-level credit (a file-level hit is not sufficient). The 0.1 schema is still
-  accepted (compat/migration).
-- Temporal intent per query: current_only | historical_as_of | version_specific | any_valid_version.
-- Metrics added over 0.1: precision@K, nDCG@K, evidence-group coverage, forbidden/privacy/stale-hit rate,
-  duplicate/near-dup burden, source diversity, provenance VALIDITY, snippet-span correctness, relevant-token
-  ratio, no-answer FP rate, hybrid uplift/regression. (recall@K / MRR / stale-source / provenance-presence /
-  forbidden-hit rate kept, values regression-green.)
-- Negatives / abstention fixtures; hybrid attribution (lexical / vector / hybrid) with the vector channel
-  EMPTY, reported cleanly; provenance VALIDATION (not presence).
-- A DETERMINISTIC reranker (retriever-0.2 hit array + descriptor -> the same shape reordered) MEASURED by the
-  harness (uplift/regression vs the raw order + rescue/demote). NO model.
-- Reports (machine `report.json` `lifeorch.retrieval_eval_report/0.2` + human `report.md`), canonical.
+- **`lib/selpol_rrf_v1.py`** -- the s4 interface `select(candidates, descriptor, policy_id, params) ->
+  {selected[], ranked[], policy_id, policy_version, features_by_candidate, omission_manifest[]}`. PURE +
+  deterministic (stdlib). Stages: hard filters -> temporal stale-demote (s5) -> authority (epistemic_authority)
+  -> versioned RRF over CHANNEL RANKS (retrieval_occurrences[]; P1-2) -> occurrence-preserving DISPLAY dedup
+  (identical text -> one display item + occurrences[] + evidence_cluster_id; P1-3) -> budget. Output ADDITIVE:
+  preserves retrieval_rank/lexical_rank/vector_rank/fused_rank; adds selection_rank/selection_score/
+  selection_policy_id/selected/reason_codes; NEVER re-sorts the retrieval array in place.
+- **Adopt it in the harness:** `rerank()` becomes a thin wrapper over `selpol_rrf_v1` (the measured A/B measures
+  the library). The shipped 0.2 benchmark + reranker A/B stay GREEN (regression -- metric VALUES byte-preserved).
+- **Eval refinement (P1-4 subset):** score PER STAGE (raw / post-filter / packet) + `packet_disposition`
+  correctness (read from a supplied #40 packet or computed deterministically); mark hybrid metrics
+  `not_applicable` (NOT zero) while the vector channel is EMPTY. Full graded-relevance P1-4 is a named follow-on.
+- Fixtures proving the library RESCUES a required source out of raw top-K + DEMOTES a stale/forbidden hit (A/B
+  delta) PRESERVING retrieval_rank, and occurrence-preserving dedup (identical text -> one display item,
+  occurrences kept).
 
 ### Non-goals (out -- do NOT build)
 
-- Real embeddings / a vector index / real vector search (the vector channel is scaffolded but EMPTY -- the
-  retrieval wave); a MODEL-based reranker; the context compiler #40; the retriever/catalog #36; skill cards
-  #41; a production router (Priority 7); UI. No model / CUDA / network; do NOT touch model modules / models.json.
-
-### Dependencies
-
-- Modules: #0 executor + dev.ship (ship path), #1 skill contract (manifest/envelope validators + generic
-  wrapper), #29 res.lease (git lease at ship). Consumes the #36 retriever-0.2 hit shape (MEMORY_CONTRACT s3).
-  Tools: `pwsh>=7.4`, `python>=3.8` (stdlib only).
+The context compiler #40 (consume its packets at fold only); real embeddings / a vector index / real vector
+search (the vector channel stays scaffolded but EMPTY); a MODEL-based reranker (deterministic only); the FULL
+P1-4 metric set / judged relevance grades (follow-on); P1-2/P1-3 calibration beyond the frozen rank-RRF +
+occurrence-dedup baseline; the retriever/catalog #36; skill cards #41; a production router; UI. No model / CUDA
+/ network; do NOT touch model modules / models.json.
 
 ### Skill contract requirements
 
-`skill_id retrieval.eval`, `version 0.2.0`, `contract_version 0.2`, `determinism deterministic`,
-`parallel_safe true`, `batch false`, `streaming false`. `confidence` = null (deterministic);
-`model_provenance` = []; artifact kinds `json` + `markdown`.
+`skill_id retrieval.eval`, `version 0.3.0`, `contract_version 0.3`, `determinism deterministic`,
+`parallel_safe true`, `batch false`, `streaming false`. `confidence` = null; `model_provenance` = [];
+artifact kinds `json` + `markdown`. Report schema `lifeorch.retrieval_eval_report/0.3`.
 
 ### Tests
 
-- **Off-machine (cloud pwsh/python):** `tests/Invoke-RetrievalEvalTests.ps1` -- AST + py_compile gates,
-  manifest + envelope validation (0.2.0), the KNOWN 0.1 baseline numbers PRESERVED, the eval-0.2 metrics with
-  KNOWN fixture values, pinned canonical sha + double-run identity, the three ACCEPTANCE failing cases
-  (required ABSENT; forbidden RETURNED; a returned span that does NOT reproduce the cited text), the reranker
-  A/B (rescue + demote), hybrid attribution with the vector channel EMPTY, fail-closed error envelopes, the
-  Module 1 wrapper. Prints `CANONICAL-HASH` lines for cross-env parity.
-- **`-Live` (Windows executor):** the same harness + a real core-docs slice via the real #36 retriever-0.2;
-  assert cross-env canonical-hash parity, 0 orphaned llama-server/python, `review_queue.jsonl` before == after.
+- **Off-machine (cloud python):** `tests/test_selpol.py` (library-direct unit suite: s4 interface, purity,
+  determinism, additive output, rescue+demote preserving retrieval_rank, RRF over channel ranks,
+  occurrence-preserving dedup, budget) + the worker over every fixture (double-run byte-identical). pwsh in the
+  cloud is absent, so the full pwsh harness runs on `-Live`.
+- **`-Live` (Windows executor):** `tests/Invoke-RetrievalEvalTests.ps1` -- AST + py_compile gates (incl.
+  `lib/selpol_rrf_v1.py` + `tests/test_selpol.py`), the library-direct unit suite, manifest (0.3.0) + envelope
+  validation, the KNOWN 0.1/0.2 metric VALUES PRESERVED (regression), the eval-0.3 selpol packet benchmark
+  (occurrence dedup, budget -> needs_expansion, packet_disposition 5/6), pinned canonical shas + double-run
+  identity, the additive selection fields, hybrid not_applicable, fail-closed error envelopes, the Module 1
+  wrapper; plus a real core-docs slice via the real #36 retriever-0.2. Asserts cross-env canonical-hash parity,
+  0 orphaned llama-server/python, `review_queue.jsonl` before == after.
 
 ### MVP acceptance criteria
 
-- [x] eval-0.2 runs DETERMINISTICALLY on a fixture corpus with the richer labels + temporal intent + negatives.
-- [x] Each new metric computes with a KNOWN fixture value (precision@K, nDCG@K, evidence-group coverage,
-      forbidden/stale-hit rate, provenance validity, no-answer FP).
-- [x] A FAILING test when a required source is ABSENT (mock2 mq-a; baseline q7; mock mq2).
-- [x] A FAILING test when a FORBIDDEN source is returned (mock2 mq-b/mq-d; benchmark2 b3).
-- [x] A FAILING test when a returned span does NOT reproduce the cited text (mock2 mq-c -> provenance INVALID).
-- [x] Hybrid attribution runs with the vector channel EMPTY and reports it.
-- [x] The deterministic reranker measurably RESCUES a required source out of the raw top-K OR DEMOTES a
-      stale/forbidden hit, with the A/B delta reported (mock2 mq-b/mq-d; +500000 ppm recall@1 / nDCG@1).
-- [x] The shipped 0.1 benchmark + metrics stay GREEN (regression); reports byte-identical on re-run.
+- [x] `selpol_rrf_v1` DETERMINISTIC + PURE (byte-identical selection on re-run); signature EXACTLY matches s4.
+- [x] A test where the library RESCUES a required source out of raw top-K AND DEMOTES a stale/forbidden hit
+      with the A/B delta reported, PRESERVING retrieval_rank (mock2 mq-b/mq-d + test_selpol).
+- [x] Occurrence-preserving dedup (identical text -> one display item WITHOUT losing occurrences)
+      (benchmark3 d1 + test_selpol).
+- [x] The shipped 0.2 benchmark + reranker A/B stay GREEN (regression); reports byte-identical on re-run.
+- [x] Per-stage metrics + packet_disposition scoring compute with KNOWN fixture values (benchmark3).
 - [ ] `-Live` over a real core-docs slice via the real #36 retriever 0.2 (filled at ship).
 
 ### Documentation
 
-`README.md` + `skill.json` (0.2.0) + `SCHEMA_NOTES.md` (D-0077: every interpretation) + `examples/` -- updated.
+`README.md` + `skill.json` (0.3.0) + `SCHEMA_NOTES.md` (D-0077: every interpretation) + `examples/` -- updated.
 
 ### Registry / state updates
 
@@ -90,5 +80,5 @@ edits NO core-doc.
 
 ### STOP conditions
 
-- Acceptance met -> stop; do not build a router, an embedder, a model reranker, #40, or `artifact.search`.
+- Acceptance met -> stop; do not build #40, an embedder, a model reranker, or `artifact.search`.
 - docs:[] -> never edit a core-doc; report and let the orchestrator fold.

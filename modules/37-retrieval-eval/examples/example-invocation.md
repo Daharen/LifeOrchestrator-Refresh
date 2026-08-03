@@ -35,7 +35,23 @@ matched); and the DETERMINISTIC reranker rescuing a current required source to r
 forbidden/stale hit (A/B delta: recall@1 / nDCG@1 uplift +500000 ppm). `examples/example-result.json` is a
 sanitized envelope from this run.
 
-## 4. Generic caller form / point at the real artifact.search #36 at fold
+## 4. The eval-0.3 selpol packet benchmark (occurrence dedup, budget, packet_disposition)
+
+```powershell
+pwsh -NoProfile -File .\Invoke-RetrievalEval.ps1 -InputFile .\tests\fixtures\benchmark3.json
+```
+
+Exercises the `selpol_rrf_v1` PACKET stage (`lib/selpol_rrf_v1.py`; CONTEXT_PACKET_CONTRACT s4): two
+byte-identical near-duplicates collapse to ONE display item carrying both `occurrences[]` + an
+`evidence_cluster_id` (provenance preserved -> packet duplicate burden 0); a `max_selected=1` budget drops the
+required chunk into the `omission_manifest` -> `needs_expansion`; and `packet_disposition` scoring against
+`expected_packet_disposition` labels (accuracy 833333 ppm = 5/6, catching a supplied #40 packet that wrongly
+claims `answerable` for an absent required source). The report (`lifeorch.retrieval_eval_report/0.3`) adds
+`selection_policy`, `stage_metrics` (raw / post_filter / packet), `aggregate_packet`, `packet_disposition_eval`,
+`hybrid_applicability`, and the additive per-hit selection fields (`retrieval_rank` preserved +
+`selection_rank`/`selection_score`/`selection_policy_id`/`selected`/`reason_codes`).
+
+## 5. Generic caller form / point at the real artifact.search #36 at fold
 
 ```powershell
 pwsh -NoProfile -File .\Invoke-RetrievalEval.ps1 -InputsJson '{"benchmark":"tests/fixtures/benchmark2.json"}'

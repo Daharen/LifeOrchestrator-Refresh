@@ -72,11 +72,20 @@ import argparse
 import subprocess
 import time
 
+# The ONE selection-policy library (CONTEXT_PACKET_CONTRACT s4, P1-1) -- OWNED here, CONSUMED by #40 and by
+# this harness's own A/B. Self-contained (stdlib only) so #40 can load it by a resolved path.
+_HERE = os.path.dirname(os.path.abspath(__file__))
+if _HERE not in sys.path:
+    sys.path.insert(0, _HERE)
+from lib import selpol_rrf_v1 as selpol  # noqa: E402
+
 GENERATOR_NAME = "retrieval.eval"
-GENERATOR_VERSION = "0.2.0"
-REPORT_SCHEMA = "lifeorch.retrieval_eval_report/0.2"
+GENERATOR_VERSION = "0.3.0"
+REPORT_SCHEMA = "lifeorch.retrieval_eval_report/0.3"
 BENCHMARK_SCHEMA = "lifeorch.retrieval_benchmark/0.2"
 BENCHMARK_SCHEMA_V1 = "lifeorch.retrieval_benchmark/0.1"
+SELECTION_POLICY_ID = selpol.POLICY_ID
+SELECTION_POLICY_VERSION = selpol.POLICY_VERSION
 SCORE_UNIT = "millionths"
 RATIO_UNIT = "ppm"
 PPM = 1000000
@@ -1171,6 +1180,16 @@ def evaluate_ordering(q, ordered_hits, k_values, retrieval_depth, corpus):
             "provenance_complete": hit_prov[i]["provenance_present"],
             "provenance_valid": hit_prov[i]["provenance_valid"],
             "provenance_failed_checks": hit_prov[i]["failed_checks"],
+            # ADDITIVE selection fields (CONTEXT_PACKET_CONTRACT s4): the retrieval rank is PRESERVED; the
+            # selection layer adds its own ordering + reason codes without re-sorting the retrieval array.
+            "retrieval_rank": h.get("retrieval_rank", h.get("rank")),
+            "selection_rank": h.get("selection_rank"),
+            "selection_score": h.get("selection_score"),
+            "selection_policy_id": h.get("selection_policy_id"),
+            "selected": h.get("selected"),
+            "reason_codes": h.get("reason_codes"),
+            "evidence_cluster_id": h.get("evidence_cluster_id"),
+            "occurrence_count": (len(h["occurrences"]) if isinstance(h.get("occurrences"), list) else None),
         })
 
     return {
@@ -1211,144 +1230,61 @@ def evaluate_ordering(q, ordered_hits, k_values, retrieval_depth, corpus):
     }
 
 
-# ------------------------------------------------------------------ deterministic reranker (8.3 / Stage 4)
-
-RERANK_W = {
-    "relevance": 1,          # x lexical/fused score (millionths)
-    "authority": 3 * PPM,    # x authority level rank
-    "freshness": 6 * PPM,    # x freshness rank
-    "project": 2 * PPM,      # namespace match
-    "component": 2 * PPM,    # path-prefix match
-    "task_stage": 2 * PPM,   # record_kind matches the task stage
-    "failure": 2 * PPM,      # failure-seeking + record_kind==failure
-    "procedural": 2 * PPM,   # action stage + record_kind==procedure
-}
-RERANK_HARD_DEMOTE = 1000 * PPM      # forbidden / privacy / deleted -> sink to the bottom
-RERANK_STALE_PENALTY = 20 * PPM      # current_only + a stale hit
-RERANK_DIVERSITY_PENALTY = 8 * PPM   # per already-selected hit from the same source_path
-
-AUTHORITY_RANK = {"authoritative": 4, "governing": 4, "curated": 3, "source_material": 2, "derived": 1}
-TASK_STAGE_KINDS = {
-    "implement": ("procedure", "source_chunk"),
-    "act": ("procedure",),
-    "debug": ("failure", "source_chunk"),
-    "plan": ("decision", "summary"),
-    "research": ("summary", "source_chunk", "claim"),
-}
+# ------------------------------------------------------------------ deterministic selection (selpol_rrf_v1)
+# The selection policy is OWNED by lib/selpol_rrf_v1.py (CONTEXT_PACKET_CONTRACT s4 / P1-1) -- the ONE
+# selection owner that the context compiler #40 AND this harness's own A/B both consume (removing the
+# "two rerankers" problem). `rerank()` is now a THIN WRAPPER over that library: the measured A/B measures
+# the library. The shipped feature weights / authority rank / task-stage kinds / hard-demote / stale
+# penalty / diversity now live in the library (its RERANK_W etc.). dedup_display=False + no budget make the
+# reranked order + diagnostics BYTE-IDENTICAL to the shipped standalone reranker (regression-green).
+# Re-exported here so any downstream import of these names keeps resolving.
+RERANK_W = selpol.RERANK_W
+RERANK_HARD_DEMOTE = selpol.RERANK_HARD_DEMOTE
+RERANK_STALE_PENALTY = selpol.RERANK_STALE_PENALTY
+RERANK_DIVERSITY_PENALTY = selpol.RERANK_DIVERSITY_PENALTY
+AUTHORITY_RANK = selpol.AUTHORITY_RANK
+TASK_STAGE_KINDS = selpol.TASK_STAGE_KINDS
 
 
-def _fresh_rank(status):
-    if status is None:
-        return 2
-    if status == "current":
-        return 3
-    if status in ("deleted", "unverified"):
-        return 0
-    if status in STALE_STATUSES:
-        return 1
-    return 2
-
-
-def _rerank_base(hit, descriptor, q):
-    rel = 0
-    for cand in (hit.get("fused_score"), hit.get("lexical_score"), hit.get("score")):
-        if isinstance(cand, bool):
-            continue
-        if isinstance(cand, (int, float)) and cand:
-            rel = int(cand)
-            break
-    auth = AUTHORITY_RANK.get(hit.get("authority_level"), 0)
-    fresh = _fresh_rank(hit.get("status"))
-    proj = 1 if (descriptor.get("namespace") and hit.get("namespace") == descriptor.get("namespace")) else 0
-    comp = 0
-    comps = descriptor.get("component")
-    if comps:
-        comps = comps if isinstance(comps, list) else [comps]
-        if any(norm_path(hit.get("source_path", "")).startswith(norm_path(c)) for c in comps):
-            comp = 1
-    stage = 0
-    ts = descriptor.get("task_stage")
-    if ts and hit.get("record_kind") in TASK_STAGE_KINDS.get(ts, ()):
-        stage = 1
-    fail = 1 if (descriptor.get("seeking_failures") and hit.get("record_kind") == "failure") else 0
-    proc = 1 if (ts in ("act", "implement") and hit.get("record_kind") == "procedure") else 0
-    base = (RERANK_W["relevance"] * rel + RERANK_W["authority"] * auth + RERANK_W["freshness"] * fresh +
-            RERANK_W["project"] * proj + RERANK_W["component"] * comp + RERANK_W["task_stage"] * stage +
-            RERANK_W["failure"] * fail + RERANK_W["procedural"] * proc)
-    hard = False
-    for f in q["forbidden_sources"] + q["privacy_exclusions"]:
-        if hit_matches_source_only(hit, f):
-            hard = True
-            break
-    if hit.get("status") == "deleted":
-        hard = True
-    if hard:
-        base -= RERANK_HARD_DEMOTE
-    if q["temporal_intent"] == "current_only":
-        is_stale = hit.get("status") in STALE_STATUSES
-        if not is_stale:
-            for s in q["stale_sources"]:
-                if hit_matches_source_only(hit, s):
-                    is_stale = True
-                    break
-        if not is_stale:
-            for req in q["required_sources"]:
-                if req.get("content_hash") and norm_path(hit["source_path"]) == req["source_path"] and \
-                        str(hit.get("content_hash", "")) != str(req["content_hash"]):
-                    is_stale = True
-                    break
-        if is_stale:
-            base -= RERANK_STALE_PENALTY
-    return base, {"relevance": rel, "authority": auth, "freshness": fresh, "project": proj,
-                  "component": comp, "task_stage": stage, "failure": fail, "procedural": proc,
-                  "hard_demote": hard}
+def _policy_params_from_query(q):
+    """Map the benchmark query's labels into selpol_rrf_v1 POLICY SIGNALS (kept out of the library so it
+    stays pure): forbidden/privacy -> hard_filter; stale_sources -> stale; required version -> required_versions;
+    temporal_intent current_only -> current_only. #40 supplies hard_filter from control_plane.permission_grants
+    and relies on the candidate's own s5 status for temporal demote -- the SAME library, different signal source."""
+    hard_filter = []
+    for f in q.get("forbidden_sources", []):
+        hard_filter.append({"source_path": f["source_path"], "content_hash": f.get("content_hash"),
+                            "reason": "forbidden"})
+    for f in q.get("privacy_exclusions", []):
+        hard_filter.append({"source_path": f["source_path"], "content_hash": f.get("content_hash"),
+                            "reason": "privacy"})
+    return {
+        "current_only": q.get("temporal_intent") == "current_only",
+        "hard_filter": hard_filter,
+        "stale": [{"source_path": s["source_path"], "content_hash": s.get("content_hash")}
+                  for s in q.get("stale_sources", [])],
+        "required_versions": [{"source_path": r["source_path"], "content_hash": r["content_hash"]}
+                              for r in q.get("required_sources", []) if r.get("content_hash")],
+    }
 
 
 def rerank(hits, descriptor, q):
-    """Deterministic rerank of retriever-0.2 hits -> the SAME hit-array shape reordered. Greedy MMR-style
-    diversity: repeatedly pick the highest (base - diversity_penalty*already_selected_same_source), ties
-    broken by the original rank (lower first). Fully deterministic; a drop-in for #40's selection."""
-    scored = []
-    for h in hits:
-        base, feats = _rerank_base(h, descriptor, q)
-        scored.append({"hit": h, "base": base, "feats": feats, "orig_rank": h.get("rank", 0)})
-    selected = []
-    remaining = list(scored)
-    source_count = {}
-    while remaining:
-        best_i = None
-        best_key = None
-        for i, s in enumerate(remaining):
-            sp = norm_path(s["hit"]["source_path"])
-            penalty = RERANK_DIVERSITY_PENALTY * source_count.get(sp, 0)
-            eff = s["base"] - penalty
-            key = (-eff, s["orig_rank"])
-            if best_key is None or key < best_key:
-                best_key = key
-                best_i = i
-        chosen = remaining.pop(best_i)
-        sp = norm_path(chosen["hit"]["source_path"])
-        chosen["diversity_penalty"] = RERANK_DIVERSITY_PENALTY * source_count.get(sp, 0)
-        chosen["effective"] = chosen["base"] - chosen["diversity_penalty"]
-        source_count[sp] = source_count.get(sp, 0) + 1
-        selected.append(chosen)
-    reordered = []
-    diagnostics = []
-    for new_rank0, s in enumerate(selected):
-        h = dict(s["hit"])
-        h["rank"] = new_rank0 + 1
-        reordered.append(h)
-        diagnostics.append({
-            "source_path": norm_path(s["hit"]["source_path"]),
-            "chunk_id": str(s["hit"].get("chunk_id", "")),
-            "from_rank": s["orig_rank"],
-            "to_rank": new_rank0 + 1,
-            "features": s["feats"],
-            "base_score": s["base"],
-            "diversity_penalty": s["diversity_penalty"],
-            "effective_score": s["effective"],
-        })
-    return reordered, diagnostics
+    """Deterministic rerank of retriever-0.2 hits -> the SAME hit-array shape reordered, via selpol_rrf_v1
+    (CONTEXT_PACKET_CONTRACT s4). Returns (reordered_hits, diagnostics) BYTE-IDENTICAL to the shipped
+    standalone reranker. The reordered hits ADDITIVELY carry selection_rank/selection_score/selection_policy_id/
+    selected/reason_codes/retrieval_occurrences while preserving retrieval_rank + the channel ranks; a drop-in
+    for #40's selection."""
+    return selpol.rerank_compat(hits, descriptor, _policy_params_from_query(q))
+
+
+def select_packet(hits, descriptor, q, budget=None):
+    """The packet-STAGE selection (CONTEXT_PACKET_CONTRACT s4 stage 5-6): occurrence-preserving display dedup
+    + budget, the shape #40 compiles into a context packet. Returns the full selpol_rrf_v1 result."""
+    params = _policy_params_from_query(q)
+    params["dedup_display"] = True
+    if budget is not None:
+        params["budget"] = budget
+    return selpol.select(hits, descriptor, selpol.POLICY_ID, params)
 
 
 def default_descriptor(rawq):
@@ -1553,6 +1489,77 @@ def rerank_ab(per_query_raw, per_query_reranked, k_values):
             "queries_with_demote": demoted_total, "per_query": per_query}
 
 
+# ------------------------------------------------------------------ packet disposition + per-stage (P0-3 / P1-4)
+
+PACKET_DISPOSITIONS = ("answerable", "needs_expansion", "abstain", "conflicted", "provenance_failed")
+
+
+def compute_packet_disposition(q, selected_hits, raw_hits, corpus):
+    """Deterministic packet_disposition (CONTEXT_PACKET_CONTRACT s2 mapping; the i30 subset). Computed from
+    the PACKET-STAGE selection: any provenance failure -> provenance_failed; a no-answer query that surfaced
+    evidence is not answerable; an unmet required requirement is needs_expansion when the source appears in
+    raw retrieval (expandable) else abstain; otherwise answerable. `conflicted` is a reserved hook (no
+    current-vs-current contradiction labels in the i30 fixtures)."""
+    for h in selected_hits:
+        valid, _c, _f = validate_provenance(h, corpus, q)
+        if not valid:
+            return "provenance_failed"
+    reqs = list(q["required_sources"])
+    for g in q["evidence_groups"]:
+        if g["mode"] == "all":
+            reqs.extend(g["members"])
+    unmet = [r for r in reqs if not any(hit_matches_member(h, r) for h in selected_hits)]
+    if q["no_answer_expected"]:
+        return "abstain" if len(selected_hits) == 0 else "needs_expansion"
+    if unmet:
+        expandable = any(any(hit_matches_member(h, r) for h in raw_hits) for r in unmet)
+        return "needs_expansion" if expandable else "abstain"
+    return "answerable"
+
+
+def packet_disposition_record(rawq, q, selected_hits, raw_hits, corpus):
+    """One packet_disposition eval record. `actual` is READ from a supplied #40 context_packet
+    (`rawq.context_packet.packet_disposition`) when present -- the fold path -- else COMPUTED deterministically
+    from the packet-stage selection. Scored against `expected_packet_disposition` when labelled."""
+    computed = compute_packet_disposition(q, selected_hits, raw_hits, corpus)
+    packet = rawq.get("context_packet") if isinstance(rawq.get("context_packet"), dict) else None
+    supplied = None
+    if packet is not None and packet.get("packet_disposition") in PACKET_DISPOSITIONS:
+        supplied = packet["packet_disposition"]
+    actual = supplied if supplied is not None else computed
+    source = "packet" if supplied is not None else "computed"
+    expected = rawq.get("expected_packet_disposition")
+    if expected not in PACKET_DISPOSITIONS:
+        expected = None
+    correct = None if expected is None else (actual == expected)
+    return {"query_id": q.get("query_id"), "expected": expected, "actual": actual,
+            "computed": computed, "supplied": supplied, "source": source, "correct": correct}
+
+
+def aggregate_disposition(records):
+    labeled = [r for r in records if r["expected"] is not None]
+    correct = sum(1 for r in labeled if r["correct"])
+    return {
+        "scored": len(labeled) > 0,
+        "num_labeled": len(labeled),
+        "num_correct": correct,
+        "accuracy_ppm": ppm(correct, len(labeled)) if labeled else PPM,
+        "per_query": records,
+    }
+
+
+_STAGE_METRIC_KEYS = ("recall_at_k_ppm", "precision_at_k_ppm", "ndcg_at_k_ppm",
+                      "source_diversity_at_k_ppm", "mrr_ppm", "evidence_group_coverage_ppm",
+                      "forbidden_hit_rate_ppm", "privacy_hit_rate_ppm", "stale_hit_rate_ppm",
+                      "duplicate_burden_ppm", "provenance_validity_ppm", "no_answer_false_positive_rate_ppm",
+                      "total_hits")
+
+
+def stage_compact(agg):
+    """A compact per-stage metric projection (P1-4: score per stage -- raw / post-filter / packet)."""
+    return {k: agg[k] for k in _STAGE_METRIC_KEYS if k in agg}
+
+
 # ------------------------------------------------------------------ report rendering
 
 def _ratio_str(ppm_val):
@@ -1636,6 +1643,46 @@ def render_markdown(report):
             h["query_id"], h["lexical_hit_count"], h["vector_hit_count"],
             len(h["required_rescued_by_vector"]), h["lexical_exactmatch_harmed_by_fusion"],
             str(h["fusion_reordered_vs_lexical"]).lower()))
+    L.append("")
+    sp = report["selection_policy"]
+    L.append("## Selection policy + per-stage metrics")
+    L.append("")
+    L.append("- selection policy: `%s` v%s (rrf_k=%d); stages: %s"
+             % (sp["policy_id"], sp["policy_version"], sp["rrf_k"], ", ".join(sp["stages"])))
+    L.append("- hybrid applicability: `%s` -- %s" % (report["hybrid_applicability"]["status"],
+                                                     report["hybrid_applicability"]["note"]))
+    L.append("")
+    sm = report["stage_metrics"]
+    L.append("| metric | raw | post_filter | packet |")
+    L.append("|---|---|---|---|")
+    for k in kvals:
+        ks = str(k)
+        L.append("| recall@%s | %s | %s | %s |" % (
+            ks, _ratio_str(sm["raw"]["recall_at_k_ppm"][ks]), _ratio_str(sm["post_filter"]["recall_at_k_ppm"][ks]),
+            _ratio_str(sm["packet"]["recall_at_k_ppm"][ks])))
+    for label, key in (("forbidden-hit rate", "forbidden_hit_rate_ppm"), ("stale-hit rate", "stale_hit_rate_ppm"),
+                       ("duplicate burden", "duplicate_burden_ppm"), ("provenance validity", "provenance_validity_ppm")):
+        L.append("| %s | %s | %s | %s |" % (label, _ratio_str(sm["raw"][key]),
+                                            _ratio_str(sm["post_filter"][key]), _ratio_str(sm["packet"][key])))
+    L.append("| total hits | %d | %d | %d |" % (sm["raw"]["total_hits"], sm["post_filter"]["total_hits"],
+                                                sm["packet"]["total_hits"]))
+    L.append("")
+    de = report["packet_disposition_eval"]
+    L.append("## Packet disposition (P0-3)")
+    L.append("")
+    if de["scored"]:
+        L.append("- disposition accuracy: %d / %d correct (%s)"
+                 % (de["num_correct"], de["num_labeled"], _ratio_str(de["accuracy_ppm"])))
+        L.append("")
+        L.append("| query | expected | actual | source | correct |")
+        L.append("|---|---|---|---|---|")
+        for r in de["per_query"]:
+            if r["expected"] is None:
+                continue
+            L.append("| %s | %s | %s | %s | %s |" % (r["query_id"], r["expected"], r["actual"],
+                                                     r["source"], str(r["correct"]).lower()))
+    else:
+        L.append("- no `expected_packet_disposition` labels in this benchmark; dispositions computed only.")
     L.append("")
     L.append("## Per-query (raw order)")
     L.append("")
@@ -1782,8 +1829,12 @@ def run(request):
 
     tombstones = benchmark.get("tombstones", [])
 
+    default_budget = benchmark.get("selection_budget") if isinstance(benchmark.get("selection_budget"), dict) else None
+
     per_query_raw = []
     per_query_reranked = []
+    per_query_packet = []
+    dispo_records = []
     hybrid = []
     rerank_diag = []
     vector_seen = False
@@ -1801,14 +1852,37 @@ def run(request):
         descriptor = default_descriptor(rawq)
         reranked, diag = rerank(norm_hits, descriptor, q)
         rr_eval = evaluate_ordering(q, reranked, k_values, retrieval_depth, corpus)
+        # PACKET STAGE (CONTEXT_PACKET_CONTRACT s4 stage 5-6): occurrence-preserving display dedup + budget.
+        q_budget = rawq.get("selection_budget") if isinstance(rawq.get("selection_budget"), dict) else default_budget
+        selres = select_packet(norm_hits, descriptor, q, q_budget)
+        packet_hits = selres["selected"]
+        pk_eval = evaluate_ordering(q, packet_hits, k_values, retrieval_depth, corpus)
+        pk_eval["omission_manifest"] = selres["omission_manifest"]
+        pk_eval["selection_policy_id"] = selres["policy_id"]
+        pk_eval["packet_size"] = len(packet_hits)
+        pk_eval["candidate_count"] = len(norm_hits)
+        dispo_records.append(packet_disposition_record(rawq, q, packet_hits, norm_hits, corpus))
         per_query_raw.append(raw_eval)
         per_query_reranked.append(rr_eval)
+        per_query_packet.append(pk_eval)
         hybrid.append(hybrid_attribution(q, norm_hits, retrieval_depth))
         rerank_diag.append({"query_id": q.get("query_id"), "order": diag})
 
     agg_raw = aggregate(per_query_raw, k_values, retrieval_depth, "raw")
     agg_rr = aggregate(per_query_reranked, k_values, retrieval_depth, "reranked")
+    agg_packet = aggregate(per_query_packet, k_values, retrieval_depth, "packet")
     ab = rerank_ab(per_query_raw, per_query_reranked, k_values)
+    dispo = aggregate_disposition(dispo_records)
+    vstatus = "active" if vector_seen else "empty"
+    stage_metrics = {"raw": stage_compact(agg_raw), "post_filter": stage_compact(agg_rr),
+                     "packet": stage_compact(agg_packet)}
+    hybrid_applicability = {
+        "vector_channel": vstatus,
+        "status": "applicable" if vector_seen else "not_applicable",
+        "note": ("hybrid channel active" if vector_seen else
+                 "hybrid uplift/regression is not_applicable while the vector channel is EMPTY "
+                 "(P1-4: not_applicable, NOT zero uplift)"),
+    }
     input_digest = compute_input_digest(benchmark, retriever_spec, k_values, retrieval_depth, corpus_manifest)
 
     report = {
@@ -1819,15 +1893,24 @@ def run(request):
         "retriever": {"kind": retriever_spec.get("kind")},
         "input_digest": input_digest,
         "provenance_validated": bool(corpus.available),
-        "vector_channel_status": "active" if vector_seen else "empty",
+        "vector_channel_status": vstatus,
+        "selection_policy": {"policy_id": SELECTION_POLICY_ID, "policy_version": SELECTION_POLICY_VERSION,
+                             "rrf_k": selpol.RRF_K_DEFAULT,
+                             "stages": ["hard_filter", "temporal", "authority", "rank_fusion_rrf",
+                                        "diversity", "budget"]},
+        "hybrid_applicability": hybrid_applicability,
         "corpus": corpus_manifest,
         "aggregate_raw": agg_raw,
         "aggregate_reranked": agg_rr,
+        "aggregate_packet": agg_packet,
+        "stage_metrics": stage_metrics,
         "rerank_ab": ab,
         "rerank_diagnostics": rerank_diag,
         "hybrid_attribution": hybrid,
+        "packet_disposition_eval": dispo,
         "per_query_raw": per_query_raw,
         "per_query_reranked": per_query_reranked,
+        "per_query_packet": per_query_packet,
     }
 
     report_bytes = canon_bytes(report)
@@ -1856,6 +1939,11 @@ def run(request):
         "vector_channel_status": report["vector_channel_status"],
         "aggregate": agg_raw,
         "aggregate_reranked": agg_rr,
+        "aggregate_packet": agg_packet,
+        "stage_metrics": stage_metrics,
+        "selection_policy": {"policy_id": SELECTION_POLICY_ID, "policy_version": SELECTION_POLICY_VERSION},
+        "packet_disposition": {"scored": dispo["scored"], "num_labeled": dispo["num_labeled"],
+                               "num_correct": dispo["num_correct"], "accuracy_ppm": dispo["accuracy_ppm"]},
         "rerank_ab": {"queries_with_rescue": ab["queries_with_rescue"],
                       "queries_with_demote": ab["queries_with_demote"], "deltas": ab["deltas"]},
         "report_json": {"path": os.path.abspath(report_json_path), "sha256": sha256_hex(report_bytes), "bytes": len(report_bytes)},
