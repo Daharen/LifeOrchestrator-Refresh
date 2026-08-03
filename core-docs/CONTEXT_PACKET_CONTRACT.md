@@ -30,6 +30,10 @@ This doc is the normative distillate.
   until P0-1 is enforced structurally AND proven by the adversarial injection suite. No side-effecting /
   action-capable consumer may execute from a packet while `non_execution` is true. Read-only compilation +
   evaluation (this wave) proceed behind that flag. This is the HARD GATE named in section 1.
+- **i31 (D-0089) PINS the s4 selection scoring** (section 4): the composite relevance-primary score, the
+  `epistemic_authority`/freshness RANKS, greedy source-diversity + occurrence-preserving display dedup, and the
+  additive output shape are FROZEN as #37's canonical `selpol_rrf_v1`/`1.0.0`; #40 IMPORTS it and its
+  `selpol_reference.py` stub is RETIRED. Pure-rank-RRF as the PRIMARY sort stays the deferred P1-2 follow-on.
 
 ## 1. P0-1 (SAFETY-CRITICAL) -- control plane vs evidence, structurally separated
 
@@ -145,11 +149,29 @@ by #37's own eval A/B** -- there is exactly one selection owner.
   fuse ranks, keeping `retrieval_occurrences[]` per candidate); (5) diversity clustering that **dedups DISPLAY
   tokens, never provenance** -- identical text collapses into one display item carrying `occurrences[]` +
   `evidence_cluster_id`, so a distinct required occurrence or independent-source agreement is never erased
-  (P1-3); (6) budget (section 3). Full P1-2/P1-3 calibration (score comparability, near-dup algorithm) is a
-  named follow-on; i30 freezes the rank-based RRF fusion + occurrence-preserving dedup as the baseline.
-- **Parallel-build seam (D-0077).** #40 builds to THIS frozen interface with a conformant reference stub; the
-  orchestrator fold wires #40 -> #37's real `selpol_rrf_v1` and asserts BYTE-IDENTICAL selection on real #36
-  hits. Any divergence is reconciled at fold, never silently. (#37 s8 + #40 s5 already anticipate this drop-in.)
+  (P1-3); (6) budget (section 3). i31 (D-0089) PINS this baseline as #37's canonical (the Scoring bullet below);
+  near-dup-algorithm calibration (P1-3) + pure-rank-RRF-primary (P1-2) stay named follow-ons.
+- **Scoring (PINNED, D-0089).** s4 now pins #37's canonical `selpol_rrf_v1`/`1.0.0` as the one policy (the i30
+  fold caught #40's reference and #37's canonical selecting differently -- neither a defect: s4 had frozen the
+  interface + stages but not the scoring). PINNED: (a) **relevance-primary = the composite base** `1*raw_relevance
+  + 3e6*authority_rank + 6e6*freshness_rank + 2e6*each descriptor match (project/component/task_stage/failure/
+  procedural) - 1e9*hard_demote - 2e7*stale_penalty`, ordered by descending `effective = base - 8e6*prior_same_
+  source_hits` with the original retrieval rank as tie-break; `raw_relevance` is the retriever's fused/lexical/
+  score (MEMORY_CONTRACT s3), NOT rank-RRF. RRF-over-channel-ranks is the `rrf_score` FEATURE + `fusion_rrf` code
+  and the fusion rule for a multi-occurrence candidate / dedup cluster ONLY; **pure-rank-RRF as the PRIMARY sort
+  is the deferred P1-2.** (b) **authority** = `epistemic_authority` -> AUTHORITY_RANK {authoritative/governing:4,
+  curated:3, source_material:2, derived:1}; #40's AUTHORITY_POINTS(40-320) scale RETIRED. **freshness** =
+  {current:3, unknown:2, stale:1, deleted/unverified:0}; #40's FRESHNESS_POINTS(0-200) RETIRED. (c) **diversity**
+  = greedy source-MMR (the `-8e6*prior_same_source` above) + optional occurrence-preserving DISPLAY dedup by
+  `chunk_content_hash` (`evidence_cluster_id` + `occurrences[]`, provenance NEVER erased); #40's excerpt-hash-only
+  clustering (no source-MMR) RETIRED. (d) **output** = `select()` -> `{ selected[]=hit COPIES, ranked[]=copies
+  preserving retrieval/lexical/vector/fused_rank + selection_rank/selection_score(int millionths)/
+  selection_policy_id/selected/reason_codes[]/retrieval_occurrences[]/rrf_score, features_by_candidate,
+  omission_manifest[], stages[] }`; #40's id-string `selected[]` + new-row output RETIRED.
+- **One owner, imported not reimplemented (D-0089).** #40 IMPORTS #37's canonical `selpol_rrf_v1` by a resolved
+  portable path (the i30 `selpol_reference.py` stub is RETIRED) and supplies `params.hard_filter` from
+  `control_plane.permission_grants` (+ forbidden/privacy) + relies on candidate `status` for temporal. The D-0077
+  fold asserts #40-via-canonical selects byte-identically to a direct `select()` on the same real #36 hits.
 
 ## 5. Provenance inside the packet -- modes + hash discipline (P0-2 cross-ref)
 
@@ -201,12 +223,12 @@ retained. 0.2 extends it so #37 can score PER STAGE (raw retrieval / post-filter
 
 - **#40 context.compiler -> `context_packet/0.2`:** three-region separation (control_plane / task_input /
   evidence with `content_role`/`can_instruct`/`trust_domain`/`epistemic_authority`), `packet_disposition` +
-  requirements/coverage, `consumer_profile` + exact/upper-bound transport accounting, CONSUME `selpol_rrf_v1`
-  via the frozen interface (retire the self-contained composite score), provenance modes (A2 names),
+  requirements/coverage, `consumer_profile` + exact/upper-bound transport accounting, IMPORT the canonical `selpol_rrf_v1`
+  directly (D-0089; the i30 `selpol_reference.py` stub RETIRED), provenance modes (A2 names),
   identity/snapshot + `omission_manifest`, `non_execution: true`.
-- **#37 retrieval.eval -> `selpol_rrf_v1` + eval refinement:** author the versioned selection-policy library
-  behind the section-4 interface (extracted from `rerank()`), and extend the harness to score per-stage +
-  `packet_disposition` (the P1-4 subset that i30 needs; full P1-4 metrics = follow-on).
+- **#37 retrieval.eval -> `selpol_rrf_v1` (the PINNED canonical, D-0089):** the versioned selection-policy
+  library (`modules/37-retrieval-eval/lib/`) is the s4-pinned one owner -- NO behavioral change at i31; #40
+  imports it. The harness scores per-stage + `packet_disposition` (the P1-4 subset i30 needs; full P1-4 = follow-on).
 - **#41 skill.card -> `summary` activation card** (`MEMORY_CONTRACT` A3 / P0-5): emit `record_kind = summary`
   with `attrs.summary_type = "skill_activation_card"` + a `derives_from` edge to #38's structural `skl_`
   record, so a `record_kind = skill` search no longer returns two owners. Cards surface as EVIDENCE refs in the
