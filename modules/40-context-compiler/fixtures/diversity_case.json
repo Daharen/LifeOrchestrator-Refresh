@@ -484,6 +484,15 @@
       "per_source_cap": 3,
       "token_budget": 2000
     },
+    "control_plane": {
+      "permission_grants": [
+        {
+          "namespaces": [
+            "core-docs"
+          ]
+        }
+      ]
+    },
     "namespace": "core-docs",
     "original_goal": "Summarize the current shipping discipline.",
     "request_text": "warm pool supervisor gate and the git lease dev.ship commit",

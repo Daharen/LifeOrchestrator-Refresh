@@ -106,6 +106,15 @@
       "per_source_cap": 3,
       "token_budget": 2000
     },
+    "control_plane": {
+      "permission_grants": [
+        {
+          "namespaces": [
+            "projA"
+          ]
+        }
+      ]
+    },
     "namespace": "projA",
     "original_goal": "Summarise Project A's lease + fencing doctrine.",
     "request_text": "project A lease TTL fencing stale holder",

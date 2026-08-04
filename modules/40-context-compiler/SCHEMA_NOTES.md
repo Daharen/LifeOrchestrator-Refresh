@@ -1,4 +1,4 @@
-# context.compile -- SCHEMA_NOTES (Module 40, skill `context.compile` 0.4.0, i32 Tier-0 SEAM REPAIRS)
+# context.compile -- SCHEMA_NOTES (Module 40, skill `context.compile` 0.5.0, i33 NAMESPACE-CLOSURE + SUPERSESSION-HARDENING)
 
 **Authority.** This file records EVERY schema/interface interpretation for the D-0077 cross-module fold.
 The orchestrator's fold smoke (this compiler's REAL packets -> retrieval.eval #37 + a fresh 9B, and #40
@@ -13,24 +13,43 @@ MEMORY_ARCHITECTURE s5 (the 9 query classes) + s9 (Tier-0 invariants); the direc
 `research/2026-08-02-frontier-wave3-design-redteam.md` (P0-1..P0-5, P1-1); SKILL_CONTRACT;
 D-0092/D-0090/D-0089/D-0087/D-0086/D-0083/D-0085/D-0080/D-0077.
 
-**i32 delta (D-0092 -- Tier-0 seam repairs; ADDITIVE over `context_packet/0.2`, schema string UNCHANGED,
-module semver `0.3.0 -> 0.4.0`; the FULL interpretation is s15).** Five seams: (U1) `namespace` is a HARD
-boundary passed BOTH ways (`filters.namespace` + `params.allowed_namespaces`) with a fail-closed backstop; (U5)
-a deterministic query-classification STAGE stamps `query_class`; (U4) `current_only` derives from `query_class`
-(explicit `time_horizon` overrides) + a `contradicts`-edge -> `conflicted`; (U3) the FOURTH region
-`working_memory` is RESERVED (empty); the selpol import now passes the new i32 params + carries the new
-reason_codes. Packet identity now COVERS `query_class` + `allowed_namespaces` (s6). Two fixtures REGENERATED
-(`transport_overflow_case` for the new frame size; `expand_case_full` recompiled) + two NEW
-(`namespace_case`, `namespace_mixed_case`). All P0-1/P0-3/P0-4/P1-5/A2 + `non_execution:true` tests stay green.
+**i33 delta (D-0096 -- NAMESPACE-CLOSURE + SUPERSESSION-HARDENING; ADDITIVE over `context_packet/0.2`, schema
+string UNCHANGED, module semver `0.4.0 -> 0.5.0`; the FULL interpretation is s16).** Five seam CLOSURES:
+(U1') `effective_allowed_namespaces = intersection(REQUEST, control_plane GRANT)` -- passed BOTH ways (never
+the raw request); empty intersection FAILS CLOSED; the canonical `ns_permitted` (IMPORTED from #37) scope-checks
+EVERY packet-visible object; a cross-namespace object ANYWHERE ABORTS SANITIZED (count only, detail -> a
+security log). (U4') the CATALOG `effective_current` signal is passed to selpol (pool-independent supersession);
+a supersession BRANCH -> `conflicted`. (U2') `candidate_role=navigation` ROUTES (navigation_refs) but is NEVER
+answer-evidence; `summary_stale` never fails coverage. (U3') `working_memory` is CONTINUITY-authoritative +
+CONJUNCTIVE access (task_id AND effective-namespace) + reserved A5 `state_version` (in packet identity). (U5')
+`query_class` / `temporal_intent` SPLIT (explicit time OUTRANKS the class default) + the versioned classifier
+policy (imported). Packet identity now COVERS `temporal_intent` + the classifier policy id/version + the ns
+policy id/version + the working-state `state_version` + the retrieval-plan/stage trace (s6). ALL input fixtures
+REGENERATED (each namespaced task now carries a `control_plane` grant -- the STRICT closure REQUIRES it).
+#37's `namespace_policy.py` (`ns_permitted` + `effective_allowed_namespaces` + `NamespaceRejectionPolicy`) +
+`classifier_policy.py` (versioned class->temporal_intent map) are OWNED by #37 and IMPORTED READ-ONLY; off-machine
+(#37 not yet shipped) #40 PREFERS the canonical modules + falls back to a BYTE-EXACT off-machine REPLICA of each
+(`selection.import_sources` records which leg ran; VERIFIED identical under both). All P0-1/P0-3/P0-4/P1-5/A2 +
+`non_execution:true` tests stay green; 280/280 off-machine python assertions.
+
+**i32 delta (D-0092 -- Tier-0 seam repairs; ADDITIVE over `context_packet/0.2`; the FULL interpretation is
+s15).** Five seams: (U1) `namespace` is a HARD boundary passed BOTH ways with a fail-closed backstop; (U5) a
+deterministic query-classification STAGE stamps `query_class`; (U4) `current_only` derives from `query_class`
++ a `contradicts`-edge -> `conflicted`; (U3) the FOURTH region `working_memory` is RESERVED (empty); the selpol
+import passes the new i32 params + carries the new reason_codes. Packet identity COVERS `query_class` +
+`allowed_namespaces`. NOTE: i33 SUPERSEDES the i32 namespace model -- the i32 backstop (SELECTED-only
+`namespace_leak`) is replaced by the i33 all-object closure + sanitized abort; the i32 fixtures still exist but
+their behavior is now the i33 one (see s16).
 
 **i31 delta (D-0089 -- one selection owner; read s8 + s12 + s7 for the fold).** #40 RETIRED the in-module
 `selpol_reference.py` (rank-RRF-primary) and IMPORTS #37's canonical `selpol_rrf_v1` (raw-fused-score-primary
 composite; `policy_version=1.0.0`) by a resolved portable path. The packet SCHEMA is unchanged
 (`context_packet/0.2`). `worker_version`/`compiler_version` bumped `0.2.0 -> 0.3.0` (now `0.4.0` at i32).
 
-Worker: `context_compiler.py` (stdlib only); `_load_canonical_selpol()` imports #37's library. Entrypoint:
-`Invoke-ContextCompiler.ps1` (pwsh-file). CPU-only, no model, no network. `worker_version=0.4.0`,
-`compiler_version=0.4.0`, `packet_schema=lifeorch.context_packet/0.2`,
+Worker: `context_compiler.py` (stdlib only); `_load_canonical_selpol()` imports #37's selpol; `_resolve_ns_predicate()`
+imports #37's `ns_permitted`; `_resolve_classifier_policy()` imports #37's versioned class->mode map. Entrypoint:
+`Invoke-ContextCompiler.ps1` (pwsh-file). CPU-only, no model, no network. `worker_version=0.5.0`,
+`compiler_version=0.5.0`, `packet_schema=lifeorch.context_packet/0.2`,
 `expansion_schema=lifeorch.context_expansion/0.2`.
 
 ---
@@ -412,3 +431,162 @@ the orchestrator D-0077 mixed-namespace fold.
 memory frame fits with margin while the ~900-token evidence still overflows -> `needs_expansion`);
 `expand_case_full` (recompiled -> a 0.4 packet). NEW: `namespace_case` (single-namespace projA, GATE TEST 3);
 `namespace_mixed_case` (projA + a projB leak -> fail-closed). All other input fixtures are byte-unchanged.
+
+## 16. i33 NAMESPACE-CLOSURE + SUPERSESSION-HARDENING (D-0096) -- the full interpretation (REQUIRED for the D-0077 fold)
+
+Hardens the packet/selection half after the frontier Tier-0 red-team (pack `159e9cb5`,
+`research/2026-08-04-tier0-amendment-redteam.md`) found the i32 amendments (s15) were an ENVELOPE-level FIRST
+layer only. Governing: `CONTEXT_PACKET_CONTRACT` i33 amendment; `MEMORY_CONTRACT` A5; `MEMORY_ARCHITECTURE`
+s5/s9. ADDITIVE over `context_packet/0.2` -- the packet SCHEMA STRING is UNCHANGED; only the module semver moves
+`0.4.0 -> 0.5.0`. #40 is the CONSUMER; #37 (RETRIEVAL-EVAL-PREDICATE-i33) authors the imports (selpol
+`1.1.0 -> 1.2.0`, the canonical `ns_permitted`, the versioned class->mode map) in the SAME i33 wave.
+
+**Imported canonical modules (A5 risk-6 -- ONE owner, imported not reimplemented).** #37 authors TWO canonical
+libraries #40 imports READ-ONLY: **`lib/namespace_policy.py`** (`ns_permitted`, `effective_allowed_namespaces`,
+`normalize_allowed`, `NamespaceRejectionPolicy`, `NS_POLICY_ID`=`ns_closed_v1`/`NS_POLICY_VERSION`=`1.0.0`) and
+**`lib/classifier_policy.py`** (`class_to_temporal_intent`, `resolve_temporal_intent`, `CLASS_TO_TEMPORAL_INTENT`,
+`CLASSIFIER_POLICY_ID`=`clsmap_v1`/`_VERSION`=`1.0.0`). #36 (retriever) + #37 (selpol) + #40 (here) all import
+the SAME predicate + intersection + classifier, so they make the byte-identical accept/reject + intersection +
+temporal decisions the D-0077 fold asserts.
+
+**Off-machine vs fold (LOAD-BEARING; the deferral is stated plainly).** #37's canonical modules may be ABSENT on
+disk while #40 runs off-machine (the two lanes ship in parallel). So the imports are RESILIENT:
+`_load_policy_module(basename, env)` PREFERS the sibling `modules/37-retrieval-eval/lib/<basename>.py` (env
+override `LIFEORCH_NS_POLICY_PATH` / `LIFEORCH_CLASSIFIER_POLICY_PATH`), else a **BYTE-EXACT off-machine REPLICA**
+of each (the same pure logic copied into #40, so the replica and the canonical make IDENTICAL decisions -- VERIFIED:
+the whole gate passes byte-for-byte under BOTH, and `expand_case_full` recompiles identically modulo the audit
+source string). The resolved SOURCE is recorded ONLY in `selection.import_sources` (`ns_predicate_source`,
+`classifier_policy_source`, the policy ids/versions, `selpol_policy_version`) -- NOT in packet identity, so
+`packet_id` is stable across the canonical/replica impls (identity covers the versioned POLICY id/version, which
+are identical). At the fold the canonical modules are imported with NO code change and the sources flip to
+`canonical_namespace_policy` / `canonical_classifier_policy`. The NEW selpol BEHAVIOR (catalog-independent
+supersession hard-filter, branch->conflicted) proves at the fold with #37's shipped selpol 1.2.0; #40's
+effective-namespace INTERSECTION + the all-object SCOPE-CHECK + the SANITIZED abort + the query_class/
+temporal_intent SPLIT + the working_memory HARDENING are all proven off-machine here (280/280).
+
+**(U1') namespace CLOSURE -- SAFETY-CRITICAL.** `task_input.namespace` is a REQUEST, NOT authorization -- it can
+never WIDEN scope (control_plane is the ONLY authority; reconciles P0-1). `_resolve_namespace_closure(task,
+namespace)` computes `effective_allowed_namespaces = intersection(REQUEST, GRANT)`:
+- **REQUEST** (`_namespace_request`) = `task_input.namespace` + an optional multi-namespace request list
+  (`task.namespaces` / `task.requested_namespaces`).
+- **GRANT** (`_namespace_grant`) = the namespaces control_plane AUTHORIZES: `control_plane.permission_grants[*].
+  (namespaces|allowed_namespaces)`, `control_plane.allowed_namespaces`, an allow-effect grant naming a single
+  `namespace`, and the flat `task.permission_grants` alias (coordinator authority, NEVER evidence).
+- **Cases (the STRICT canonical semantics -- #40 conforms to #37's `effective_allowed_namespaces`):** (1) a
+  REQUEST and/or a GRANT are present -> `effective = effective_allowed_namespaces(REQUEST, GRANT)` (the imported
+  canonical: `intersection(REQUEST, GRANT)`; a MISSING/EMPTY GRANT grants NOTHING -> empty -> FAIL CLOSED
+  `namespace_closure_empty`). **A namespaced compile REQUIRES a control_plane grant** -- control_plane is the ONLY
+  authority (P0-1); `task_input.namespace` is a REQUEST that can never WIDEN past the grant. Every namespaced
+  INPUT fixture therefore carries a `control_plane.permission_grants:[{namespaces:[<ns>]}]`. (2) NEITHER a request
+  NOR a grant -> UNSCOPED global compile (`enforced=False`) -- the A5 "no closure requested" caller decision that
+  BYPASSES the predicate; its ONLY guard is a `>1`-distinct-namespace pool -> fail closed (a mixed pool with no
+  declared scope cannot be disambiguated). NO implicit all/wildcard/prefix/parent/shared namespace anywhere.
+
+The COMPUTED effective set (NEVER the raw request) is passed BOTH ways: `filters.namespace` +
+`filters.effective_allowed_namespaces` on every retriever query, and `params.allowed_namespaces` to selpol.
+BEFORE selection, `scope_check_pool(pool, closure)` scope-checks EVERY raw candidate with the canonical
+`ns_permitted` (`_scope_ok`: an UNSCOPED compile BYPASSES the predicate; otherwise the canonical decides --
+EXACT membership, and a candidate with NO namespace `ns=None` can NEVER be proven in-scope under an enforced
+closure -> `False`, the byte-identical decision #36/#37/#40 all make). It accumulates violations into the
+canonical `NamespaceRejectionPolicy` (imported): `.violation_count` is the ONLY caller-visible signal;
+`.security_log` is the privileged detail. Any violation -> `NamespaceClosureError` -> SANITIZED abort: the
+returned payload carries ONLY `compile_status=failed_closed` + `namespace_violation_count` +
+`effective_allowed_namespaces`; the identifying detail (ids/paths/namespaces) is routed to a privileged
+`namespace_security_log.json` sidecar (written to `output_dir`), NEVER the payload/packet. Because the pool is
+scope-checked BEFORE selection, NO cross-namespace item can enter selection OR any diagnostic array (`ranked[]`/
+`features_by_candidate`/`stages[]`/`retrieval_occurrences[]`/`omission_manifest[]`/`evaluation_hooks.retrieved[]`)
+-- closing the red-team's risk-1 diagnostic leakage that the i32 SELECTED-only backstop missed (selpol 1.1.0
+SINKS the cross-ns item but its metadata still leaked via the diagnostics). DEFENSE-IN-DEPTH: after assembly,
+`assert_packet_namespace_closure(packet, permitted_rvids, closure)` walks every packet-visible object
+(`_collect_packet_scope_refs`) and asserts no `record_version_id` outside the pre-filtered pool and no namespace
+failing the closure; a failure aborts sanitized. The one canonical predicate + intersection + rejection policy
+are IMPORTED (A5 risk-6), NEVER re-implemented (the off-machine REPLICA is a byte-exact stand-in the fold
+replaces with #37's `namespace_policy`).
+
+**(U4') candidate-INDEPENDENT supersession.** `_selection_candidate` PASSES THROUGH the catalog signal so
+selpol 1.2.0 can hard-filter POOL-INDEPENDENTLY: the per-candidate `effective_current` (#36 A5 catalog verdict),
+the s5 `status` (incl the new `superseded` value), and the `superseded_by`/`supersedes`/`contradicts` edges +
+typed `record_edges`/`edges` (read by selpol). A supersession BRANCH (>=2 live successors of one record) drives
+`packet_disposition = conflicted`: `detect_supersession_conflicts(sel, excerpts, pool)` consumes selpol's own
+branch signal FIRST (checked under several likely keys -- `supersession_conflicts`/`conflicted_branches`/
+`superseded_branches`/`branches` -- since #37's exact key is reconciled at the fold) AND has a structural
+FALLBACK (a record whose excerpts' `superseded_by` names >=2 CURRENT successors). #40 also consumes selpol's
+`contradicts_pairs`. Off-machine (selpol 1.1.0) the catalog hard-filter of an ABSENT-successor superseded
+candidate is DEFERRED to the fold (1.1.0 doesn't know `superseded`); #40 proves the PASS-THROUGH (the candidate
+carries `effective_current`/`superseded_by`/`status=superseded`) + the branch->conflicted disposition (via the
+structural fallback + a synthetic selpol-branch signal).
+
+**(U2') navigation vs evidence.** `_candidate_role(hit)` = an explicit `candidate_role`, else `navigation` for a
+`record_kind=node`, else `evidence`. A navigation candidate is SKIPPED from excerpts in `select_into_budget`
+(it is NOT an omitted evidence item -- it is not evidence at all) and surfaced by `build_evidence_refs` in a NEW
+`evidence.navigation_refs[]` list (each ref carries `candidate_role:navigation`, `may_answer:false`, and a
+`navigational_stale` flag = `status==summary_stale`). NAVIGATIONAL staleness never fails an evidence coverage
+requirement -- a node cannot satisfy a requirement (it is not an excerpt), and a routing-only node keeps a
+requirement `expandable` (routes to descend) so the disposition is `needs_expansion`, NOT a false `abstain`.
+Evidence provenance follows `provenance_mode` (a `derived_record`/`aggregate`/node item needs no single source
+span -- s10 unchanged).
+
+**(U3') working_memory hardening.** `build_working_memory(task, closure, grant_snapshot_ref)` keeps the FOURTH
+region present-but-empty (store is Tier 1) but hardens it: `authority:continuity_authoritative` (the recorded
+current state of THIS task, NOT world-truth, NOT execution authority; `content_role:working_state`,
+`can_instruct:false`; permissions ONLY in control_plane; `is_evidence:false`). Access is CONJUNCTIVE --
+`access_policy:conjunctive_task_id_and_effective_namespace` + `namespace_scope` = the effective closed set +
+`_working_item_accessible(item, task_id, closure)` (task_id AND effective-namespace; task-isolation and
+namespace-isolation are DIFFERENT mechanisms). Items carry the A5 `state_version` (None at Tier 0), and packet
+`identity.working_state_version` COVERS it. The reserved A5 store fields (`working_state_id`, `state_version`,
+`parent_state_version`, `namespace_scope`, `grant_snapshot_ref`, `created_from_packet_id`, `content_hash`,
+`lifecycle_state`, `content_role`, `writer_authority`) are RESERVED now (the store + promotion are Tier 1, a
+NON-GOAL). Render order unchanged (`control_plane -> task_input -> working_memory -> evidence`).
+
+**(U5') query_class / temporal_intent SPLIT + versioned classifier.** `classify_query` (OWNED by #40 -- the
+compiler-front task_type->query_class STAGE) stamps the SEMANTIC `query_class` (the 9 reachable by task_type;
+`composite`/`unclassified` FALLBACK classes reachable by an explicit override; an unmapped task_type with no
+literals -> `unclassified`, the honest fallback). `resolve_temporal_intent(task, query_class)` maps #40's task
+fields to #37's CANONICAL versioned resolver (`classifier_policy.resolve_temporal_intent`, imported): an EXPLICIT
+user `time_horizon`/`version`/`as_of` OUTRANKS the class->intent DEFAULT map (`CLASS_TO_TEMPORAL_INTENT`).
+NOTE the canonical map is MORE PERMISSIVE than the i32 stub: temporal is NOT a security boundary (namespace is),
+so ONLY `current_state`/`procedure_selection` default to `current_only`, `exact_reference` -> `version_specific`,
+`historical_reconstruction` -> `historical_as_of`, and EVERYTHING else -- incl `local_factual`/`global_synthesis`
++ the fallbacks -- defaults to `any_valid_version` (stale ALLOWED; current_only applies ONLY after intent
+resolves to it). `current_only = (temporal_intent == current_only)`. `build_selection_params` passes
+`temporal_mode = temporal_intent` (it OUTRANKS selpol's own query_class default). The classifier policy
+id/version (`clsmap_v1`/`1.0.0`, imported) is stamped into `task_input`, `normalize`'s output, and packet
+`identity.classifier_policy{id,version}` (source in `import_sources`, not identity). Packet identity now COVERS
+`temporal_intent` + the classifier policy id/version + the ns policy id/version + the working-state
+`state_version` + `retrieval_plan_digest` (a sha over the `query_set` + selection stages) -- so `packet_id`
+changes when any of them changes (proven by acceptance e).
+
+**Acceptance coverage (off-machine, `tests/context_compiler_tests.py`, 280/280 -- against the REPLICA; VERIFIED
+byte-identical 280/280 against the CANONICAL `namespace_policy`+`classifier_policy` when present).** (a) `test_namespace_hard_
+boundary` + `test_i33_all_object_scope_check`: effective = intersection(request, grant) passed both ways +
+stamped; a mixed pool fails closed SANITIZED (`namespace_closure_violation`, count only, NO cross-ns metadata in
+any diagnostic/output, privileged security log written to output_dir); multi-namespace needs REQUEST+GRANT;
+empty intersection -> `namespace_closure_empty`; a request cannot widen past the grant; GATE TEST 3 (A =
+provenance-expansion on the namespaced fixture reproduces; B = the sanitized abort). (b)
+`test_i33_catalog_effective_current_passthrough` + `test_i33_supersession_branch_conflicted`: the catalog
+signal + edges are passed through; a branch -> conflicted (structural + a synthetic selpol signal). (c)
+`test_i33_candidate_role_navigation`: navigation routes (navigation_refs, may_answer=false), never excerpted;
+navigational staleness never forces abstain. (d) `test_working_memory_region`: continuity-authoritative +
+conjunctive access + state_version in identity + reserved store fields. (e) `test_i33_temporal_intent_split`:
+the split, explicit-time override, composite/unclassified, and packet-identity coverage. (f) all
+P0-1/P0-3/P0-4/P1-5/A2 + `non_execution:true` tests stay green; the `#40 selection == direct selpol.select()`
+byte-identity (`test_selection_byte_identity`) runs with the new params; `test_selpol_interface`/`test_selpol_
+stale_demote` are VERSION-AGNOSTIC (assert the ACTUAL imported `selpol.POLICY_VERSION`/`STAGES`, so a 1.1.0->
+1.2.0 bump never drifts them). (g) `test_i33_unscoped_and_determinism`: unscoped back-compat + the mixed-
+unscoped-pool guard + byte-identical re-run. The `-Live` real-#36 leg + the selpol-1.2.0 NEW-behavior leg are
+DEFERRED to the orchestrator D-0077 mixed-namespace fold (say-so recorded in `selection.import_sources`).
+
+**Fixtures.** REGENERATED (deterministic): ALL input fixtures now carry a `control_plane.permission_grants:
+[{namespaces:[<ns>]}]` (the STRICT closure REQUIRES a grant -- `_gen_fixtures._inject_grants` injects one into
+every single-namespace INPUT task, skipping compiled-packet subtrees); `expand_case_full` recompiles to a 0.5
+packet. The i33 cases -- mixed-ns sanitized abort, empty intersection, request-cannot-widen, navigation,
+supersession branch, unscoped, temporal split, expand-no-widen -- are built INLINE in the test suite via the
+extended `_hit`/`_compile_hits` helpers (which also carry the projA grant). `namespace_mixed_case` behavior is
+now the i33 sanitized abort (`namespace_closure_violation`), NOT the i32 `namespace_leak`.
+
+**i33 non-goals (unchanged from the mission).** NO working-memory STORE/lifecycle/promotion; NO multi-channel
+query ROUTING; NO contradiction DETECTION (only consumption of declared edges + selpol's branch); NO change to
+#37's selpol/predicate/classifier or #36's catalog (imported READ-ONLY -- if the canonical cannot serve a new
+param, STOP + report a fold reconciliation, never edit #37); NO P0-1 adversarial injection SUITE / action-
+capable release (the structural separation + `non_execution:true` stay); NO real embeddings/vector; NO 9B/
+models.json; NO UI; NO core-doc edits (`docs:[]` -- the orchestrator mirrors).

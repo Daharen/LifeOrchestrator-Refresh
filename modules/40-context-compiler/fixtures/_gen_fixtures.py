@@ -17,6 +17,26 @@ def sha256_hex(b):
         b = b.encode("utf-8")
     return hashlib.sha256(b).hexdigest()
 
+def _inject_grants(obj):
+    """i33/U1' (D-0096): the strict canonical `effective_allowed_namespaces = intersection(REQUEST, GRANT)`
+    (owned by #37 `namespace_policy.py`) FAILS CLOSED when control_plane grants no namespace. So EVERY
+    single-namespace INPUT task fixture carries a control_plane grant authorising exactly its namespace
+    (control_plane is the ONLY authority -- P0-1). This walker injects that grant into any INPUT task dict
+    (original_goal + namespace, no control_plane yet); it SKIPS a compiled packet / packet region (schema /
+    identity / packet_id / non_execution) so it never corrupts expand_case_full's embedded packet, and it
+    is idempotent (skips a task that already declares a control_plane -- e.g. a multi-namespace test)."""
+    if isinstance(obj, dict):
+        if any(k in obj for k in ("packet_id", "non_execution", "identity", "schema")):
+            return
+        ns = obj.get("namespace") or obj.get("project_id")
+        if "original_goal" in obj and ns and "control_plane" not in obj:
+            obj["control_plane"] = {"permission_grants": [{"namespaces": [ns]}]}
+        for v in obj.values():
+            _inject_grants(v)
+    elif isinstance(obj, list):
+        for v in obj:
+            _inject_grants(v)
+
 def chunk_hit(source_path, full_text, start, end, *, rank, record_kind="source_chunk",
               record_id=None, record_version_id=None, currentness="current",
               authority_level="source_material", namespace="core-docs", section_path=None,
@@ -454,6 +474,7 @@ def build_expand_case_full(compile_module):
     """Build a self-contained entrypoint-level expand case: {packet, request, expansion_candidates,
     source_texts} where `packet` is the real compiled packet from the expand_case compile_args."""
     ec = build_expand_case()
+    _inject_grants(ec)   # i33/U1': the compile_args task needs a control_plane grant (strict closure)
     args = dict(ec["compile_args"]); args["op"] = "compile"
     meta = compile_module.run(args)
     packet = meta["result"]["packet"]
@@ -481,11 +502,15 @@ def build_namespace_case():
             "_allowed_namespaces": ["projA"]}
 
 def build_namespace_mixed_case():
-    # i32/U1 FAIL-CLOSED: a projA compile whose injected pool ALSO carries a projB hit (a cross-namespace
-    # leak the shipped selpol 1.0.0 does NOT filter). #40's own namespace backstop MUST abort the compile
-    # (error_code namespace_leak) -- no packet is ever emitted carrying the projB item. At the orchestrator
-    # fold with selpol 1.1.0 the projB candidate is SUNK (hard_filter_namespace) before the backstop, so a
-    # clean projA-only packet emits; that leg is proven at the fold. Both hits share ONE corpus_version.
+    # i33/U1' SANITIZED FAIL-CLOSED: a projA compile whose injected pool ALSO carries a projB hit. #40
+    # computes effective_allowed_namespaces = {projA} (request projA, no grant ceiling) and scope-checks the
+    # RAW pool with the canonical ns_permitted BEFORE selection -- the projB candidate is a cross-namespace
+    # violation, so the compile ABORTS SANITIZED (error_code namespace_closure_violation): ONLY a
+    # namespace_violation_count surfaces; NO projB id/path/snippet reaches the packet OR any diagnostic array
+    # (risk-1), and the identifying detail is routed to a privileged security log. At the orchestrator fold
+    # #36's scoped retrieval returns ONLY projA hits (a clean projA packet emits); this fixture (a deliberate
+    # projB leak) proves #40's all-object scope-check backstop with the canonical ns_permitted. Both hits
+    # share ONE corpus_version.
     a1 = "# Project A doctrine\n\nProject A pins the lease TTL to 1800 seconds.\n"
     b1 = "# Project B doctrine\n\nProject B pins the lease TTL to 900 seconds.\n"
     ab = a1.encode("utf-8"); bb = b1.encode("utf-8")
@@ -525,6 +550,7 @@ def main():
         "skill_card_summary_case.json": build_skill_card_summary_case(),
     }
     for name, obj in cases.items():
+        _inject_grants(obj)   # i33/U1': every single-namespace INPUT task fixture carries its control_plane grant
         path = os.path.join(HERE, name)
         with open(path, "w", encoding="utf-8", newline="\n") as f:
             f.write(json.dumps(obj, ensure_ascii=False, indent=2, sort_keys=True) + "\n")

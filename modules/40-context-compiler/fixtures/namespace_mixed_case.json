@@ -104,6 +104,15 @@
       "per_source_cap": 3,
       "token_budget": 2000
     },
+    "control_plane": {
+      "permission_grants": [
+        {
+          "namespaces": [
+            "projA"
+          ]
+        }
+      ]
+    },
     "namespace": "projA",
     "original_goal": "State Project A's lease TTL.",
     "request_text": "project lease TTL",

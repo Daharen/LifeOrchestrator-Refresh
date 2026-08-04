@@ -99,6 +99,15 @@
       "per_source_cap": 5,
       "token_budget": 500
     },
+    "control_plane": {
+      "permission_grants": [
+        {
+          "namespaces": [
+            "core-docs"
+          ]
+        }
+      ]
+    },
     "corpus_version": "digest_inj_0001",
     "namespace": "core-docs",
     "original_goal": "Summarize the lease order.",

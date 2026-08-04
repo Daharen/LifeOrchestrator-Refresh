@@ -107,6 +107,15 @@
     "config": {
       "token_budget": 500
     },
+    "control_plane": {
+      "permission_grants": [
+        {
+          "namespaces": [
+            "core-docs"
+          ]
+        }
+      ]
+    },
     "namespace": "core-docs",
     "original_goal": "Find a skill to compile context.",
     "request_text": "context compile skill",

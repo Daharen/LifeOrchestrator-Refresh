@@ -7,6 +7,15 @@
   "constraints": [
     "docs:[] -- do not edit core-docs"
   ],
+  "control_plane": {
+    "permission_grants": [
+      {
+        "namespaces": [
+          "core-docs"
+        ]
+      }
+    ]
+  },
   "namespace": "core-docs",
   "original_goal": "Ship the context compiler safely under the git lease.",
   "relevant_entities": [

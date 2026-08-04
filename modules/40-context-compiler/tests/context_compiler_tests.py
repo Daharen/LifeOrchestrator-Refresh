@@ -59,23 +59,46 @@ def compile_case(name):
         name = name + ".json"
     return cc.run(dict(load(name), op="compile"))
 
-def _hit(path, text, rvid, rid, ns="projA", rank=1, contradicts=None, currentness="current"):
+def _hit(path, text, rvid, rid, ns="projA", rank=1, contradicts=None, currentness="current",
+         record_kind="source_chunk", candidate_role=None, superseded_by=None, effective_current=None,
+         authority_level="source_material", corpus="digest_i33_0001"):
     """A minimal deterministic retriever-0.2 hit whose direct_span reproduces `text` (chunk_content_hash =
-    sha256(span bytes)) -- used to build small i32 cases inline."""
+    sha256(span bytes)) -- used to build small i32/i33 cases inline."""
     b = text.encode("utf-8")
     ch = sha256_hex(b)
-    h = {"record_id": rid, "record_version_id": rvid, "record_kind": "source_chunk",
+    h = {"record_id": rid, "record_version_id": rvid, "record_kind": record_kind,
          "chunk_id": "chk_" + rvid, "source_path": path, "abs_path": None,
          "content_hash": ch, "chunk_content_hash": ch, "span": {"start": 0, "end": len(b)},
          "span_label": "bytes:0-%d" % len(b), "status": currentness, "currentness": currentness,
-         "authority_level": "source_material", "namespace": ns, "source": ns,
+         "authority_level": authority_level, "namespace": ns, "source": ns,
          "source_version_id": "ver_" + rvid, "lexical_rank": rank, "lexical_score": 1.0 - (rank - 1) * 0.01,
          "vector_rank": None, "fused_rank": rank, "fused_score": 1.0 - (rank - 1) * 0.01,
-         "index_snapshot": "digest_i32_0001", "corpus_version": "digest_i32_0001",
+         "index_snapshot": corpus, "corpus_version": corpus,
          "tie_break_key": rvid, "snippet": text, "rank": rank}
     if contradicts is not None:
         h["contradicts"] = contradicts
+    if candidate_role is not None:
+        h["candidate_role"] = candidate_role
+    if superseded_by is not None:
+        h["superseded_by"] = superseded_by
+    if effective_current is not None:
+        h["effective_current"] = effective_current
     return h
+
+def _compile_hits(hits, task_extra=None, source_texts=None, corpus="digest_i33_0001"):
+    """Compile an inline pool of _hit()s under a single namespace (projA) with a matching source_texts.
+    i33/U1' STRICT: a namespaced compile REQUIRES a control_plane grant (control_plane is the only authority),
+    so the task carries a projA grant -> effective_allowed_namespaces = intersection({projA},{projA}) = {projA}."""
+    st = source_texts or {h["source_path"]: h["snippet"] for h in hits}
+    task = {"original_goal": "g", "request_text": "current claim state fencing lease",
+            "namespace": "projA", "task_type": "documentation",
+            "control_plane": {"permission_grants": [{"namespaces": ["projA"]}]}}
+    if task_extra:
+        task.update(task_extra)
+    args = {"op": "compile", "task": task,
+            "retrieval_batches": [{"query_index": 0, "hits": hits}],
+            "source_texts": st, "retrieval_meta": {"retriever": "mock", "corpus_version": corpus}}
+    return cc.run(args)
 
 # ----------------------------------------------------------------------------- primitives -------
 def test_primitives():
@@ -141,8 +164,12 @@ def test_injection():
           cc.canonical_json(pe["evidence"]["candidate_skills"]))
     check("side_effect_policy still deny_all (evidence 'allow_all' ignored)",
           pe["control_plane"]["side_effect_policy"] == "deny_all")
-    check("permission_grants still empty (evidence 'grant git.push' ignored)",
-          pe["control_plane"]["permission_grants"] == [])
+    # the control_plane's ONLY permission_grant is the legit namespace grant (i33/U1'); the evil hit's
+    # 'grant git.push' is NEVER added -- permission_grants are byte-identical with/without the malicious hit.
+    check("permission_grants unchanged by injected evidence (no 'git.push' added)",
+          cc.canonical_json(pe["control_plane"]["permission_grants"])
+          == cc.canonical_json(pb["control_plane"]["permission_grants"])
+          and "git.push" not in cc.canonical_json(pe["control_plane"]["permission_grants"]))
     evil_ex = [e for e in pe["evidence"]["excerpts"] if e["record_version_id"] == "evil_rec_v1"]
     check("malicious content carried ONLY as evidence (content_role=evidence, can_instruct=false)",
           len(evil_ex) == 1 and evil_ex[0]["content_role"] == "evidence" and evil_ex[0]["can_instruct"] is False)
@@ -208,12 +235,13 @@ def test_selpol_interface():
     print("[acceptance d: P1-1 selection via #37's CANONICAL selpol_rrf_v1 -- additive, order-preserving]")
     p = compile_case("compile_case.json")["result"]["packet"]
     check("selection policy_id = selpol_rrf_v1 (canonical)", p["selection"]["policy_id"] == "selpol_rrf_v1")
-    check("selection policy_version = 1.0.0 (from the imported lib, not a #40 constant)",
-          p["selection"]["policy_version"] == "1.0.0")
+    # version-AGNOSTIC: assert the packet stamps the ACTUAL imported lib version/stages (never a #40 constant),
+    # so a #37 selpol bump (1.1.0 off-machine -> 1.2.0 at the i33 fold) never drifts this gate.
+    check("selection policy_version == the imported lib POLICY_VERSION (not a #40 constant)",
+          p["selection"]["policy_version"] == selpol.POLICY_VERSION)
     check("selection owner is #37's lib", p["selection"].get("owner", "").endswith("selpol_rrf_v1.py"))
-    check("selection carries the canonical 6 stages",
-          p["selection"].get("stages") == ["hard_filter", "temporal", "authority", "rank_fusion_rrf",
-                                            "diversity", "budget"])
+    check("selection stages == the imported lib STAGES",
+          p["selection"].get("stages") == list(selpol.STAGES))
     for e in p["evidence"]["excerpts"]:
         s = e["selection"]
         check("excerpt selection has selection_rank+score+policy+reason_codes",
@@ -233,6 +261,7 @@ def test_selpol_interface():
     check("select returns the frozen canonical shape",
           all(k in out for k in ("selected", "ranked", "policy_id", "policy_version",
                                  "features_by_candidate", "omission_manifest", "stages")))
+    check("select policy_version == imported lib POLICY_VERSION", out["policy_version"] == selpol.POLICY_VERSION)
     check("select preserves retrieval order (r1 before r2)",
           [r["record_version_id"] for r in out["ranked"]] == ["r1", "r2"])
     check("selected[] are hit COPIES in selection order",
@@ -258,18 +287,27 @@ def test_selpol_interface():
     check("no hard_filter -> selected", out4["ranked"][0]["selected"] is True)
 
 def test_selpol_stale_demote():
-    print("[P1-1: temporal demote -- current outranks a better-ranked stale under current_only]")
+    print("[P1-1: temporal -- current outranks a stale hit; current_only HARD-filters, prefer_current SOFT-demotes]")
     stale = {"record_version_id": "stale", "authority_level": "source_material", "status": "source_stale",
              "source_path": "s.md", "chunk_content_hash": "s", "fused_score": 900000,
              "rank": 1, "retrieval_rank": 1, "fused_rank": 1, "lexical_rank": 1}
     cur = {"record_version_id": "cur", "authority_level": "source_material", "status": "current",
            "source_path": "c.md", "chunk_content_hash": "c", "fused_score": 800000,
            "rank": 2, "retrieval_rank": 2, "fused_rank": 2, "lexical_rank": 2}
+    # current_only (i32/i33): a stale hit is HARD-filtered (not soft-demoted) -- current ranks above it and it
+    # is not selected. (The i32 semantic change: the 1.0.0 soft `stale_demote` moved to the prefer_current mode.)
     out = selpol.select([stale, cur], {"time_horizon": "current_only"})
     order = [r["record_version_id"] for r in out["ranked"]]
-    check("current ranks above stale despite worse retrieval rank", order.index("cur") < order.index("stale"), str(order))
-    check("stale row carries stale_demote reason",
-          any("stale_demote" in r["reason_codes"] for r in out["ranked"] if r["record_version_id"] == "stale"))
+    check("current ranks above stale under current_only", order.index("cur") < order.index("stale"), str(order))
+    stale_row = [r for r in out["ranked"] if r["record_version_id"] == "stale"][0]
+    check("stale hard-filtered under current_only (hard_filter_stale, not selected)",
+          stale_row["selected"] is False and "hard_filter_stale" in stale_row["reason_codes"],
+          str(stale_row["reason_codes"]))
+    # prefer_current: the surviving 1.0.0 SOFT demote -- the stale hit is demoted but still selectable.
+    out2 = selpol.select([dict(stale), dict(cur)], {}, selpol.POLICY_ID, {"temporal_mode": "prefer_current"})
+    s2 = [r for r in out2["ranked"] if r["record_version_id"] == "stale"][0]
+    check("prefer_current soft-demotes the stale hit (stale_demote)", "stale_demote" in s2["reason_codes"],
+          str(s2["reason_codes"]))
 
 def test_selection_byte_identity():
     print("[acceptance e: #40's selection == a DIRECT selpol_rrf_v1.select() on the same candidates (D-0077)]")
@@ -304,7 +342,8 @@ def test_selection_byte_identity():
                 or e["selection"]["reason_codes"] != dr.get("reason_codes")):
             ok = False
     check("excerpt selection_score + reason_codes come straight from the canonical select()", ok)
-    check("direct select() carries the canonical policy_version", direct["policy_version"] == "1.0.0")
+    check("direct select() carries the imported lib policy_version",
+          direct["policy_version"] == selpol.POLICY_VERSION)
 
 # --------------------------------------------------- (P0-2) provenance modes --------------------
 def test_provenance_modes():
@@ -472,31 +511,40 @@ def test_query_classification():
     check("altered query_class stamped", palt["identity"]["query_class"] == "precedent_search")
 
 def test_current_only_propagation():
-    print("[i32/U4 acceptance b: current_only derives from query_class; explicit time_horizon overrides]")
+    print("[i33/U4'+U5' acceptance b: temporal_intent from the CANONICAL classifier; explicit time overrides]")
     def params_for(task):
         config = cc._resolve_config(task, {}); norm = cc.normalize_task(task, config)
         cp = cc.build_control_plane(task, norm["original_goal"])
         desc = cc.build_selection_descriptor(task, norm)
         return norm, cc.build_selection_params(cp, desc)
+    # a current-leaning class (verification -> current_state) resolves to current_only (canonical map).
+    n0, p0 = params_for({"original_goal": "g", "request_text": "status", "task_type": "verification"})
+    check("current_state class -> current_only True", p0["current_only"] is True and n0["current_only"] is True
+          and n0["temporal_intent"] == "current_only")
+    # per #37's canonical classifier, global_synthesis (documentation) is any_valid_version (temporal is NOT a
+    # security boundary -- namespace is; current_only applies ONLY after intent resolves to it).
     n1, p1 = params_for({"original_goal": "g", "request_text": "state", "task_type": "documentation"})
-    check("current-leaning class -> current_only True", p1["current_only"] is True and n1["current_only"] is True)
+    check("global_synthesis class -> any_valid_version (canonical)", p1["current_only"] is False
+          and n1["temporal_intent"] == "any_valid_version")
     n2, p2 = params_for({"original_goal": "g", "request_text": "history", "task_type": "history"})
-    check("time-spanning class (history) -> current_only False",
-          p2["current_only"] is False and n2["query_class"] == "historical_reconstruction")
+    check("historical_reconstruction -> historical_as_of (not current)",
+          p2["current_only"] is False and n2["query_class"] == "historical_reconstruction"
+          and n2["temporal_intent"] == "historical_as_of")
     n3, p3 = params_for({"original_goal": "g", "request_text": "history", "task_type": "history",
                          "time_horizon": "current_only"})
-    check("explicit time_horizon overrides the class", p3["current_only"] is True)
+    check("explicit time_horizon OUTRANKS the class default", p3["current_only"] is True)
     check("query temporal_mode carried on the retriever query set",
-          all(q.get("temporal_mode") in ("current_only", "any_valid_version") for q in n1["query_set"]))
+          all(q.get("temporal_mode") in cc.TEMPORAL_INTENT_SET for q in n0["query_set"]))
     # a current-vs-current `contradicts` edge among selected evidence -> packet_disposition conflicted (U4).
     t = "Alpha current claim.\n"; u = "Beta current claim.\n"
     ha = _hit("projA/a.md", t, "ca_v1", "ca", contradicts=["cb_v1"])
     hb = _hit("projA/b.md", u, "cb_v1", "cb", rank=2)
     args = {"op": "compile", "task": {"original_goal": "reconcile", "request_text": "current claim",
-            "namespace": "projA", "task_type": "documentation"},
+            "namespace": "projA", "task_type": "documentation",
+            "control_plane": {"permission_grants": [{"namespaces": ["projA"]}]}},
             "retrieval_batches": [{"query_index": 0, "hits": [ha, hb]}],
             "source_texts": {"projA/a.md": t, "projA/b.md": u},
-            "retrieval_meta": {"retriever": "mock", "corpus_version": "digest_i32_0001"}}
+            "retrieval_meta": {"retriever": "mock", "corpus_version": "digest_i33_0001"}}
     pc = cc.run(args)["result"]["packet"]
     check("contradicts edge among current evidence -> conflicted",
           pc["disposition"]["packet_disposition"] == "conflicted")
@@ -504,77 +552,136 @@ def test_current_only_propagation():
           any(x["kind"] == "contradicts_edge" for x in pc["disposition"]["contradictions"]))
 
 def test_namespace_hard_boundary():
-    print("[i32/U1 acceptance a: namespace passed BOTH ways + fail-closed on a cross-namespace item]")
-    # single-namespace compile: allowed_namespaces stamped both-ways; every evidence item in-namespace.
+    print("[i33/U1' acceptance a: effective = intersection(request, grant), passed BOTH ways + fail-closed]")
+    # single-namespace compile: effective = {projA} (request projA, no grant ceiling -> request stands).
     p = compile_case("namespace_case.json")["result"]["packet"]
-    check("allowed_namespaces in task_input", p["task_input"]["allowed_namespaces"] == ["projA"])
+    check("effective allowed_namespaces in task_input", p["task_input"]["allowed_namespaces"] == ["projA"])
     check("allowed_namespaces in identity (packet_id coverage)", p["identity"]["allowed_namespaces"] == ["projA"])
+    check("identity carries the namespace_closure (request/grant/effective/policy_id)",
+          p["identity"]["namespace_closure"]["request"] == ["projA"]
+          and p["identity"]["namespace_closure"]["effective"] == ["projA"]
+          and p["identity"]["namespace_closure"]["grant"] == ["projA"]
+          and "policy_id" in p["identity"]["namespace_closure"])
+    check("selection.import_sources carries the ns predicate source (audit, not identity)",
+          "ns_predicate_source" in p["selection"]["import_sources"])
     ex_ns = set(e["namespace"] for e in p["evidence"]["excerpts"])
     check("every excerpt is in-namespace", ex_ns <= {"projA"} and len(p["evidence"]["excerpts"]) >= 1)
-    # GATE TEST 3 (i32): provenance-expansion on a NAMESPACED fixture -- every excerpt reconstructs to source.
+    # GATE TEST 3 (i33, part A): provenance-expansion on a NAMESPACED fixture -- every excerpt reconstructs.
     for e in p["evidence"]["excerpts"]:
         if e["provenance"]["provenance_mode"] == cc.PROV_DIRECT_SPAN:
             src = load("namespace_case.json")["source_texts"][e["source_path"]]
             raw = src.encode("utf-8")[e["span"]["start"]:e["span"]["end"]].decode("utf-8")
             check("namespaced direct_span reproduces source bytes", raw == e["text"] and e["provenance"]["reproduced"])
-    check("gate test 3: provenance_reproduced_all on the namespaced fixture",
+    check("gate test 3A: provenance_reproduced_all on the namespaced fixture",
           p["evaluation_hooks"]["packet_metrics"]["provenance_reproduced_all"]
           and p["evaluation_hooks"]["packet_metrics"]["provenance_valid_all"])
     ref_ns = set()
     for key in ("current_state_refs", "candidate_skills", "relevant_procedures",
-                "relevant_failures", "similar_episodes"):
-        for r in p["evidence"][key]:
+                "relevant_failures", "similar_episodes", "navigation_refs"):
+        for r in p["evidence"].get(key, []):
             if r.get("namespace") is not None:
                 ref_ns.add(r["namespace"])
     check("every ref is in-namespace", ref_ns <= {"projA"})
-    # filters.namespace reaches the retriever query set (U1, the retriever-side half).
+    # filters.namespace reaches the retriever query set = the EFFECTIVE set (U1', retriever-side half).
     for q in p["retrieval_provenance"]["query_set"]:
-        check("query carries filters.namespace", q["filters"].get("namespace") == "projA")
+        check("query carries filters.namespace (effective)", q["filters"].get("namespace") == "projA")
+        check("query carries the effective_allowed_namespaces closed set",
+              q["filters"].get("effective_allowed_namespaces") == ["projA"])
         break
-    # the selection params carry allowed_namespaces (the selpol-side half).
+    # the selection params carry the EFFECTIVE allowed_namespaces (the selpol-side half).
     case = load("namespace_case.json"); task = case["task"]
     config = cc._resolve_config(task, {}); norm = cc.normalize_task(task, config)
     cp = cc.build_control_plane(task, norm["original_goal"]); desc = cc.build_selection_descriptor(task, norm)
     params = cc.build_selection_params(cp, desc)
-    check("params.allowed_namespaces passed to selpol", params["allowed_namespaces"] == ["projA"])
-    check("descriptor.allowed_namespaces passed to selpol", desc["allowed_namespaces"] == ["projA"])
-    # FAIL-CLOSED: a mixed pool (projB leak) -> compile aborts (no packet emitted carrying the projB item).
+    check("params.allowed_namespaces passed to selpol (effective)", params["allowed_namespaces"] == ["projA"])
+    check("descriptor.allowed_namespaces passed to selpol (effective)", desc["allowed_namespaces"] == ["projA"])
+
+    # GATE TEST 3 (i33, part B) -- SANITIZED ABORT: a mixed pool (projB) fails closed; ONLY a count surfaces
+    # and NO cross-namespace metadata (id/path/snippet) is anywhere in the returned payload.
     mm = cc.run(dict(load("namespace_mixed_case.json"), op="compile"))
-    check("cross-namespace item fails closed (namespace_leak)",
-          (not mm["ok"]) and mm.get("error_code") == "namespace_leak", json.dumps(mm))
-    # multi-namespace requires an EXPLICIT control_plane grant naming the namespaces.
+    check("cross-namespace pool fails closed (namespace_closure_violation)",
+          (not mm["ok"]) and mm.get("error_code") == "namespace_closure_violation", json.dumps(mm))
+    check("failed_closed compile_status", mm.get("compile_status") == "failed_closed")
+    check("only a namespace_violation_count surfaces (>=1)", mm.get("namespace_violation_count", 0) >= 1)
+    blob = json.dumps(mm)
+    check("NO cross-namespace identifying metadata in the payload (sanitized)",
+          ("projB" not in blob) and ("b_doc" not in blob) and ("900 seconds" not in blob), blob[:400])
+    check("no packet emitted on the sanitized abort", "packet" not in mm.get("result", {}) and "result" not in mm)
+
+    # a multi-namespace compile requires BOTH the REQUEST naming the namespaces AND control_plane GRANTing
+    # them (intersection). Requesting projA+projB with a grant of projA+projB -> effective = {projA, projB}.
     grant = json.loads(json.dumps(load("namespace_mixed_case.json")))
-    grant["task"]["control_plane"] = {"permission_grants": [{"namespaces": ["projA", "projB"]}]}
+    grant["task"]["namespaces"] = ["projA", "projB"]                             # the REQUEST names both
+    grant["task"]["control_plane"] = {"permission_grants": [{"namespaces": ["projA", "projB"]}]}  # the GRANT
     mg = cc.run(dict(grant, op="compile"))
-    check("multi-namespace grant admits both namespaces (no leak)", mg["ok"], json.dumps(
-        {k: mg.get(k) for k in ("ok", "error_code")}))
+    check("multi-namespace request+grant admits both namespaces (no violation)", mg["ok"],
+          json.dumps({k: mg.get(k) for k in ("ok", "error_code", "namespace_violation_count")}))
     pg = mg["result"]["packet"]
     check("granted compile carries both namespaces",
           set(e["namespace"] for e in pg["evidence"]["excerpts"]) == {"projA", "projB"})
-    check("identity allowed_namespaces covers both", set(pg["identity"]["allowed_namespaces"]) == {"projA", "projB"})
+    check("identity allowed_namespaces (effective) covers both",
+          set(pg["identity"]["allowed_namespaces"]) == {"projA", "projB"})
+
+    # EMPTY INTERSECTION -> FAIL CLOSED: request projA but control_plane grants ONLY projB (disjoint).
+    empt = json.loads(json.dumps(load("namespace_case.json")))
+    empt["task"]["control_plane"] = {"permission_grants": [{"namespaces": ["projB"]}]}
+    me = cc.run(dict(empt, op="compile"))
+    check("empty intersection fails closed (namespace_closure_empty)",
+          (not me["ok"]) and me.get("error_code") == "namespace_closure_empty", json.dumps(me))
+    check("empty-intersection effective set is []", me.get("effective_allowed_namespaces") == [])
+
+    # request WIDENING is clamped by the grant: request {projA,projB}, grant ONLY {projA} -> effective {projA}
+    # and the projB candidate then trips the sanitized scope-check (a request can never widen past the grant).
+    widen = json.loads(json.dumps(load("namespace_mixed_case.json")))
+    widen["task"]["namespaces"] = ["projA", "projB"]
+    widen["task"]["control_plane"] = {"permission_grants": [{"namespaces": ["projA"]}]}
+    mw = cc.run(dict(widen, op="compile"))
+    check("request cannot widen past the grant (projB clamped -> fail-closed)",
+          (not mw["ok"]) and mw.get("error_code") == "namespace_closure_violation", json.dumps(mw))
 
 def test_working_memory_region():
-    print("[i32/U3 acceptance c: working_memory reserved region -- present, empty, NOT authority/evidence]")
-    p = compile_case("compile_case.json")["result"]["packet"]
+    print("[i33/U3' acceptance d: working_memory -- continuity-authoritative + conjunctive access + state_version]")
+    p = compile_case("namespace_case.json")["result"]["packet"]
     check("working_memory is a FOURTH top-level region", "working_memory" in p)
     wm = p["working_memory"]
     check("working_memory reserved + empty (no store)",
           wm["present"] is False and wm["items"] == [] and wm["item_count"] == 0)
     check("working_memory items carry content_role=working_state, can_instruct=false",
           wm["content_role"] == "working_state" and wm["can_instruct"] is False)
-    check("working_memory is NOT evidence + NOT execution authority",
-          wm["is_evidence"] is False and wm["authority"] == "task_state_only")
+    check("working_memory is NOT evidence + is CONTINUITY-authoritative (i33)",
+          wm["is_evidence"] is False and wm["authority"] == "continuity_authoritative")
+    # U3' (i33): CONJUNCTIVE access (task_id AND effective-namespace) + namespace_scope = the effective set.
+    check("working_memory access is conjunctive (task_id AND effective-namespace)",
+          wm["access_policy"] == "conjunctive_task_id_and_effective_namespace")
+    check("working_memory namespace_scope == the effective closed set", wm["namespace_scope"] == ["projA"])
+    # U3' (i33): the A5 state_version is reserved (None while empty) AND covered by packet identity.
+    check("working_memory carries the A5 state_version (None at Tier 0)", "state_version" in wm)
+    check("packet identity covers the working-state state_version",
+          "working_state_version" in p["identity"] and p["identity"]["working_state_version"] == wm["state_version"])
+    # U3' (i33): the reserved A5 store fields are present (store is Tier 1, not built).
+    for f in ("working_state_id", "state_version", "parent_state_version", "namespace_scope",
+              "grant_snapshot_ref", "created_from_packet_id", "content_hash", "lifecycle_state",
+              "content_role", "writer_authority"):
+        check("reserved A5 store field: " + f, f in wm["reserved_store_fields"])
     check("working_memory keyed by task_id", wm["task_id"] == p["identity"]["task_id"])
     check("working_memory is a DISTINCT region (not inside control_plane/evidence)",
           "working_memory" not in p["control_plane"] and "working_memory" not in p["evidence"])
     check("render order control->task->working_memory->evidence",
           p["rendering"]["order"] == ["control_plane", "task_input", "working_memory", "evidence"])
-    # the region is actually rendered THIRD in the final model-facing input.
     rendered = cc.render_packet_input(p["control_plane"], p["task_input"], wm, p["evidence"]["excerpts"])
     i_task = rendered.index("=== TASK ===")
     i_wm = rendered.index("=== WORKING MEMORY")
     i_ev = rendered.index("=== EVIDENCE")
     check("working_memory rendered between task and evidence", i_task < i_wm < i_ev)
+    # the conjunctive-access predicate: a foreign-task item is rejected; a same-task in-scope item accepted.
+    tid = wm["task_id"]
+    closure = {"effective": ["projA"], "enforced": True, "unscoped_global": False}
+    check("conjunctive access rejects a foreign task_id",
+          cc._working_item_accessible({"task_id": "other", "namespace_scope": "projA"}, tid, closure) is False)
+    check("conjunctive access rejects an out-of-scope namespace",
+          cc._working_item_accessible({"task_id": tid, "namespace_scope": "projB"}, tid, closure) is False)
+    check("conjunctive access accepts same-task in-scope",
+          cc._working_item_accessible({"task_id": tid, "namespace_scope": "projA"}, tid, closure) is True)
 
 def test_new_reason_codes_carry():
     print("[i32/U-import acceptance d: the new selpol reason_codes are CARRIED onto evidence + omission]")
@@ -606,15 +713,213 @@ def test_new_reason_codes_carry():
         check("%s -> omission reason hard_filter, not excerpted" % code,
               not ex2 and any(o["reason"] == "hard_filter" for o in om2))
 
+# =============================================================== i33 NAMESPACE-CLOSURE + SUPERSESSION ===
+
+def test_i33_all_object_scope_check():
+    print("[i33/U1' acceptance a: EVERY packet-visible object scope-checked -- no cross-ns leak in diagnostics]")
+    # A projA compile whose pool ALSO carries a projB hit. Off-machine (selpol 1.1.0 SINKS it but its
+    # metadata would still leak via ranked[]/features_by_candidate/omission/eval-hooks) -- i33 #40 aborts
+    # BEFORE selection, so NO cross-namespace metadata reaches ANY diagnostic array. Only a count surfaces.
+    ha = _hit("projA/a.md", "Project A pins the lease TTL.\n", "a_v1", "a", ns="projA", rank=1)
+    hb = _hit("projB/secret.md", "Project B SECRET pins TTL 900.\n", "b_v1", "b", ns="projB", rank=2)
+    m = cc.run({"op": "compile",
+                "task": {"original_goal": "State A TTL.", "request_text": "lease TTL", "namespace": "projA",
+                         "task_type": "documentation",
+                         "control_plane": {"permission_grants": [{"namespaces": ["projA"]}]}},
+                "retrieval_batches": [{"query_index": 0, "hits": [ha, hb]}],
+                "source_texts": {"projA/a.md": ha["snippet"], "projB/secret.md": hb["snippet"]},
+                "retrieval_meta": {"retriever": "mock", "corpus_version": "digest_i33_0001"}})
+    check("mixed pool fails closed", (not m["ok"]) and m["error_code"] == "namespace_closure_violation")
+    check("violation count >= 1", m.get("namespace_violation_count", 0) >= 1)
+    blob = json.dumps(m)
+    for leak in ("projB", "b_v1", "SECRET", "secret.md", "900"):
+        check("NO leak of %r in any diagnostic/output (sanitized)" % leak, leak not in blob)
+    # a SANITIZED security log (privileged) is written ONLY to output_dir, never the returned payload.
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        m2 = cc.run({"op": "compile", "output_dir": td,
+                     "task": {"original_goal": "State A TTL.", "request_text": "lease TTL",
+                              "namespace": "projA", "task_type": "documentation",
+                              "control_plane": {"permission_grants": [{"namespaces": ["projA"]}]}},
+                     "retrieval_batches": [{"query_index": 0, "hits": [ha, hb]}],
+                     "source_texts": {"projA/a.md": ha["snippet"], "projB/secret.md": hb["snippet"]},
+                     "retrieval_meta": {"retriever": "mock", "corpus_version": "digest_i33_0001"}})
+        logp = os.path.join(td, "namespace_security_log.json")
+        check("privileged security log written to output_dir", os.path.isfile(logp))
+        if os.path.isfile(logp):
+            sec = json.load(open(logp))
+            check("security log holds the privileged detail (projB) OUT of the payload",
+                  "projB" in json.dumps(sec) and "projB" not in json.dumps(m2))
+
+
+def test_i33_candidate_role_navigation():
+    print("[i33/U2' acceptance c: candidate_role navigation ROUTES but is NEVER answer-evidence]")
+    ev = _hit("projA/answer.md", "The lease TTL is 1800 seconds under res.lease.\n", "ev_v1", "ev",
+              ns="projA", rank=2)
+    nav = _hit("projA/index.md", "Navigation node: lease topics live under res.lease docs.\n", "nav_v1", "nav",
+               ns="projA", rank=1, record_kind="node", currentness="summary_stale")
+    m = _compile_hits([nav, ev])
+    check("navigation compile ok", m["ok"], json.dumps({k: m.get(k) for k in ("ok", "error_code")}))
+    p = m["result"]["packet"]
+    ex_rvids = set(e["record_version_id"] for e in p["evidence"]["excerpts"])
+    check("navigation node is NOT an answer-evidence excerpt", "nav_v1" not in ex_rvids)
+    check("evidence hit IS an excerpt", "ev_v1" in ex_rvids)
+    nav_refs = p["evidence"].get("navigation_refs", [])
+    check("navigation node surfaced in navigation_refs", any(r["record_version_id"] == "nav_v1" for r in nav_refs))
+    check("navigation ref flags may_answer=false + navigational_stale",
+          nav_refs and nav_refs[0]["may_answer"] is False and nav_refs[0]["navigational_stale"] is True)
+    # NAVIGATIONAL staleness (summary_stale node) does NOT drive abstain -- the evidence hit still answers.
+    check("navigational staleness does not force abstain",
+          p["disposition"]["packet_disposition"] in ("answerable", "needs_expansion"))
+    # a node with NO evidence for a required path -> the node routes (needs_expansion), never abstain.
+    nav_only = _hit("projA/topics.md", "Node listing failure topics.\n", "n2_v1", "n2", ns="projA",
+                    rank=1, record_kind="node")
+    m2 = _compile_hits([nav_only], task_extra={"relevant_paths": ["projA/topics.md"]})
+    check("a routing-only node keeps the packet from a false abstain",
+          m2["ok"] and m2["result"]["packet"]["disposition"]["packet_disposition"] != "answerable")
+
+
+def test_i33_catalog_effective_current_passthrough():
+    print("[i33/U4' acceptance b: catalog effective_current + supersession edges PASSED THROUGH to selpol]")
+    # #40 PLUMBS the catalog signal onto the candidate; selpol 1.2.0 (at the fold) hard-filters an
+    # absent-successor superseded candidate under current_only. Off-machine we prove the PASS-THROUGH.
+    hit = _hit("projA/old.md", "old superseded content.\n", "old_v1", "old", ns="projA",
+               superseded_by=["new_v9"], effective_current=False, currentness="superseded")
+    entry = {"hit": hit, "record_version_id": "old_v1", "best_rank": 1,
+             "matched_queries": [0], "occurrences": []}
+    cand = cc._selection_candidate(entry)
+    check("candidate carries catalog effective_current (False)", cand["effective_current"] is False)
+    check("candidate carries superseded_by edge (absent successor)", cand["superseded_by"] == ["new_v9"])
+    check("candidate carries the s5 'superseded' status through", cand["status"] == "superseded")
+    check("candidate default candidate_role = evidence", cand["candidate_role"] == "evidence")
+    # the selection block records that the catalog effective_current passthrough is engaged.
+    p = _compile_hits([hit])["result"]["packet"]
+    check("selection.i33_params records the catalog effective_current passthrough",
+          p["selection"]["i33_params"]["catalog_effective_current_passthrough"] is True)
+    check("selection.import_sources records the ns/classifier import provenance",
+          all(k in p["selection"]["import_sources"]
+              for k in ("selpol_policy_version", "ns_predicate_source", "classifier_policy_source")))
+
+
+def test_i33_supersession_branch_conflicted():
+    print("[i33/U4' acceptance b: a supersession BRANCH (>=2 live successors) -> packet_disposition conflicted]")
+    base = _hit("projA/base.md", "Base record with two live successors.\n", "base_v1", "base",
+                ns="projA", rank=1, superseded_by=["s1_v1", "s2_v1"], currentness="current")
+    s1 = _hit("projA/s1.md", "Successor one, current.\n", "s1_v1", "s1", ns="projA", rank=2)
+    s2 = _hit("projA/s2.md", "Successor two, current.\n", "s2_v1", "s2", ns="projA", rank=3)
+    p = _compile_hits([base, s1, s2])["result"]["packet"]
+    check("supersession branch -> conflicted", p["disposition"]["packet_disposition"] == "conflicted")
+    check("a supersession_branch contradiction is recorded",
+          any(x["kind"] == "supersession_branch" for x in p["disposition"]["contradictions"]))
+    # #40 ALSO consumes a selpol-surfaced branch signal (field name reconciled at the fold): feed a synthetic
+    # sel output and assert detect_supersession_conflicts picks it up.
+    syn = {"supersession_conflicts": [{"record_id": "rX", "record_version_ids": ["x1", "x2"]}]}
+    conf = cc.detect_supersession_conflicts(syn, [], {})
+    check("selpol-surfaced branch signal consumed",
+          any(c["kind"] == "supersession_branch" and c.get("source") == "selpol" for c in conf))
+
+
+def test_i33_temporal_intent_split():
+    print("[i33/U5' acceptance e: query_class/temporal_intent split + versioned classifier in identity]")
+    # query_class (semantic) and temporal_intent (temporal) are INDEPENDENT + both stamped.
+    m = cc.run({"op": "normalize", "task": {"original_goal": "g", "request_text": "state",
+                                            "task_type": "documentation"}})
+    r = m["result"]
+    check("query_class stamped (semantic)", r["query_class"] == "global_synthesis")
+    check("temporal_intent stamped (independent)", r["temporal_intent"] in cc.TEMPORAL_INTENT_SET)
+    check("classifier_policy_id/version stamped (imported, versioned)",
+          bool(r["classifier_policy_id"]) and bool(r["classifier_policy_version"]))
+    # an EXPLICIT user time OUTRANKS the class->mode default.
+    hist = cc.run({"op": "normalize", "task": {"original_goal": "g", "request_text": "h",
+                                               "task_type": "history"}})["result"]
+    check("history class default is non-current", hist["temporal_intent"] != "current_only")
+    histx = cc.run({"op": "normalize", "task": {"original_goal": "g", "request_text": "h",
+                    "task_type": "history", "time_horizon": "current_only"}})["result"]
+    check("explicit time_horizon OUTRANKS the class default",
+          histx["temporal_intent"] == "current_only"
+          and histx["temporal_intent_basis"].startswith("explicit"))
+    # composite / unclassified fallback classes are reachable + handled by the temporal resolver.
+    comp = cc.classify_query({"query_class": "composite"}, "coding", [])
+    check("composite fallback class reachable (explicit)", comp[0] == "composite")
+    ti, _ = cc.resolve_temporal_intent({}, "composite")
+    check("composite resolves to a valid temporal_intent", ti in cc.TEMPORAL_INTENT_SET)
+    un = cc.classify_query({}, "totally-unmapped-type", [])
+    check("unmapped task_type + no literals -> unclassified", un[0] == "unclassified")
+    # packet identity COVERS temporal_intent + classifier policy: changing temporal_intent changes packet_id.
+    base = load("compile_case.json")
+    p0 = cc.run(dict(base, op="compile"))["result"]["packet"]
+    check("identity covers temporal_intent", p0["identity"]["temporal_intent"] == "current_only")
+    check("identity covers the versioned classifier policy",
+          p0["identity"]["classifier_policy"]["id"] and p0["identity"]["classifier_policy"]["version"])
+    alt = json.loads(json.dumps(base)); alt["task"]["time_horizon"] = "any_valid_version"
+    palt = cc.run(dict(alt, op="compile"))["result"]["packet"]
+    check("temporal_intent change alters packet_id (identity coverage)", palt["packet_id"] != p0["packet_id"])
+    check("altered temporal_intent stamped", palt["identity"]["temporal_intent"] == "any_valid_version")
+
+
+def test_i33_unscoped_and_determinism():
+    print("[i33: unscoped-global back-compat + a mixed unscoped pool guard + determinism]")
+    # NO namespace declared + no grant -> UNSCOPED global compile (i32 back-compat: boundary not enforced).
+    m = cc.run({"op": "compile", "task": {"original_goal": "g", "request_text": "content"},
+                "retrieval_batches": [{"query_index": 0, "hits": [
+                    _hit("a.md", "unnamespaced content.\n", "u1", "u", ns=None, rank=1)]}],
+                "source_texts": {"a.md": "unnamespaced content.\n"},
+                "retrieval_meta": {"retriever": "mock"}})
+    check("unscoped global compile ok (no namespace declared)", m["ok"], json.dumps(
+        {k: m.get(k) for k in ("ok", "error_code")}))
+    check("unscoped closure is not enforced", m["result"]["packet"]["identity"]["namespace_closure"]["enforced"] is False)
+    # an UNSCOPED compile over a >1-distinct-namespace pool cannot be disambiguated -> fail closed.
+    mm = cc.run({"op": "compile", "task": {"original_goal": "g", "request_text": "content"},
+                 "retrieval_batches": [{"query_index": 0, "hits": [
+                     _hit("a.md", "ns a.\n", "a1", "a", ns="nsA", rank=1),
+                     _hit("b.md", "ns b.\n", "b1", "b", ns="nsB", rank=2)]}],
+                 "source_texts": {"a.md": "ns a.\n", "b.md": "ns b.\n"},
+                 "retrieval_meta": {"retriever": "mock"}})
+    check("unscoped mixed-namespace pool fails closed",
+          (not mm["ok"]) and mm["error_code"] == "namespace_closure_violation")
+    # determinism: the same i33 compile is byte-identical on re-run (incl the new identity fields).
+    a = _compile_hits([_hit("projA/d.md", "deterministic.\n", "d1", "d", ns="projA")])
+    b = _compile_hits([_hit("projA/d.md", "deterministic.\n", "d1", "d", ns="projA")])
+    check("i33 packet byte-identical on re-run",
+          cc.canonical_json(a["result"]["packet"]) == cc.canonical_json(b["result"]["packet"]))
+
+
+def test_i33_expand_no_widen():
+    print("[i33/U1': expansion NEVER widens the parent namespace scope]")
+    parent = _compile_hits([_hit("projA/a.md", "Project A fencing + lease content.\n", "a1", "a",
+                                 ns="projA", rank=1)])["result"]["packet"]
+    check("parent packet is projA-scoped", parent["identity"]["allowed_namespaces"] == ["projA"])
+    cands = [_hit("projA/more.md", "more projA evidence about the lease.\n", "m1", "m", ns="projA", rank=1),
+             _hit("projB/leak.md", "projB SECRET leak content.\n", "l1", "l", ns="projB", rank=2)]
+    args = {"op": "expand", "packet": parent,
+            "request": {"type": "more_evidence", "budget": {"max_tokens": 200}},
+            "expansion_candidates": cands,
+            "source_texts": {"projA/more.md": cands[0]["snippet"], "projB/leak.md": cands[1]["snippet"]}}
+    m = cc.run(args)
+    check("expand ok", m["ok"], json.dumps({k: m.get(k) for k in ("ok", "error_code")}))
+    exp = m["result"]["expansion"]
+    check("expansion effective allowed_namespaces = parent scope [projA]", exp["allowed_namespaces"] == ["projA"])
+    check("cross-namespace expansion candidate DROPPED (never widens scope)",
+          exp["expansion_namespace_dropped"] >= 1)
+    ev_rvids = set(e["record_version_id"] for e in exp["evidence"])
+    check("projB candidate NOT in the expansion evidence", "l1" not in ev_rvids and "m1" in ev_rvids)
+    check("NO projB metadata leaked into the expansion", "projB" not in json.dumps(exp)
+          and "SECRET" not in json.dumps(exp))
+
+
 def main():
-    print("== context.compile 0.4 off-machine test gate (i32 Tier-0 seam repairs) ==")
+    print("== context.compile 0.5 off-machine test gate (i33 namespace-closure + supersession-hardening) ==")
     for t in (test_primitives, test_normalize, test_three_regions, test_injection,
               test_dispositions, test_consumer_profile_and_transport, test_selpol_interface,
               test_selpol_stale_demote, test_selection_byte_identity, test_provenance_modes,
               test_identity_and_determinism, test_corpus_pin, test_omission_and_diversity,
               test_a3_skill_cards, test_eval_hooks, test_expand, test_error_paths,
               test_query_classification, test_current_only_propagation, test_namespace_hard_boundary,
-              test_working_memory_region, test_new_reason_codes_carry):
+              test_working_memory_region, test_new_reason_codes_carry,
+              # i33 NAMESPACE-CLOSURE + SUPERSESSION-HARDENING (D-0096)
+              test_i33_all_object_scope_check, test_i33_candidate_role_navigation,
+              test_i33_catalog_effective_current_passthrough, test_i33_supersession_branch_conflicted,
+              test_i33_temporal_intent_split, test_i33_unscoped_and_determinism, test_i33_expand_no_widen):
         t()
     total = _passed + _failed
     print("\n== %d/%d passed, %d failed ==" % (_passed, total, _failed))

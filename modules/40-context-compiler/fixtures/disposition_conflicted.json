@@ -104,6 +104,15 @@
       "per_source_cap": 5,
       "token_budget": 500
     },
+    "control_plane": {
+      "permission_grants": [
+        {
+          "namespaces": [
+            "core-docs"
+          ]
+        }
+      ]
+    },
     "namespace": "core-docs",
     "original_goal": "State the lease TTL.",
     "request_text": "lease TTL value",

@@ -1,29 +1,74 @@
-# Module 40 -- context.compile (Context Compiler) 0.4.0
+# Module 40 -- context.compile (Context Compiler) 0.5.0
 
 The Collective Agent's context-compilation centerpiece (D-0080 directive Priority 4 / section 8),
 conformed to `core-docs/CONTEXT_PACKET_CONTRACT.md` (`context_packet/0.2`; **s4 PINNED, D-0089**; **i32
-amendment, D-0092**). A **deterministic, CPU-only, no-model, no-network** skill that turns a task descriptor
-into a versioned, token-budgeted, SAFE, self-describing `lifeorch.context_packet/0.2` the coordinator hands a
-disposable model:
+amendment, D-0092**; **i33 amendment, D-0096**). A **deterministic, CPU-only, no-model, no-network** skill
+that turns a task descriptor into a versioned, token-budgeted, SAFE, self-describing
+`lifeorch.context_packet/0.2` the coordinator hands a disposable model:
 
 ```
-normalize + query-classify (8.1 + i32/U5) -> retrieve via the retriever-0.2 seam (8.2; namespace HARD filter)
--> select via #37's CANONICAL selpol_rrf_v1 (P1-1 / D-0089: IMPORTED; i32 passes allowed_namespaces/current_only/query_class)
+normalize + query-classify + temporal-intent (8.1 + i33/U5') -> compute effective_allowed_namespaces =
+   intersection(REQUEST, control_plane GRANT) (i33/U1'; empty -> FAIL CLOSED) -> retrieve via the retriever-0.2
+   seam (8.2; effective namespace HARD filter) -> SCOPE-CHECK every object with the canonical ns_permitted
+   (a cross-namespace object ANYWHERE -> SANITIZED abort, count only) -> select via #37's CANONICAL
+   selpol_rrf_v1 (P1-1 / D-0089: IMPORTED; i33 passes effective allowed_namespaces / temporal_intent /
+   query_class + per-candidate catalog effective_current + supersession edges)
 -> token budget with EXACT accounting (8.4/16.3) + fail-closed transport (P0-4)
--> context_packet/0.2 = FOUR regions (control_plane / task_input / working_memory / evidence, P0-1 + i32/U3),
-   packet_disposition (P0-3), A2 provenance modes (P0-2), identity/lineage covering query_class + allowed_namespaces (P1-5 + i32/s6),
+-> context_packet/0.2 = FOUR regions (control_plane / task_input / working_memory / evidence, P0-1 + i33/U3'),
+   packet_disposition (P0-3; supersession branch -> conflicted, i33/U4'), navigation_refs (i33/U2'),
+   A2 provenance modes (P0-2), identity/lineage covering query_class + temporal_intent + the classifier policy
+   + effective allowed_namespaces + the working-state state_version + the retrieval-plan/stage trace (P1-5 + i33/s6),
    an omission_manifest, an immutable expand seam (8.5), and packet-evaluation hooks (8.6)
 ```
 
-It **consumes** the FROZEN `MEMORY_CONTRACT` retriever-0.2 hit shape (s3) + s5 staleness enum + s1/A2
-provenance envelope AND the `CONTEXT_PACKET_CONTRACT` s4 selection-policy interface, and **produces**
-packets that retrieval.eval #37 0.2 and a fresh 9B consume at the orchestrator fold (D-0077). The 9B is
-NOT run here -- this module is deterministic; the model consumes the packet downstream.
+It **consumes** the FROZEN `MEMORY_CONTRACT` retriever-0.2 hit shape (s3) + s5 staleness enum + s1/A2/A5
+provenance envelope AND the `CONTEXT_PACKET_CONTRACT` s4 selection-policy interface + #37's canonical
+`ns_permitted` + versioned classifier map (all imported READ-ONLY), and **produces** packets that
+retrieval.eval #37 and a fresh 9B consume at the orchestrator fold (D-0077). The 9B is NOT run here -- this
+module is deterministic; the model consumes the packet downstream.
 
-## The i32 Tier-0 seam repairs (D-0092)
+## The i33 NAMESPACE-CLOSURE + SUPERSESSION-HARDENING (D-0096)
 
-context.compile 0.4 plumbs the Tier-0 memory-architecture seams THROUGH the packet + selection (ADDITIVE
-over `context_packet/0.2` -- the schema string is unchanged; module semver `0.3.0 -> 0.4.0`):
+context.compile 0.5 hardens the packet/selection half after the frontier Tier-0 red-team found the i32
+seams were an ENVELOPE-level first layer (ADDITIVE over `context_packet/0.2` -- schema string unchanged;
+module semver `0.4.0 -> 0.5.0`). See `SCHEMA_NOTES.md` **s16** (the D-0077 fold contract).
+
+- **(U1') namespace CLOSURE (SAFETY-CRITICAL).** `task_input.namespace` is a REQUEST, NOT authorization. The
+  compiler computes `effective_allowed_namespaces = intersection(REQUEST, control_plane GRANT)` (the imported
+  canonical `namespace_policy.effective_allowed_namespaces`) and passes THAT (never the raw request) to selpol +
+  the retriever; an EMPTY intersection FAILS CLOSED -- so **a namespaced compile REQUIRES a control_plane grant**
+  (control_plane is the only authority). The canonical `ns_permitted` (IMPORTED, never re-implemented)
+  scope-checks EVERY packet-visible object -- evidence, working_memory, provenance/derivation refs, and every
+  diagnostic array. A cross-namespace object ANYWHERE ABORTS SANITIZED via the canonical `NamespaceRejectionPolicy`:
+  only a `namespace_violation_count` surfaces; identifying detail -> a privileged security log.
+- **(U4') candidate-INDEPENDENT supersession.** The per-candidate CATALOG `effective_current` signal is passed
+  to selpol so a superseded candidate is hard-filtered under `current_only` even when its successor is ABSENT
+  from the pool; a supersession BRANCH (>=2 live successors) drives `packet_disposition = conflicted`.
+- **(U2') navigation vs evidence.** A `candidate_role=navigation` node ROUTES (surfaced in `navigation_refs`)
+  but is NEVER answer-evidence; NAVIGATIONAL staleness (`summary_stale`) never fails a coverage requirement.
+- **(U3') working_memory hardening.** CONTINUITY-authoritative; access is CONJUNCTIVE (task_id AND
+  effective-namespace); items carry the A5 `state_version` (packet identity covers it) + reserved A5 store
+  fields. NO store (Tier 1) is built.
+- **(U5') query_class / temporal_intent SPLIT.** `query_class` (semantic) and `temporal_intent`
+  (`current_only|historical_as_of|version_specific|any_valid_version`) are INDEPENDENT; an explicit user
+  time/version OUTRANKS the class->mode default (imported from #37's VERSIONED classifier map, with
+  `composite`/`unclassified` fallback classes).
+
+#40 remains the CONSUMER: it IMPORTS #37's canonical `selpol_rrf_v1` + `namespace_policy.py` (`ns_permitted` +
+`effective_allowed_namespaces` + `NamespaceRejectionPolicy`) + `classifier_policy.py` (the versioned
+class->temporal_intent map) READ-ONLY -- the ONE owner of each decision (A5 risk-6). #37 authors these in the
+SAME i33 wave, so OFF-MACHINE #40 PREFERS the canonical modules and falls back to a BYTE-EXACT REPLICA of each
+(recorded in `selection.import_sources`; verified identical under both). The NEW selpol behavior
+(catalog-independent supersession, branch->conflicted) proves at the orchestrator D-0077 mixed-namespace fold
+with #37's shipped selpol.
+
+## The i32 Tier-0 seam repairs (D-0092) -- the FIRST layer (HARDENED by i33 above)
+
+context.compile 0.4 plumbed the Tier-0 memory-architecture seams THROUGH the packet + selection (ADDITIVE
+over `context_packet/0.2` -- the schema string is unchanged; module semver `0.3.0 -> 0.4.0`). **The i32
+namespace model (single-namespace `filters.namespace`; the SELECTED-only `namespace_leak` backstop) is
+SUPERSEDED by the i33 closure above** (the effective-set intersection + the all-object scope-check +
+sanitized abort); the rest of the i32 seams below are hardened, not replaced:
 
 - **(U1) namespace is a HARD boundary, both ways.** `task_input.namespace` is passed as `filters.namespace`
   to the retriever AND `params.allowed_namespaces` to selpol. A packet NEVER carries a cross-namespace
@@ -99,8 +144,8 @@ repeats on real #36 hits).
   canonical `selpol_rrf_v1` by a resolved portable path (`_load_canonical_selpol`); the i30
   `selpol_reference.py` stub is RETIRED (deleted).
 - `Invoke-ContextCompiler.ps1` -- the thin entrypoint + the retriever seam (mock off-machine; real #36 `-Live`).
-- `skill.json` -- the `lifeorch.skill.manifest/0.1` manifest (version 0.3.0, contract 0.3).
-- `SCHEMA_NOTES.md` -- **the D-0077 fold contract** (every 0.2/0.3 schema/interface interpretation).
+- `skill.json` -- the `lifeorch.skill.manifest/0.1` manifest (version 0.5.0, contract 0.5).
+- `SCHEMA_NOTES.md` -- **the D-0077 fold contract** (every schema/interface interpretation; **s16 = i33**).
 - `WORK_ORDER.md`, `examples/`, `fixtures/`, `tests/`.
 - **cross-module (READ-ONLY import):** `../37-retrieval-eval/lib/selpol_rrf_v1.py` -- the ONE canonical
   selection-policy library #40 consumes (owned by #37; #40 never edits it).
@@ -141,7 +186,7 @@ cited span reproduces the text (`provenance.reproduced`).
 
 ## Tests
 ```bash
-python tests/context_compiler_tests.py                 # 162 assertions (acceptance a-g + canonical selpol/byte-identity/provenance/identity/expand)
+python tests/context_compiler_tests.py                 # 272 assertions (acceptance a-g + i33 namespace-closure/supersession/navigation/temporal-split/byte-identity)
 pwsh   tests/Invoke-ContextCompilerTests.ps1           # entrypoint end-to-end (mock)
 pwsh   tests/Invoke-ContextCompilerTests.ps1 -DbPath <#36 catalog> -RepoRoot <repo>   # -Live
 ```

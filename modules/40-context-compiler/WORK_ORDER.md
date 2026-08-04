@@ -1,23 +1,45 @@
-# Work Order: Context Compiler (`context.compile`) 0.4.0 -- i32 Tier-0 SEAM REPAIRS
+# Work Order: Context Compiler (`context.compile`) 0.5.0 -- i33 NAMESPACE-CLOSURE + SUPERSESSION-HARDENING
 
 **Contract targeted:** `CONTEXT_PACKET_CONTRACT.md` `context_packet/0.2` with **s4 PINNED (D-0089)** + the
-**i32 amendment (D-0092)** + `MEMORY_CONTRACT.md` A2/A3/**A4** + `MEMORY_ARCHITECTURE.md` s5/s9 · **Author:**
-CONTEXT-COMPILER-TIER0-i32 (2026-08-04) · **Roadmap entry:** `MODULE_ROADMAP.md#40-context-compiler` ·
-**Wave:** i32 (plan `fo-32-0fb25203`) · **Supersedes:** the i31 0.3.0 build (CONTEXT-COMPILER-SELPOL-i31,
-plan `fo-31-eca37c08`).
+**i32 amendment (D-0092)** + the **i33 amendment (D-0096)** + `MEMORY_CONTRACT.md` A2/A3/A4/**A5** +
+`MEMORY_ARCHITECTURE.md` s5/s9 · **Author:** CONTEXT-COMPILER-CLOSURE-i33 (2026-08-04) · **Roadmap entry:**
+`MODULE_ROADMAP.md#40-context-compiler` · **Wave:** i33 (plan `fo-33-d7b55e46`) · **Supersedes:** the i32 0.4.0
+build (CONTEXT-COMPILER-TIER0-i32, plan `fo-32-0fb25203`).
 
-### i32 delta (D-0092) -- Tier-0 seam repairs, ADDITIVE over context_packet/0.2 (schema string UNCHANGED; semver 0.3.0 -> 0.4.0)
-Plumbs the Tier-0 memory-architecture seams THROUGH the packet + selection (full interpretation:
-`SCHEMA_NOTES.md` s15): **(U1)** `namespace` is a HARD boundary passed BOTH ways (`filters.namespace` +
-`params.allowed_namespaces`) with a fail-closed `namespace_leak` backstop + namespace-guarded refs +
-multi-namespace-by-grant; **(U5)** a deterministic query-classification STAGE stamps `query_class` (one of the
-`MEMORY_ARCHITECTURE` s5 nine) into `task_input` + descriptor + identity and drives the temporal mode;
-**(U4)** `current_only` derives from `query_class` (explicit `time_horizon` overrides) + a `contradicts` edge
-among current selected evidence -> `conflicted`; **(U3)** the FOURTH region `working_memory` is RESERVED
-(present-but-empty; store is Tier 1); the selpol import passes the new i32 params + carries the new
-reason_codes. Off-machine (cloud python + REAL selpol 1.0.0): 203/203 -- the selpol NEW-behavior + `-Live`
-legs are DEFERRED to the orchestrator D-0077 mixed-namespace fold with #37's shipped 1.1.0. The i31 scope
-below is retained for reference.
+### i33 delta (D-0096) -- namespace closure + supersession hardening, ADDITIVE over context_packet/0.2 (schema string UNCHANGED; semver 0.4.0 -> 0.5.0)
+Hardens the packet/selection half (full interpretation: `SCHEMA_NOTES.md` **s16**): **(U1')** SAFETY-CRITICAL
+namespace CLOSURE -- `task_input.namespace` is a REQUEST not authorization; the compiler computes
+`effective_allowed_namespaces = intersection(REQUEST, control_plane GRANT)` and passes THAT (never the raw
+request) to selpol + the retriever, an EMPTY intersection FAILS CLOSED; the canonical `ns_permitted` (IMPORTED
+from #37) scope-checks EVERY packet-visible object and a cross-namespace object ANYWHERE ABORTS SANITIZED
+(count only; detail -> a privileged security log). **(U4')** candidate-INDEPENDENT supersession -- the
+per-candidate CATALOG `effective_current` signal is passed to selpol (pool-independent hard-filter under
+current_only); a supersession BRANCH -> `conflicted`. **(U2')** navigation vs evidence -- a
+`candidate_role=navigation` node ROUTES (navigation_refs) but is NEVER answer-evidence; navigational staleness
+never fails coverage. **(U3')** working_memory hardening -- CONTINUITY-authoritative + CONJUNCTIVE access
+(task_id AND effective-namespace) + reserved A5 `state_version`/store fields (store is Tier 1). **(U5')**
+query_class / temporal_intent SPLIT -- independent dimensions; explicit user time OUTRANKS the class default;
+the versioned classifier map is IMPORTED (composite/unclassified fallback). Packet identity now COVERS
+temporal_intent + the classifier policy id/version + the working-state state_version + the retrieval-plan/stage
+trace. #40 IMPORTS #37's `selpol_rrf_v1` + `ns_permitted` + the versioned class->mode map READ-ONLY; off-machine
+(#37 not yet at 1.2.0) #40 PREFERS the canonical + falls back to a marked SHIM (`selection.import_sources`).
+Off-machine (cloud python importing the REAL #37 lib): **272/272** -- the selpol 1.2.0 NEW-behavior +
+`-Live` legs are DEFERRED to the orchestrator D-0077 mixed-namespace fold. The i32/i31 scope below is retained
+for reference (the i32 namespace model is SUPERSEDED by U1' above; the rest is hardened, not replaced).
+
+### i33 acceptance criteria (a)-(g)
+(a) `effective_allowed_namespaces = intersection(request, grant)` computed + passed both ways; an empty
+intersection fails closed; EVERY packet-visible object scope-checked; a mixed-ns fixture proves NO cross-ns item
+(evidence OR diagnostic) reaches the packet -- only a count. (b) catalog `effective_current` passed to selpol
+(absent-successor superseded filtered at the fold); a branch -> `packet_disposition=conflicted`. (c)
+`candidate_role` consumed (navigation routes, never answer-evidence); navigational staleness does not fail
+coverage; provenance_mode honored. (d) `working_memory` continuity-authoritative + conjunctive access +
+`state_version` in packet identity; NO store built. (e) query_class/temporal_intent split with explicit-time
+override; versioned `classifier_policy` imported; packet identity covers it all. (f) imports selpol (`ns_permitted`
++ versioned map) READ-ONLY; P0-1 three-region + `non_execution:true` + P0-3 + P0-4 + P1-5 + A2 stay green;
+GATE TEST 3 (provenance-expansion + sanitized-abort on a namespaced fixture) passes; deterministic packet_id.
+(g) a #40-side test proving #40's selection == a direct `selpol_rrf_v1.select(...)` on the same candidates +
+new params. skill.json `0.4.0 -> 0.5.0`; SCHEMA_NOTES s16 records every A5/i33 interpretation.
 
 ---
 

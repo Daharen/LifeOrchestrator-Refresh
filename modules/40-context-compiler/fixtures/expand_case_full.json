@@ -46,9 +46,9 @@
   "packet": {
     "compiler": {
       "name": "context.compile",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "worker": "context_compiler.py",
-      "worker_version": "0.4.0"
+      "worker_version": "0.5.0"
     },
     "consumer_profile": {
       "chat_template_id": "qwen3p5-chatml-no-think",
@@ -74,8 +74,14 @@
         "the completion contract has no closing predicate",
         "packet_disposition is not 'answerable'"
       ],
-      "grant_snapshot_ref": "sha256:8fea70608d6dba499dd7afad6149cf3eb2238f545d6e5e6f2d4b448a3278ff39",
-      "permission_grants": [],
+      "grant_snapshot_ref": "sha256:a137ed9469a5ccd5de215248864d027d3c40be5c6cdb581a00197efc61361f8e",
+      "permission_grants": [
+        {
+          "namespaces": [
+            "core-docs"
+          ]
+        }
+      ],
       "policy": "read_only_compile",
       "provenance": "descriptor_authority_fields_only",
       "request_authority": null,
@@ -132,7 +138,7 @@
         "evidence_can_instruct": false,
         "evidence_item_count": 1,
         "evidence_populated_control_plane": false,
-        "grant_snapshot_ref": "sha256:8fea70608d6dba499dd7afad6149cf3eb2238f545d6e5e6f2d4b448a3278ff39"
+        "grant_snapshot_ref": "sha256:a137ed9469a5ccd5de215248864d027d3c40be5c6cdb581a00197efc61361f8e"
       },
       "packet_metrics": {
         "budget": 200,
@@ -154,7 +160,7 @@
         "provenance_reproduced_count": 1,
         "provenance_valid_all": true,
         "provenance_valid_count": 1,
-        "rendered_tokens": 480,
+        "rendered_tokens": 551,
         "requirements_missing": 0,
         "requirements_satisfied": 1,
         "requirements_total": 1
@@ -178,7 +184,7 @@
           "retrieval_rank": 1,
           "selected": true,
           "selection_rank": 1,
-          "selection_score": 26000000,
+          "selection_score": 24000000,
           "source_content_hash": "d4cc66a3622c59ba3a1a16cf24b72cecd0625db2fd4c810e30c1bf69154c0842",
           "source_path": "core-docs/summary.md",
           "vector_rank": null
@@ -263,7 +269,7 @@
             "rrf_score": 16393,
             "selection_policy_id": "selpol_rrf_v1",
             "selection_rank": 1,
-            "selection_score": 26000000,
+            "selection_score": 24000000,
             "vector_rank": null
           },
           "source_path": "core-docs/summary.md",
@@ -278,6 +284,7 @@
           "trust_domain": "repo_internal"
         }
       ],
+      "navigation_refs": [],
       "relevant_failures": [],
       "relevant_procedures": [],
       "similar_episodes": []
@@ -306,32 +313,53 @@
         "core-docs"
       ],
       "budget": 200,
-      "compiler_version": "0.4.0",
+      "classifier_policy": {
+        "id": "clsmap_v1",
+        "version": "1.0.0"
+      },
+      "compiler_version": "0.5.0",
       "consumer_profile": {
         "model_id": "llm.strong.qwen3p5-9b",
         "tokenizer_fingerprint": "unpinned_upper_bound_ceil_chars_div4",
         "tokenizer_id": "qwen3p5-9b"
       },
-      "control_plane_grant_snapshot_ref": "sha256:8fea70608d6dba499dd7afad6149cf3eb2238f545d6e5e6f2d4b448a3278ff39",
+      "control_plane_grant_snapshot_ref": "sha256:a137ed9469a5ccd5de215248864d027d3c40be5c6cdb581a00197efc61361f8e",
       "corpus_version": "digest_fixture_0001",
-      "current_only": true,
+      "current_only": false,
       "expansion_id": null,
+      "namespace_closure": {
+        "effective": [
+          "core-docs"
+        ],
+        "enforced": true,
+        "grant": [
+          "core-docs"
+        ],
+        "policy_id": "ns_closed_v1",
+        "policy_version": "1.0.0",
+        "request": [
+          "core-docs"
+        ]
+      },
       "omission_manifest_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "parent_packet_id": null,
       "query_class": "global_synthesis",
+      "retrieval_plan_digest": "sha256:40fdbe22457f20bf77733a6c8e0e2d1fde5830ddd3bf19f8ec9f78f2e559749b",
       "selected_record_version_ids": [
         "sum_spec_v1"
       ],
       "selection_policy": {
         "id": "selpol_rrf_v1",
-        "version": "1.0.0"
+        "version": "1.1.0"
       },
-      "task_descriptor_digest": "sha256:e8d087dd909bb0a1a173971cf7bda7646f46db92ad0c88515d97bc1c865bb1fe",
-      "task_id": "task_e8d087dd909bb0a1a173971cf7bda764"
+      "task_descriptor_digest": "sha256:8639688b7eef557e47d292ced53e158d208f24d0648eb139d8823022274186b1",
+      "task_id": "task_8639688b7eef557e47d292ced53e158d",
+      "temporal_intent": "any_valid_version",
+      "working_state_version": null
     },
     "non_execution": true,
     "omission_manifest": [],
-    "packet_id": "cpkt_5ed3652f6b5458e05177f2451aedd461",
+    "packet_id": "cpkt_90a2d1e5110709b94d4413f76db585f9",
     "rendering": {
       "evidence_delimiters": {
         "begin": "<<<EVIDENCE_BEGIN",
@@ -346,7 +374,7 @@
         "evidence"
       ],
       "rendered_input_artifact": "rendered_input.txt",
-      "rendered_input_sha256": "1271ae12b85675d6b7034ef429f9987d38fc803a0cb9bf6653eb1b5178cdc3e1",
+      "rendered_input_sha256": "5ff8c6998b90ade49dc61df21b1fe1b075796c13e3ed98a546131998b81b612c",
       "working_memory_delimiters": {
         "begin": "<<<WORKING_STATE_BEGIN",
         "end": "WORKING_STATE_END>>>"
@@ -366,7 +394,9 @@
       "query_set": [
         {
           "filters": {
-            "exclude_stale": true,
+            "effective_allowed_namespaces": [
+              "core-docs"
+            ],
             "namespace": "core-docs"
           },
           "k": 20,
@@ -374,10 +404,13 @@
           "purpose": "primary",
           "query": "context packet spec summary",
           "query_index": 0,
-          "temporal_mode": "current_only"
+          "temporal_mode": "any_valid_version"
         },
         {
           "filters": {
+            "effective_allowed_namespaces": [
+              "core-docs"
+            ],
             "namespace": "core-docs",
             "record_kind": "decision"
           },
@@ -386,10 +419,13 @@
           "purpose": "kind:decision",
           "query": "context packet spec summary",
           "query_index": 1,
-          "temporal_mode": "current_only"
+          "temporal_mode": "any_valid_version"
         },
         {
           "filters": {
+            "effective_allowed_namespaces": [
+              "core-docs"
+            ],
             "namespace": "core-docs",
             "record_kind": "summary"
           },
@@ -398,10 +434,13 @@
           "purpose": "kind:summary",
           "query": "context packet spec summary",
           "query_index": 2,
-          "temporal_mode": "current_only"
+          "temporal_mode": "any_valid_version"
         },
         {
           "filters": {
+            "effective_allowed_namespaces": [
+              "core-docs"
+            ],
             "namespace": "core-docs",
             "record_kind": "claim"
           },
@@ -410,7 +449,7 @@
           "purpose": "kind:claim",
           "query": "context packet spec summary",
           "query_index": 3,
-          "temporal_mode": "current_only"
+          "temporal_mode": "any_valid_version"
         }
       ],
       "retriever": "mock",
@@ -433,21 +472,24 @@
         "seeking_failures": false,
         "task_stage": "research",
         "task_type": "research",
-        "time_horizon": "current_only"
+        "temporal_intent": "any_valid_version",
+        "time_horizon": "any_valid_version"
       },
       "features_by_candidate": {
         "sum_spec_v1": {
           "authority": 1,
-          "base_score": 26000000,
+          "base_score": 24000000,
           "component": 0,
           "diversity_penalty": 0,
-          "effective_score": 26000000,
+          "effective_score": 24000000,
           "failure": 0,
           "freshness": 3,
           "hard_demote": false,
+          "is_stale": false,
+          "namespace_filtered": false,
           "occurrence_count": 1,
           "procedural": 0,
-          "project": 1,
+          "project": 0,
           "reason_codes": [
             "authority_boost",
             "fusion_rrf",
@@ -458,23 +500,37 @@
           "selected": true,
           "selection_rank": 1,
           "stale": false,
-          "task_stage": 1
+          "task_stage": 1,
+          "temporal_mode": "any_valid_version"
         }
       },
-      "i32_params": {
+      "i33_params": {
         "allowed_namespaces": [
           "core-docs"
         ],
-        "current_only": true,
-        "query_class": "global_synthesis"
+        "catalog_effective_current_passthrough": true,
+        "current_only": false,
+        "query_class": "global_synthesis",
+        "temporal_intent": "any_valid_version"
       },
-      "note": "IMPORTED from #37's canonical selpol_rrf_v1 (D-0089; the in-module reference stub is RETIRED). raw-fused-score-primary composite + AUTHORITY_RANK/freshness ranks + greedy source-MMR + occurrence-preserving display dedup; additive selection fields; the retrieval order is preserved (rank=index+1 untouched; selection is a separate ordering). i32 (D-0092) passes allowed_namespaces / current_only / query_class + carries the hard_filter_namespace / hard_filter_stale / superseded_demote reason_codes.",
+      "import_sources": {
+        "classifier_policy_id": "clsmap_v1",
+        "classifier_policy_source": "local_offmachine_replica_pending_37_canonical",
+        "classifier_policy_version": "1.0.0",
+        "ns_policy_id": "ns_closed_v1",
+        "ns_policy_version": "1.0.0",
+        "ns_predicate_source": "local_offmachine_replica_pending_37_canonical",
+        "selpol_policy_version": "1.1.0"
+      },
+      "note": "IMPORTED from #37's canonical selpol_rrf_v1 (D-0089; the in-module reference stub is RETIRED). raw-fused-score-primary composite + AUTHORITY_RANK/freshness ranks + greedy source-MMR + occurrence-preserving display dedup; additive selection fields; the retrieval order is preserved (rank=index+1 untouched; selection is a separate ordering). i33 (D-0096) passes the EFFECTIVE allowed_namespaces (intersection(request,grant)) + temporal_intent + query_class + per-candidate catalog effective_current + supersession edges, and imports #37's canonical ns_permitted (scope-check) + versioned class->mode map (all READ-ONLY). The NEW selpol behavior (catalog-independent supersession, branch->conflicted) proves at the orchestrator fold with #37's shipped 1.2.0.",
       "owner": "modules/37-retrieval-eval/lib/selpol_rrf_v1.py",
       "policy_id": "selpol_rrf_v1",
-      "policy_version": "1.0.0",
+      "policy_version": "1.1.0",
       "stages": [
+        "namespace_filter",
         "hard_filter",
         "temporal",
+        "supersession",
         "authority",
         "rank_fusion_rrf",
         "diversity",
@@ -485,9 +541,18 @@
       "allowed_namespaces": [
         "core-docs"
       ],
+      "classifier_policy_id": "clsmap_v1",
+      "classifier_policy_version": "1.0.0",
       "constraints": [],
-      "current_only": true,
+      "current_only": false,
       "namespace": "core-docs",
+      "namespace_enforced": true,
+      "namespace_grant": [
+        "core-docs"
+      ],
+      "namespace_request": [
+        "core-docs"
+      ],
       "normalized_task": "[research] context packet spec summary",
       "open_questions": [],
       "original_goal": "Explain the context packet spec.",
@@ -495,7 +560,9 @@
       "query_class_basis": "task_type",
       "requested_side_effects": [],
       "task_type": "research",
-      "time_horizon": "current_only"
+      "temporal_intent": "any_valid_version",
+      "temporal_intent_basis": "class_default:global_synthesis",
+      "time_horizon": "any_valid_version"
     },
     "token_budget": {
       "budget": 200,
@@ -521,9 +588,9 @@
       "dropped_for_transport": 0,
       "fits": true,
       "max_context": 8192,
-      "rendered_char_count": 1917,
-      "rendered_input_sha256": "1271ae12b85675d6b7034ef429f9987d38fc803a0cb9bf6653eb1b5178cdc3e1",
-      "rendered_tokens": 480,
+      "rendered_char_count": 2202,
+      "rendered_input_sha256": "5ff8c6998b90ade49dc61df21b1fe1b075796c13e3ed98a546131998b81b612c",
+      "rendered_tokens": 551,
       "reserved_generation_tokens": 1024,
       "reserved_system_tokens": 384,
       "reserved_tool_tokens": 0,
@@ -533,17 +600,38 @@
       "transport_overflow": false
     },
     "working_memory": {
-      "authority": "task_state_only",
+      "access_policy": "conjunctive_task_id_and_effective_namespace",
+      "authority": "continuity_authoritative",
       "can_instruct": false,
       "content_role": "working_state",
       "is_evidence": false,
       "item_count": 0,
       "items": [],
-      "note": "Reserved per-task working-memory region (CONTEXT_PACKET_CONTRACT i32/U3; MEMORY_CONTRACT A4 `working` kind). Task-authoritative for STATE, NOT execution authority (permissions live ONLY in control_plane) and NOT evidence. The per-task_id store is Tier 1; at Tier 0 this region is present-but-empty. Populated items carry content_role=working_state, can_instruct=false; render order control_plane -> task_input -> working_memory -> evidence.",
+      "namespace_enforced": true,
+      "namespace_scope": [
+        "core-docs"
+      ],
+      "note": "Reserved per-task working-memory region (CONTEXT_PACKET_CONTRACT i33/U3'; MEMORY_CONTRACT A5 `working` kind). CONTINUITY-authoritative (recorded current state of THIS task, NOT world-truth, NOT execution authority -- permissions live ONLY in control_plane; NOT evidence). Access is CONJUNCTIVE: task_id AND effective-namespace authorization. Items carry the A5 state_version (packet identity covers it). The per-task_id store + promotion are Tier 1; at Tier 0 this region is present-but-empty. Render order control_plane -> task_input -> working_memory -> evidence.",
       "present": false,
+      "reserved_store_fields": {
+        "content_hash": null,
+        "content_role": "working_state",
+        "created_from_packet_id": null,
+        "grant_snapshot_ref": "sha256:a137ed9469a5ccd5de215248864d027d3c40be5c6cdb581a00197efc61361f8e",
+        "lifecycle_state": "reserved",
+        "namespace_scope": [
+          "core-docs"
+        ],
+        "parent_state_version": null,
+        "state_version": null,
+        "task_id": "task_8639688b7eef557e47d292ced53e158d",
+        "working_state_id": null,
+        "writer_authority": "task_coordinator"
+      },
+      "state_version": null,
       "store_status": "reserved_no_store",
       "store_tier": "tier_1",
-      "task_id": "task_e8d087dd909bb0a1a173971cf7bda764"
+      "task_id": "task_8639688b7eef557e47d292ced53e158d"
     }
   },
   "request": {

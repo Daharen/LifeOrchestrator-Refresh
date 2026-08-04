@@ -1,4 +1,4 @@
-# context.compile 0.2 -- example invocations
+# context.compile 0.5 -- example invocations
 
 Deterministic, CPU-only, no model, no network. The retriever is INJECTED (mock off-machine; the real
 artifact.search #36 `search` op -Live). Produces `lifeorch.context_packet/0.2` (three regions +

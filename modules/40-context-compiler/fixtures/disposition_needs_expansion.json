@@ -105,6 +105,15 @@
       "per_excerpt_overhead_tokens": 2,
       "token_budget": 24
     },
+    "control_plane": {
+      "permission_grants": [
+        {
+          "namespaces": [
+            "core-docs"
+          ]
+        }
+      ]
+    },
     "evidence_requirements": [
       {
         "description": "the required detail literal",

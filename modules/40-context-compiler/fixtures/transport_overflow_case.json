@@ -66,6 +66,15 @@
       "reserved_system_tokens": 0,
       "reserved_tool_tokens": 0
     },
+    "control_plane": {
+      "permission_grants": [
+        {
+          "namespaces": [
+            "core-docs"
+          ]
+        }
+      ]
+    },
     "namespace": "core-docs",
     "original_goal": "Answer from the big source.",
     "relevant_paths": [

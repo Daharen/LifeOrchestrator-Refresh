@@ -95,6 +95,15 @@
     "core-docs/b.md": "snapshot two content.\n"
   },
   "task": {
+    "control_plane": {
+      "permission_grants": [
+        {
+          "namespaces": [
+            "core-docs"
+          ]
+        }
+      ]
+    },
     "namespace": "core-docs",
     "original_goal": "g",
     "request_text": "content"

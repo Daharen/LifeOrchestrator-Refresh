@@ -8,6 +8,15 @@
   "constraints": [
     "docs:[] -- workers do not edit core-docs"
   ],
+  "control_plane": {
+    "permission_grants": [
+      {
+        "namespaces": [
+          "core-docs"
+        ]
+      }
+    ]
+  },
   "namespace": "core-docs",
   "original_goal": "Ship the Wave 3 context compiler safely under the res.lease git lease.",
   "relevant_entities": [

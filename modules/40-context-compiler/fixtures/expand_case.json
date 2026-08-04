@@ -61,6 +61,15 @@
       "config": {
         "token_budget": 200
       },
+      "control_plane": {
+        "permission_grants": [
+          {
+            "namespaces": [
+              "core-docs"
+            ]
+          }
+        ]
+      },
       "namespace": "core-docs",
       "original_goal": "Explain the context packet spec.",
       "request_text": "context packet spec summary",

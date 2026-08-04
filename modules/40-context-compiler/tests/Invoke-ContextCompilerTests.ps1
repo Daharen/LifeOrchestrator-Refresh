@@ -42,12 +42,12 @@ function Run-CC([string[]]$ccArgs) {
     return $text | ConvertFrom-Json -Depth 60
 }
 
-Write-Host "== context.compile 0.4 entrypoint harness (i32 Tier-0 seam repairs) =="
+Write-Host "== context.compile 0.5 entrypoint harness (i33 namespace-closure + supersession-hardening) =="
 Write-Host "[mock: compile end-to-end over fixtures/compile_case.json -> context_packet/0.2]"
 $env1 = Run-CC @('-Op','compile','-Retriever','mock','-CaseFile',(Join-Path $Fix 'compile_case.json'))
 Check "envelope status ok/partial" ($env1.status -in @('ok','partial')) "status=$($env1.status)"
 Check "skill_id context.compile" ($env1.skill_id -eq 'context.compile')
-Check "skill_version 0.4.0" ($env1.skill_version -eq '0.4.0') "ver=$($env1.skill_version)"
+Check "skill_version 0.5.0" ($env1.skill_version -eq '0.5.0') "ver=$($env1.skill_version)"
 $packet = $env1.result.result.packet
 Check "packet schema 0.2" ($packet.schema -eq 'lifeorch.context_packet/0.2')
 Check "packet_id present" ($packet.packet_id -like 'cpkt_*')
@@ -55,9 +55,12 @@ Check "P0-1 non_execution true" ($packet.non_execution -eq $true)
 Check "P0-1 three regions present" ($null -ne $packet.control_plane -and $null -ne $packet.task_input -and $null -ne $packet.evidence)
 Check "control_plane descriptor-only provenance" ($packet.control_plane.provenance -eq 'descriptor_authority_fields_only')
 Check "i32/U3 working_memory reserved region present + empty (no store)" ($null -ne $packet.working_memory -and $packet.working_memory.present -eq $false -and @($packet.working_memory.items).Count -eq 0)
-Check "i32/U3 render order control->task->working_memory->evidence" (($packet.rendering.order -join ',') -eq 'control_plane,task_input,working_memory,evidence')
-Check "i32/U5 query_class stamped in task_input + identity" ($null -ne $packet.task_input.query_class -and $packet.identity.query_class -eq $packet.task_input.query_class)
-Check "i32/U1 allowed_namespaces stamped in task_input + identity" ($null -ne $packet.task_input.allowed_namespaces -and $null -ne $packet.identity.allowed_namespaces)
+Check "i33/U3' render order control->task->working_memory->evidence" (($packet.rendering.order -join ',') -eq 'control_plane,task_input,working_memory,evidence')
+Check "i33/U3' working_memory continuity-authoritative + conjunctive access + state_version in identity" ($packet.working_memory.authority -eq 'continuity_authoritative' -and $packet.working_memory.access_policy -eq 'conjunctive_task_id_and_effective_namespace' -and ($packet.identity.PSObject.Properties.Name -contains 'working_state_version'))
+Check "i33/U5' query_class stamped in task_input + identity" ($null -ne $packet.task_input.query_class -and $packet.identity.query_class -eq $packet.task_input.query_class)
+Check "i33/U5' temporal_intent + versioned classifier stamped in identity" ($null -ne $packet.identity.temporal_intent -and $null -ne $packet.identity.classifier_policy.id -and $null -ne $packet.identity.classifier_policy.version)
+Check "i33/U1' effective allowed_namespaces + namespace_closure stamped" ($null -ne $packet.task_input.allowed_namespaces -and $null -ne $packet.identity.allowed_namespaces -and $null -ne $packet.identity.namespace_closure.effective -and $null -ne $packet.identity.namespace_closure.policy_id)
+Check "i33 selection.import_sources records the canonical/replica policy provenance" ($null -ne $packet.selection.import_sources.ns_predicate_source -and $null -ne $packet.selection.import_sources.classifier_policy_source)
 Check "evidence excerpts present" (@($packet.evidence.excerpts).Count -gt 0)
 Check "every excerpt content_role=evidence/can_instruct=false" (@($packet.evidence.excerpts | Where-Object { $_.content_role -ne 'evidence' -or $_.can_instruct -ne $false }).Count -eq 0)
 Check "P0-3 packet_disposition present" ($null -ne $packet.disposition.packet_disposition)
@@ -110,10 +113,18 @@ Check "expansion schema 0.2" ($exp.schema -eq 'lifeorch.context_expansion/0.2')
 Check "expansion immutable + locked snapshot" ($exp.immutable -eq $true -and $exp.corpus_snapshot.locked_to_parent -eq $true)
 Check "expansion bounded within budget" ($exp.token_estimate -le $exp.budget_tokens)
 
-Write-Host "[mock: normalize op]"
+Write-Host "[mock: i33/U1' SANITIZED fail-closed on a mixed-namespace pool -- only a count, no leak]"
+$envM = Run-CC @('-Op','compile','-Retriever','mock','-CaseFile',(Join-Path $Fix 'namespace_mixed_case.json'))
+Check "mixed-namespace compile fails closed (status=error)" ($envM.status -eq 'error') "status=$($envM.status)"
+Check "fail-closed error_code = namespace_closure_violation" ($null -ne $envM.error -and $envM.error.code -eq 'namespace_closure_violation') "code=$(if($null -ne $envM.error){$envM.error.code})"
+$mblob = ($envM | ConvertTo-Json -Depth 60)
+Check "NO cross-namespace (projB) metadata leaks into the entrypoint envelope" (($mblob -notmatch 'projB') -and ($mblob -notmatch 'b_doc'))
+
+Write-Host "[mock: normalize op -- query_class + temporal_intent split (i33/U5')]"
 $envn = Run-CC @('-Op','normalize','-Task',(Join-Path $Fix 'task_only.json'))
 Check "normalize returns a query_set" ($envn.result.result.query_set.Count -gt 0)
 Check "original_goal preserved verbatim" ($envn.result.result.original_goal.Length -gt 0)
+Check "i33/U5' normalize stamps query_class + temporal_intent + classifier policy" ($null -ne $envn.result.result.query_class -and $null -ne $envn.result.result.temporal_intent -and $null -ne $envn.result.result.classifier_policy_id)
 
 if (-not [string]::IsNullOrWhiteSpace($DbPath)) {
     Write-Host "[-Live: REAL artifact.search #36 retriever-0.2 seam]"

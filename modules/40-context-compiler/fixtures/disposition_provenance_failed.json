@@ -60,6 +60,15 @@
     "config": {
       "token_budget": 500
     },
+    "control_plane": {
+      "permission_grants": [
+        {
+          "namespaces": [
+            "core-docs"
+          ]
+        }
+      ]
+    },
     "namespace": "core-docs",
     "original_goal": "Answer from the source.",
     "relevant_paths": [
