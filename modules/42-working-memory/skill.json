@@ -1,0 +1,45 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "working.memory",
+  "name": "Working Memory Store",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "i34 Tier-1 build (D-0090/D-0096/D-0077): the per-task WORKING-MEMORY STORE that MEMORY_CONTRACT Amendment A5 (U3') fully specified and RESERVED but did not build. Holds a task's evolving intermediate STATE across its iterative turns so a deepening task distinguishes its OWN current state from stale earlier state (the mechanical cure for iterative-prompt deterioration), kept STRICTLY out of long-term evidence + execution authority. A `working` record (lifeorch.memory_record/0.1, record_kind=working) is CONTINUITY-authoritative -- content_role=working_state, can_instruct=false; permissions live ONLY in a packet control_plane, never here. SQLite-backed store (working_state/0.1 sub-contract, SCHEMA_NOTES.md): immutable versioned snapshots; CAS on parent_state_version (stale-parent write FAILS CLOSED); exactly ONE active head per task_id; explicit fork; a SEPARATE fixed working-memory budget; a closed/archived state is not returned by get_active_head; PROMOTION emits a NEW derived long-term summary record (derives_from the working record, provenance_mode=derived_record) and NEVER re-labels the working record. CONJUNCTIVE isolation (task_id AND current-namespace authorization) -- the namespace half reuses #37's ONE canonical ns_permitted (imported READ-ONLY, A5 risk-6; never re-implemented); a cross-namespace access is fail-closed + sanitized (a namespace_violation_count only; identifying detail -> a privileged local security log). Ordinary search REJECTS record_kind=working (retrievable ONLY by an exact-task_id op). The compiler #40 consults get_active_head to render the packet working_memory region. Thin pwsh wrapper over a deterministic stdlib-only Python worker (working_memory.py); every emitted id/hash is content-derived -> canonical records byte-identical on a re-run of the same op sequence. CPU-only, no model, no network. NON-GOALS (later): packet assembly (#40), promotion POLICY/triggers/consolidation (Tier 2), embeddings, model use.",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-WorkingMemory.ps1",
+    "args_spec": "Named params: -Op put_state|get_active_head|list_by_task|fork|close|archive|promote|search. put_state: -TaskId -NamespaceScope(required for v1) -Body <json|path> [-ParentStateVersion n]. get_active_head|list_by_task|close|archive|promote: -TaskId. fork: -SourceTaskId -NewTaskId. search: [-RecordKind]. All access-controlled ops take -AllowedNamespaces (request) + -PermissionGrants (grant). OR generic -InputsJson '<json {op, task_id, namespace_scope, body, parent_state_version, source_task_id, new_task_id, allowed_namespaces, permission_grants, record_kind, grant_snapshot_ref, created_from_packet_id, writer_authority, store_path, ns_policy_path, python_path, worker_path}>'. Also -StorePath (persistent; default runtime/store/working_memory.db), -NsPolicyPath, -PythonPath, -WorkerPath, -ArtifactRoot, -InvocationId."
+  },
+  "inputs": [
+    { "name": "op", "type": "string", "required": true, "description": "put_state | get_active_head | list_by_task | fork | close | archive | promote | search." },
+    { "name": "task_id", "type": "string", "required": false, "description": "The task whose working state this op addresses (exact match; the task-isolation half of conjunctive access)." },
+    { "name": "namespace_scope", "type": "string", "required": false, "description": "put_state (a task's v1): the isolation namespace stamped on the task's state; immutable across its versions (never widened)." },
+    { "name": "body", "type": "object", "required": false, "description": "put_state: the state payload (an opaque canonical object) under the working-memory budget." },
+    { "name": "parent_state_version", "type": "int", "required": false, "description": "put_state: the CAS token -- must equal the current active head's state_version (null/0 for a task's v1); a mismatch FAILS CLOSED (cas_conflict)." },
+    { "name": "source_task_id", "type": "string", "required": false, "description": "fork: the task whose active head the new branch derives from." },
+    { "name": "new_task_id", "type": "string", "required": false, "description": "fork: the new branch task id (its own single active head; namespace inherited, never widened)." },
+    { "name": "allowed_namespaces", "type": "array", "required": false, "description": "The caller's namespace REQUEST (task_input.namespace analog). effective = intersection(request, grant)." },
+    { "name": "permission_grants", "type": "array", "required": false, "description": "The caller's control-plane namespace GRANT. Neither request nor grant widens the other." },
+    { "name": "record_kind", "type": "string", "required": false, "description": "search: proves the boundary -- record_kind=working is never retrievable via search." }
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "put_state: { op, task_id, namespace_scope, working_state_id, record_version_id, state_version, parent_state_version, content_hash, active_head_version, ns_policy_id, namespace_violation_count, records_digest } + artifact state.json (the working record envelope). get_active_head: { op, task_id, found, working_state_id?, state_version?, content_hash?, reason? } (+ state.json when found). list_by_task: { op, task_id, count, versions[] } (+ records.json). fork: { op, source_task_id, new_task_id, forked_from, state_version } (+ state.json). close|archive: { op, task_id, changed, lifecycle_state }. promote: { op, task_id, promoted_record_id, promoted_record_version_id, derives_from, promoted_record_kind=summary, working_record_unchanged } (+ promoted.json, source_working_state.json). search: { op, count=0, working_excluded_from_search=true, reason }. All access-controlled ops also carry namespace_violation_count + namespace_closure_violated (sanitized). Canonical record artifacts (state.json/records.json/promoted.json) are UTF-8 no BOM, sorted keys, byte-identical on a re-run of the same op sequence; identifying rejection detail goes to a privileged ns-security-log.jsonl (never returned).",
+    "record_kinds": ["working", "summary"]
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4", "python>=3.8"],
+    "models": [],
+    "libraries": [],
+    "cpu": "any", "gpu": "none", "memory_mb": 128,
+    "network": false, "filesystem": "read-write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": { "root": "runtime/artifacts/<invocation_id>/" },
+  "timeout": { "default_seconds": 120, "on_timeout": "kill_tree_and_report" },
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": true,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}
