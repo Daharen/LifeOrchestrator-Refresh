@@ -18,7 +18,7 @@ labels; full detail is in `DECISION_LOG.md`.
    -- never to enlarge it. Compact form: `superseded (was <state>)` / `folded (was <state>)` in the state cell
    + `[superseded by D-00yy]` / `[folded by D-00yy]` in the decision cell.
 5. **Compress at append time.** When you add a D-entry to `DECISION_LOG.md`, distill its index row to one
-   fragment from the start -- do NOT paste the entry's summary. Re-bloat begins here.
+   fragment from the start -- do NOT paste the entry's summary. Re-bloat begins here. Distill from the entry's DECISION and match the terse exemplars (e.g. D-0086..D-0089), NOT the newest rows -- which may have drifted.
 6. **Budget 20 KB (DOC_PROTOCOL s2).** An append-only index trends upward -- per-row discipline (rules 1-5) is
    the real guard; snapshot to `archive/doc-snapshots/<date>/` before any slim (history is never deleted).
 | id | date | state | decision |
@@ -112,6 +112,6 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0087 | 2026-08-02 | locked | Context-packet and memory contracts hardened for control/evidence separation and provenance |
 | D-0088 | 2026-08-03 | locked | Contract conformance shipped; selection-policy implementations found inconsistent |
 | D-0089 | 2026-08-03 | locked | Selection policy pinned to retrieval.eval canonical implementation; context.compiler must import it |
-| D-0090 | 2026-08-03 | locked | Adopt the full long-horizon memory architecture as the evidence-staged design target (NEW MEMORY_ARCHITECTURE.md + MEMORY_BENCHMARK.md + seam-audit digest): stored memory grows indefinitely while working context stays bounded; Tiers 0-3 (design-now vs build-now) with urgent Tier-0 seam repairs. |
-| D-0091 | 2026-08-03 | locked | Fan-out iteration 31 (SELECTION-POLICY SETTLE part 2/2): #40 context.compile 0.2.0->0.3.0 retires selpol_reference.py + imports #37's canonical selpol_rrf_v1/1.0.0; the D-0077 selpol fold PASSED on real #36 data (canonical selection stamped, valid context_packet/0.2, deterministic, 0 orphans; #41->#36 chain re-confirmed); the i30 pair-1 divergence RESOLVED, P1-1 one-selection-owner realized. NEXT = i32 Tier-0 memory seam repairs (D-0090). |
-| D-0092 | 2026-08-04 | provisional | Fan-out iteration 32 (Tier-0 memory seam repairs, part 1): MEMORY_CONTRACT A4 + CONTEXT_PACKET_CONTRACT i32 amendment make namespace a HARD retrieval/packet boundary (U1) + current_only mode + supersession-aware ranking + contradicts edge (U4), and reserve additive seams -- node/member_of_node/child_of_node hierarchy (U2), working record_kind + working_memory packet region (U3), frozen-open retriever channels + a query-classification stage (U5); 3-lane CPU conformance wave (#36/#37/#40) + a frontier red-team DISPATCHED. |
+| D-0090 | 2026-08-03 | locked | Adopt the full long-horizon memory architecture as the evidence-staged design target (Tiers 0-3, design-now vs build-now). |
+| D-0091 | 2026-08-03 | locked | Selection-policy settle (i31): context.compiler imports retrieval.eval's canonical selpol, resolving the i30 divergence. |
+| D-0092 | 2026-08-04 | provisional | Tier-0 seam repairs (i32, p1): contract amendments for hard-namespace, current/supersession, and reserved hierarchy/working/query seams. |
