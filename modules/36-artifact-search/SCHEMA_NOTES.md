@@ -351,19 +351,26 @@ where named. `SCHEMA_VERSION "3"->"4"`, `PRIOR_SCHEMA_VERSIONS=("1","2","3")`, `
 ### 12.1 (U1') namespace CLOSURE -- the canonical predicate, per-hop + all-object, sanitized rejection, homogeneous derivations
 
 - **ONE canonical predicate (the A5 mirror; risk 6).** `ns_permitted(candidate_namespace, effective_allowed)`
-  is a top-level PURE function: `effective_allowed is None` (UNSCOPED) -> True; a `None`/missing candidate
-  namespace under a closed set -> False (fail-closed); otherwise `str(candidate_namespace) in effective_allowed`
-  -- PURE membership, NO wildcard/prefix/parent/shared, an EMPTY set permits nothing. A5(f) requires this
-  predicate be authored ONCE (owned by #37 `lib/`, imported by #40) with #36 implementing the IDENTICAL decision
-  and the i33 fold asserting byte-identical accept/reject across the three. **MIRROR NOTE (recorded for the
-  fold):** at this worker's build time #37's standalone `ns_permitted` was NOT yet on disk (only
-  `modules/37-retrieval-eval/lib/selpol_rrf_v1.py` existed), so per the worker prompt's sanctioned fallback #36
-  MIRRORS the A5 semantics exactly, kept intentionally minimal + pure so the fold's byte-identity check is
-  trivial. **The fold MUST assert `ns_permitted` decisions are byte-identical between #36's mirror and #37's
-  canonical.** If they diverge, #36 adopts #37's (the canonical owner) with no semantic change expected.
+  is a top-level PURE function with EXACT-string membership -- NO wildcard/prefix/parent/child/shared/`all`:
+  `effective_allowed is None` (the UNSCOPED SENTINEL) -> **False** (permit NOTHING); an EMPTY closed set ->
+  False; a `None`/missing candidate namespace -> False; otherwise `str(candidate_namespace) in effective_allowed`
+  (a `_ns_normalize_allowed` mirror handles a raw list/str input). A5(f) requires this predicate be authored
+  ONCE (owned by #37 `lib/`, imported by #40) with #36 implementing the IDENTICAL decision and the i33 fold
+  asserting byte-identical accept/reject across the three. **MIRROR NOTE (recorded for the fold):** #37's
+  canonical is now on disk at **`modules/37-retrieval-eval/lib/namespace_policy.py`** (`ns_policy_id
+  ns_closed_v1`); #36's `ns_permitted` is a byte-identical-DECISION MIRROR of it (verify: both fail-close on
+  `None`, empty set, and a missing candidate; both do exact-string membership otherwise). Per #37's documented
+  design the `None` UNSCOPED case is handled by a SEPARATE caller GUARD that BYPASSES the predicate, NOT by the
+  predicate inventing "permit all": every #36 enforcement site (the FTS + exact chunk/record scope-checks,
+  `_chunk_passes`/`_record_passes`, the supersession-walk per-hop, the `list-records` edge walk, the all-hits
+  assertion) enforces `ns_permitted` ONLY when `effective_allowed is not None`; when it is `None` (no namespace
+  filter supplied) #36 skips enforcement (its standalone/admin/eval back-compat -- the compiler always supplies
+  the effective set, so the compiled path never hits this branch). **The fold's byte-identity assertion holds
+  unconditionally** (identical decisions on every `(candidate, set)` input, including `None`).
 - **The effective set is #36's ONLY dual-form site.** `effective_allowed_namespaces(filters)` returns `None`
-  (absent `filters.namespace` = UNSCOPED back-compat) or a `frozenset`; an explicit empty set/list stays EMPTY
-  (zero hits). The set carries BOTH the raw and the `_slug` form of each requested value because #36 stores TWO
+  (absent `filters.namespace` = UNSCOPED back-compat -> enforcement BYPASSED per the guard above) or a
+  `frozenset`; an explicit empty set/list stays EMPTY (zero hits -- the predicate fail-closes). The set carries
+  BOTH the raw and the `_slug` form of each requested value because #36 stores TWO
   namespace representations (records = raw envelope value; chunks = slugged `source_id`). This dual-form
   expansion is on the SET, not the predicate -- the predicate stays byte-identical to #37/#40 (the fold checks
   identical accept/reject on identical `(candidate, set)` inputs).

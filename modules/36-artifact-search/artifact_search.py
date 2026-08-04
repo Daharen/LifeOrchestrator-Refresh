@@ -1600,8 +1600,10 @@ class Catalog:
             for (svid, sns, sstatus, exists) in self._direct_successors(node):
                 if svid in seen:
                     continue                       # acyclic guard
-                # per-hop enforcement: same-namespace + within the caller's closed scope; else IGNORE the edge
-                if sns is None or sns != namespace or not ns_permitted(sns, effective_allowed):
+                # per-hop enforcement: same-namespace ALWAYS (no cross-ns supersession); AND within the caller's
+                # closed scope when one is supplied (None = UNSCOPED bypasses the predicate, same as every other
+                # enforcement site). A cross-namespace or out-of-scope successor edge is IGNORED (blocked per-hop).
+                if sns is None or sns != namespace or (effective_allowed is not None and not ns_permitted(sns, effective_allowed)):
                     continue
                 seen.add(svid)
                 if not exists:
@@ -1868,7 +1870,9 @@ class Catalog:
     def _chunk_passes(self, c, filters, effective_allowed):
         if filters.get("source") and c["source_id"] != _slug(filters["source"]):
             return False
-        if not ns_permitted(c["source_id"], effective_allowed):
+        # A5/U1': enforce the canonical predicate ONLY when a scope is supplied; None = UNSCOPED back-compat
+        # BYPASSES the predicate (never widens it -- the predicate itself fail-closes on None).
+        if effective_allowed is not None and not ns_permitted(c["source_id"], effective_allowed):
             return False
         if filters.get("type") and c["chunk_type"] != filters["type"]:
             return False
@@ -1879,7 +1883,8 @@ class Catalog:
         return True
 
     def _record_passes(self, r, filters, effective_allowed):
-        if not ns_permitted(r["namespace"], effective_allowed):
+        # A5/U1': enforce ONLY when a scope is supplied; None = UNSCOPED back-compat BYPASSES the predicate.
+        if effective_allowed is not None and not ns_permitted(r["namespace"], effective_allowed):
             return False
         # A5/U3': a `working` record surfaces ONLY under CONJUNCTIVE access -- the request scopes to its exact
         # task_id AND supplies an in-scope namespace authorization (task-isolation and namespace-isolation are
@@ -1920,7 +1925,7 @@ class Catalog:
                 c = self.conn.execute("SELECT * FROM chunks WHERE chunk_id=?", (r["chunk_id"],)).fetchone()
                 if c is None:
                     continue
-                if not ns_permitted(c["source_id"], effective_allowed):
+                if effective_allowed is not None and not ns_permitted(c["source_id"], effective_allowed):
                     self._ns_reject(violations, "source_chunk", c["chunk_id"], c["source_id"]); continue
                 if not self._chunk_passes(c, filters, effective_allowed):
                     continue
@@ -1938,7 +1943,7 @@ class Catalog:
                 rec = self.conn.execute("SELECT * FROM records WHERE record_version_id=?", (r["rvid"],)).fetchone()
                 if rec is None:
                     continue
-                if not ns_permitted(rec["namespace"], effective_allowed):
+                if effective_allowed is not None and not ns_permitted(rec["namespace"], effective_allowed):
                     self._ns_reject(violations, rec["record_kind"], rec["record_version_id"], rec["namespace"]); continue
                 if not self._record_passes(rec, filters, effective_allowed):
                     continue
@@ -1958,7 +1963,7 @@ class Catalog:
         want_records = (kind_filter is None or kind_filter in TYPED_RECORD_KINDS)
         if want_chunks:
             for c in self.conn.execute("SELECT * FROM chunks ORDER BY rel_path, chunk_index, chunk_id").fetchall():
-                if not ns_permitted(c["source_id"], effective_allowed):
+                if effective_allowed is not None and not ns_permitted(c["source_id"], effective_allowed):
                     # count a violation ONLY when the candidate would otherwise match the query (a real leak
                     # attempt), so an unscoped-corpus exact scan does not inflate the count with non-matches.
                     text0 = c["text"]
@@ -1984,7 +1989,7 @@ class Catalog:
                 text = rec["text"] or ""
                 occ = text.lower().count(ql)
                 path_hit = bool(rec["source_path"]) and ql in rec["source_path"].lower()
-                if not ns_permitted(rec["namespace"], effective_allowed):
+                if effective_allowed is not None and not ns_permitted(rec["namespace"], effective_allowed):
                     if occ > 0 or path_hit:
                         self._ns_reject(violations, rec["record_kind"], rec["record_version_id"], rec["namespace"])
                     continue
@@ -2266,23 +2271,40 @@ def _slug(s):
 # candidate's namespace string in the caller-supplied CLOSED effective set -- no wildcard/prefix/parent/shared.
 # ============================================================================================================
 
+def _ns_normalize_allowed(allowed):
+    # MIRROR of #37 `namespace_policy.normalize_allowed` (byte-identical decision): None -> None (the UNSCOPED
+    # sentinel); a str -> a singleton frozenset; any iterable -> a frozenset of str members (a None member is
+    # dropped; an empty input stays empty -> fail-closed). NO expansion of any kind.
+    if allowed is None:
+        return None
+    if isinstance(allowed, str):
+        return frozenset([allowed])
+    return frozenset(str(x) for x in allowed if x is not None)
+
+
 def ns_permitted(candidate_namespace, effective_allowed):
-    """The canonical Tier-0 namespace predicate (A5/U1'). `effective_allowed` is a CLOSED set (frozenset/set)
-    of permitted namespace tokens supplied by the caller (the compiler computes it = intersection(request,
-    grant); the retriever NEVER widens it), OR None = UNSCOPED (no namespace boundary engaged -- the documented
-    back-compat / admin / eval path). Returns True iff the candidate is permitted:
-      * effective_allowed is None            -> True  (unscoped)
-      * candidate_namespace is None/missing   -> False (a record with no namespace is never permitted under a
-                                                        closed set -- fail-closed)
+    """The canonical Tier-0 namespace predicate (A5/U1') -- a byte-identical-DECISION MIRROR of #37
+    `namespace_policy.ns_permitted` (now on disk at `modules/37-retrieval-eval/lib/namespace_policy.py`; the
+    fold asserts identical accept/reject across #36/#37/#40). `effective_allowed` is a CLOSED set of permitted
+    namespace tokens; membership is EXACT-STRING only -- NO wildcard/prefix/parent/child/shared/`all`. Returns
+    True iff the candidate is permitted:
+      * effective_allowed is None            -> False (the UNSCOPED SENTINEL: this predicate permits NOTHING.
+                                                       #36's 'no namespace filter supplied' back-compat is a
+                                                       SEPARATE caller guard that BYPASSES this predicate at the
+                                                       enforcement sites -- never a value the predicate invents,
+                                                       matching #37's documented design)
+      * an EMPTY closed set                   -> False (fail-closed: zero hits)
+      * candidate_namespace is None/missing   -> False (a record with no namespace is never in-scope)
       * otherwise                             -> str(candidate_namespace) in effective_allowed  (membership ONLY)
-    An EMPTY closed set permits NOTHING (fail-closed). There is NO implicit all/wildcard/prefix/parent/shared
-    namespace. The SAME predicate backs every retrieval stage, every graph hop, and the post-rank all-hits
-    assertion -- so a disagreement is exactly the `namespace_leak` fail-closed error (defense in depth)."""
+    """
     if effective_allowed is None:
-        return True
+        return False
+    allowed = effective_allowed if isinstance(effective_allowed, (set, frozenset)) else _ns_normalize_allowed(effective_allowed)
+    if not allowed:
+        return False
     if candidate_namespace is None:
         return False
-    return str(candidate_namespace) in effective_allowed
+    return str(candidate_namespace) in allowed
 
 
 def effective_allowed_namespaces(filters):
