@@ -41,6 +41,40 @@ split (the analog of `SKILL_CONTRACT.md` for the memory substrate). Rationale li
   "skill_activation_card"` + a **`derives_from`** edge to #38's `skl_` record -- a navigational derivative
   that fits the CLOSED s1 enum -- so a `record_kind = skill` search returns ONE owner. The card payload +
   Stage-1/2 seams are unchanged; only the kind + the edge change. Re-verify list = {#41 -> summary (this wave)}.
+- **Amendment A4 -- Tier-0 architectural-seam repairs (D-0092, i32).** Realizes the record/retriever half of the
+  seam audit (`research/2026-08-03-memory-architecture-seam-audit.md` s3) Tier-0 urgent corrections, governed by
+  `MEMORY_ARCHITECTURE.md` (D-0090); the packet/selection half is `CONTEXT_PACKET_CONTRACT.md` (its i32
+  amendment). ADDITIVE + backward-compatible -- a v0.1.1-conformant producer/consumer stays valid; the new
+  semantics bind where named. **(U1) `namespace` is a HARD retrieval boundary,** not a soft rank boost: the s3
+  `filters.namespace` is an ENFORCED filter -- a candidate whose envelope `namespace` is outside the requested
+  set is EXCLUDED before ranking; every hit carries its `namespace`; the retriever asserts all returned hits
+  match (a mismatch is a fail-closed error, never a low-ranked hit). Single-namespace is default; a
+  multi-namespace query passes an explicit set. `namespace` is a first-class catalog partition + the future
+  hierarchy/node partition key. **(U4) `current_only` is a real retrieval MODE + supersession is rank-affecting.**
+  The s3 `mode` gains `current_only`: any candidate whose s5 `status`/`currentness` is not `current` is
+  HARD-EXCLUDED (not demoted); `historical_as_of`/`version_specific`/`any_valid_version` (s6) may still request
+  stale/specific versions. A superseded record is ordered below its live successor by construction when both
+  match (selection: `CONTEXT_PACKET_CONTRACT` s4). NEW first-class edge **`contradicts`** joins the s1 edge set
+  (reserved-additive; detection is Tier 2 -- the edge exists now so a current-vs-current pair can drive packet
+  `conflicted`). **(U2) hierarchy seam (reserved-additive; NO tree at Tier 0):** the CLOSED s1 `record_kind`
+  enum gains **`node`** (a navigation node -- synopsis + bounded child list + time/authority ranges + key
+  entities + child ids + counts + lexical descriptors + embedding + synopsis provenance, `MEMORY_ARCHITECTURE`
+  s3 layer 6), and the s1 edge set gains **`member_of_node`** (record->node) + **`child_of_node`** (node->node).
+  #36's flat catalog admits a `node` record via the envelope + `record_edges` with a `schema_version` bump and
+  NO rewrite of sources/documents/versions/chunks; shortlist-and-descend + the tree build are Tier 1. Retrieval
+  + selection MUST stay hierarchy-agnostic at the candidate-pool interface (no new flat-top-k-only hardening).
+  **(U3) working-memory seam (reserved-additive; store at Tier 1):** the enum gains **`working`** -- a
+  per-`task_id` record carrying a task's evolving state across its iterative turns; it surfaces ONLY for its own
+  `task_id` (excluded from ordinary long-term retrieval by default), is `content_role != evidence` and NEVER
+  control-plane authority, and follows a promote/demote lifecycle (created during a task, archived at close).
+  Tier 0 reserves the kind + isolation so the compiler consults it as a DISTINCT packet region
+  (`CONTEXT_PACKET_CONTRACT`). **(U5) the retriever channel set is FROZEN OPEN:** s3
+  `retrieval_occurrences[].channel` is DATA -- graph/temporal/prior-use-statistics/code-symbol channels are
+  added as new `channel` values with no interface change; a consumer MUST NOT hard-code `{lexical, vector}`. The
+  query-classification stage that routes across channels lives in the compiler front
+  (`CONTEXT_PACKET_CONTRACT`); the router is Tier 1. **Re-verify list** = {#36 (retriever hard namespace +
+  `current_only` mode + the reserved kinds/edges + the additive migration + the schema-evolution gate test); #37
+  selpol + #40 compiler (`CONTEXT_PACKET_CONTRACT` i32); the `MEMORY_ARCHITECTURE` Tier-0 gate}.
 - **Adoption.** Wave 1 modules keep running as shipped at 0.1; each adopts 0.2 on its NEXT named revision
   (§9). Wave 2 NEW modules build to 0.2 from day one.
 - **Grounding.** The frozen shapes reconcile the two shipped-0.1 interfaces (#35 embedding.local, #36
@@ -53,7 +87,7 @@ split (the analog of `SKILL_CONTRACT.md` for the memory substrate). Rationale li
 The single change that most protects the architecture: define ONE generic envelope every retrievable object
 will satisfy, so file-chunks do **not** silently become the universal memory abstraction. A source chunk is
 ONE `record_kind` among the kinds the architecture already anticipates: `symbol`, `summary`, `decision`,
-`claim`, `episode`, `failure`, `procedure`, `skill`, `reminder`, `entity`, `relationship`. **This enum is
+`claim`, `episode`, `failure`, `procedure`, `skill`, `reminder`, `entity`, `relationship`, `node`, `working` (the last two added by A4). **This enum is
 CLOSED (D-0085):** a producer MUST NOT emit a kind outside it. In particular an episode's per-stage detail is
 STRUCTURAL -- it lives in the `episode` record `body` (a `stage_sequence` carrying the full stage detail)
 and/or `child_edges` (`has_stage`), NOT as a separate `episode_stage` record. Adding a kind requires a §0
@@ -91,7 +125,7 @@ stay; expose chunks through this envelope via a **view/adapter** (no premature w
 - `token_count`.
 - `embedding_space_id` -- nullable until embedded (§2).
 - `parent_edges` / `child_edges` -- first-class derivation + relationship edges (chunk<-document; later
-  summary<-descendants, symbol->symbol, decision supersedes decision). NOT denormalized path fields.
+  summary<-descendants, symbol->symbol, decision supersedes decision; **(A4)** `member_of_node`/`child_of_node` node membership + tree, `contradicts` conflicting claims). NOT denormalized path fields.
 
 **Chunk -> envelope mapping (Wave 1, normative for the #36 adapter):** `record_id` <- `document_id`+chunk
 locator; `record_version_id` <- `chunk_id` (occurrence, below); `record_kind`=`source_chunk`;
@@ -145,7 +179,7 @@ consumed a zero-vector-for-skipped + `input_status[]` -- BOTH are superseded):
 ## 3. Retriever contract 0.2
 
 Op `search`: `{ query, k, filters?, mode? }` -> a ranked hit array in DETERMINISTIC order. A consumer treats
-array position as rank (`rank = index + 1`) and NEVER re-sorts.
+array position as rank (`rank = index + 1`) and NEVER re-sorts. **(A4)** `filters.namespace` is an ENFORCED hard filter with an all-hits-match assertion; `mode` includes `current_only` (hard-excludes any non-`current` s5 status); `retrieval_occurrences[].channel` (below) is FROZEN OPEN -- do NOT hard-code `{lexical, vector}`.
 
 **Frozen hit fields:**
 
@@ -199,7 +233,7 @@ at least one of: `source_stale` (superseded document version); `derivation_stale
 (source version changed, edges need regeneration); `summary_stale` (a descendant changed); `authority_stale`
 (no longer governs current truth); `temporal_expiry` (`valid_to` passed); `deleted` (occurrence gone);
 `unverified` (ingestion/provenance check failed). Retrieval filters current-source queries on this without
-destroying historical memory; historical/version-specific queries (§6) may request stale/specific versions.
+destroying historical memory; historical/version-specific queries (§6) may request stale/specific versions. **(A4)** `current_only` is a real retriever mode: a non-`current` candidate is HARD-EXCLUDED, not demoted.
 The `{state, stale_reasons, verified}` OBJECT form is RETIRED (D-0085): the effective value is the single
 string `status`; any extra simultaneous reasons live in `attrs.stale_reasons`.
 

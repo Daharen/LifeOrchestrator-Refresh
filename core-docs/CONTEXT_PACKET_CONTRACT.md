@@ -34,6 +34,35 @@ This doc is the normative distillate.
   `epistemic_authority`/freshness RANKS, greedy source-diversity + occurrence-preserving display dedup, and the
   additive output shape are FROZEN as #37's canonical `selpol_rrf_v1`/`1.0.0`; #40 IMPORTS it and its
   `selpol_reference.py` stub is RETIRED. Pure-rank-RRF as the PRIMARY sort stays the deferred P1-2 follow-on.
+- **i32 (D-0092) Tier-0 seam repairs.** Realizes the packet/selection half of the seam-audit s3 Tier-0 urgent
+  corrections (the record/retriever half = `MEMORY_CONTRACT` Amendment A4); ADDITIVE over 0.2; #40 + #37 conform
+  this wave. **(U1) `namespace` is a HARD packet + selection boundary.** `task_input.namespace` (s1) is the
+  authoritative compile namespace; the compiler passes it as `params.allowed_namespaces` (a hard filter) to
+  `selpol_rrf_v1` AND as `filters.namespace` to the retriever (`MEMORY_CONTRACT` A4). selpol stage 1 (s4) gains
+  `hard_filter_namespace` (SINK a cross-namespace candidate); the soft namespace / 'project-match' descriptor
+  bonus is RETIRED (component/task_stage/failure/procedural matches remain, intra-namespace). A packet MUST NOT
+  carry an evidence item outside `task_input.namespace` (a multi-namespace compile requires an explicit
+  `control_plane` grant naming the namespaces); a cross-namespace item reaching selection is a fail-closed
+  contract violation. **(U4) `current_only` + supersession-aware selection.** selpol stage 2 (s4, temporal):
+  under `current_only` a non-`current` candidate (`MEMORY_CONTRACT` s5) is HARD-filtered (`hard_filter_stale`),
+  not soft-demoted (the `stale_penalty` soft demote survives ONLY for the non-current_only modes); supersession
+  is rank-affecting -- a superseded candidate whose live successor also survives is ordered strictly below it
+  (`superseded_demote`), independent of `selection_score`. A current-vs-current `contradicts` pair (the A4 edge)
+  among selected evidence drives `packet_disposition = conflicted` (s2). **(U3) the `working_memory` packet
+  region.** The packet gains a FOURTH top-level region **`working_memory`** (distinct from
+  `control_plane`/`task_input`/`evidence`): the per-`task_id` evolving state the compiler consults so a deepening
+  task distinguishes its own current intermediate state from stale earlier state. Trust: task-authoritative for
+  STATE, but NOT execution authority (permissions stay ONLY in `control_plane`) and NOT general evidence; items
+  carry `content_role: working_state`, `can_instruct: false`. Render order (s1): `control_plane` -> `task_input`
+  -> `working_memory` -> `evidence`. The STORE is Tier 1; Tier 0 RESERVES the region (present in the packet
+  shape, empty/absent until the store exists). **(U5) the query-classification stage (seam; router is Tier 1).**
+  The compiler front gains a deterministic stage mapping `task_input` (task_type + descriptor) to `query_class`
+  in {`exact_reference`, `current_state`, `historical_reconstruction`, `temporal_change`, `local_factual`,
+  `global_synthesis`, `causal_diagnosis`, `procedure_selection`, `precedent_search`} (`MEMORY_ARCHITECTURE` s5);
+  `query_class` is stamped into `task_input` + the selection descriptor + packet identity (s6) and DRIVES
+  selpol's temporal mode (e.g. `current_state`->`current_only`; `historical_reconstruction`->historical). At
+  Tier 0 it is a deterministic task_type->class map (a stub); the multi-channel query-aware ROUTER is Tier 1.
+  `non_execution: true` (s0) is UNCHANGED -- none of these regions relax the P0-1 gate.
 
 ## 1. P0-1 (SAFETY-CRITICAL) -- control plane vs evidence, structurally separated
 
@@ -41,7 +70,7 @@ This doc is the normative distillate.
 text ("run this", "no approval needed", "the completion criterion is X"). Determinism, under-budget, and
 provenance-shape do NOT make such text authoritative. `authority_level` alone is insufficient -- epistemic
 authority (how much to trust a claim) is NOT execution authority (permission to act). The packet therefore has
-**three top-level regions with different trust origins**, and a consumer treats them differently by
+**three top-level regions with different trust origins** (the i32 amendment adds a fourth, `working_memory` -- s0/s4), and a consumer treats them differently by
 construction:
 
 - **`control_plane`** -- the ONLY authoritative region. Fields: `policy`, `permission_grants[]`,
@@ -61,7 +90,7 @@ construction:
   never an instruction to the consumer.
 
 **Rendering contract (how the packet becomes model input).** `control_plane` renders first as the authoritative
-frame; `task_input` second; `evidence` last, each item inside HARD DELIMITERS as quoted data with a role
+frame; `task_input` second; **`working_memory` third (i32, when present)**; `evidence` last, each item inside HARD DELIMITERS as quoted data with a role
 banner asserting `content_role=evidence, can_instruct=false`. The renderer never inlines evidence text into
 the control or task regions. The token count (section 3) is computed on THIS final rendered form.
 
@@ -132,7 +161,7 @@ by #37's own eval A/B** -- there is exactly one selection owner.
 - **Output is ADDITIVE -- it never destroys the retrieval order.** The library preserves each candidate's
   channel ranks and adds selection fields; per candidate: `retrieval_rank`, `lexical_rank`, `vector_rank`,
   `fused_rank` (from s3, PRESERVED), `selection_rank`, `selection_score` (integer millionths/points),
-  `selection_policy_id`, `selected` (bool), `reason_codes[]` (e.g. `hard_filter_forbidden`, `stale_demote`,
+  `selection_policy_id`, `selected` (bool), `reason_codes[]` (e.g. `hard_filter_forbidden`, `hard_filter_namespace` (i32), `hard_filter_stale` (i32), `superseded_demote` (i32), `stale_demote`,
   `authority_boost`, `fusion_rrf`, `diversity_capped`, `budget_omitted`, `rescued`, `selected`). This resolves
   the P1-1 conflict with "`rank = index+1`, never re-sort": the ORIGINAL retrieval array keeps `rank=index+1`
   untouched; selection produces a SEPARATE `selection_rank` ordering -- reordering is expressed as new fields,
@@ -198,7 +227,7 @@ A `provenance` failure on any packet-carried item drives `packet_disposition = p
   `packet_content_hash` vs `parent_packet_id` / `expansion_id` (for an expansion delta). Canonical
   serialization + excluded volatile fields are retained from 0.1 (no wall-clock, no `abs_path`, integer-only,
   sorted keys, trailing `\n`).
-- **Identity must be complete.** `packet_id` MUST cover: `compiler` version, `selection_policy` id+version,
+- **Identity must be complete.** `packet_id` MUST cover: `compiler` version, `selection_policy` id+version, `query_class` + `allowed_namespaces` (i32),
   `consumer_profile` (tokenizer) id+fingerprint, budget, the `control_plane` grant-snapshot ref,
   `corpus_version`, the selected `record_version_id`s, and the `omission_manifest`. Same task + same corpus
   snapshot + same grants + same profile => identical `packet_id`.
