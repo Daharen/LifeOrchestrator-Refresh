@@ -1,87 +1,35 @@
-# FANOUT_AGENT_002 -- READY (i34 wave scoping)
+# FANOUT_AGENT_002 -- i34 Lane B (modules/37-retrieval-eval (skill `retrieval.eval`))
 
 ## Header
 - **Slot:** FANOUT_AGENT_002
 - **Status:** READY
-- **Wave / iteration:** i34 (plan id `fo-34-45fcbd0d` once planned)
-- **Lane:** CODING (CPU; GPU lane skipped this wave)
-- **Worker id / label:** w2-workmem (`42-working-memory`, NEW module)
-- **Module/area (exclusive):** `modules/42-working-memory/` ONLY (NEW module; skill `working.memory` 0.1.0)
+- **Wave / iteration:** i34 (plan `fo-34-584fd656`)
+- **Lane:** CPU
+- **Worker id / label:** HIERARCHY-EVAL-i34
+- **Module/area (exclusive):** modules/37-retrieval-eval (skill `retrieval.eval`), eval + fixtures
 - **GPU:** false
 - **Docs:** `[]`
 
 ## Mission
-Build the MEMORY_ARCHITECTURE **Tier 1** per-`task_id` **working-memory STORE** -- the seam A5 U3'
-(`MEMORY_CONTRACT.md`) fully specified and reserved but did not build. This is the store that lets a deepening
-task distinguish its OWN current intermediate state from stale earlier state (the mechanical cure for
-"deteriorates on iterative prompts"), kept strictly out of long-term evidence + execution authority. NEW module
-#42. Governs: `MEMORY_ARCHITECTURE.md` s4 (working type), s9-s10 (Tier 1); `MEMORY_CONTRACT.md` A4 (U3), A5 (U3');
-`CONTEXT_PACKET_CONTRACT.md` i32/i33 (the `working_memory` packet region -- your CONSUMER is #40, slot 003, in
-this wave's D-0077 cross-module smoke). Author a small `working_state/0.1` sub-contract (A5 U3' prefers it).
+MEASURE the Tier-1 hierarchy (CONTEXT_PACKET_CONTRACT i34 s7 + MEMORY_ARCHITECTURE Tier-1 gate, D-0098): navigation-cost (nodes examined vs leaf count -> sub-linear O(B*log_F N), p50/p95, NOT constant) + DUAL recall (hierarchy-PATH recall AND end-to-end PACKET-EVIDENCE recall) + shortlist regret + fallback frequency + stale-window recall + adversarial scale/mutation fixtures (identical path prefixes, dominant entity, rare decisive term, cross-cutting, multimodal/absent vectors, insert/delete/tombstone/move/split/collapse, mutation-during-regen, cross-namespace contamination, exact+global mixtures) + the Tier-1 gate set; scaffold + FLAG the ~200MB real-corpus rehearsal as the pre-freeze gate (synthetic scale is necessary, NOT sufficient). CPU-only, deterministic, no model; measures #36/#40 via the external_command/adapter seam (READ-ONLY). Governing: `core-docs/CONTEXT_PACKET_CONTRACT.md` i34 s7 + `research/2026-08-04-i34-hierarchy-design-redteam.md`.
 
 ## Unit (the full worker prompt)
-You are the #42 working-memory worker for i34 -- a BRAND-NEW module. Read `core-docs/START_HERE.md` +
-`core-docs/CURRENT_STATE.md` (esp. Known failures) + `MEMORY_ARCHITECTURE.md` s4 + `MEMORY_CONTRACT.md` A5 U3' +
-`CONTEXT_PACKET_CONTRACT.md` i32/i33 first; obey `SKILL_CONTRACT.md`. Follow #39 episode.record / #36
-artifact.search as the module-shape + SQLite precedent. Do ONE unit in `modules/42-working-memory/` only;
-`docs:[]`. A new module has NO skill.json yet -- create it (skill_id `working.memory`). Ship via `dev.ship`.
-
-**SCOPE IN (new module `working.memory` 0.1.0 + a `working_state/0.1` sub-contract in `SCHEMA_NOTES.md`):**
-1. **The `working` record + reserved store fields (A5 U3').** A per-`task_id` state record via the shared
-   envelope (`record_kind = working`), CONTINUITY-authoritative (the recorded current state of THIS task, NOT
-   world-truth, NOT execution authority): `content_role: working_state`, `can_instruct: false`, permissions live
-   ONLY in a packet's `control_plane` (never here). Store fields: `working_state_id`, `task_id`, `state_version`,
-   `parent_state_version`, `namespace_scope`, `grant_snapshot_ref`, `created_from_packet_id`, `content_hash`,
-   `lifecycle_state` (`active | closed | archived`), `content_role: working_state`, `writer_authority`.
-2. **Store semantics (freeze in the sub-contract, build now):** immutable versioned snapshots; **CAS on
-   `parent_state_version`** at update (a stale-parent write fails closed); **exactly ONE active head per task**;
-   explicit `fork`; a SEPARATE fixed working-memory budget (distinct from the evidence budget); a `closed` state
-   is NOT ordinarily retrievable; `archive != evidence`; **PROMOTION creates a NEW derived long-term record** with
-   provenance + validation (never re-labels the working record).
-3. **Conjunctive isolation (A5 U3').** Access requires `task_id` AND current-namespace authorization -- task-
-   isolation and namespace-isolation are DIFFERENT mechanisms; an operation never widens parent scope. Reuse #37's
-   canonical `lib/namespace_policy.py` `ns_permitted` (imported READ-ONLY) for the namespace half -- do NOT
-   re-implement the predicate (A5 risk-6).
-4. **Ops (skill.json).** At least: `put_state` (append a new version under CAS -> new active head), `get_active_head`
-   (by `task_id` + effective namespace, conjunctive), `fork`, `close`, `archive`, `list_by_task` (exact-`task_id`
-   only), `promote` (emit a derived long-term record + provenance, return its ref). Deterministic; JSON envelope on
-   stdout only (diagnostics to stderr).
-5. **`search` REJECTS `working` by default (A5 U3').** Working records are retrievable ONLY by an exact-`task_id`
-   op here -- NOT by ordinary long-term `search`. Provide/prove the rejection at THIS module's boundary (and note
-   the requirement for #36 -- but do not modify #36; #36's own `search` working-rejection is slot 001's / already
-   in the contract). "Excluded by default" is too weak: enforce it.
-
-**SCOPE OUT:** NO packet assembly / no `working_memory` packet REGION rendering (that is #40, slot 003 -- you
-expose the READ op it calls). NO promotion policy/triggers beyond the mechanical `promote` op (consolidation is
-Tier 2). NO 9B/model. NO changes to #36/#37/#40 or any other module. Keep the store a SEPARATE store from #36's
-searchable catalog (working memory must never enter the long-term retrieval pool).
-
-**GATES.** Off-machine cloud gate FIRST -> `-Live` on the Windows executor -> `dev.ship`. Prove: CAS rejects a
-stale-parent write; exactly one active head invariant holds under concurrent-ish writes; a closed/archived state is
-not returned by `get_active_head`; conjunctive access denies a wrong-namespace caller fail-closed with no leakage;
-`promote` yields a valid long-term derived record with `derives_from` provenance (never re-labeling). Double-run
-byte-identity on canonical outputs (pwsh determinism traps -- CURRENT_STATE). Record every interpretation +
-the `working_state/0.1` sub-contract in `modules/42-working-memory/SCHEMA_NOTES.md`. Report plainly if a seam is
-impractical (D-0061).
+The complete, self-contained worker prompt -- scope IN/OUT, acceptance, gates, and the appended res.lease +
+report commands for plan `fo-34-584fd656` -- is at:
+`modules/30-orchestrate-fanout/runtime/artifacts/1e8f4363-630e-4b29-b895-5bdf0096828c/workers/worker-HIERARCHY-EVAL-i34.prompt.md`
+(also delivered to Nicholas as a file). READ IT IN FULL AND EXECUTE IT. Pull D-0098 (A6/i34) / D-0096 (A5) /
+D-0092 (A4) / D-0077 (the cross-module smoke) from `core-docs/DECISION_LOG_INDEX.md`.
 
 ## Rails
-Standing rules: `core-docs/fanout/FANOUT_AGENT_TEMPLATE.md`. Acquire res.lease in gpu->git->doc order (git only
-this wave); release on exit. ONE unit, module-exclusive, `docs:[]`. New module: OMIT skill_id/skill_dir in the
-plan until skill.json exists; create it as part of the unit. Gate off-machine first, then `exec-job.sh devship`;
-files reach the box via SendUserFile + device_commit_files; 0 orphaned llama-server/python. Report: `-Action
-report -PlanId fo-34-45fcbd0d -WorkerId w2-workmem -State done` + a plain measured summary.
+- Read `core-docs/START_HERE.md` + `core-docs/CURRENT_STATE.md` 'Known failures' first; obey `SKILL_CONTRACT.md`.
+- docs:[] -> no doc lease; CPU lane -> no gpu lease; take the `git` lease ONLY around your dev.ship commit, release after.
+- Do ONE unit; never touch another module (except a READ-ONLY import where the brief allows) or ANY core-doc (the orchestrator mirrors). Gate off-machine FIRST,
+  then dev.ship (named files, FAIL-CLOSED); VERIFY the real HEAD via native git (D-0072). 0 UNMANAGED orphans.
+- Report: `-Action report -PlanId fo-34-584fd656 -WorkerId HIERARCHY-EVAL-i34 -State done` + a plain measured summary
+  (negative results are first-class, the D-0061 ethos).
 
 ## Verification
-- New module scaffolded (`Invoke-WorkingMemory.ps1` + `skill.json` + `tests/` + `SCHEMA_NOTES.md` with the
-  `working_state/0.1` sub-contract), invocable via the Module 1 wrapper.
-- CAS: a write on a stale `parent_state_version` FAILS CLOSED; a correct-parent write advances the single active head.
-- One-active-head invariant proven; `fork` creates an explicit divergent head; `close`/`archive` remove a task
-  from `get_active_head`.
-- Conjunctive access: right `task_id` + wrong namespace -> fail-closed, no leakage; `ns_permitted` byte-identical
-  to #37 canonical.
-- Ordinary `search` semantics reject `record_kind = working`; only exact-`task_id` ops return working state.
-- `promote` emits a NEW derived long-term record + `derives_from` provenance (working record NOT re-labeled).
-- Suite green cloud + `-Live`; a fresh Verification-Console `run_module` item if runnable; 0 orphans.
+navigation-cost across >=2 orders of magnitude asserted sub-linear (log-shaped, p50+p95, not constant); DUAL recall (path + packet-evidence) both reported; shortlist regret + fallback frequency + stale-window recall; the adversarial fixtures with KNOWN pinned outcomes (incl mutation-during-regen + cross-ns contamination + rare-decisive-term); the Tier-1 gate set (structural/security/mutation/retrieval/complexity) as deterministic checks; the ~200MB rehearsal harness scaffolded + FLAGGED as an open pre-freeze gate (not claimed passed on synthetic). All shipped eval tests green; deterministic byte-identical; eval/skill version bumped.
 
-## Report-back record
-_(Orchestrator fills from `plans/fo-34-45fcbd0d/reports/` before archiving.)_
+## Report-back record (ORCHESTRATOR fills from plans/<id>/reports/ at fold)
+_pending -- filled at the i34 fold._
