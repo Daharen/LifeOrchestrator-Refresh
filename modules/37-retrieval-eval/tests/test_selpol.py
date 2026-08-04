@@ -117,29 +117,42 @@ check("BUDGET: max_selected caps selected[]", len(bud["selected"]) == 2)
 check("BUDGET: overflow recorded in omission_manifest with reason", len(bud["omission_manifest"]) == 1 and bud["omission_manifest"][0]["reason"] == "max_selected")
 check("BUDGET: omitted candidate carries budget_omitted reason", any("budget_omitted" in h["reason_codes"] for h in bud["ranked"] if not h["selected"]))
 
-# ================================================================= i32 (D-0092) additive stages
+# ================================================================= i33 (D-0096) NAMESPACE CLOSURE + hardening
 
-# ---- 8. hard_filter_namespace (U1): cross-namespace SUNK; soft project bonus retired when engaged ----
-ns_cands = [hit(1, "in.md", "IN", 900000, ns="projX"), hit(2, "out.md", "OUT", 800000, ns="projY"),
+# ---- 8. i33/U1' namespace CLOSURE: a cross-namespace candidate is DROPPED (sanitized), not sunk-in-place ----
+ns_cands = [hit(1, "in.md", "IN", 900000, ns="projX"), hit(2, "out.md", "OUT", 950000, ns="projY"),
             hit(3, "in2.md", "IN2", 700000, ns="projX")]
 res8 = sp.select(ns_cands, {"namespace": "projX"}, "selpol_rrf_v1", {"allowed_namespaces": ["projX"]})
-outh = [h for h in res8["ranked"] if h["source_path"] == "out.md"][0]
-check("U1 hard_filter_namespace: cross-namespace candidate SUNK + not selected",
-      outh["selected"] is False and "hard_filter_namespace" in outh["reason_codes"])
-inh = [h for h in res8["ranked"] if h["source_path"] == "in.md"][0]
-check("U1: in-namespace candidate selected", inh["selected"] is True)
-check("U1: soft project bonus RETIRED when allowed_namespaces supplied (project feature == 0 for all)",
+paths8 = [h["source_path"] for h in res8["ranked"]]
+check("U1' closure: cross-namespace candidate DROPPED from ranked[] entirely (no leak)", "out.md" not in paths8)
+check("U1' closure: cross-namespace candidate absent from selected[] too",
+      "out.md" not in [h["source_path"] for h in res8["selected"]])
+check("U1' closure: cross-namespace candidate leaves NO features_by_candidate entry",
+      "rv_out.md_2" not in res8["features_by_candidate"])
+check("U1' closure: SANITIZED surface -> namespace_violation_count == 1 (the ONLY caller-visible signal)",
+      res8["namespace_violation_count"] == 1 and res8["namespace_closure_violated"] is True)
+check("U1' closure: in-namespace candidates survive + selected", set(paths8) == {"in.md", "in2.md"})
+check("U1' closure: soft project bonus RETIRED when allowed_namespaces supplied (project feature == 0)",
       all(f["project"] == 0 for f in res8["features_by_candidate"].values()))
-check("U1: cross-namespace item flagged namespace_filtered==True in its features",
-      res8["features_by_candidate"][outh["record_version_id"]]["namespace_filtered"] is True)
+check("U1' closure: the canonical predicate/policy is stamped in the result (ns_closed_v1)",
+      res8["namespace_policy_id"] == sp.NS_POLICY_ID and sp.NS_POLICY_ID == "ns_closed_v1")
+# the privileged security log carries the identifying detail (caller routes it to a local sink; NOT the packet)
+rp8 = sp.NamespaceRejectionPolicy()
+res8p = sp.select(ns_cands, {}, "selpol_rrf_v1", {"allowed_namespaces": ["projX"], "rejection_policy": rp8})
+check("U1' closure: privileged security_log captures the dropped candidate's identifying detail",
+      len(rp8.security_log) == 1 and rp8.security_log[0]["source_path"] == "out.md"
+      and rp8.security_log[0]["reason_code"] == "namespace_closure_violation")
+check("U1' closure: caller_summary() is sanitized (count only, NO identifying detail)",
+      rp8.caller_summary() == {"namespace_violation_count": 1, "namespace_closure_violated": True})
 res8bc = sp.select(ns_cands, {"namespace": "projX"}, "selpol_rrf_v1", None)
-check("U1 back-compat: absent allowed_namespaces -> soft project bonus PRESERVED (project feature == 1 for a match)",
+check("U1' back-compat: absent allowed_namespaces -> soft project bonus PRESERVED (project == 1 for a match)",
       any(f["project"] == 1 for f in res8bc["features_by_candidate"].values()))
-check("U1 back-compat: absent allowed_namespaces -> NO namespace hard filter (all selectable)",
-      all("hard_filter_namespace" not in h["reason_codes"] for h in res8bc["ranked"]))
-# empty allowed_namespaces = fail-closed (filter EVERYTHING)
+check("U1' back-compat: absent allowed_namespaces -> NO closure (all three candidates present + selectable)",
+      len(res8bc["ranked"]) == 3 and res8bc["namespace_violation_count"] == 0)
+# empty allowed_namespaces = fail-closed (drop EVERYTHING)
 res8e = sp.select(ns_cands, {}, "selpol_rrf_v1", {"allowed_namespaces": []})
-check("U1: an EMPTY allowed_namespaces set fails closed (nothing selected)", len(res8e["selected"]) == 0)
+check("U1' closure: an EMPTY allowed_namespaces set fails closed (0 ranked, 0 selected, 3 violations)",
+      len(res8e["ranked"]) == 0 and len(res8e["selected"]) == 0 and res8e["namespace_violation_count"] == 3)
 
 # ---- 9. current_only HARD stale filter + prefer_current SOFT demote + 'any' allows stale (U4) ----
 mix = [hit(1, "cur.md", "CUR", 900000, status="current"),
@@ -186,25 +199,31 @@ check("U4 contradicts: a SELECTED contradicts pair is surfaced in contradicts_pa
 check("U4 contradicts: the edge is stamped on the involved features (contradicts_with)",
       r_con["features_by_candidate"]["cl_a"].get("contradicts_with") == ["cl_b"])
 
-# ---- 11. query_class -> temporal mode (U5) deterministic default ----
+# ---- 11. i33/U5' query_class -> temporal_intent default (semantic vs temporal split) ----
 qcstale = hit(1, "s.md", "SS", 900000, status="source_stale")
 qccur = hit(2, "c.md", "CC", 800000, status="current")
 r_cs = sp.select([qcstale, qccur], {"query_class": "current_state"}, "selpol_rrf_v1", None)
 csh = [h for h in r_cs["ranked"] if h["source_path"] == "s.md"][0]
-check("U5 current_state -> current_only (HARD): stale excluded",
-      csh["selected"] is False and "hard_filter_stale" in csh["reason_codes"])
+check("U5' current_state -> current_only (HARD): stale excluded; temporal_intent stamped",
+      csh["selected"] is False and "hard_filter_stale" in csh["reason_codes"] and r_cs["temporal_intent"] == "current_only")
 r_hr = sp.select([qcstale, qccur], {"query_class": "historical_reconstruction"}, "selpol_rrf_v1", None)
 hrh = [h for h in r_hr["ranked"] if h["source_path"] == "s.md"][0]
-check("U5 historical_reconstruction -> allow stale: NOT filtered",
-      hrh["selected"] is True and "hard_filter_stale" not in hrh["reason_codes"])
+check("U5' historical_reconstruction -> historical_as_of (allow stale): NOT filtered",
+      hrh["selected"] is True and "hard_filter_stale" not in hrh["reason_codes"] and r_hr["temporal_intent"] == "historical_as_of")
 r_lf = sp.select([qcstale, qccur], {"query_class": "local_factual"}, "selpol_rrf_v1", None)
 lfh = [h for h in r_lf["ranked"] if h["source_path"] == "s.md"][0]
-check("U5 local_factual -> prefer_current (SOFT): stale_demote, still selectable",
-      lfh["selected"] is True and "stale_demote" in lfh["reason_codes"])
-check("U5 mode map is complete for the 9 classes",
-      sorted(sp.QUERY_CLASS_TEMPORAL_MODE.keys()) == sorted(["exact_reference", "current_state",
+check("U5' local_factual -> any_valid_version (allow, NO soft demote): still selectable, no stale reason",
+      lfh["selected"] is True and "stale_demote" not in lfh["reason_codes"]
+      and "hard_filter_stale" not in lfh["reason_codes"] and r_lf["temporal_intent"] == "any_valid_version")
+# the surviving prefer_current SOFT mode is now explicit-only (back-compat), not a class default
+r_pc2 = sp.select([qcstale, qccur], {}, "selpol_rrf_v1", {"temporal_mode": "prefer_current"})
+pch = [h for h in r_pc2["ranked"] if h["source_path"] == "s.md"][0]
+check("U5' prefer_current is explicit-only (back-compat soft demote survives via params.temporal_mode)",
+      pch["selected"] is True and "stale_demote" in pch["reason_codes"])
+check("U5' class->intent map complete: 9 classes + composite + unclassified fallbacks",
+      sorted(sp.CLASS_TO_TEMPORAL_INTENT.keys()) == sorted(["exact_reference", "current_state",
             "historical_reconstruction", "temporal_change", "local_factual", "global_synthesis",
-            "causal_diagnosis", "procedure_selection", "precedent_search"]))
+            "causal_diagnosis", "procedure_selection", "precedent_search", "composite", "unclassified"]))
 
 # ---- 12. open channel set (U5): an explicit 3rd 'graph' channel fuses with NO code change ----
 g = hit(1, "g.md", "GG", 500000)
@@ -240,10 +259,93 @@ check("REGRESSION: omission_manifest BYTE-IDENTICAL to 1.0.0",
       _rsha(rgD["omission_manifest"]) == "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945")
 
 # ---- 14. version + stages + additive result surface ----
-check("POLICY_VERSION is 1.1.0", sp.POLICY_VERSION == "1.1.0")
-check("stages list adds namespace_filter + supersession (i32)",
-      "namespace_filter" in rgA["stages"] and "supersession" in rgA["stages"])
+check("POLICY_VERSION is 1.2.0", sp.POLICY_VERSION == "1.2.0")
+check("stages list adds namespace_filter + supersession", "namespace_filter" in rgA["stages"] and "supersession" in rgA["stages"])
 check("contradicts_pairs present in every result (additive)", "contradicts_pairs" in rgA)
+check("i33 additive result keys present", all(k in rgA for k in
+      ("supersession_conflicts", "conflicted", "temporal_intent", "classifier_policy_id",
+       "classifier_policy_version", "namespace_policy_id", "namespace_violation_count")))
+
+# ================================================================= i33 (D-0096) new-unit gates
+
+# ---- 15. the canonical ns_permitted predicate (accept / reject / empty / None / no-widening) ----
+import lib.namespace_policy as nsp  # noqa: E402
+import lib.classifier_policy as clsp  # noqa: E402
+check("ns_permitted: exact member accepted", nsp.ns_permitted("A", frozenset(["A", "B"])) is True)
+check("ns_permitted: non-member rejected", nsp.ns_permitted("C", frozenset(["A", "B"])) is False)
+check("ns_permitted: EMPTY set rejects (fail-closed)", nsp.ns_permitted("A", frozenset()) is False)
+check("ns_permitted: None set rejects (fail-closed; no implicit all)", nsp.ns_permitted("A", None) is False)
+check("ns_permitted: NO prefix widening", nsp.ns_permitted("A/sub", frozenset(["A"])) is False)
+check("ns_permitted: NO parent widening", nsp.ns_permitted("A", frozenset(["A/sub"])) is False)
+check("ns_permitted: a candidate with no namespace is rejected", nsp.ns_permitted(None, frozenset(["A"])) is False)
+check("ns_permitted: accepts a raw list/str (normalizes)", nsp.ns_permitted("A", ["A", "B"]) is True and nsp.ns_permitted("A", "A") is True)
+
+# ---- 16. effective_allowed_namespaces = intersection(request, grant); request cannot widen grant ----
+check("intersection(request, grant)", nsp.effective_allowed_namespaces(["A", "B", "C"], ["B", "C", "D"]) == frozenset(["B", "C"]))
+check("intersection: request cannot WIDEN the grant", nsp.effective_allowed_namespaces(["A", "Z"], ["A"]) == frozenset(["A"]))
+check("intersection: a None grant grants nothing (fail-closed)", nsp.effective_allowed_namespaces(["A"], None) == frozenset())
+check("intersection: a None request requests nothing (fail-closed)", nsp.effective_allowed_namespaces(None, ["A"]) == frozenset())
+check("intersection: disjoint sets -> empty (fail-closed)", nsp.effective_allowed_namespaces(["A"], ["B"]) == frozenset())
+
+# ---- 17. NamespaceRejectionPolicy: count + privileged log + sanitized summary ----
+rp = nsp.NamespaceRejectionPolicy()
+rp.reject({"namespace": "nsZ", "record_version_id": "rvZ", "source_path": "z.md"}, frozenset(["nsA"]))
+rp.reject({"namespace": "nsY", "record_version_id": "rvY", "source_path": "y.md"}, frozenset(["nsA"]))
+check("rejection policy: violation_count accumulates", rp.violation_count == 2)
+check("rejection policy: security_log carries the privileged identifying detail", len(rp.security_log) == 2 and rp.security_log[0]["source_path"] == "z.md")
+check("rejection policy: caller_summary sanitized (count + flag ONLY, no ids/paths)",
+      rp.caller_summary() == {"namespace_violation_count": 2, "namespace_closure_violated": True}
+      and "source_path" not in rp.caller_summary())
+
+# ---- 18. pool-INDEPENDENT current_only: effective_current==False with an ABSENT successor is excluded ----
+old_abs = hit(1, "old.md", "OLD", 990000, status="superseded", ns="nsA")
+old_abs["record_version_id"] = "rv_old"; old_abs["effective_current"] = False
+old_abs["effective_current_successor"] = "rv_successor_ABSENT_from_pool"
+cur_a = hit(2, "cur.md", "CUR", 400000, status="current", ns="nsA"); cur_a["effective_current"] = True
+r_pi = sp.select([old_abs, cur_a], {}, "selpol_rrf_v1", {"allowed_namespaces": ["nsA"], "current_only": True})
+oldr = [h for h in r_pi["ranked"] if h["source_path"] == "old.md"][0]
+check("U4' pool-independent: superseded w/ ABSENT successor HARD-filtered under current_only",
+      oldr["selected"] is False and "hard_filter_stale" in oldr["reason_codes"])
+check("U4' pool-independent: the current candidate survives", any(h["source_path"] == "cur.md" and h["selected"] for h in r_pi["ranked"]))
+# the SAME predecessor is KEPT when temporal intent is not current_only (historical)
+r_hist = sp.select([old_abs, cur_a], {}, "selpol_rrf_v1", {"allowed_namespaces": ["nsA"], "temporal_intent": "historical_as_of"})
+check("U4' pool-independent: NOT current_only -> the superseded predecessor is retained (historical)",
+      any(h["source_path"] == "old.md" and h["selected"] for h in r_hist["ranked"]))
+
+# ---- 19. supersession demote via the CATALOG successor ref (non-current_only ordering) ----
+sold = hit(1, "d/v1.md", "V1", 990000, status="current", ns="nsA"); sold["record_version_id"] = "dv1"
+sold["effective_current"] = False; sold["effective_current_successor"] = "dv2"
+snew = hit(2, "d/v2.md", "V2", 100000, status="current", ns="nsA"); snew["record_version_id"] = "dv2"
+snew["effective_current"] = True
+r_dem = sp.select([sold, snew], {}, "selpol_rrf_v1", {"allowed_namespaces": ["nsA"], "temporal_intent": "any_valid_version"})
+dv1 = [h for h in r_dem["ranked"] if h["record_version_id"] == "dv1"][0]
+dv2 = [h for h in r_dem["ranked"] if h["record_version_id"] == "dv2"][0]
+check("U4' catalog-ref demote: live successor ordered ABOVE its superseded twin despite lower score",
+      dv2["selection_rank"] < dv1["selection_rank"] and "superseded_demote" in dv1["reason_codes"])
+
+# ---- 20. supersession BRANCH -> conflicted (two live successors) ----
+br = hit(1, "b.md", "B", 900000, ns="nsA"); br["record_version_id"] = "rvB"
+br["effective_current"] = False; br["effective_current_branch"] = True
+br["effective_current_successors"] = ["rvS2", "rvS1"]
+r_br = sp.select([br, hit(2, "o.md", "O", 800000, ns="nsA")], {}, "selpol_rrf_v1", {"allowed_namespaces": ["nsA"]})
+check("U4' branch: supersession_conflicts surfaces the branch (sorted successors)",
+      len(r_br["supersession_conflicts"]) == 1 and r_br["supersession_conflicts"][0]["successors"] == ["rvS1", "rvS2"])
+check("U4' branch: result.conflicted flag set + 'conflicted' reason on the branch candidate",
+      r_br["conflicted"] is True and "conflicted" in [c for h in r_br["ranked"] if h["record_version_id"] == "rvB" for c in h["reason_codes"]])
+
+# ---- 21. classifier split: explicit temporal_intent / version OUTRANKS the query_class default ----
+check("classifier: versioned id/version", clsp.CLASSIFIER_POLICY_ID == "clsmap_v1" and clsp.CLASSIFIER_POLICY_VERSION == "1.0.0")
+check("classifier: composite + unclassified fall back to any_valid_version",
+      clsp.class_to_temporal_intent("composite") == "any_valid_version" and clsp.class_to_temporal_intent(None) == "any_valid_version")
+check("classifier: an explicit temporal_intent OUTRANKS the class default",
+      clsp.resolve_temporal_intent("current_state", "any_valid_version")[0] == "any_valid_version")
+check("classifier: an explicit version request -> version_specific (outranks class)",
+      clsp.resolve_temporal_intent("current_state", None, True)[0] == "version_specific")
+smix = [hit(1, "s.md", "SS", 900000, status="source_stale", ns="nsA"), hit(2, "c.md", "CC", 800000, status="current", ns="nsA")]
+r_ov = sp.select(smix, {"query_class": "current_state"}, "selpol_rrf_v1", {"allowed_namespaces": ["nsA"], "temporal_intent": "any_valid_version"})
+sov = [h for h in r_ov["ranked"] if h["source_path"] == "s.md"][0]
+check("U5' in selpol: explicit temporal_intent OUTRANKS query_class (current_state stale NOT excluded)",
+      sov["selected"] is True and "hard_filter_stale" not in sov["reason_codes"] and r_ov["temporal_intent"] == "any_valid_version")
 
 print("")
 if FAIL[0] == 0:

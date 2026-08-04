@@ -1,4 +1,43 @@
-# Work Order: retrieval.eval -- 0.3.0 -> 0.4.0 (selpol_rrf_v1 1.1.0 + eval-0.4, i32 Tier-0 seams)
+# Work Order: retrieval.eval -- 0.4.0 -> 0.5.0 (selpol_rrf_v1 1.2.0 + eval-0.5, i33 NAMESPACE-CLOSURE)
+
+**Contract version targeted:** 0.5 · **Author:** FANOUT_AGENT_002 (RETRIEVAL-EVAL-PREDICATE-i33) / 2026-08-04 ·
+**Roadmap:** i33 NAMESPACE-CLOSURE + SUPERSESSION-HARDENING, CPU lane B (plan fo-33-d7b55e46; D-0096
+MEMORY_CONTRACT A5 + CONTEXT_PACKET_CONTRACT i33 amendment). Predecessor: 0.4.0 (RETRIEVAL-EVAL-SELPOL-TIER0-i32).
+
+### Problem being solved (i33)
+
+The frontier Tier-0 red-team (`159e9cb5`, `research/2026-08-04-tier0-amendment-redteam.md`) found the i32
+amendments were a correct ENVELOPE-level FIRST layer but INCOMPLETE: namespace was only an envelope filter
+(derived-record / diagnostic-metadata leakage; per-hop gaps) and supersession was candidate-set-DEPENDENT (a
+predecessor stayed `current` when its successor was absent). As the SELECTION-POLICY + NAMESPACE-PREDICATE OWNER,
+this revision authors the ONE canonical namespace predicate + rejection policy, makes supersession
+candidate-INDEPENDENT, and splits `query_class` from `temporal_intent`. #40 IMPORTS the predicate + the class-map;
+the orchestrator runs the D-0077 mixed-namespace LEAKAGE-path smoke at fold.
+
+### Scope (in) -- touch ONLY `modules/37-retrieval-eval`
+
+- **NEW `lib/namespace_policy.py`** (U1' / A5 risk-6): `ns_permitted` (closed-set membership; no wildcard/prefix/
+  parent/shared/all; empty/None -> reject) + `effective_allowed_namespaces` (intersection(request, grant)) +
+  `NamespaceRejectionPolicy` (violation_count + privileged security_log + sanitized caller_summary). The ONE owner
+  #36 + #40 import.
+- **NEW `lib/classifier_policy.py`** (U5'): versioned `CLASS_TO_TEMPORAL_INTENT` map (9 classes + `composite` +
+  `unclassified`) + `resolve_temporal_intent` where an explicit user temporal_intent/version OUTRANKS the class.
+- **`lib/selpol_rrf_v1.py` 1.1.0 -> 1.2.0** (additive; 1.1.0-default byte-identical): namespace CLOSURE via the
+  canonical predicate + a sanitized DROP (no leak in any diagnostic array); candidate-INDEPENDENT supersession via
+  the catalog `effective_current` boolean (pool-independent `hard_filter_stale`) + catalog-ref demote + branch
+  `conflicted`; the query_class/temporal_intent split via `classifier_policy`. `POLICY_VERSION 1.2.0`.
+- **eval 0.4 -> 0.5:** `selection_conformance` extended to MEASURE the leakage paths + NEW `benchmark5.json`
+  fixture; report schema `/0.5`; `skill.json` 0.5.0 / contract 0.5. Every shipped RAW/reranked/packet metric VALUE
+  preserved; all report SHA + input_digest pins re-computed.
+- **Docs:** `SCHEMA_NOTES.md` s15 (every A5/i33 interpretation, for the fold), this WORK_ORDER, README.
+
+### Acceptance -- see `SCHEMA_NOTES.md` s15; the selpol unit suite (`tests/test_selpol.py`, s15-21) + the pwsh
+suite (`tests/Invoke-RetrievalEvalTests.ps1`, benchmark4 + benchmark5 sections) prove U1'/U4'/U5' + the 1.1.0
+byte-identity regression.
+
+---
+
+# Work Order (historical): retrieval.eval -- 0.3.0 -> 0.4.0 (selpol_rrf_v1 1.1.0 + eval-0.4, i32 Tier-0 seams)
 
 **Contract version targeted:** 0.4 · **Author:** FANOUT_AGENT_002 (RETRIEVAL-EVAL-SELPOL-TIER0-i32) / 2026-08-04 ·
 **Roadmap:** i32 Tier-0 MEMORY-ARCHITECTURE seam repairs, CPU lane B (plan fo-32-0fb25203; D-0092

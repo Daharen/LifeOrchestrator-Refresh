@@ -1,6 +1,23 @@
-# Module 37 -- retrieval.eval (Retrieval Evaluation Harness + Selection Policy) -- contract v0.4 / eval-0.4
+# Module 37 -- retrieval.eval (Retrieval Evaluation Harness + Selection Policy + Namespace Predicate) -- contract v0.5 / eval-0.5
 
-**i32 (D-0092) -- Tier-0 seam repairs, `selpol_rrf_v1` 1.0.0 -> 1.1.0 (ADDITIVE) + eval 0.3 -> 0.4.** Folds the
+**i33 (D-0096) -- NAMESPACE-CLOSURE + SUPERSESSION-HARDENING, `selpol_rrf_v1` 1.1.0 -> 1.2.0 (ADDITIVE) + eval 0.4 -> 0.5.**
+Folds `MEMORY_CONTRACT` A5 + the `CONTEXT_PACKET_CONTRACT` i33 amendment after the frontier Tier-0 red-team
+(`159e9cb5`) found the i32 amendments were an ENVELOPE-level first layer only. **(U1')** the ONE canonical
+namespace predicate + rejection policy now live in **`lib/namespace_policy.py`** (`ns_permitted` closed-set
+membership + `effective_allowed_namespaces` = intersection(request, grant) + `NamespaceRejectionPolicy`),
+authored here + IMPORTED by #40 + mirrored by #36 (A5 risk-6); a cross-namespace candidate is **DROPPED** before
+scoring and leaves NO identifying metadata in any output array (the ONLY caller-visible surface is
+`namespace_violation_count`; detail -> a privileged security log). **(U4')** candidate-INDEPENDENT supersession --
+the temporal stage consumes a per-candidate catalog `effective_current` boolean, so a superseded record is
+excluded under `current_only` EVEN when its successor is absent from the pool; a branch (two live successors) ->
+`supersession_conflicts`/`conflicted`. **(U5')** `query_class` (semantic) and `temporal_intent` (temporal) are
+INDEPENDENT -- the versioned **`lib/classifier_policy.py`** maps class->intent (with `composite`/`unclassified`
+fallbacks) and an explicit user `temporal_intent`/version OUTRANKS the class default. A 1.1.0 caller supplying
+none of the new signals gets BYTE-IDENTICAL selection (regression-proven). eval 0.5 extends `selection_conformance`
+to MEASURE the leakage paths (closure drop+sanitize, pool-independent current_only, supersession chain+branch,
+the class/intent split). Full interpretation record: `SCHEMA_NOTES.md` **s15**.
+
+**i32 (D-0092) -- Tier-0 seam repairs, `selpol_rrf_v1` 1.0.0 -> 1.1.0 (ADDITIVE) + eval 0.3 -> 0.4 (superseded by i33).** Folds the
 `CONTEXT_PACKET_CONTRACT` i32 amendment into the selection library: **(U1)** `allowed_namespaces` is a HARD
 boundary -- a cross-namespace candidate is SUNK (`hard_filter_namespace`) and the soft namespace/project bonus is
 retired when it is engaged; **(U4)** under the resolved `current_only` mode a non-`current` candidate is
@@ -28,7 +45,11 @@ Two jobs, ONE module:
 ```
 select(candidates, descriptor, policy_id="selpol_rrf_v1", params=None)
   -> { selected[], ranked[], policy_id, policy_version, features_by_candidate, omission_manifest[],
-       stages, contradicts_pairs[], temporal_mode, allowed_namespaces }   # last 3 additive (i32)
+       stages, contradicts_pairs[], temporal_mode, allowed_namespaces,        # i32 additive
+       supersession_conflicts[], conflicted, temporal_intent,                 # i33 additive (U4'/U5')
+       classifier_policy_id, classifier_policy_version,                       # i33 additive (U5')
+       namespace_policy_id, namespace_policy_version,                         # i33 additive (U1')
+       namespace_violation_count, namespace_closure_violated }               # i33 additive (U1', SANITIZED)
 ```
 
 **PURE + DETERMINISTIC** (no model, no I/O, no state, no wall-clock, no randomness; byte-identical on re-run,

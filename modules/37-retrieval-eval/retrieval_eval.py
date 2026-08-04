@@ -80,8 +80,8 @@ if _HERE not in sys.path:
 from lib import selpol_rrf_v1 as selpol  # noqa: E402
 
 GENERATOR_NAME = "retrieval.eval"
-GENERATOR_VERSION = "0.4.0"
-REPORT_SCHEMA = "lifeorch.retrieval_eval_report/0.4"
+GENERATOR_VERSION = "0.5.0"
+REPORT_SCHEMA = "lifeorch.retrieval_eval_report/0.5"
 BENCHMARK_SCHEMA = "lifeorch.retrieval_benchmark/0.2"
 BENCHMARK_SCHEMA_V1 = "lifeorch.retrieval_benchmark/0.1"
 SELECTION_POLICY_ID = selpol.POLICY_ID
@@ -93,10 +93,10 @@ SHA256_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
 
 TEMPORAL_INTENTS = ("current_only", "historical_as_of", "version_specific", "any_valid_version")
-# MEMORY_CONTRACT s5 staleness enum (the healthy baseline is `current`).
+# MEMORY_CONTRACT s5 staleness enum (the healthy baseline is `current`; A5/i33 adds the literal `superseded`).
 STALE_STATUSES = frozenset([
     "source_stale", "derivation_stale", "embedding_stale", "relationship_stale",
-    "summary_stale", "authority_stale", "temporal_expiry", "deleted", "unverified",
+    "summary_stale", "authority_stale", "temporal_expiry", "superseded", "deleted", "unverified",
 ])
 STATUS_ENUM = frozenset(["current"]) | STALE_STATUSES
 
@@ -723,6 +723,12 @@ def normalize_hit(h, rank):
         "supersedes": h.get("supersedes"),
         "contradicts": h.get("contradicts"),
         "record_edges": (h.get("record_edges") if isinstance(h.get("record_edges"), list) else h.get("edges")),
+        # i33/U4' (D-0096): preserve the CATALOG-computed, POOL-INDEPENDENT effective_current signals #36 emits so
+        # selpol excludes a superseded candidate under current_only even when its successor is absent (additive).
+        "effective_current": (h.get("effective_current") if isinstance(h.get("effective_current"), bool) else None),
+        "effective_current_successor": h.get("effective_current_successor"),
+        "effective_current_successors": h.get("effective_current_successors"),
+        "effective_current_branch": (h.get("effective_current_branch") if isinstance(h.get("effective_current_branch"), bool) else None),
         "source_version_id": h.get("source_version_id"),
         "embedding_space_id": h.get("embedding_space_id"),
         "retrieval_channels": channels,
@@ -820,9 +826,14 @@ def normalize_query(q):
         "query": q.get("query"),
         "filters": q.get("filters"),
         "temporal_intent": ti,
-        # i32 (D-0092): U1 hard namespace boundary + U5 query_class (both optional; absent -> back-compat).
+        # i32 (D-0092) -> i33 (D-0096): U1' hard namespace closure boundary + U5' query_class / temporal split
+        # (all optional; absent -> back-compat). explicit_temporal_intent (one of the 4-value enum) OUTRANKS the
+        # query_class default; version_specific is an explicit as-of/version request.
         "allowed_namespaces": q.get("allowed_namespaces"),
         "query_class": q.get("query_class"),
+        "explicit_temporal_intent": (q.get("explicit_temporal_intent")
+                                     if q.get("explicit_temporal_intent") in TEMPORAL_INTENTS else None),
+        "version_specific": bool(q.get("version_specific", False)),
         "required_sources": required,
         "evidence_groups": groups,
         "stale_sources": [_norm_member(s) for s in (q.get("stale_sources") or [])],
@@ -1268,13 +1279,20 @@ def _policy_params_from_query(q):
         hard_filter.append({"source_path": f["source_path"], "content_hash": f.get("content_hash"),
                             "reason": "privacy"})
     return {
-        # temporal_intent is the benchmark's temporal LABEL; it forces current_only ONLY when no query_class is
-        # supplied. When a query_class IS present (the #40-aligned path) it DRIVES selpol's temporal mode (U5).
-        "current_only": (q.get("temporal_intent") == "current_only") and not q.get("query_class"),
-        # i32 (D-0092): U1 allowed_namespaces hard boundary + U5 query_class temporal-mode signal. Absent ->
-        # None (back-compat: the soft project bonus survives + no namespace hard filter; #40 always supplies them).
+        # temporal_intent is the benchmark's temporal LABEL; it forces current_only ONLY when NEITHER a
+        # query_class NOR an explicit_temporal_intent is supplied. When a query_class IS present (the #40-aligned
+        # path) it DRIVES selpol's temporal mode via the versioned class->intent map (U5'); an
+        # explicit_temporal_intent OUTRANKS the class default (the i33/U5' split).
+        "current_only": (q.get("temporal_intent") == "current_only")
+                        and not q.get("query_class") and not q.get("explicit_temporal_intent"),
+        # i32/U1 -> i33/U1': allowed_namespaces is the CALLER-computed effective set (a HARD closure boundary).
+        # Absent -> None (back-compat: soft project bonus + no closure; #40 always supplies it).
         "allowed_namespaces": q.get("allowed_namespaces"),
+        # i33/U5': query_class (semantic) drives the class-default temporal_intent; explicit_temporal_intent
+        # (temporal) OUTRANKS it. Both optional; absent -> the byte-identical back-compat path.
         "query_class": q.get("query_class"),
+        "temporal_intent": q.get("explicit_temporal_intent"),
+        "version_specific": bool(q.get("version_specific", False)),
         "hard_filter": hard_filter,
         "stale": [{"source_path": s["source_path"], "content_hash": s.get("content_hash")}
                   for s in q.get("stale_sources", [])],
@@ -1315,15 +1333,21 @@ def default_descriptor(rawq):
     return d
 
 
-# ------------------------------------------------------------------ selection conformance (eval-0.4, i32 D-0092)
-# eval-0.4 MEASURES the i32 selection stages on the PACKET-STAGE selection: U1 namespace isolation (a
-# cross-namespace distractor must NOT be selected), U4 current_only correctness (a status-stale candidate must
-# not be selected under current_only) + supersession ordering (a live successor above its superseded twin), and
-# reason-code coverage. All integer-only + deterministic (byte-identical on re-run). Queries that supply no i32
-# signal (no allowed_namespaces, no current_only, no supersession edges) report trivially (0 violations).
+# ------------------------------------------------------------------ selection conformance (eval-0.5, i33 D-0096)
+# eval-0.5 MEASURES the i33 NAMESPACE-CLOSURE + SUPERSESSION-HARDENING leakage paths on the PACKET-STAGE
+# selection, over the i32 eval-0.4 measures. Integer-only + deterministic (byte-identical on re-run). Queries
+# that supply no signal report trivially (0 violations). The measured properties:
+#  * U1' NAMESPACE CLOSURE -- a cross-namespace distractor must NOT be selected AND must NOT appear in ANY
+#    selection-output diagnostic array (ranked[]); the sanitized `namespace_violation_count` is the ONLY
+#    surface the drop leaves. `cross_namespace_in_ranked == 0` is the leak check the i32 "sink-in-place" failed.
+#  * U4' POOL-INDEPENDENT current_only -- a candidate the catalog marks `effective_current == False` (a
+#    superseded record, even one whose successor is ABSENT from the pool) must NOT be selected under current_only.
+#  * U4' supersession ordering (a live successor above its superseded twin) + branch `supersession_conflicts`.
+#  * U5' the query_class / temporal_intent split (the resolved `temporal_intent` + its source + classifier id).
+#  * reason-code coverage.
 
 def selection_conformance(q, norm_hits, selres):
-    """Per-query i32 selection-conformance record (see the section header). Scored on selres (the packet stage)."""
+    """Per-query i33 selection-conformance record (see the section header). Scored on selres (the packet stage)."""
     allowed = selres.get("allowed_namespaces")             # sorted list | None
     allowed_set = set(allowed) if allowed is not None else None
     mode = selres.get("temporal_mode")
@@ -1334,10 +1358,23 @@ def selection_conformance(q, norm_hits, selres):
     def _is_stale(h):
         return h.get("status") in STALE_STATUSES
 
+    def _not_current(h):
+        # POOL-INDEPENDENT: the catalog effective_current verdict when present, else the status-stale fallback.
+        ec = h.get("effective_current")
+        if isinstance(ec, bool):
+            return ec is False
+        return _is_stale(h)
+
     cross_cand = sum(1 for h in norm_hits if allowed_set is not None and h.get("namespace") not in allowed_set)
     cross_sel = sum(1 for h in selected if allowed_set is not None and h.get("namespace") not in allowed_set)
+    # U1' leak check: a cross-namespace item must not appear in ANY selection-output diagnostic array (ranked[]).
+    cross_ranked = sum(1 for h in ranked if allowed_set is not None and h.get("namespace") not in allowed_set)
+    ns_violation_count = int(selres.get("namespace_violation_count") or 0)
     stale_cand = sum(1 for h in norm_hits if _is_stale(h))
     stale_sel_co = sum(1 for h in selected if current_only and _is_stale(h))
+    # U4' pool-independent: a candidate flagged not-effective-current must not be selected under current_only.
+    noncurrent_cand = sum(1 for h in norm_hits if _not_current(h))
+    noncurrent_sel_co = sum(1 for h in selected if current_only and _not_current(h))
 
     # supersession: a SELECTED superseded record whose live successor is ALSO selected must rank BELOW it.
     sel_by_id = {}
@@ -1368,25 +1405,43 @@ def selection_conformance(q, norm_hits, selres):
         "query_id": q.get("query_id"),
         "allowed_namespaces": allowed,
         "temporal_mode": mode,
+        # i33/U5' the resolved temporal_intent + its source + the versioned classifier policy (packet identity).
+        "temporal_intent": selres.get("temporal_intent"),
+        "temporal_intent_source": selres.get("temporal_intent_source"),
+        "classifier_policy_id": selres.get("classifier_policy_id"),
+        "classifier_policy_version": selres.get("classifier_policy_version"),
+        "namespace_policy_id": selres.get("namespace_policy_id"),
         "current_only": current_only,
         "candidate_count": len(norm_hits),
         "selected_count": len(selected),
+        "ranked_count": len(ranked),
         "cross_namespace_candidates": cross_cand,
         "cross_namespace_selected": cross_sel,
+        # i33/U1' the DIAGNOSTIC-array leak check + the sanitized surface.
+        "cross_namespace_in_ranked": cross_ranked,
+        "namespace_violation_count": ns_violation_count,
+        "namespace_closure_violated": bool(selres.get("namespace_closure_violated")),
         "namespace_isolation_ok": (cross_sel == 0),
+        "namespace_closure_ok": (cross_sel == 0 and cross_ranked == 0),
         "stale_candidates": stale_cand,
         "stale_selected_under_current_only": stale_sel_co,
         "current_only_isolation_ok": (stale_sel_co == 0),
+        # i33/U4' pool-independent current_only.
+        "noncurrent_candidates": noncurrent_cand,
+        "noncurrent_selected_under_current_only": noncurrent_sel_co,
+        "pool_independent_current_only_ok": (noncurrent_sel_co == 0),
         "supersession_pairs_total": sup_total,
         "supersession_pairs_correct": sup_correct,
         "supersession_order_ok": (sup_total == sup_correct),
+        "supersession_conflicts": selres.get("supersession_conflicts") or [],
         "contradicts_pairs": selres.get("contradicts_pairs") or [],
+        "conflicted": bool(selres.get("conflicted")),
         "reason_codes_observed": sorted(codes),
     }
 
 
 def aggregate_selection_conformance(per_q):
-    """Aggregate the per-query i32 conformance into integer counters + reason-code coverage (deterministic)."""
+    """Aggregate the per-query i33 conformance into integer counters + reason-code coverage (deterministic)."""
     n = len(per_q)
     codes = set()
     for q in per_q:
@@ -1397,14 +1452,25 @@ def aggregate_selection_conformance(per_q):
         "queries_current_only": sum(1 for q in per_q if q["current_only"]),
         "cross_namespace_candidates_total": sum(q["cross_namespace_candidates"] for q in per_q),
         "cross_namespace_selected_total": sum(q["cross_namespace_selected"] for q in per_q),
+        # i33/U1' leakage-path totals: the diagnostic-array leak + the sanitized violation count.
+        "cross_namespace_in_ranked_total": sum(q["cross_namespace_in_ranked"] for q in per_q),
+        "namespace_violations_total": sum(q["namespace_violation_count"] for q in per_q),
         "namespace_isolation_violations": sum(1 for q in per_q if not q["namespace_isolation_ok"]),
+        "namespace_closure_violations": sum(1 for q in per_q if not q["namespace_closure_ok"]),
+        "queries_with_namespace_drop": sum(1 for q in per_q if q["namespace_closure_violated"]),
         "stale_candidates_total": sum(q["stale_candidates"] for q in per_q),
         "current_only_stale_leaks": sum(q["stale_selected_under_current_only"] for q in per_q),
         "queries_with_current_only_leak": sum(1 for q in per_q if not q["current_only_isolation_ok"]),
+        # i33/U4' pool-independent current_only totals.
+        "noncurrent_candidates_total": sum(q["noncurrent_candidates"] for q in per_q),
+        "pool_independent_current_only_leaks": sum(q["noncurrent_selected_under_current_only"] for q in per_q),
+        "queries_with_pool_independent_leak": sum(1 for q in per_q if not q["pool_independent_current_only_ok"]),
         "supersession_pairs_total": sum(q["supersession_pairs_total"] for q in per_q),
         "supersession_pairs_correct": sum(q["supersession_pairs_correct"] for q in per_q),
         "supersession_order_violations": sum(1 for q in per_q if not q["supersession_order_ok"]),
+        "queries_with_supersession_branch": sum(1 for q in per_q if q["supersession_conflicts"]),
         "queries_with_contradicts": sum(1 for q in per_q if q["contradicts_pairs"]),
+        "queries_conflicted": sum(1 for q in per_q if q["conflicted"]),
         "reason_code_coverage": sorted(codes),
         "reason_code_coverage_count": len(codes),
     }
@@ -1782,15 +1848,20 @@ def render_markdown(report):
     L.append("")
     sc = report.get("selection_conformance")
     if sc is not None:
-        L.append("## Selection conformance (i32 / D-0092)")
+        L.append("## Selection conformance (i33 / D-0096)")
         L.append("")
-        L.append("- namespace isolation (U1): %d violation(s) over %d query(ies) with an allowed_namespaces set"
-                 % (sc["namespace_isolation_violations"], sc["queries_with_allowed_namespaces"]))
-        L.append("- current_only (U4): %d stale leak(s) over %d current_only query(ies)"
+        L.append("- namespace CLOSURE (U1'): %d isolation violation(s) + %d diagnostic-array leak(s) over %d query(ies) with a closure set; %d candidate(s) dropped (sanitized)"
+                 % (sc["namespace_isolation_violations"], sc["cross_namespace_in_ranked_total"],
+                    sc["queries_with_allowed_namespaces"], sc["namespace_violations_total"]))
+        L.append("- current_only (U4): %d status-stale leak(s) over %d current_only query(ies)"
                  % (sc["current_only_stale_leaks"], sc["queries_current_only"]))
-        L.append("- supersession ordering (U4): %d/%d selected superseded/successor pair(s) correctly ordered; %d violation(s)"
-                 % (sc["supersession_pairs_correct"], sc["supersession_pairs_total"], sc["supersession_order_violations"]))
-        L.append("- contradicts (U4): %d query(ies) surfaced a contradicts pair" % sc["queries_with_contradicts"])
+        L.append("- pool-INDEPENDENT current_only (U4'): %d leak(s) over %d not-effective-current candidate(s)"
+                 % (sc["pool_independent_current_only_leaks"], sc["noncurrent_candidates_total"]))
+        L.append("- supersession ordering (U4): %d/%d selected superseded/successor pair(s) correctly ordered; %d violation(s); %d branch conflict(s)"
+                 % (sc["supersession_pairs_correct"], sc["supersession_pairs_total"],
+                    sc["supersession_order_violations"], sc["queries_with_supersession_branch"]))
+        L.append("- conflicts (U4'): %d query(ies) surfaced a contradicts pair; %d query(ies) conflicted"
+                 % (sc["queries_with_contradicts"], sc["queries_conflicted"]))
         L.append("- reason-code coverage: %d codes -- %s" % (sc["reason_code_coverage_count"],
                  ", ".join("`%s`" % c for c in sc["reason_code_coverage"])))
         L.append("")
@@ -2025,7 +2096,13 @@ def run(request):
         "provenance_validated": bool(corpus.available),
         "vector_channel_status": vstatus,
         "selection_policy": {"policy_id": SELECTION_POLICY_ID, "policy_version": SELECTION_POLICY_VERSION,
-                             "rrf_k": selpol.RRF_K_DEFAULT, "stages": list(selpol.STAGES)},
+                             "rrf_k": selpol.RRF_K_DEFAULT, "stages": list(selpol.STAGES),
+                             # i33 (D-0096): the canonical namespace predicate + versioned classifier policy that
+                             # #40 imports (packet identity, CONTEXT_PACKET_CONTRACT s6).
+                             "namespace_policy_id": selpol.NS_POLICY_ID,
+                             "namespace_policy_version": selpol.NS_POLICY_VERSION,
+                             "classifier_policy_id": selpol.CLASSIFIER_POLICY_ID,
+                             "classifier_policy_version": selpol.CLASSIFIER_POLICY_VERSION},
         "selection_conformance": sel_conf_agg,
         "hybrid_applicability": hybrid_applicability,
         "corpus": corpus_manifest,
@@ -2074,12 +2151,18 @@ def run(request):
         "selection_policy": {"policy_id": SELECTION_POLICY_ID, "policy_version": SELECTION_POLICY_VERSION},
         "packet_disposition": {"scored": dispo["scored"], "num_labeled": dispo["num_labeled"],
                                "num_correct": dispo["num_correct"], "accuracy_ppm": dispo["accuracy_ppm"]},
-        "selection_conformance": {  # i32 (D-0092) eval-0.4 compact
+        "selection_conformance": {  # i33 (D-0096) eval-0.5 compact
             "namespace_isolation_violations": sel_conf_agg["namespace_isolation_violations"],
+            "namespace_closure_violations": sel_conf_agg["namespace_closure_violations"],
+            "cross_namespace_in_ranked_total": sel_conf_agg["cross_namespace_in_ranked_total"],
+            "namespace_violations_total": sel_conf_agg["namespace_violations_total"],
             "current_only_stale_leaks": sel_conf_agg["current_only_stale_leaks"],
+            "pool_independent_current_only_leaks": sel_conf_agg["pool_independent_current_only_leaks"],
             "supersession_order_violations": sel_conf_agg["supersession_order_violations"],
             "supersession_pairs_total": sel_conf_agg["supersession_pairs_total"],
+            "queries_with_supersession_branch": sel_conf_agg["queries_with_supersession_branch"],
             "queries_with_contradicts": sel_conf_agg["queries_with_contradicts"],
+            "queries_conflicted": sel_conf_agg["queries_conflicted"],
             "reason_code_coverage_count": sel_conf_agg["reason_code_coverage_count"]},
         "rerank_ab": {"queries_with_rescue": ab["queries_with_rescue"],
                       "queries_with_demote": ab["queries_with_demote"], "deltas": ab["deltas"]},

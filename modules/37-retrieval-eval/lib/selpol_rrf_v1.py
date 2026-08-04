@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # selpol_rrf_v1.py -- the ONE versioned DETERMINISTIC selection-policy library (Life Orchestrator
-# module 37 `retrieval.eval`, contract v0.4 / CONTEXT_PACKET_CONTRACT s4 [PINNED D-0089] + the i32
-# amendment [D-0092]; P1-1; plans fo-30-dd453156 / fo-31 / fo-32-0fb25203).
+# module 37 `retrieval.eval`, contract v0.5 / CONTEXT_PACKET_CONTRACT s4 [PINNED D-0089] + the i32
+# amendment [D-0092] + the i33 amendment [D-0096]; P1-1; plans fo-30-dd453156 / fo-31 / fo-32-0fb25203 /
+# fo-33-d7b55e46).
 #
 # WHAT THIS IS (CONTEXT_PACKET_CONTRACT.md s4 -- the FROZEN interface, PINNED scoring D-0089)
 #   ONE selection owner. Extracted from #37's shipped deterministic `rerank()` so there is exactly one
@@ -9,10 +10,15 @@
 #   A/B -- removing the "two rerankers" problem (P1-1). PURE + DETERMINISTIC: no model, no I/O, no state,
 #   no wall-clock, no randomness. Byte-identical selection on re-run, cross-machine.
 #
-#   INTERFACE (frozen, s4):
+#   INTERFACE (frozen, s4; i33 adds result keys additively):
 #     select(candidates, descriptor, policy_id="selpol_rrf_v1", params=None)
 #       -> { selected[], ranked[], policy_id, policy_version, features_by_candidate,
-#            omission_manifest[], stages, contradicts_pairs[] }
+#            omission_manifest[], stages, contradicts_pairs[],
+#            supersession_conflicts[], conflicted,                                     # i33/U4'
+#            temporal_mode, temporal_intent, temporal_intent_source,                   # i33/U5'
+#            classifier_policy_id, classifier_policy_version,                          # i33/U5'
+#            namespace_policy_id, namespace_policy_version, allowed_namespaces,        # i33/U1'
+#            namespace_violation_count, namespace_closure_violated }                   # i33/U1' (SANITIZED)
 #
 #   INPUTS
 #     candidates  -- the MEMORY_CONTRACT s3 retriever-0.2 hit array (normalized dicts; each carries
@@ -20,7 +26,10 @@
 #                    authority_level, namespace, record_kind, source_path, chunk_id, chunk_content_hash,
 #                    span_start/span_end/span_label, token_count, snippet, retrieval_channels; and -- i32 --
 #                    OPTIONAL retrieval_occurrences[] [{channel,rank}], superseded_by / supersedes /
-#                    contradicts / edges|record_edges [{type,target}] supersession + conflict edges).
+#                    contradicts / edges|record_edges [{type,target}] supersession + conflict edges; and -- i33 --
+#                    the #36 CATALOG signals effective_current(bool), effective_current_successor(id|list),
+#                    effective_current_branch(bool), effective_current_successors(list) for pool-INDEPENDENT
+#                    supersession).
 #     descriptor  -- the UNIFIED selection descriptor (s4 reconciliation of #40's task fields + #37's
 #                    rerank_descriptor): { namespace?, component?, relevant_paths?, task_type?,
 #                    task_stage?, time_horizon?, seeking_failures?, permission_context?, query_class? }.
@@ -29,7 +38,10 @@
 #                    library stays pure -- the caller supplies what it is permitted/labelled to demote):
 #                      rrf_k(int=60), weights{}, authority_rank{}, diversity_penalty, hard_demote,
 #                      stale_penalty, current_only(bool), temporal_mode(str), query_class(str),
-#                      allowed_namespaces(set|list|str), dedup_display(bool=False),
+#                      temporal_intent(str -- i33/U5', OUTRANKS query_class), version_specific(bool -- i33/U5'),
+#                      allowed_namespaces(set|list|str -- the CALLER-computed intersection(request,grant)),
+#                      rejection_policy(NamespaceRejectionPolicy -- i33/U1', captures the privileged reject log),
+#                      dedup_display(bool=False),
 #                      hard_filter[{source_path, content_hash?, reason}], stale[{source_path, content_hash?}],
 #                      required_versions[{source_path, content_hash}], budget{max_selected?, max_tokens?,
 #                      per_item_overhead?}.
@@ -75,20 +87,66 @@
 #   reason_codes[], retrieval_occurrences[], rrf_score, and (in a dedup cluster) occurrences[] +
 #   evidence_cluster_id. The input list is not mutated.
 #
-#   BACK-COMPAT / REGRESSION (1.0.0 -> 1.1.0, additive; SCHEMA_NOTES s14): the i32 stages engage ONLY when
-#   their signals are supplied -- allowed_namespaces (namespace boundary + soft-bonus retirement), a resolved
-#   current_only mode (hard stale filter), supersession edges (superseded_demote), an explicit
-#   retrieval_occurrences[] (open channels), query_class (temporal mode). With NONE of them (the 1.0.0
-#   default call) select() reproduces 1.0.0 selection BYTE-IDENTICALLY. A current_only caller on all-`current`
-#   candidates is ALSO byte-identical; the ONLY intended divergence is current_only + a stale candidate
-#   (1.0.0 soft-demoted -> 1.1.0 hard-excludes -- the A4 semantic; the old soft demote lives on as the
-#   `prefer_current` mode). RRF-over-channel-ranks stays the `rrf_score` FEATURE + `fusion_rrf` code; pure
-#   rank-RRF as the PRIMARY sort is still the deferred P1-2.
+#   i33 (D-0096) NAMESPACE-CLOSURE + SUPERSESSION-HARDENING (1.1.0 -> 1.2.0, additive; SCHEMA_NOTES s15).
+#   The frontier Tier-0 red-team (159e9cb5) found the i32 amendments were an ENVELOPE-level first layer only.
+#   i33 hardens three things WITHOUT breaking the 1.1.0 default path:
+#     * NAMESPACE CLOSURE (U1' / A5 risk-6). The ONE canonical predicate `ns_permitted` + rejection policy live
+#       in `lib/namespace_policy.py` (imported here, imported by #40, mirrored by #36 -- never re-implemented).
+#       When `allowed_namespaces` is supplied a cross-namespace candidate is DROPPED BEFORE scoring and leaves
+#       NO identifying metadata in ANY output array (ranked/selected/features/omission) -- the ONLY caller-visible
+#       surface is `namespace_violation_count` + `namespace_closure_violated`; the identifying detail goes to a
+#       PRIVILEGED `NamespaceRejectionPolicy.security_log` (pass `params.rejection_policy` to capture it; never
+#       route it into a packet). This REPLACES the i32 "sink to the bottom but keep in ranked[]" leak.
+#     * CANDIDATE-INDEPENDENT SUPERSESSION (U4'). The temporal stage consumes a per-candidate `effective_current`
+#       boolean computed by #36 from the CATALOG (not the retrieved pair): under `current_only` a candidate with
+#       `effective_current == False` is HARD-filtered EVEN when its successor is absent from the pool. The
+#       demote-ordering (non-current_only) uses the catalog successor ref `effective_current_successor` (falling
+#       back to the `superseded_by`/`supersedes` edges); a branch (`effective_current_branch == True`, two live
+#       successors) is surfaced as `supersession_conflicts[]` + a `conflicted` reason for #40's disposition.
+#     * QUERY_CLASS vs TEMPORAL_INTENT SPLIT (U5'). Resolved via the versioned `lib/classifier_policy.py`
+#       (class -> temporal_intent DEFAULT; an explicit user temporal_intent / version OUTRANKS it; the map is
+#       versioned via classifier_policy_id/version, with `composite` + `unclassified` fallbacks). RRF/occurrence
+#       handling stays channel-AGNOSTIC.
+#   BACK-COMPAT / REGRESSION: every i32/i33 stage engages ONLY when its signal is supplied -- allowed_namespaces
+#   (closure), effective_current / a resolved current_only mode (hard stale filter), supersession edges/refs
+#   (superseded_demote), effective_current_branch (conflicted), an explicit retrieval_occurrences[] (open
+#   channels), query_class / temporal_intent (temporal mode). With NONE of them (the 1.0.0/1.1.0 default call)
+#   select() reproduces 1.1.0 selection BYTE-IDENTICALLY (the ranked/omission SHAs in test_selpol s13 stay green
+#   for 1.2.0). RRF-over-channel-ranks stays the `rrf_score` FEATURE + `fusion_rrf` code; pure rank-RRF as the
+#   PRIMARY sort is still the deferred P1-2.
 
 import hashlib
+import os as _os
+import sys as _sys
+
+# The canonical namespace predicate + rejection policy (A5 risk-6) and the versioned classifier map (U5') are
+# SIBLING libs. Import them robustly whether selpol is loaded as a package module (`from lib import ...`) or as
+# a path-loaded standalone (#40 imports the resolved file directly).
+try:
+    from . import namespace_policy as _nsp  # type: ignore
+    from . import classifier_policy as _clsp  # type: ignore
+except Exception:  # pragma: no cover - standalone / importlib-by-path load
+    _LIBDIR = _os.path.dirname(_os.path.abspath(__file__))
+    if _LIBDIR not in _sys.path:
+        _sys.path.insert(0, _LIBDIR)
+    import namespace_policy as _nsp  # type: ignore
+    import classifier_policy as _clsp  # type: ignore
+
+# ---- re-exports so a consumer (#40) can import the canonical predicate/map from selpol OR the sibling ----
+ns_permitted = _nsp.ns_permitted
+effective_allowed_namespaces = _nsp.effective_allowed_namespaces
+NamespaceRejectionPolicy = _nsp.NamespaceRejectionPolicy
+NS_POLICY_ID = _nsp.NS_POLICY_ID
+NS_POLICY_VERSION = _nsp.NS_POLICY_VERSION
+CLASSIFIER_POLICY_ID = _clsp.CLASSIFIER_POLICY_ID
+CLASSIFIER_POLICY_VERSION = _clsp.CLASSIFIER_POLICY_VERSION
+CLASS_TO_TEMPORAL_INTENT = _clsp.CLASS_TO_TEMPORAL_INTENT
+TEMPORAL_INTENTS = _clsp.TEMPORAL_INTENTS
+resolve_temporal_intent = _clsp.resolve_temporal_intent
+class_to_temporal_intent = _clsp.class_to_temporal_intent
 
 POLICY_ID = "selpol_rrf_v1"
-POLICY_VERSION = "1.1.0"
+POLICY_VERSION = "1.2.0"
 KNOWN_POLICIES = frozenset([POLICY_ID])
 
 PPM = 1000000
@@ -122,36 +180,38 @@ TASK_STAGE_KINDS = {
     "plan": ("decision", "summary"),
     "research": ("summary", "source_chunk", "claim"),
 }
-# MEMORY_CONTRACT s5 staleness enum (the healthy baseline is `current`). Local copy so the library is
-# SELF-CONTAINED (stdlib only) and importable by #40 without pulling in the eval harness.
+# MEMORY_CONTRACT s5 staleness enum (the healthy baseline is `current`; A5 adds the literal `superseded`).
+# Local copy so the library is SELF-CONTAINED (stdlib only) and importable by #40 without pulling in the eval
+# harness. NOTE: `superseded` is a NEW A5 enum value -- a 1.1.0 corpus never carried it, so adding it here is
+# additive (it only affects NEW inputs; the 1.1.0 regression fixtures use only the pre-A5 statuses).
 STALE_STATUSES = frozenset([
     "source_stale", "derivation_stale", "embedding_stale", "relationship_stale",
-    "summary_stale", "authority_stale", "temporal_expiry", "deleted", "unverified",
+    "summary_stale", "authority_stale", "temporal_expiry", "superseded", "deleted", "unverified",
 ])
 
-# i32/U5: query_class -> temporal MODE (MEMORY_ARCHITECTURE s5 planner). A deterministic Tier-0 STUB -- the
-# multi-channel query-aware ROUTER is Tier 1; this is the default when current_only is not explicitly set.
-#   current_only    : the question is about the CURRENT truth -> HARD-exclude stale.
-#   prefer_current  : prefer current but do not exclude -> SOFT stale_demote (the surviving 1.0.0 soft path).
-#   historical_as_of / version_specific / any_valid_version : allow stale (no temporal action).
-# Rationale per class in SCHEMA_NOTES s14. (Absent query_class -> `any`, the byte-identical default path.)
-QUERY_CLASS_TEMPORAL_MODE = {
-    "current_state": "current_only",
-    "procedure_selection": "current_only",
-    "local_factual": "prefer_current",
-    "global_synthesis": "prefer_current",
-    "exact_reference": "version_specific",
-    "historical_reconstruction": "historical_as_of",
-    "temporal_change": "any_valid_version",
-    "causal_diagnosis": "any_valid_version",
-    "precedent_search": "any_valid_version",
-}
-# The modes that HARD-exclude / SOFT-demote stale; everything else allows stale.
+# i33/U5' (was i32/U5): query_class (SEMANTIC) and temporal_intent (TEMPORAL) are INDEPENDENT. The versioned
+# class -> temporal_intent map + resolver are OWNED by lib/classifier_policy.py (imported above, re-exported as
+# CLASS_TO_TEMPORAL_INTENT / resolve_temporal_intent / class_to_temporal_intent). selpol maps the resolved
+# CONTRACT temporal_intent to its INTERNAL action mode:
+#   current_only    : the question is about the CURRENT truth -> HARD-exclude non-effective-current.
+#   prefer_current  : the surviving 1.0.0/1.1.0 SOFT stale_demote -- NOT a class default in 1.2.0; reachable
+#                     ONLY via an explicit params.temporal_mode='prefer_current' (back-compat).
+#   any / historical_as_of / version_specific / any_valid_version : allow stale (no temporal action).
+# Rationale per class in classifier_policy.py + SCHEMA_NOTES s15. (Absent every signal -> `any`, the
+# byte-identical default path.)
 MODE_CURRENT_ONLY = "current_only"
 MODE_PREFER_CURRENT = "prefer_current"
 KNOWN_TEMPORAL_MODES = frozenset([
     "current_only", "prefer_current", "historical_as_of", "version_specific", "any_valid_version", "any",
 ])
+# Back-compat alias: the internal query_class -> temporal MODE stub map (current_state/procedure_selection ->
+# current_only; everything else allows stale). Derived from the versioned classifier intent map so there is ONE
+# source of truth; a downstream import of this name keeps resolving. (In 1.2.0 no class defaults to
+# prefer_current; that soft mode is explicit-only.)
+QUERY_CLASS_TEMPORAL_MODE = {
+    _c: (MODE_CURRENT_ONLY if _i == "current_only" else _i)
+    for _c, _i in CLASS_TO_TEMPORAL_INTENT.items()
+}
 
 
 # ------------------------------------------------------------------ pure helpers
@@ -305,8 +365,11 @@ def _edge_targets(hit, types):
 
 
 def _successor_ids(hit):
-    """Identities of records that SUPERSEDE this hit (this hit is superseded_by them)."""
-    return _id_list(hit.get("superseded_by")) + _edge_targets(hit, ("superseded_by",))
+    """Identities of records that SUPERSEDE this hit (this hit is superseded_by them). i33/U4': the CATALOG
+    successor ref `effective_current_successor` (#36-computed, single id or list) is consulted alongside the
+    `superseded_by` field + edges, so the demote ordering prefers the catalog signal + falls back to edges."""
+    return (_id_list(hit.get("superseded_by")) + _edge_targets(hit, ("superseded_by",)) +
+            _id_list(hit.get("effective_current_successor")))
 
 
 def _supersedes_ids(hit):
@@ -321,26 +384,53 @@ def _contradicts_ids(hit):
 
 # ------------------------------------------------------------------ the staged policy
 
+def _intent_of_mode(mode):
+    """Best-effort inverse (internal mode string -> a CONTRACT temporal_intent) for diagnostics / packet id."""
+    if mode == MODE_CURRENT_ONLY:
+        return "current_only"
+    if mode in ("historical_as_of", "version_specific", "any_valid_version"):
+        return mode
+    return "any_valid_version"  # prefer_current / any -> any_valid_version (informational)
+
+
+def _mode_of_intent(intent):
+    """A CONTRACT temporal_intent -> selpol's INTERNAL action mode. current_only -> HARD exclude; the other
+    three intents -> allow (no temporal action). prefer_current is NOT produced here (explicit-only)."""
+    return MODE_CURRENT_ONLY if intent == "current_only" else "any"
+
+
 def _resolve_temporal_mode(params, descriptor):
-    """i32/U4+U5: resolve the effective temporal MODE (pure). Precedence: an explicit current_only bool >
-    an explicit temporal_mode string > descriptor.time_horizon=='current_only' > the query_class map (U5) >
-    a direct time_horizon mode string > `any` (the byte-identical default)."""
+    """i33/U5': resolve (internal_temporal_mode, temporal_intent, source), treating query_class (semantic) and
+    temporal_intent (temporal) as INDEPENDENT dimensions -- an EXPLICIT user current_only / temporal_mode /
+    temporal_intent / version OUTRANKS the query_class default. Pure. Precedence, highest first:
+      (1) explicit params.current_only is True  -> current_only
+      (2) explicit params.temporal_mode string (a known INTERNAL mode, incl. back-compat prefer_current)
+      (3) descriptor.time_horizon == 'current_only'
+      (4) the versioned intent resolver (explicit temporal_intent > version > query_class DEFAULT) -- engaged
+          ONLY when a class/intent/version signal is present, so the no-signal default path stays byte-identical
+      (5) descriptor.time_horizon as a raw mode string
+      (6) 'any' (the byte-identical 1.1.0 default)."""
     if params.get("current_only") is True:
-        return MODE_CURRENT_ONLY
+        return MODE_CURRENT_ONLY, "current_only", "explicit_current_only_bool"
     tm = params.get("temporal_mode_param")
     if isinstance(tm, str) and tm in KNOWN_TEMPORAL_MODES:
-        return tm
+        return tm, _intent_of_mode(tm), "explicit_temporal_mode"
     if descriptor.get("time_horizon") == "current_only":
-        return MODE_CURRENT_ONLY
+        return MODE_CURRENT_ONLY, "current_only", "time_horizon_current_only"
     qc = descriptor.get("query_class")
     if not (isinstance(qc, str) and qc):
         qc = params.get("query_class")
-    if isinstance(qc, str) and qc in QUERY_CLASS_TEMPORAL_MODE:
-        return QUERY_CLASS_TEMPORAL_MODE[qc]
+    explicit_ti = params.get("temporal_intent")
+    if not (isinstance(explicit_ti, str) and explicit_ti):
+        explicit_ti = descriptor.get("temporal_intent")
+    explicit_ver = bool(params.get("version_specific") or descriptor.get("version_specific"))
+    if (isinstance(qc, str) and qc) or (isinstance(explicit_ti, str) and explicit_ti) or explicit_ver:
+        intent, src = _clsp.resolve_temporal_intent(qc, explicit_ti, explicit_ver)
+        return _mode_of_intent(intent), intent, "intent:" + src
     th = descriptor.get("time_horizon")
     if isinstance(th, str) and th in KNOWN_TEMPORAL_MODES:
-        return th
-    return "any"
+        return th, _intent_of_mode(th), "time_horizon_mode"
+    return "any", "any_valid_version", "default"
 
 
 def _score_candidate(hit, descriptor, params):
@@ -384,14 +474,14 @@ def _score_candidate(hit, descriptor, params):
     if auth > 0:
         reasons.append("authority_boost")
 
-    # (1) NAMESPACE hard boundary (i32/U1) -- SINK a cross-namespace candidate.
+    # (1) NAMESPACE CLOSURE (i33/U1'): a cross-namespace candidate is DROPPED BEFORE it ever reaches this
+    # scorer (select() pre-filters via the canonical ns_permitted, sanitized -- SCHEMA_NOTES s15). So every
+    # candidate here is already in-scope; `namespace_filtered` is always False. The soft namespace/'project-match'
+    # bonus stays RETIRED whenever the hard boundary is engaged (allowed_ns supplied) and preserved (back-compat)
+    # when it is absent -- see `proj` above.
     hard = False
     hard_reason = None
     ns_filtered = False
-    if allowed_ns is not None and hit.get("namespace") not in allowed_ns:
-        hard = True
-        hard_reason = "namespace"
-        ns_filtered = True
 
     # (2) HARD FILTERS -- forbidden / privacy / deleted (unchanged 1.0.0 semantics).
     if not hard:
@@ -422,9 +512,18 @@ def _score_candidate(hit, descriptor, params):
                 is_label_stale = True
                 break
     is_stale = is_status_stale or is_label_stale
+    # i33/U4': candidate-INDEPENDENT currentness. When #36 supplies the CATALOG-computed `effective_current`
+    # boolean (status==current AND no valid reachable live successor at the snapshot within scope), it is
+    # AUTHORITATIVE and POOL-INDEPENDENT -- a superseded candidate with `effective_current == False` is excluded
+    # under current_only EVEN when its successor is absent from the pool. Absent the signal, fall back to the
+    # 1.1.0 `is_stale` test (byte-identical). (#36 is responsible for setting effective_current to already
+    # reflect status staleness + supersession.)
+    ec = hit.get("effective_current")
+    has_ec = isinstance(ec, bool)
+    not_current = (ec is False) if has_ec else is_stale
     stale_flagged = False
     if temporal_mode == MODE_CURRENT_ONLY:
-        if is_stale:
+        if not_current:
             stale_flagged = True
             if not hard:
                 hard = True
@@ -432,7 +531,7 @@ def _score_candidate(hit, descriptor, params):
             reasons.append("hard_filter_stale")
     elif temporal_mode == MODE_PREFER_CURRENT:
         # the 1.0.0 current_only SOFT demote, relocated -- survives ONLY for this non-current_only mode.
-        if is_stale:
+        if not_current:
             stale_flagged = True
             base -= params["stale_penalty"]
             reasons.append("stale_demote")
@@ -450,6 +549,9 @@ def _score_candidate(hit, descriptor, params):
         "occurrence_count": len(occ), "base_score": base,
         "namespace_filtered": ns_filtered, "temporal_mode": temporal_mode,
         "is_stale": is_stale,
+        # i33/U4' diagnostics: whether the catalog effective_current signal was present + the resolved verdict.
+        "effective_current_supplied": has_ec,
+        "not_current": not_current,
     }
     return base, features, reasons, occ
 
@@ -474,15 +576,16 @@ def _resolve_params(params):
                             "reason": m.get("reason")})
         return out
 
-    # i32/U1: allowed_namespaces -> a frozenset (a str is wrapped; an explicit empty set filters EVERYTHING,
-    # fail-closed). ABSENT (None) = the back-compat soft-project path.
-    ans = p.get("allowed_namespaces")
-    if ans is None:
-        allowed_namespaces = None
-    elif isinstance(ans, str):
-        allowed_namespaces = frozenset([ans])
-    else:
-        allowed_namespaces = frozenset(str(x) for x in ans)
+    # i33/U1': allowed_namespaces -> the CANONICAL normalization (the ONE owner, namespace_policy). A str is
+    # wrapped; an explicit empty set filters EVERYTHING (fail-closed); ABSENT (None) = the back-compat unscoped
+    # soft-project path (closure NOT engaged).
+    allowed_namespaces = _nsp.normalize_allowed(p.get("allowed_namespaces"))
+
+    # i33/U1' rejection policy: the caller may pass a NamespaceRejectionPolicy to CAPTURE the privileged
+    # security-log detail; otherwise select() creates an internal one (detail discarded, only the count surfaces).
+    rej = p.get("rejection_policy")
+    if not isinstance(rej, _nsp.NamespaceRejectionPolicy):
+        rej = None
 
     return {
         "rrf_k": int(p.get("rrf_k", RRF_K_DEFAULT)),
@@ -493,8 +596,11 @@ def _resolve_params(params):
         "diversity_penalty": int(p.get("diversity_penalty", RERANK_DIVERSITY_PENALTY)),
         "current_only": bool(p.get("current_only", False)),
         "temporal_mode_param": p.get("temporal_mode"),
+        "temporal_intent": p.get("temporal_intent"),   # i33/U5' explicit user temporal intent (outranks class)
+        "version_specific": bool(p.get("version_specific", False)),  # i33/U5' explicit version/as-of request
         "query_class": p.get("query_class"),
         "allowed_namespaces": allowed_namespaces,
+        "rejection_policy": rej,                        # i33/U1' caller-supplied privileged accumulator (or None)
         "dedup_display": bool(p.get("dedup_display", False)),
         "hard_filter": _matchers("hard_filter"),
         "stale": _matchers("stale"),
@@ -591,14 +697,34 @@ def select(candidates, descriptor, policy_id=POLICY_ID, params=None):
         raise ValueError("unknown selection policy_id: %r (known: %s)" % (policy_id, sorted(KNOWN_POLICIES)))
     descriptor = descriptor or {}
     P = _resolve_params(params)
-    # resolve the effective temporal mode (i32/U4+U5), then expose the boolean the scorer consumes.
-    P["temporal_mode"] = _resolve_temporal_mode(P, descriptor)
-    P["current_only"] = (P["temporal_mode"] == MODE_CURRENT_ONLY)
+    # resolve the effective temporal mode + intent (i33/U5'), then expose the boolean the scorer consumes.
+    temporal_mode, temporal_intent, temporal_source = _resolve_temporal_mode(P, descriptor)
+    P["temporal_mode"] = temporal_mode
+    P["current_only"] = (temporal_mode == MODE_CURRENT_ONLY)
 
-    # ---- Stages 1-3,5-6: score every candidate (order-independent) ----
+    # ---- Stage 1: NAMESPACE CLOSURE (i33/U1') -- the canonical predicate, sanitized DROP. ----
+    # When allowed_namespaces is supplied (closure engaged) a candidate that fails `ns_permitted` is DROPPED
+    # BEFORE scoring and NEVER enters scored[]/ranked[]/selected[]/features_by_candidate/omission_manifest -- so
+    # no cross-namespace identifying data can leak through ANY selection-output diagnostic array. The ONLY
+    # caller-visible surface is namespace_violation_count + namespace_closure_violated; the identifying detail
+    # goes to the privileged rejection-policy security_log. ABSENT allowed_namespaces = the unscoped back-compat
+    # path (no drop) -> byte-identical to 1.1.0.
+    allowed_ns = P["allowed_namespaces"]
+    rej = P["rejection_policy"] if P["rejection_policy"] is not None else _nsp.NamespaceRejectionPolicy()
+    if allowed_ns is not None:
+        in_scope = []
+        for hit in candidates:
+            if _nsp.ns_permitted(hit.get("namespace"), allowed_ns):
+                in_scope.append(hit)
+            else:
+                rej.reject(hit, allowed_ns, stage="selection")
+    else:
+        in_scope = candidates
+
+    # ---- Stages 2-3,5-6: score every IN-SCOPE candidate (order-independent) ----
     scored = []
     features_by_candidate = {}
-    for idx, hit in enumerate(candidates):
+    for idx, hit in enumerate(in_scope):
         base, feats, reasons, occ = _score_candidate(hit, descriptor, P)
         orig_rank = hit.get("rank")
         if not isinstance(orig_rank, int):
@@ -635,6 +761,24 @@ def select(candidates, descriptor, policy_id=POLICY_ID, params=None):
     for s in ordered:
         if id(s) in demoted_ids:
             s["reasons"].append("superseded_demote")
+
+    # ---- Stage 4b: supersession BRANCH (i33/U4') -- the catalog flagged a candidate with TWO live successors
+    # (`effective_current_branch`); a branch is a conflict, surfaced (never a silent pick) for #40's
+    # `conflicted` disposition. Byte-identical when no candidate carries the flag. ----
+    supersession_conflicts = []
+    for s in ordered:
+        if s["feats"]["hard_demote"]:
+            continue
+        if s["hit"].get("effective_current_branch") is True:
+            s["reasons"].append("conflicted")
+            succs = _id_list(s["hit"].get("effective_current_successors")) or _successor_ids(s["hit"])
+            supersession_conflicts.append({
+                "record_version_id": s["hit"].get("record_version_id"),
+                "record_id": s["hit"].get("record_id"),
+                "successors": sorted(set(succs)),
+            })
+    supersession_conflicts.sort(key=lambda c: (str(c.get("record_version_id") or ""),
+                                               str(c.get("record_id") or "")))
 
     # ---- Stage 7b: occurrence-preserving DISPLAY dedup (P1-3; optional, default OFF) ----
     # Identical text collapses into ONE display item carrying occurrences[] + evidence_cluster_id, and the
@@ -746,8 +890,8 @@ def select(candidates, descriptor, policy_id=POLICY_ID, params=None):
         # deterministic, de-duplicated reason codes in stable stage order (i32 codes folded in additively)
         order = ["rescued", "hard_filter_namespace", "hard_filter_forbidden", "hard_filter_privacy",
                  "hard_filter_deleted", "hard_filter_source", "hard_filter_stale", "superseded_demote",
-                 "stale_demote", "authority_boost", "fusion_rrf", "diversity_capped", "display_duplicate",
-                 "budget_omitted", "selected"]
+                 "conflicted", "stale_demote", "authority_boost", "fusion_rrf", "diversity_capped",
+                 "display_duplicate", "budget_omitted", "selected"]
         seen = set()
         codes = []
         for c in s["reasons"]:
@@ -782,8 +926,22 @@ def select(candidates, descriptor, policy_id=POLICY_ID, params=None):
         "omission_manifest": omission,
         "stages": list(STAGES),
         "contradicts_pairs": contradicts_pairs,
+        # i33/U4' supersession branch conflicts (candidate-independent) for #40's `conflicted` disposition.
+        "supersession_conflicts": supersession_conflicts,
+        # a convenience flag #40 may fold into packet_disposition (either a contradicts pair OR a branch).
+        "conflicted": bool(contradicts_pairs) or bool(supersession_conflicts),
+        # i33/U5' temporal + classifier policy stamps (packet identity, CONTEXT_PACKET_CONTRACT s6).
         "temporal_mode": P["temporal_mode"],
+        "temporal_intent": temporal_intent,
+        "temporal_intent_source": temporal_source,
+        "classifier_policy_id": _clsp.CLASSIFIER_POLICY_ID,
+        "classifier_policy_version": _clsp.CLASSIFIER_POLICY_VERSION,
+        # i33/U1' namespace closure: the canonical predicate/policy stamps + the SANITIZED violation surface.
+        "namespace_policy_id": _nsp.NS_POLICY_ID,
+        "namespace_policy_version": _nsp.NS_POLICY_VERSION,
         "allowed_namespaces": (sorted(P["allowed_namespaces"]) if P["allowed_namespaces"] is not None else None),
+        "namespace_violation_count": rej.violation_count,
+        "namespace_closure_violated": rej.violation_count > 0,
     }
 
 

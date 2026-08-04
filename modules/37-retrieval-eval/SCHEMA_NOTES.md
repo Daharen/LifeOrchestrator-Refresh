@@ -1,4 +1,4 @@
-# SCHEMA_NOTES -- retrieval.eval (Module 37, contract v0.4 / eval-0.4 + selpol_rrf_v1 1.1.0, plan fo-32-0fb25203, RETRIEVAL-EVAL-SELPOL-TIER0-i32; prior: v0.3 / SELECTION-POLICY-i30, s9-13)
+# SCHEMA_NOTES -- retrieval.eval (Module 37, contract v0.5 / eval-0.5 + selpol_rrf_v1 1.2.0, plan fo-33-d7b55e46, RETRIEVAL-EVAL-PREDICATE-i33; prior: v0.4 / eval-0.4 + selpol 1.1.0, fo-32-0fb25203, s14; v0.3 / SELECTION-POLICY-i30, s9-13)
 
 **REQUIRED by D-0077.** This module is BOTH the CONSUMER side of a retriever pair (it calls the real
 `artifact.search` #36 retriever-0.2 at fold / its own lexical baseline now, and scores the ranked hits + #40's
@@ -498,3 +498,128 @@ selects BYTE-IDENTICALLY to a direct `select()` on the same real #36 hits: zero 
 superseded ordered below successor, stale excluded under current_only, a `node`/reserved kind additively
 ingested + never selected out-of-namespace, deterministic `packet_id`. selpol carries NO catalog/packet logic --
 it consumes the hit array + descriptor + params only.
+
+## 15. i33 (D-0096) -- NAMESPACE-CLOSURE + SUPERSESSION-HARDENING: selpol 1.1.0 -> 1.2.0 + eval 0.4 -> 0.5
+
+The frontier Tier-0 red-team (pack `159e9cb5`, `research/2026-08-04-tier0-amendment-redteam.md`) found the i32
+amendments were a correct ENVELOPE-level FIRST layer but INCOMPLETE. i33 hardens the selection/predicate half.
+selpol is the PRODUCER of the ONE canonical namespace predicate + the selection semantics + the versioned
+class->intent map; #36 (retriever) + #40 (compiler) CONSUME them; the orchestrator runs the D-0077
+mixed-namespace leakage-path smoke at fold. Governing: `CONTEXT_PACKET_CONTRACT.md` s4 (PINNED, D-0089) + its
+i33 amendment (s0); `MEMORY_CONTRACT.md` Amendment A5 (U1'..U5' + risk 6); `MEMORY_ARCHITECTURE.md` s5 (query
+classes) + s9. Every change is ADDITIVE; a 1.1.0 caller that supplies NONE of the new signals gets
+BYTE-IDENTICAL selection (the s13 regression pins stay green for 1.2.0 -- proof below). `POLICY_VERSION
+1.1.0 -> 1.2.0`; `GENERATOR_VERSION 0.5.0`; report schema `lifeorch.retrieval_eval_report/0.5`; skill.json
+`0.5.0`/contract `0.5`.
+
+**(U1' risk-6) The ONE canonical namespace predicate + rejection/sanitization policy -- NEW `lib/namespace_policy.py`.**
+Authored ONCE here (owned by #37), IMPORTED by #40, and MIRRORED by #36's retriever (the D-0077 fold asserts
+byte-identical accept/reject across the three); NEVER re-implemented per module. It is PURE + stdlib-only.
+- `ns_permitted(candidate_namespace, effective_allowed) -> bool`: CLOSED-SET membership ONLY. True IFF the
+  candidate namespace is EXACTLY a member of the caller-supplied closed set. NO wildcard / prefix / parent /
+  child / shared / `all` expansion. A `None` or EMPTY `effective_allowed` permits NOTHING (fail-closed). A
+  candidate with no namespace (`None`) is never permitted (cannot be proven in-scope).
+- `effective_allowed_namespaces(request, grant) -> frozenset`: the ONE scope computation =
+  `intersection(REQUEST, GRANT)`. `task_input.namespace` is a REQUEST (never authorization); the control_plane
+  grant is the authority; neither widens the other; a `None`/empty request OR grant OR intersection => the EMPTY
+  set (fail-closed). #40 computes this and passes the RESULT as `params.allowed_namespaces` (selpol treats it as
+  a closed set and never widens it).
+- `NamespaceRejectionPolicy`: the sanitized rejection policy. Its caller-visible surface is ONLY
+  `violation_count` + `caller_summary()` (`{namespace_violation_count, namespace_closure_violated}`); the
+  identifying detail (namespace, ids, paths, the effective set, stage) accumulates in the privileged
+  `security_log`, intended for a PRIVILEGED LOCAL security sink and MUST NOT reach a packet/caller.
+selpol ENGAGES closure whenever `params.allowed_namespaces` is supplied: a candidate that fails `ns_permitted`
+is DROPPED BEFORE scoring and NEVER enters `scored[]`/`ranked[]`/`selected[]`/`features_by_candidate`/
+`omission_manifest` -- so no cross-namespace identifying data can leak through ANY selection-output diagnostic
+array (the i32 "sink to the bottom but keep in ranked[]" was the leak; i33 REPLACES it). The result carries the
+SANITIZED surface `namespace_violation_count` + `namespace_closure_violated` + `namespace_policy_id/version`;
+a caller (#40) may pass `params.rejection_policy` (a `NamespaceRejectionPolicy`) to CAPTURE the privileged log,
+else the detail is discarded (safe default). ABSENT `allowed_namespaces` = the unscoped back-compat path (no
+closure, soft project bonus preserved) -> byte-identical to 1.1.0.
+
+**(U4' candidate-INDEPENDENT supersession).** The temporal stage consumes a per-candidate `effective_current`
+BOOLEAN that #36 computes from the CATALOG (`status == current` AND no valid reachable live successor within
+scope at the pinned snapshot) -- POOL-INDEPENDENT. When present it is AUTHORITATIVE: under `current_only` a
+candidate with `effective_current == False` is HARD-filtered (`hard_filter_stale`) EVEN when its successor is
+ABSENT from the candidate pool (the i32 by-construction demote was pool-DEPENDENT -- the defect). Absent the
+signal, selpol falls back to the 1.1.0 `is_stale` test (byte-identical). A NEW s5 value `superseded` is added to
+`STALE_STATUSES` (a 1.1.0 corpus never carried it -> additive). The demote-ORDERING (non-current_only modes)
+prefers the catalog successor ref `effective_current_successor` (falling back to the `superseded_by`/`supersedes`
+edges) so a surviving live successor is ordered STRICTLY ABOVE its surviving superseded predecessor
+(`superseded_demote`). A branch -- `effective_current_branch == True` (the catalog saw TWO live successors) --
+is surfaced (never a silent pick) in the result's `supersession_conflicts[]` + a `conflicted` reason on the
+branch candidate + the top-level `conflicted` flag, for #40's `packet_disposition = conflicted`. The pool-dependent
+supersession EXCLUSION is RETIRED; the reorder + branch engage only when their signals are present (byte-identical
+otherwise). selpol scope-checks its OWN diagnostics: `contradicts_pairs`/`supersession_conflicts`/`features` only
+reference SURVIVING in-scope candidates (cross-namespace candidates are dropped before they can be referenced);
+selpol relies on the A5 no-cross-namespace-edge invariant (#36-enforced) for pass-through edge fields.
+
+**(U5' query_class vs temporal_intent split) -- NEW `lib/classifier_policy.py`.** `query_class` (SEMANTIC) and
+`temporal_intent` (TEMPORAL: `current_only | historical_as_of | version_specific | any_valid_version`) are
+INDEPENDENT dimensions. The versioned `CLASS_TO_TEMPORAL_INTENT` map (`classifier_policy_id = clsmap_v1` /
+`classifier_policy_version = 1.0.0`) is the DEFAULT; `resolve_temporal_intent(query_class, explicit_temporal_intent,
+explicit_version)` makes an EXPLICIT user `temporal_intent` (one of the 4-value enum) OUTRANK the class default,
+and an explicit version request -> `version_specific`. `composite` + `unclassified` are first-class FALLBACK
+classes (-> `any_valid_version`). The class->intent map: `current_state`/`procedure_selection -> current_only`;
+`exact_reference -> version_specific`; `historical_reconstruction -> historical_as_of`; every other class + the
+two fallbacks -> `any_valid_version` (stale ALLOWED). Rationale: ONLY a class that inherently asks "what is true
+NOW" defaults to the HARD current_only exclude; temporal is NOT a security boundary (namespace is), so the other
+classes never silently drop a valid record -- the red-team's caution against over-freezing current_only as the
+universal mode. #40's compiler front owns the task_type -> query_class STAGE; this module owns the class -> intent
+MAP + the resolver (#40 imports them). selpol maps the resolved CONTRACT intent to its INTERNAL action mode
+(`current_only` -> HARD exclude; the 1.1.0 soft `prefer_current` survives as an EXPLICIT-ONLY `params.temporal_mode`
+back-compat, no longer a class default). The result stamps `temporal_intent` + `temporal_intent_source` +
+`classifier_policy_id/version` for #40's packet identity (CONTEXT_PACKET_CONTRACT s6). Channels stay OPEN
+(U5, unchanged): `retrieval_occurrences[].channel` is DATA; an explicit list fuses a novel channel with no code
+change. Temporal-mode resolution precedence (pure): explicit `params.current_only is True` > explicit
+`params.temporal_mode` (a known INTERNAL mode incl. `prefer_current`) > `descriptor.time_horizon == 'current_only'`
+> the versioned intent resolver (explicit `temporal_intent` > explicit version > `query_class` default) engaged
+ONLY when a class/intent/version signal is present > a raw `descriptor.time_horizon` mode > `any` (the
+byte-identical default).
+
+**eval 0.4 -> 0.5 (the MEASUREMENT).** `normalize_hit` PRESERVES the A5 catalog signals
+(`effective_current`/`effective_current_successor`/`effective_current_successors`/`effective_current_branch`).
+`_policy_params_from_query` + `normalize_query` pass `allowed_namespaces` (the CALLER-computed effective set),
+`query_class` (the class default), and an explicit `explicit_temporal_intent`/`version_specific` (the U5' override,
+which outranks the class); `temporal_intent` forces `current_only` ONLY when NEITHER a query_class NOR an
+explicit_temporal_intent is present. The `selection_conformance` block (aggregate + `per_query_selection_conformance`)
+MEASURES, integer-only + byte-identical on re-run: **U1' namespace CLOSURE** (`cross_namespace_candidates` present
+BUT `cross_namespace_selected == 0` AND `cross_namespace_in_ranked == 0` -- the diagnostic-array leak check the i32
+sink-in-place failed -- plus the sanitized `namespace_violation_count`/`namespace_closure_violated`); **U4'
+pool-INDEPENDENT current_only** (`noncurrent_selected_under_current_only == 0` over `noncurrent_candidates`, using
+the pool-independent `effective_current` verdict); **U4' supersession ordering + branch** (`supersession_order_ok`,
+`supersession_conflicts`); **U5' the class/intent split** (`temporal_intent` + `temporal_intent_source` +
+`classifier_policy_id/version`); and **reason-code coverage**. NEW fixture `benchmark5.json` (+ `benchmark5-plan.json`,
+a canned retriever-0.2 stream via `mock-retriever.py`) exercises all five paths with a cross-namespace distractor
+that OUTSCORES the answer (dropped), a superseded high-scorer whose successor is ABSENT (excluded under
+current_only), a supersession chain (successor above predecessor), a two-successor branch (conflicted), and a
+`query_class=current_state` + `explicit_temporal_intent=any_valid_version` override (stale not excluded). The
+report `selection_policy` block additionally stamps `namespace_policy_id/version` + `classifier_policy_id/version`
+(packet-identity fields #40 imports). The shipped 0.4 fixtures report the new metrics with 0 violations and every
+RAW/reranked/packet metric VALUE is PRESERVED (the closure DROP does not move a pinned K-window metric --
+verified; the only shape change is the cross-namespace distractor no longer appearing in `benchmark4`'s ranked[]
++ `reason_code_coverage`, i.e. `hard_filter_namespace` is no longer a surfaced code because the candidate is now
+DROPPED, sanitized). All report SHA + input_digest pins were re-computed (the version string + the new fields +
+the sanitized drop change the bytes; `REPORT_SCHEMA` is part of `input_digest`).
+
+**1.1.0 -> 1.2.0 REGRESSION PROOF (selpol unit test s13, pins captured from selpol 1.0.0, verified for 1.2.0).**
+The SELECTION output (`ranked`/`selected`/`omission_manifest`) is BYTE-IDENTICAL for: the default path with
+descriptor bonuses (ranked sha `47179d1d...`); `current_only=True` on all-`current` candidates (ranked sha
+`ca885642...`); a forbidden+dedup+budget mix (ranked sha `d364068b...`, omission sha `4f53cda1...`). Every i33
+stage engages ONLY when its signal is present (allowed_namespaces / effective_current / a resolved current_only /
+supersession refs / effective_current_branch / query_class / temporal_intent), so the no-signal call reproduces
+1.1.0 exactly. `features_by_candidate` grows two ADDITIVE diagnostic keys (`effective_current_supplied`,
+`not_current`) -- not hashed by the s13 pins; the result grows the additive i33 keys listed in the module header.
+
+**Fold notes for #40 (D-0077 selpol byte-identity + mixed-namespace LEAKAGE smoke, i33).** #40 imports the
+canonical `selpol_rrf_v1` AND `lib/namespace_policy.py` (path-resolved). It MUST: compute
+`effective_allowed_namespaces = intersection(task_input.namespace, control_plane grant)` via the canonical helper
+and pass the RESULT as `params.allowed_namespaces` (never the raw request); pass its resolved `query_class` +
+any explicit user `temporal_intent`/version so the temporal mode resolves; rely on each candidate's #36-supplied
+`effective_current` (+ `effective_current_successor`/`_branch`) for the pool-independent temporal + supersession
+stages; and route `params.rejection_policy.security_log` to a privileged local sink (NEVER into the packet). The
+fold asserts #40-via-canonical selects BYTE-IDENTICALLY to a direct `select()` on the same real #36 hits AND, on
+a mixed-namespace catalog (ns-A + ns-B + a superseded/absent-successor pair + a reserved `node` + a `working`
+record), that ZERO ns-B data appears in evidence OR any diagnostic array, the superseded predecessor is excluded
+pool-independently under current_only, a branch drives `conflicted`, and the `packet_id` is deterministic. selpol
+carries NO catalog/packet logic -- it consumes the hit array + descriptor + params only.

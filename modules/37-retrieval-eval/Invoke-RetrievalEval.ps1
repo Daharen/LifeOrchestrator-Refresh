@@ -43,7 +43,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$SKILL_ID = 'retrieval.eval'; $SKILL_VERSION = '0.4.0'; $CONTRACT = '0.4'
+$SKILL_ID = 'retrieval.eval'; $SKILL_VERSION = '0.5.0'; $CONTRACT = '0.5'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 $bound = $PSBoundParameters
