@@ -482,3 +482,128 @@ where named. `SCHEMA_VERSION "3"->"4"`, `PRIOR_SCHEMA_VERSIONS=("1","2","3")`, `
 - **GATE** (section 33): a v3 seed (built by the frozen `fixtures/artifact_search_v3.py`) migrates 3->4 in place
   with migrated=true / `from:3` / `reserve_a5`; NO chunk or record loss; shipped tables byte-identical (migrated
   sha == fresh v4 sha); catalog_digest UNCHANGED; idempotent re-open; shipped search regression-green.
+
+## 13. A6 (D-0098) Tier-1 bounded-fanout HIERARCHY -- EVERY interpretation (REQUIRED for the D-0077 fold)
+
+0.5 turns the A4/A5 RESERVED `node` seam into a real DETERMINISTIC build (schema_version 4 -> 5). The builder is
+CODE, never the model; the frontier design red-team (pack `b4c90545`) NO-GO'd the first draft's recall claim, so
+the **SAFE-PRUNING invariant is load-bearing** (13.7). The packet/selection + navigation-plan half is #40/#37
+(i35). Everything below is what a consumer + the D-0077 fold must rely on.
+
+### 13.1 (H1) the `node` record + `nodes`/`hierarchies` tables + CANONICAL edges vs PROJECTION
+- A `node` is a DERIVED record: `record_kind=node`, `provenance_mode=derived_record`, `content_role=navigation`,
+  `candidate_role=navigation`, namespace-homogeneous, exactly one parent, acyclic. Nodes live in the NEW `nodes`
+  table and are **NOT inserted into `records`** -- the flat `search`/`list-records` stay hierarchy-agnostic; a
+  node NEVER enters `evidence[]` (navigation is the SEPARATE `shortlist`/`descend` ops).
+- **`child_of_node` (node->parent node) + `member_of_node` (leaf->node) are CANONICAL edges in `record_edges`**;
+  the node's stored `child_ids_json`/`member_ids_json` are a rebuildable PROJECTION whose set MUST equal the
+  canonical edges (integrity `tree_digest_matches_canonical`; the fold + `_validate_tree` assert equality).
+- Deterministic structural synopsis: `child_count`, `member_count`, `subtree_record_count`, bounded
+  `entity_union` (top-N by subtree frequency, tie-break by key -- RANKING ONLY, never prunes), bounded
+  `lexical_descriptor` {term: df} (RANKING ONLY), EXACT `time_range` {valid_from_min, valid_to_max}, EXACT
+  `authority_set` (sorted distinct), EXACT `kind_histogram`, and a **no-false-negative Bloom `presence_filter`**
+  (m=2048, k=7, over subtree paths/record-ids/entity+lexical terms -- the ONLY lexical/entity/path/id ABSENCE
+  proof; see 13.7).
+- **Vector aggregate = SUFFICIENT STATISTICS, not a mean-of-normalized-child-centroids**: `{vector_sum,
+  vector_count, missing_vector_count, embedding_space_id, dim, canonical_member_order, accumulation_precision,
+  accumulation_algo}`. Accumulated in f64 by summing child sums (associative -> TOPOLOGY-INDEPENDENT) then
+  QUANTIZED (round 1e-6) BEFORE hashing -> byte-reproducible. **ABSENT (NULL) while no subtree leaf has a
+  vector** (lexical+entity shortlist stands alone; the aggregate is NEVER a pruning oracle). `synopsis_text` +
+  `covering_radius`/`medoids` are RESERVED (Tier 2), not built.
+- `record_content_hash` = sha256 over the canonical (quantized, sorted) synopsis bytes; `synopsis_input_digest`
+  = digest over the IMMEDIATE child/member canonical (id, hash) pairs (transitive reconstruction follows the
+  bounded-fanout graph, not a flattened leaf list). `record_version_id = ndv_<sha(node_id+record_content_hash)>`.
+
+### 13.2 (H4) the DETERMINISTIC BALANCED bulk-builder (MINIMAL i34; live split -> i35)
+- Leaves = all level-0 EVIDENCE (`source_chunk` + typed records; `node`/`working` EXCLUDED) in ONE canonical
+  namespace (keyed by `_slug` so a source's chunks [source_id] + its typed records [namespace] unify). Total
+  order = `(coarse_group_key, content_hash, leaf_id)` (coarse = parent dir else kind bucket).
+- **Balanced even-partition**: `_even_partition_sizes(n, MAX_FANOUT)` = fewest groups each <= fanout, sizes as
+  even as possible; recurse level-up until one root. Balance is INDEPENDENT of the grouping key's distribution
+  (a low-cardinality/dominant key CANNOT produce deep thin chains -- the key only sets the order). Depth is
+  logarithmic; `node_id = nd_<sha(hierarchy_id + level + sorted child/member ids)>` is CONTENT-ADDRESSED (NO
+  tree_version) so an identical corpus rebuilds byte-identical node_ids + tree_digest.
+- `MAX_FANOUT` default 16 (ratifiable; `max_fanout` arg). `builder_policy_id=balanced-even-partition`, version 1.
+- **Rebuild/flat-fallback triggers (H4)**: a corpus mutation (ingest/ingest-records/store-embeddings) sets any
+  CURRENT tree whose `built_from_corpus_version != corpus_version` to `topology_state=rebuild_required`
+  (`mark_stale_hierarchies`, run after every corpus-changing op) -- flat retrieval serves until a deterministic
+  rebuild + atomic swap. `_validate_tree` failure -> `topology_state=corrupt` (NOT published). Live incremental
+  in-place split is DEFERRED to i35 (this wave rebuilds).
+
+### 13.3 (H3) hierarchy IDENTITY + ATOMIC tree-version publication
+- `hierarchies` row = {`hierarchy_id` (STABLE per (namespace, kind)), `tree_version` (tv1, tv2, ... per build),
+  `hierarchy_kind=source_module`, namespace, builder_policy_id/version, max_fanout, root_node_id, `tree_digest`,
+  topology_state, node_count, leaf_count, depth, built_from_corpus_version, build_generation, is_current}.
+- **Atomic publication**: a (re)build shadow-builds all nodes in memory, deletes the prior tree's nodes + node
+  edges + hierarchy row, inserts the new ones, and COMMITS ONCE -- a reader (compile) therefore sees EITHER the
+  whole old OR the whole new tree, never a mix ("a compile pins one tree_version"). i34 keeps exactly ONE current
+  version per hierarchy (multi-version retention for concurrent long compiles = i35; the single-writer executor
+  makes mixed-generation reads impossible). `shortlist`/`descend` pinning a NON-current `hierarchy_version` are
+  NOT served (fail-safe). Fault injection `before_hierarchy_commit` rolls back -> the prior tree is intact.
+- `tree_digest` = deterministic sha over this version's node rows + their canonical `member_of_node`/
+  `child_of_node` edges (the atomic-publish + projection==edges + determinism proof).
+
+### 13.4 (H2) THREE separated state axes + monotonic generations + CAS-cleared regen
+- Do NOT overload evidence `status` (s5). Distinct axes: evidence `status`/`currentness` (s5, unchanged);
+  `topology_state` {valid|rebuild_required|corrupt}; navigation-synopsis `synopsis_freshness` {fresh|stale} via
+  MONOTONIC `subtree_generation`/`synopsis_generation` (+ `synopsis_built_from_corpus_version`,
+  `synopsis_input_digest`). A node is FRESH iff `synopsis_generation` covers `subtree_generation` AND the input
+  digest matches the current canonical children/members. A node can be topology-VALID + synopsis-STALE at once.
+- **Deterministic propagation** (`propagate_leaf_change(leaf_id)`): mark the UNION of affected ancestor-path
+  synopses `synopsis_freshness=stale` + `status=summary_stale` and bump their `subtree_generation` (local update
+  -- nodes off the path stay fresh). **CAS regen** (`regen_node(node_id, expected_generation?)`): recompute the
+  synopsis from CURRENT children, then `UPDATE ... synopsis_generation=subtree_generation, freshness=fresh WHERE
+  node_id=? AND subtree_generation=<expected>` -- if the generation advanced since it was observed the clear is
+  REFUSED (rowcount 0) and the node stays stale. **This closes the ABA/lost-update stale-clear race** (a Boolean
+  flag is insufficient). `refresh-hierarchy` lazily regens all stale nodes bottom-up.
+- **`summary_stale` ROUTES but never ANSWERS**: a stale node still appears in `shortlist` (which flags
+  `stale_navigation_encountered`) but a node never enters `evidence[]`, and `current_only` evidence `search` is
+  unaffected by node staleness (the axes are decoupled). A STALE synopsis is NEVER eligible to prune (13.7).
+
+### 13.5 (H5, SAFETY-CRITICAL) write-time + transitive namespace HOMOGENEITY
+- Leaves are collected per canonical `_slug(namespace)`; every leaf is asserted slug-homogeneous with the
+  hierarchy (a mismatch -> `cross_namespace_member` fail-closed + a privileged security-log line). Every node's
+  namespace == its hierarchy's namespace (integrity `node_namespace_matches_hierarchy`); no cross-namespace
+  `child_of_node` edge (integrity `no_cross_namespace_node_edge`). Every aggregate (entity_union / lexical /
+  ranges / histograms / vector-aggregate / counts / hashes / bloom) is PROTECTED derived info built ONLY from
+  same-namespace members. A multi-namespace authorized compile gets SEPARATE roots (one per namespace) -- NEVER
+  a merged root/aggregate.
+
+### 13.6 (H6, SAFETY-CRITICAL) authorization-bound frontier ops
+- `shortlist(query, effective_allowed_namespaces, hierarchy_version, corpus_snapshot, k)` ranks the AUTHORIZED
+  hierarchy ROOTS (the initial navigation frontier) by structural-synopsis match -- a FRONTIER-EXPANSION op, NOT
+  a flat scan of every node. `descend(node_id, retrieval_plan_id, effective_allowed_namespaces, hierarchy_version,
+  corpus_snapshot)` expands ONE node into its direct children + leaf members. The canonical `ns_permitted`
+  (A5; the same predicate the retriever uses) is enforced at EVERY hop AND on every returned object; `shortlist`
+  re-asserts all returned nodes in-scope (a leak -> fail-closed abort, count only). **An arbitrary / foreign /
+  out-of-scope `node_id` NEVER makes the retriever a confused deputy** -- `descend` FAILS CLOSED with an
+  identical opaque `{authorized:false, reason:not_authorized, child_count:0, children:[], leaf_members:[]}` (NO
+  namespace/id/metadata; the detail goes to the privileged security log). Hits carry the reserved
+  `retrieval_stage_id`/`parent_stage_id`/`retrieval_plan_id` lineage (a compile is multi-stage).
+
+### 13.7 the load-bearing SAFE-PRUNING channel predicates (`prune_verdict`; frontier red-team `b4c90545`)
+- A navigation-derived value may POSITIVELY prioritize a branch but MUST NOT NEGATIVELY exclude one unless a
+  deterministic, channel-specific, NO-FALSE-NEGATIVE predicate PROVES the subtree cannot satisfy the requirement
+  at the pinned snapshot; else `keep` (the compiler expands / switches channel / flat-falls-back). Verdicts:
+  `lexical|entity|path|id` -> the Bloom `presence_filter` ("definitely absent" = SOUND prune; "maybe" = keep);
+  `kind` -> exact `kind_histogram` membership; `authority` -> exact `authority_set` membership; `time` -> exact
+  `time_range`; **`descriptor` (bounded entity_union/lexical_descriptor) NEVER prunes**; **`vector` (centroid
+  alone) NEVER prunes** (needs the reserved covering-radius); **a STALE synopsis NEVER prunes** (any channel).
+
+### 13.8 Migration + determinism + catalog_digest (schema_version 4 -> 5)
+- **`_migrate_4_to_5` is ADDITIVE ONLY**: it ensures the NEW `nodes` + `hierarchies` tables (SCHEMA_SQL is
+  idempotent on open) and adds NO column to any table. It rewrites NONE of `sources`/`documents`/
+  `document_versions`/`chunks`/`records` -- `shipped_tables_schema_sha` BYTE-IDENTICAL pre/post (asserted vs a
+  fresh v5 db). Version-chained 1->2->3->4->5; idempotent; action `a6:hierarchies+nodes_tables;...`.
+- **`catalog_digest` EXCLUDES `member_of_node`/`child_of_node` edges** so the CORPUS fingerprint stays stable
+  across a tree build (a tree is DERIVED navigation state) and **zero nodes == today's flat retrieval
+  byte-for-byte**. The hierarchy has its OWN `tree_digest`. Building or rebuilding a tree does NOT change
+  `catalog_digest`/`corpus_version`.
+- **GATE** (D-0077, this module owns the hierarchy gate tests): STRUCTURAL (deterministic byte-identical rebuild
+  tree_digest; no cycles/orphans; fanout+occupancy; one parent; projection==canonical edges; atomic publication);
+  SECURITY (zero cross-ns aggregate/metadata leakage; unauthorized/foreign descend fails closed count-only;
+  mixed-ns build inputs rejected); MUTATION/FRESHNESS (every mutation dirties the ancestor path; the ABA
+  stale-clear race is refused; a stale synopsis cannot supply a prune proof); SAFE-PRUNING (a bounded descriptor
+  NEVER prunes; exact/range/membership prune only a provably-empty branch). Off-machine gate:
+  `tests/test_hierarchy_a6.py` (cloud python, 56 checks) + `tests/Invoke-ArtifactSearchTests.ps1` A6 section
+  (real-worker via the entrypoint, 36 checks); full suite 210/210.

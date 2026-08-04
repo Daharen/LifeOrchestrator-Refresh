@@ -67,7 +67,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$SKILL_ID = 'artifact.search'; $SKILL_VERSION = '0.4.0'; $CONTRACT = '0.4'
+$SKILL_ID = 'artifact.search'; $SKILL_VERSION = '0.5.0'; $CONTRACT = '0.5'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 $startedAt = [DateTime]::UtcNow
@@ -132,9 +132,9 @@ $status = 'ok'; $errorObj = $null; $result = $null; $inputsDigest = $null
 $confidence = $null; $modelProvenance = @(); $artifacts = @()
 $warnings = New-Object System.Collections.Generic.List[string]
 $invDir = Join-Path $ArtifactRoot $InvocationId
-$VALID_OPS = @('ingest','ingest-records','list-records','migrate','search','embed','integrity','catalog','export-chunk-texts','store-embeddings','get-vector')
+$VALID_OPS = @('ingest','ingest-records','list-records','migrate','search','embed','integrity','catalog','export-chunk-texts','store-embeddings','get-vector','build-hierarchy','build-tree','hierarchy-build','shortlist','descend','hierarchy','hierarchy-status','refresh-hierarchy','hierarchy-mark-changed','hierarchy-regen','prune-verdict')
 # ops that CREATE-or-open a db (no pre-existing db required); every other db-op requires the db to exist
-$CREATE_OPS = @('ingest','ingest-records','migrate')
+$CREATE_OPS = @('ingest','ingest-records','migrate','build-hierarchy','build-tree','hierarchy-build')
 
 try {
     # ---- build the worker args: start from InputsJson (generic pass-through), then named params win ----

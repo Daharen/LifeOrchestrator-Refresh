@@ -98,8 +98,8 @@ Check 'manifest is schema-valid' ([bool]$mv.valid) (($mv.errors) -join '; ')
 $man = (Get-Content -LiteralPath $mf -Raw) | ConvertFrom-Json
 Check 'manifest determinism=deterministic' ($man.determinism -eq 'deterministic')
 Check 'manifest skill_id=artifact.search' ($man.skill_id -eq 'artifact.search')
-Check 'manifest version=0.4.0' ($man.version -eq '0.4.0')
-Check 'manifest contract_version=0.4' ($man.contract_version -eq '0.4')
+Check 'manifest version=0.5.0' ($man.version -eq '0.5.0')
+Check 'manifest contract_version=0.5' ($man.contract_version -eq '0.5')
 Check 'manifest batch=false & streaming=false' (($man.batch -eq $false) -and ($man.streaming -eq $false))
 
 # ---------- 2) ingest the bundled fixture repo ----------
@@ -328,12 +328,12 @@ $v1chunks = [int]$v1m.result.counts_total.chunks
 $v1emb = [int]$v1m.result.counts_total.embeddings
 # migrate op is the FIRST op to touch the v1 db (so it reports the migration actions); 0.4 chains 1->2->3->4
 $mg = Payload (Run-AS @{ op='migrate'; db=$v1db })
-Check 'migrate: schema_version 1 -> 4 in place (chained), migrated=true' ($null -ne $mg -and [bool]$mg.migrated -and [string]$mg.schema_version -eq '4')
+Check 'migrate: schema_version 1 -> 5 in place (chained), migrated=true' ($null -ne $mg -and [bool]$mg.migrated -and [string]$mg.schema_version -eq '5')
 Check 'migrate: reports from:1 + the A4 + A5 reserved-seam actions' ($null -ne $mg -and (@($mg.migration_actions) -contains 'from:1') -and (@($mg.migration_actions | Where-Object { $_ -match 'reserve_a4' }).Count -ge 1) -and (@($mg.migration_actions | Where-Object { $_ -match 'reserve_a5' }).Count -ge 1))
 Check 'migrate: integrity ok + NO chunk loss' ($null -ne $mg -and [bool]$mg.integrity.ok -and [int]$mg.counts.chunks -eq $v1chunks) "chunks=$($mg.counts.chunks) v1=$v1chunks"
 Check 'migrate: chunk_embeddings JSON retired -> float32 BLOB vectors (count preserved)' ([int]$mg.counts.embeddings -eq $v1emb) "emb=$($mg.counts.embeddings) v1=$v1emb"
 $mg2 = Payload (Run-AS @{ op='migrate'; db=$v1db })
-Check 'migrate: idempotent (second migrate is a no-op)' ($null -ne $mg2 -and (-not [bool]$mg2.migrated) -and [string]$mg2.schema_version -eq '4')
+Check 'migrate: idempotent (second migrate is a no-op)' ($null -ne $mg2 -and (-not [bool]$mg2.migrated) -and [string]$mg2.schema_version -eq '5')
 Check 'migrate: shipped search regression-green on migrated db' ([int](Payload (Run-AS @{ op='search'; query='frobnicator'; mode='fts'; db=$v1db })).count -ge 1)
 Check 'migrate: shipped integrity regression-green on migrated db' ([bool](Payload (Run-AS @{ op='integrity'; db=$v1db })).ok)
 Check 'migrate: source_chunk view works on migrated db' ([int](Payload (Run-AS @{ op='list-records'; db=$v1db; filters=@{ record_kind='source_chunk' }; limit=3 })).count -ge 1)
@@ -542,7 +542,7 @@ Check 'A4/U2: v2 seed db built at schema_version 2' ($null -ne $v2m -and [bool]$
 $v2chunks = [int]$v2m.result.counts_total.chunks
 # migrate v2 -> v3 in place (additive; no shipped-table rewrite)
 $mg3 = Payload (Run-AS @{ op='migrate'; db=$v2db })
-Check 'A4/U2: migrate 2 -> 4 in place (chained 2->3->4), migrated=true' ($null -ne $mg3 -and [bool]$mg3.migrated -and [string]$mg3.schema_version -eq '4')
+Check 'A4/U2: migrate 2 -> 5 in place (chained 2->3->4->5), migrated=true' ($null -ne $mg3 -and [bool]$mg3.migrated -and [string]$mg3.schema_version -eq '5')
 Check 'A4/U2: migrate reports from:2 + the A4 + A5 reserved-seam actions' ((@($mg3.migration_actions) -contains 'from:2') -and (@($mg3.migration_actions | Where-Object { $_ -match 'reserve_a4' }).Count -ge 1) -and (@($mg3.migration_actions | Where-Object { $_ -match 'reserve_a5' }).Count -ge 1)) "acts=$($mg3.migration_actions -join ',')"
 Check 'A4/U2: NO chunk loss across 2->4 migration' ([int]$mg3.counts.chunks -eq $v2chunks) "chunks=$($mg3.counts.chunks) v2=$v2chunks"
 Check 'A4/U2: shipped tables BYTE-IDENTICAL pre/post (migrated sha == fresh v4 sha)' ([string]$mg3.shipped_tables_schema_sha -eq $freshSha) "migrated=$($mg3.shipped_tables_schema_sha) fresh=$freshSha"
@@ -688,7 +688,7 @@ $v3cm = $null; try { $v3cm = (Get-Content -LiteralPath $v3cmeta -Raw) | ConvertF
 $v3cat = $v3cm.result; $v3digest = [string]$v3cat.digest; $v3chunks = [int]$v3cat.counts.chunks; $v3recs = [int]$v3cat.counts.records
 Check 'A5: v3 baseline read at schema_version 3 (frozen worker)' ([string]$v3cat.schema_version -eq '3') "sv=$($v3cat.schema_version)"
 $mg4 = Payload (Run-AS @{ op='migrate'; db=$v3db })
-Check 'A5: migrate 3 -> 4 in place, migrated=true' ($null -ne $mg4 -and [bool]$mg4.migrated -and [string]$mg4.schema_version -eq '4')
+Check 'A5: migrate 3 -> 5 in place, migrated=true' ($null -ne $mg4 -and [bool]$mg4.migrated -and [string]$mg4.schema_version -eq '5')
 Check 'A5: migrate reports from:3 + reserve_a5 action' ((@($mg4.migration_actions) -contains 'from:3') -and (@($mg4.migration_actions | Where-Object { $_ -match 'reserve_a5' }).Count -ge 1)) "acts=$($mg4.migration_actions -join ',')"
 Check 'A5: NO chunk loss across 3->4' ([int]$mg4.counts.chunks -eq $v3chunks) "chunks=$($mg4.counts.chunks) v3=$v3chunks"
 Check 'A5: NO record loss across 3->4' ([int]$mg4.counts.records -eq $v3recs) "recs=$($mg4.counts.records) v3=$v3recs"
@@ -696,7 +696,7 @@ Check 'A5: shipped tables BYTE-IDENTICAL pre/post 3->4 (migrated sha == fresh v4
 Check 'A5: catalog_digest UNCHANGED across 3->4 (no re-ingest)' ([string]$mg4.catalog_digest -eq $v3digest) "post=$($mg4.catalog_digest) pre=$v3digest"
 Check 'A5: migrate 3->4 integrity ok' ([bool]$mg4.integrity.ok)
 $mg4b = Payload (Run-AS @{ op='migrate'; db=$v3db })
-Check 'A5: 3->4 migration idempotent (re-open is a no-op)' ((-not [bool]$mg4b.migrated) -and [string]$mg4b.schema_version -eq '4')
+Check 'A5: 3->5 migration idempotent (re-open is a no-op)' ((-not [bool]$mg4b.migrated) -and [string]$mg4b.schema_version -eq '5')
 Check 'A5: shipped search regression-green on the 3->4 migrated db' ([int](Payload (Run-AS @{ op='search'; query='frobnicator'; mode='fts'; db=$v3db })).count -ge 1)
 
 # ---------- 34) A5 determinism: double-run byte-identical catalog_digest WITH supersession edges ----------
@@ -708,6 +708,95 @@ $ddrecs = @(
 Run-AS @{ op='ingest-records'; db=$dd1; ingest_run=@{ producer='p'; namespace='d' }; records=$ddrecs } | Out-Null
 Run-AS @{ op='ingest-records'; db=$dd2; ingest_run=@{ producer='p'; namespace='d' }; records=$ddrecs } | Out-Null
 Check 'A5: identical corpus (with supersession) -> identical catalog_digest across fresh dbs' ([string](Payload (Run-AS @{ op='catalog'; db=$dd1 })).digest -eq [string](Payload (Run-AS @{ op='catalog'; db=$dd2 })).digest)
+
+# ================= 0.5 (MEMORY_CONTRACT Amendment A6 / D-0098 Tier-1 BOUNDED-FANOUT HIERARCHY) =====
+Write-Host "--- A6 (D-0098) bounded-fanout hierarchy ---"
+$hsrc = Join-Path $tmpRoot 'hsrc'
+New-Item -ItemType Directory -Path (Join-Path $hsrc 'docs') -Force | Out-Null
+foreach ($i in 0..11) { [System.IO.File]::WriteAllText((Join-Path $hsrc "docs/f$i.md"), "# H$i`n`nalpha$i frobnicator beta gamma`n", $utf8) }
+$hdb = Join-Path $tmpRoot 'hier.db'
+Run-AS @{ op='ingest'; source='projA'; root=$hsrc; db=$hdb; embed_provider='mock' } | Out-Null
+Run-AS @{ op='ingest-records'; db=$hdb; ingest_run=@{ producer='t'; namespace='projB' }; records=@([ordered]@{ record_id='b1'; record_version_id='b1@1'; record_kind='decision'; namespace='projB'; text='projb decision zeta' }) } | Out-Null
+$digBefore = [string](Payload (Run-AS @{ op='catalog'; db=$hdb })).digest
+$sBefore = Payload (Run-AS @{ op='search'; query='frobnicator'; mode='fts'; db=$hdb; k=50 })
+Check 'A6: flat search returns NO node records (pre-build)' (@($sBefore.results | Where-Object { $_.record_kind -eq 'node' }).Count -eq 0)
+
+$bh = Payload (Run-AS @{ op='build-hierarchy'; db=$hdb; max_fanout=2 })
+Check 'A6: build-hierarchy ok + all_valid' ($null -ne $bh -and [bool]$bh.all_valid)
+Check 'A6: two separate hierarchies built (projA + projB, separate roots)' (@($bh.built).Count -ge 2)
+$hA = @($bh.built | Where-Object { $_.namespace -eq 'proja' })[0]
+Check 'A6: projA has a root + tree_digest + multi-level (depth>=2)' ($null -ne $hA -and $hA.root_node_id -and $hA.tree_digest -and [int]$hA.depth -ge 2) "depth=$($hA.depth)"
+Check 'A6: catalog_digest UNCHANGED by the build (node edges excluded; corpus stable)' ([string](Payload (Run-AS @{ op='catalog'; db=$hdb })).digest -eq $digBefore)
+Check 'A6: schema_version 5 after build' ([string](Payload (Run-AS @{ op='catalog'; db=$hdb })).schema_version -eq '5')
+Check 'A6: integrity all green (incl hierarchy invariants)' ([bool](Payload (Run-AS @{ op='integrity'; db=$hdb })).ok)
+$sAfter = Payload (Run-AS @{ op='search'; query='frobnicator'; mode='fts'; db=$hdb; k=50 })
+Check 'A6: flat search count identical after build (flat retrieval unaffected)' (@($sAfter.results).Count -eq @($sBefore.results).Count)
+
+$bh2 = Payload (Run-AS @{ op='build-hierarchy'; db=$hdb; max_fanout=2 })
+$hA2 = @($bh2.built | Where-Object { $_.namespace -eq 'proja' })[0]
+Check 'A6: deterministic rebuild -> identical tree_digest' ([string]$hA2.tree_digest -eq [string]$hA.tree_digest)
+
+$st = Payload (Run-AS @{ op='hierarchy'; db=$hdb; namespace='projA'; include_nodes=$true })
+$hh = @($st.hierarchies)[0]
+Check 'A6: hierarchy status: nodes + tree_digest + topology valid' ($null -ne $hh -and @($hh.nodes).Count -ge 1 -and $hh.topology_state -eq 'valid')
+$rootId = [string]$hh.root_node_id
+Check 'A6: no node exceeds max_fanout (child+member <= 2)' ((@($hh.nodes | Where-Object { (@($_.entity_union).Count -ge 0) -and ((([int]$_.child_count) + ([int]$_.member_count)) -gt 2) }).Count) -eq 0)
+
+$sl = Payload (Run-AS @{ op='shortlist'; db=$hdb; query='frobnicator'; effective_allowed_namespaces=@('projA') })
+Check 'A6: shortlist scoped -> only projA navigation nodes' ([int]$sl.count -ge 1 -and (@($sl.nodes | Where-Object { $_.namespace -ne 'proja' -or $_.candidate_role -ne 'navigation' }).Count -eq 0))
+
+$de = Payload (Run-AS @{ op='descend'; db=$hdb; node_id=$rootId; effective_allowed_namespaces=@('projA'); retrieval_plan_id='p1' })
+Check 'A6: descend authorized -> direct children (frontier-expansion)' ([bool]$de.authorized -and [int]$de.child_count -ge 1)
+Check 'A6: descend carries stage lineage + retrieval_plan_id' ([string]$de.retrieval_plan_id -eq 'p1' -and [string]$de.parent_stage_id -eq 'stage:shortlist:1')
+$deX = Payload (Run-AS @{ op='descend'; db=$hdb; node_id=$rootId; effective_allowed_namespaces=@('projB'); retrieval_plan_id='p' })
+Check 'A6: descend out-of-scope FAILS CLOSED (count-only, no metadata)' ((-not [bool]$deX.authorized) -and [int]$deX.child_count -eq 0 -and (-not (Has $deX 'namespace')))
+$deB = Payload (Run-AS @{ op='descend'; db=$hdb; node_id='nd_deadbeefdeadbeefdeadbeef'; effective_allowed_namespaces=@('projA'); retrieval_plan_id='p' })
+Check 'A6: descend foreign node_id FAILS CLOSED' ((-not [bool]$deB.authorized) -and [int]$deB.child_count -eq 0)
+
+# safe-pruning on the root (subtree = whole namespace)
+Check 'A6: safe-prune DESCRIPTOR never prunes' ([string](Payload (Run-AS @{ op='prune-verdict'; db=$hdb; node_id=$rootId; channel='descriptor'; key='x' })).verdict -eq 'keep')
+Check 'A6: safe-prune VECTOR never prunes' ([string](Payload (Run-AS @{ op='prune-verdict'; db=$hdb; node_id=$rootId; channel='vector'; key='x' })).verdict -eq 'keep')
+Check 'A6: safe-prune lexical present -> keep (no false negative)' ([string](Payload (Run-AS @{ op='prune-verdict'; db=$hdb; node_id=$rootId; channel='lexical'; key='frobnicator' })).verdict -eq 'keep')
+Check 'A6: safe-prune lexical absent -> prune (Bloom absence proof)' ([string](Payload (Run-AS @{ op='prune-verdict'; db=$hdb; node_id=$rootId; channel='lexical'; key='zzzabsentxyz9931' })).verdict -eq 'prune')
+Check 'A6: safe-prune kind absent -> prune' ([string](Payload (Run-AS @{ op='prune-verdict'; db=$hdb; node_id=$rootId; channel='kind'; key='episode' })).verdict -eq 'prune')
+Check 'A6: safe-prune kind present -> keep' ([string](Payload (Run-AS @{ op='prune-verdict'; db=$hdb; node_id=$rootId; channel='kind'; key='source_chunk' })).verdict -eq 'keep')
+
+# staleness (H2): mark a leaf changed -> ancestors stale -> routes-but-never-answers -> refresh clears
+$lr = Payload (Run-AS @{ op='list-records'; db=$hdb; filters=@{ namespace='projA'; record_kind='source_chunk' }; limit=1 })
+$leafId = [string](@($lr.records)[0].record_version_id)
+$mc = Payload (Run-AS @{ op='hierarchy-mark-changed'; db=$hdb; leaf_id=$leafId })
+Check 'A6: mark-changed dirties the ancestor path' (@($mc.dirtied).Count -ge 1)
+$st2 = Payload (Run-AS @{ op='hierarchy'; db=$hdb; namespace='projA' })
+Check 'A6: stale nodes surfaced in status (synopsis freshness axis)' ([int](@($st2.hierarchies)[0].stale_node_count) -ge 1)
+$slS = Payload (Run-AS @{ op='shortlist'; db=$hdb; query='frobnicator'; effective_allowed_namespaces=@('projA') })
+Check 'A6: summary_stale node still ROUTES + flags stale_navigation (never answers)' ([int]$slS.count -ge 1 -and [bool]$slS.stale_navigation_encountered)
+$stalePrune = [string](Payload (Run-AS @{ op='prune-verdict'; db=$hdb; node_id=$rootId; channel='lexical'; key='zzzabsentxyz9931' })).verdict
+Check 'A6: a STALE synopsis never supplies a prune proof (keep)' ($stalePrune -eq 'keep')
+$rf = Payload (Run-AS @{ op='refresh-hierarchy'; db=$hdb; namespace='projA' })
+Check 'A6: refresh regenerates all stale nodes (CAS clear)' ([int]$rf.cleared -eq [int]$rf.stale)
+
+# ---------- A6 GATE: schema_version 4 -> 5 additive in-place migration (shipped tables byte-identical) ----------
+$v4worker = Join-Path $SkillDir 'fixtures/artifact_search_v4.py'
+Check 'A6: frozen shipped-0.4 (v4) worker fixture present' (Test-Path -LiteralPath $v4worker -PathType Leaf)
+$v4db = Join-Path $tmpRoot 'v4seed.db'
+$v4iargs = Join-Path $tmpRoot 'v4iargs.json'; $v4imeta = Join-Path $tmpRoot 'v4imeta.json'
+[System.IO.File]::WriteAllText($v4iargs, ([ordered]@{ op='ingest'; source='projA'; root=$hsrc; db=$v4db; embed_provider='mock'; meta_path=$v4imeta; output_dir=(Join-Path $tmpRoot 'v4iout') } | ConvertTo-Json -Depth 8), $utf8)
+& $PythonPath $v4worker $v4iargs 2>$null | Out-Null
+$v4cargs = Join-Path $tmpRoot 'v4cargs.json'; $v4cmeta = Join-Path $tmpRoot 'v4cmeta.json'
+[System.IO.File]::WriteAllText($v4cargs, ([ordered]@{ op='catalog'; db=$v4db; meta_path=$v4cmeta; output_dir=(Join-Path $tmpRoot 'v4cout') } | ConvertTo-Json -Depth 8), $utf8)
+& $PythonPath $v4worker $v4cargs 2>$null | Out-Null
+$v4cm = $null; try { $v4cm = (Get-Content -LiteralPath $v4cmeta -Raw) | ConvertFrom-Json } catch { }
+$v4cat = $v4cm.result; $v4digest = [string]$v4cat.digest
+Check 'A6: v4 baseline read at schema_version 4 (frozen worker)' ([string]$v4cat.schema_version -eq '4') "sv=$($v4cat.schema_version)"
+$mg5 = Payload (Run-AS @{ op='migrate'; db=$v4db })
+Check 'A6: migrate 4 -> 5 in place, migrated=true' ($null -ne $mg5 -and [bool]$mg5.migrated -and [string]$mg5.schema_version -eq '5')
+Check 'A6: migrate reports from:4 + a6 action' ((@($mg5.migration_actions) -contains 'from:4') -and (@($mg5.migration_actions | Where-Object { $_ -match 'a6' }).Count -ge 1)) "acts=$($mg5.migration_actions -join ',')"
+Check 'A6: shipped tables BYTE-IDENTICAL pre/post 4->5 (migrated sha == fresh v5 sha)' ([string]$mg5.shipped_tables_schema_sha -eq $freshSha4) "migrated=$($mg5.shipped_tables_schema_sha) fresh=$freshSha4"
+Check 'A6: catalog_digest UNCHANGED across 4->5 (zero nodes = flat, no re-ingest)' ([string]$mg5.catalog_digest -eq $v4digest) "post=$($mg5.catalog_digest) pre=$v4digest"
+Check 'A6: migrate 4->5 integrity ok' ([bool]$mg5.integrity.ok)
+$mg5b = Payload (Run-AS @{ op='migrate'; db=$v4db })
+Check 'A6: 4->5 migration idempotent (re-open is a no-op)' ((-not [bool]$mg5b.migrated) -and [string]$mg5b.schema_version -eq '5')
+Check 'A6: shipped search regression-green on the 4->5 migrated db' ([int](Payload (Run-AS @{ op='search'; query='frobnicator'; mode='fts'; db=$v4db })).count -ge 1)
 
 # ---------- cleanup ----------
 try { Remove-Item -LiteralPath $tmpRoot -Recurse -Force -ErrorAction SilentlyContinue } catch { }

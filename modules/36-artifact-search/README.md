@@ -1,9 +1,10 @@
-# Module 36 -- artifact.search (0.4.0)
+# Module 36 -- artifact.search (0.5.0)
 
-**Deterministic SQLite catalog + typed-record memory substrate + hybrid LEXICAL (FTS5) search.** The
-Collective Agent's authoritative catalog (D-0080 Wave 1/2, arch position 23), built to the FROZEN
-**`core-docs/MEMORY_CONTRACT.md`** (D-0083) + **Amendment A4** (D-0092) + **Amendment A5** (D-0096, Tier-0
-namespace-closure + supersession-hardening). A thin PowerShell entrypoint (`Invoke-ArtifactSearch.ps1`,
+**Deterministic SQLite catalog + typed-record memory substrate + hybrid LEXICAL (FTS5) search + a
+bounded-fanout navigation HIERARCHY.** The Collective Agent's authoritative catalog (D-0080 Wave 1/2, arch
+position 23), built to the FROZEN **`core-docs/MEMORY_CONTRACT.md`** (D-0083) + **Amendment A4** (D-0092) +
+**Amendment A5** (D-0096, Tier-0 namespace-closure + supersession-hardening) + **Amendment A6** (D-0098, i34
+Tier-1 bounded-fanout hierarchy). A thin PowerShell entrypoint (`Invoke-ArtifactSearch.ps1`,
 `pwsh-file`) over a stdlib-only Python worker (`artifact_search.py`) that owns a SQLite database with FTS5.
 CPU-only, no model, no network, `determinism=deterministic`.
 
@@ -35,7 +36,27 @@ reserved `candidate_role`/retrieval-stage lineage. (U3') working-store field res
 working access (exact `task_id` AND an in-scope namespace). All via a `schema_version 3->4` in-place migration
 that rewrites NONE of the shipped tables. Full record: `SCHEMA_NOTES.md` section 12.
 
-Contract: `SKILL_CONTRACT.md` + `MEMORY_CONTRACT.md` (D-0083 + A4/D-0092 + A5/D-0096). Schema + every
+**0.5 realizes MEMORY_CONTRACT Amendment A6 (D-0098, i34 Tier-1 BOUNDED-FANOUT HIERARCHY; ADDITIVE +
+backward-compatible; `schema_version 4->5`)** -- turns the A4/A5 RESERVED `node` seam into a real DETERMINISTIC
+build (NO model). (H1) a `node` derived record + `nodes`/`hierarchies` tables + CANONICAL
+`member_of_node`/`child_of_node` edges (the stored child/member lists are a rebuildable PROJECTION == the edges)
+with a deterministic structural synopsis (bounded entity_union/lexical_descriptor + exact ranges/histograms + a
+no-false-negative Bloom presence filter + a sufficient-statistics vector aggregate that is topology-independent +
+byte-reproducible, ABSENT while the vector channel is empty). (H4) a BALANCED even-partition bulk-builder
+(`MAX_FANOUT` default 16) whose balance is INDEPENDENT of the grouping key (no deep thin chains); live split is
+deferred to i35 -- a corpus mutation sets `topology_state=rebuild_required` + flat-fallback. (H3) hierarchy
+identity + ATOMIC tree-version publication (a compile pins one `tree_version`). (H2) THREE separated state axes
+(evidence status / topology_state / synopsis freshness) with monotonic generations + CAS-cleared regen (closes
+the ABA stale-clear race); `summary_stale` ROUTES but never ANSWERS. (H5, safety-critical) write-time +
+transitive namespace HOMOGENEITY (separate roots for a multi-namespace compile). (H6, safety-critical)
+authorization-bound `shortlist`/`descend` (`ns_permitted` at every hop; a foreign/out-of-scope `node_id` fails
+closed count-only). **The load-bearing SAFE-PRUNING invariant** (frontier red-team `b4c90545`): navigation may
+prioritize but MUST NOT exclude a branch without a channel-specific NO-FALSE-NEGATIVE proof (Bloom absence /
+exact set / exact range); a bounded descriptor, a centroid, and a STALE synopsis NEVER prune. Node edges are
+EXCLUDED from `catalog_digest` (the corpus fingerprint stays stable; zero nodes == flat retrieval byte-for-byte);
+the hierarchy has its own `tree_digest`. Full record: `SCHEMA_NOTES.md` section 13.
+
+Contract: `SKILL_CONTRACT.md` + `MEMORY_CONTRACT.md` (D-0083 + A4/D-0092 + A5/D-0096 + A6/D-0098). Schema + every
 interpretation: `SCHEMA_NOTES.md` (authoritative for the fold). Work order: `WORK_ORDER.md`.
 
 ## Ops
@@ -45,12 +66,18 @@ interpretation: `SCHEMA_NOTES.md` (authoritative for the fold). Work order: `WOR
 | `ingest` | walk a root, content-hash inventory, detect new/changed/moved/deleted, Markdown-aware chunk (+ text fallback), FTS5 index, MOCK-embed as float32 BLOB, reconcile with NO dup chunks, explicit stale-fallback on unparseable change, tombstone deletions, integrity check, deterministic `catalog_digest` (extended to records) |
 | `ingest-records` | the s1 typed-record SINK: land externally-produced records (from #38/#39) deterministically + idempotently; validate ids/required fields; reject malformed with a surfaced reason; materialize first-class edges |
 | `list-records` | the s1 record ENVELOPE adapter (`source_chunk` via a view + typed records), with parent/child edges (A5: scoped edges redacted when a namespace filter is active); `working` records task-scoped-only, with the reserved store fields |
-| `migrate` | forward-migrate a shipped-0.1/0.2/0.3 db to schema_version 4 IN PLACE, version-chained 1->2->3->4 (idempotent, no data loss, shipped tables byte-identical, catalog_digest unchanged) |
+| `migrate` | forward-migrate a shipped-0.1/0.2/0.3/0.4 db to schema_version 5 IN PLACE, version-chained 1->2->3->4->5 (idempotent, no data loss, shipped tables byte-identical, catalog_digest unchanged) |
 | `search` | retriever 0.2 + A4 + A5: ranked, provenance-complete hits across chunks AND records in DETERMINISTIC order -- span object + span_label, per-channel diagnostics; `score` retired. A5: `ns_permitted` enforced at every stage + graph hop (sanitized `namespace_violation_count`; leaked hit -> `namespace_leak` abort); `current_only` on catalog-computed `effective_current` (pool-independent); provenance_mode-conditional hits + reserved `candidate_role`/stage-lineage; `working` retrievable only via CONJUNCTIVE `task_id`+in-scope-namespace (#37/#40 consume) |
 | `embed` | the MOCK embedding-provider envelope (shape matches the real adapter #35) |
 | `integrity` | PRAGMA integrity_check + catalog invariants (extended: occurrence ids, vectors, records, staleness, serving) |
 | `catalog` | `catalog_digest` + counts |
 | `export-chunk-texts` / `store-embeddings` / `get-vector` | fold drop-in: export ordered chunk texts -> real adapter -> store float32 BLOB vectors by id -> round-trip |
+| `build-hierarchy` | A6: DETERMINISTIC balanced (re)build of the bounded-fanout tree (one per namespace, kind `source_module`); `max_fanout` default 16; atomic tree-version publication; `all_valid`/`topology_state`/`tree_digest` per namespace |
+| `shortlist` | A6/H6: rank the AUTHORIZED hierarchy roots (the navigation frontier) by structural-synopsis match; `effective_allowed_namespaces` enforced on every node; navigation candidates only (never evidence) |
+| `descend` | A6/H6: expand ONE frontier node into its direct children + leaf members; `ns_permitted` per hop; a foreign/out-of-scope `node_id` FAILS CLOSED count-only (no metadata) |
+| `hierarchy` | A6: hierarchy status (identity, tree_version, topology_state, tree_digest, node/leaf counts, stale-node count; `include_nodes` for the full node projections) |
+| `refresh-hierarchy` | A6/H2: lazily regenerate all stale node synopses bottom-up (CAS-cleared) |
+| `hierarchy-mark-changed` / `hierarchy-regen` / `prune-verdict` | A6: the staleness-propagation, CAS-regen, and SAFE-PRUNING oracle entry points (mutation-path + ABA-race + no-false-negative gates) |
 
 ## Invocation
 

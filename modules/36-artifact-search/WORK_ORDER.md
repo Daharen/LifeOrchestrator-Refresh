@@ -1,12 +1,38 @@
-# Work Order: Artifact Search (`artifact.search`) -- 0.3.0 -> 0.4.0 (i33, MEMORY_CONTRACT A5 namespace-closure + supersession-hardening)
+# Work Order: Artifact Search (`artifact.search`) -- 0.4.0 -> 0.5.0 (i34, MEMORY_CONTRACT A6 Tier-1 bounded-fanout hierarchy)
 
-**Contract version targeted:** 0.4 (SKILL_CONTRACT) + **MEMORY_CONTRACT Amendment A5 (D-0096, i33 Tier-0
-NAMESPACE-CLOSURE + SUPERSESSION-HARDENING)** |
-**Author:** FANOUT_AGENT_001 (i33, plan fo-33-d7b55e46, worker ARTIFACT-SEARCH-CLOSURE-i33) / 2026-08-04 |
+**Contract version targeted:** 0.5 (SKILL_CONTRACT) + **MEMORY_CONTRACT Amendment A6 (D-0098, i34 Tier-1
+BOUNDED-FANOUT HIERARCHY)** |
+**Author:** FANOUT_AGENT_001 (i34, plan fo-34-584fd656, worker HIERARCHY-BUILDER-i34) / 2026-08-04 |
 **Prior revisions:** 0.1.0 (i25, MVP) -> 0.2.0 (i27, record envelope + ingest_records) -> 0.3.0 (i32, A4 Tier-0
-envelope seams) |
+envelope seams) -> 0.4.0 (i33, A5 namespace-closure + supersession-hardening) |
 **Roadmap entry:** `MODULE_ROADMAP.md#artifact.search` (arch position 23); governed by `MEMORY_ARCHITECTURE.md`
-(D-0090) + `research/2026-08-04-tier0-amendment-redteam.md` (frontier Tier-0 red-team, changes 1-4).
+(D-0090) s3 layer 6 / s6 / s9 + `research/2026-08-04-i34-hierarchy-design.md` + `-redteam.md` (frontier design
+red-team pack `b4c90545`, the 10 deltas incl. the SAFETY-CRITICAL safe-pruning fix).
+
+### i34 problem being solved (A6 Tier-1 bounded-fanout hierarchy) -- DONE
+The A4/A5 waves RESERVED the `node` kind + `member_of_node`/`child_of_node` edges but built no tree. i34 builds
+the real bounded-fanout HIERARCHY so navigation cost stays sub-linear as a namespace grows. The frontier design
+red-team (pack `b4c90545`) NO-GO'd the first draft: a bounded beam pruning branches on LOSSY structural synopses
+is NOT recall-preserving. So the **SAFE-PRUNING invariant is load-bearing** -- a navigation-derived value may
+POSITIVELY prioritize a branch but MUST NOT NEGATIVELY exclude one without a channel-specific NO-FALSE-NEGATIVE
+proof. 0.5 (schema_version 4->5, ADDITIVE) delivers: **(H1)** the `node` record + `nodes`/`hierarchies` tables +
+canonical edges (child/member lists a rebuildable PROJECTION) + deterministic structural synopsis +
+sufficient-statistics vector aggregate; **(H4)** a DETERMINISTIC BALANCED even-partition bulk-builder
+(MAX_FANOUT 16; balance independent of the grouping key; live split -> i35 via rebuild_required + flat-fallback);
+**(H3)** hierarchy identity + ATOMIC tree-version publication; **(H2)** three separated state axes + monotonic
+generations + CAS regen (closes the ABA race) + deterministic staleness propagation + summary_stale
+routes-never-answers; **(H5, safety-critical)** write-time + transitive namespace homogeneity + separate roots;
+**(H6, safety-critical)** authorization-bound `shortlist`/`descend` (fail-closed count-only on a foreign node);
+and the **SAFE-PRUNING** channel predicates (Bloom absence / exact set / exact range; a bounded descriptor,
+centroid, and stale synopsis NEVER prune). Node edges are EXCLUDED from `catalog_digest`; the hierarchy has its
+own `tree_digest`. #36 owns the hierarchy GATE TESTS. Every interpretation: `SCHEMA_NOTES.md` **section 13**.
+Result: **210/210 off-machine** (canonical pwsh suite, incl. the 36 A6 gate checks) + **56/56** the python A6
+gate (`tests/test_hierarchy_a6.py`). NON-GOALS (deferred): the compiler shortlist-and-descend PLAN +
+`retrieval_completeness` + navigation_refs (#40, i35), the eval navigation-cost/recall measures + adversarial
+scale fixtures (#37, i35), the per-task working-memory STORE + the query ROUTER (i35), the model-prose synopsis +
+live incremental split + covering-radius vector bounds (Tier 2), real embeddings, the 9B/models.json.
+
+--- the i33 (A5) work order follows, for reference ---
 
 ### i33 problem being solved (A5 namespace-closure + supersession-hardening) -- DONE
 The frontier Tier-0 red-team (pack 159e9cb5, D-0095) found the A4 (0.3) seams a correct ENVELOPE-level FIRST
