@@ -2,7 +2,9 @@
 <#
 .SYNOPSIS
   artifact.search -- deterministic SQLite catalog + hybrid LEXICAL (FTS5) search (Life Orchestrator,
-  Module 36, contract v0.2). The Collective Agent's authoritative catalog substrate (D-0080 Wave 1).
+  Module 36, contract v0.3). The Collective Agent's authoritative catalog substrate (D-0080 Wave 1); 0.3
+  enforces the MEMORY_CONTRACT A4 Tier-0 seams (D-0092): a HARD namespace boundary, a current_only retrieval
+  mode, and the reserved-additive node/working record kinds + member_of_node/child_of_node/contradicts edges.
 .DESCRIPTION
   A thin PowerShell entrypoint over a stdlib-only Python worker (artifact_search.py) that owns a SQLite
   database (the authoritative catalog) with SQLite FTS5. One op per invocation:
@@ -61,7 +63,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$SKILL_ID = 'artifact.search'; $SKILL_VERSION = '0.2.0'; $CONTRACT = '0.2'
+$SKILL_ID = 'artifact.search'; $SKILL_VERSION = '0.3.0'; $CONTRACT = '0.3'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 $startedAt = [DateTime]::UtcNow

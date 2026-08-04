@@ -1,27 +1,16 @@
 #!/usr/bin/env python
+# FROZEN COPY of the shipped artifact.search 0.2.0 worker (schema_version=2).
+# USED ONLY as a fixture to seed a v2 SQLite catalog for the 0.2->0.3 (A4/D-0092) migration test.
+# DO NOT EDIT. The live worker is ../artifact_search.py (0.3.0, schema_version=3).
+#!/usr/bin/env python
 # artifact_search.py -- deterministic SQLite catalog + hybrid LEXICAL (FTS5) search worker
-# for artifact.search (Life Orchestrator, Module 36; skill id artifact.search). SCHEMA v3 / worker 0.3.0.
+# for artifact.search (Life Orchestrator, Module 36; skill id artifact.search). SCHEMA v2 / worker 0.2.0.
 #
 # 0.2 adopts the FROZEN MEMORY_CONTRACT (D-0083): the s1 record+provenance envelope, a generic
 # `ingest_records` SINK for TYPED records (from repo.intel #38 / episode.memory #39), the retriever-0.2
 # hit shape (span object + span_label + per-channel diagnostics; opaque `score` retired), the s5 staleness
 # ENUM, s4 forward migrations + parser/chunker/extractor fingerprints, and the s2 float32-LE BLOB vector
 # storage form keyed on embedding_space_id. SCHEMA_NOTES.md is authoritative for every interpretation.
-#
-# 0.3 realizes MEMORY_CONTRACT Amendment A4 (D-0092, Tier-0 seam repairs) -- ADDITIVE + backward-compatible:
-#   (U1) `namespace` is a HARD retrieval boundary: `search` `filters.namespace` (a single value OR an
-#        explicit set) EXCLUDES cross-namespace candidates BEFORE ranking, and the retriever ASSERTS every
-#        returned hit matches (a mismatch is a fail-closed `namespace_leak`, never a low-ranked hit).
-#   (U4) `current_only` is a real retrieval MODE: a candidate whose s5 status is not `current` is
-#        HARD-EXCLUDED (not demoted). The reserved-additive `contradicts` edge joins the edge set.
-#   (U2) hierarchy seam (reserved-additive; NO tree built): the CLOSED record_kind enum gains `node`; the
-#        edge set gains `member_of_node` (record->node) + `child_of_node` (node->node). #36's flat catalog
-#        admits a `node` record via the envelope + record_edges with the schema_version 2->3 bump and NO
-#        rewrite of sources/documents/document_versions/chunks.
-#   (U3) working-memory seam (reserved-additive; store at Tier 1): the enum gains `working` -- a per-task_id
-#        record EXCLUDED from ordinary retrieval unless the request scopes to its `task_id`.
-# The schema_version 2->3 migration is additive (a `records.task_id`/`records.content_role` column) and
-# rewrites NONE of the shipped tables. SCHEMA_NOTES.md is authoritative for every A4 interpretation.
 #
 # Contract with the PowerShell wrapper (Invoke-ArtifactSearch.ps1), mirroring the D-0021 worker+meta
 # hand-off (robust to library stdout chatter):
@@ -41,9 +30,9 @@
 #   * search results are emitted in a fully deterministic order with a stable tie-break (tie_break_key).
 import sys, os, json, time, hashlib, math, re, sqlite3, fnmatch, struct, traceback
 
-SCHEMA_VERSION = "3"                 # 1->2 (D-0083); 2->3 (A4/D-0092 Tier-0 seams); forward-migrated in place
-PRIOR_SCHEMA_VERSIONS = ("1", "2")
-WORKER_VERSION = "0.3.0"
+SCHEMA_VERSION = "2"                 # bumped 1 -> 2 (D-0083 adoption); forward-migrated in place
+PRIOR_SCHEMA_VERSIONS = ("1",)
+WORKER_VERSION = "0.2.0"
 
 PARSER_MARKDOWN = ("markdown", "1")
 PARSER_TEXT = ("text", "1")
@@ -72,27 +61,13 @@ STATUS_ENUM = {
     "summary_stale", "authority_stale", "temporal_expiry", "deleted", "unverified",
 }
 
-# s1 record_kind enum (CLOSED). 'source_chunk' is produced by the chunk pipeline (via the envelope view),
-# NOT the ingest_records sink; the sink rejects it as reserved. A4 (D-0092) adds `node` (a navigation node,
-# reserved-additive -- the hierarchy seam) + `working` (a per-task_id working-memory record, reserved-additive
-# -- the working-memory seam). No tree/store is BUILT here; the kinds + edges are RESERVED so the flat catalog
-# admits them additively.
-WORKING_KIND = "working"
-NODE_KIND = "node"
+# s1 record_kind enum. 'source_chunk' is produced by the chunk pipeline (via the envelope view), NOT the
+# ingest_records sink; the sink rejects it as reserved.
 TYPED_RECORD_KINDS = {
     "symbol", "summary", "decision", "claim", "episode", "failure",
     "procedure", "skill", "reminder", "entity", "relationship",
-    "node", "working",                     # A4/D-0092 reserved-additive kinds
 }
 ALL_RECORD_KINDS = TYPED_RECORD_KINDS | {"source_chunk"}
-
-# s1 record_edge canonical kinds. edge_kind is a free-text column (any producer edge is accepted), but this
-# is the DOCUMENTED canonical set; A4 (D-0092) adds `member_of_node` (record->node), `child_of_node`
-# (node->node) and `contradicts` (a current-vs-current conflict; detection is Tier 2 -- the edge is reserved).
-RECORD_EDGE_KINDS = {
-    "derives_from", "supersedes", "relates_to", "references", "has_stage", "describes_structural_skill",
-    "member_of_node", "child_of_node", "contradicts",   # A4/D-0092 reserved-additive edges
-}
 
 DEFAULT_EXCLUDE_DIRS = [
     ".git", "node_modules", "__pycache__", "runtime", "artifacts",
@@ -533,8 +508,6 @@ CREATE TABLE IF NOT EXISTS records (
   title               TEXT,
   chunk_type          TEXT,
   attrs_json          TEXT,
-  task_id             TEXT,                    -- A4/D-0092: per-task_id working-memory scope (working kind)
-  content_role        TEXT,                    -- A4/D-0092: 'evidence' baseline; a working record != evidence
   text                TEXT,
   created_at          TEXT
 );
@@ -671,10 +644,9 @@ class Catalog:
             pass
 
     def _ensure_views(self):
-        # indexes on migration-added columns: created AFTER migration so the column exists on a migrated db
-        # (present from the start on a fresh db). idx_records_task backs the A4/D-0092 working-memory scope.
+        # index on the new occurrence-id column: created AFTER migration so the column exists on a
+        # migrated v1 db (it is present from the start on a fresh v2 db).
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_chunks_occ ON chunks(chunk_occurrence_id)")
-        self.conn.execute("CREATE INDEX IF NOT EXISTS idx_records_task ON records(task_id)")
         self.conn.executescript(VIEW_SOURCE_CHUNK)
         self.conn.commit()
 
@@ -688,20 +660,8 @@ class Catalog:
             self.migration_actions.append("add_col:%s.%s" % (table, name))
 
     def _migrate(self, from_version):
-        # forward, in-place, version-chained: 1->2 (D-0083) then 2->3 (A4/D-0092). Each step is additive; the
-        # 2->3 step rewrites NONE of the shipped tables. Idempotent (a re-open of a current db reports no work).
         acts = self.migration_actions
         acts.append("from:%s" % from_version)
-        if from_version == "1":
-            self._migrate_1_to_2()
-        self._migrate_2_to_3()
-        self.conn.execute("INSERT OR REPLACE INTO catalog_meta(key,value) VALUES('schema_version',?)", (SCHEMA_VERSION,))
-        self.conn.execute("INSERT OR REPLACE INTO catalog_meta(key,value) VALUES('migrated_at',?)", (now_utc(),))
-        self.conn.execute("INSERT OR REPLACE INTO catalog_meta(key,value) VALUES('migrated_from',?)", (from_version,))
-        self.conn.commit()
-
-    def _migrate_1_to_2(self):
-        acts = self.migration_actions
         # 1) additive columns on the shipped tables (fresh v2 already has them; ALTER only if missing)
         self._add_col("documents", "serving_status", "TEXT")
         self._add_col("documents", "source_locator_id", "TEXT")
@@ -775,37 +735,14 @@ class Catalog:
                 migrated += 1
             self.conn.execute("DROP TABLE chunk_embeddings")
             acts.append("retire_chunk_embeddings:%d->vectors" % migrated)
-
-    def _migrate_2_to_3(self):
-        # A4/D-0092 Tier-0 reserved-additive seams. ADDITIVE ONLY -- rewrites NO shipped table
-        # (sources/documents/document_versions/chunks stay byte-identical -- gate test 2). The `node`+`working`
-        # kinds and the `member_of_node`/`child_of_node`/`contradicts` edges need NO new tables (records +
-        # record_edges already carry a free-text record_kind/edge_kind); the ONLY schema delta is the
-        # working-memory scope columns on `records` (task_id + content_role) + their index.
-        self._add_col("records", "task_id", "TEXT")
-        self._add_col("records", "content_role", "TEXT")
-        # (idx_records_task is created in _ensure_views AFTER migration, once the column exists.)
-        self.migration_actions.append("reserve_a4:node+working_kinds;member_of_node+child_of_node+contradicts_edges")
+        self.conn.execute("INSERT OR REPLACE INTO catalog_meta(key,value) VALUES('schema_version',?)", (SCHEMA_VERSION,))
+        self.conn.execute("INSERT OR REPLACE INTO catalog_meta(key,value) VALUES('migrated_at',?)", (now_utc(),))
+        self.conn.execute("INSERT OR REPLACE INTO catalog_meta(key,value) VALUES('migrated_from',?)", (from_version,))
+        self.conn.commit()
 
     def schema_version(self):
         r = self.conn.execute("SELECT value FROM catalog_meta WHERE key='schema_version'").fetchone()
         return r["value"] if r else None
-
-    # ---- A4/D-0092: shipped-table schema fingerprint. The four shipped tables (sources / documents /
-    # document_versions / chunks) MUST NOT be rewritten by the 2->3 migration; comparing this fingerprint on
-    # a v2->v3-migrated db against a fresh v3 db is the 'byte-identical pre/post' proof (gate test 2). ----
-    SHIPPED_TABLES = ("sources", "documents", "document_versions", "chunks")
-
-    def shipped_tables_schema(self):
-        out = {}
-        for t in self.SHIPPED_TABLES:
-            row = self.conn.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (t,)).fetchone()
-            out[t] = (row["sql"] if (row is not None and row["sql"] is not None) else None)
-        return out
-
-    def shipped_tables_schema_sha(self):
-        s = self.shipped_tables_schema()
-        return sha256_text("\n".join("%s\x00%s" % (t, s.get(t) or "") for t in self.SHIPPED_TABLES))
 
     # ---- deletion of a version's derived rows (chunks + fts + vectors) ----
     def _purge_version_derived(self, version_id):
@@ -1141,27 +1078,13 @@ class Catalog:
             if token_count is None:
                 token_count = max(1, len(text) // 4) if text else 0
             derivation_refs = r.get("derivation_refs")
-            # A4/D-0092 working-memory scope: task_id (top-level or attrs.task_id) drives isolation; a
-            # `working` record is content_role='working' (NEVER evidence), everything else 'evidence' by
-            # default (an explicit content_role wins). Non-working records carry task_id=NULL.
-            attrs_obj = r.get("attrs") if isinstance(r.get("attrs"), dict) else None
-            task_id = r.get("task_id")
-            if (task_id is None or str(task_id).strip() == "") and attrs_obj is not None:
-                task_id = attrs_obj.get("task_id")
-            task_id = str(task_id) if (task_id is not None and str(task_id).strip() != "") else None
-            content_role = r.get("content_role")
-            if content_role is None and attrs_obj is not None:
-                content_role = attrs_obj.get("content_role")
-            if content_role is None:
-                content_role = "working" if kind == WORKING_KIND else "evidence"
-            content_role = str(content_role)
             self.conn.execute(
                 """INSERT INTO records(record_version_id,record_id,record_kind,namespace,content_hash,status,
                    authority_level,sensitivity_class,valid_from,valid_to,created_by_ingest_run,source_version_id,
                    source_path,source_span_start,source_span_end,derivation_refs,parser_fingerprint,
                    chunker_fingerprint,extractor_fingerprint,record_schema_version,token_count,embedding_space_id,
-                   section_path,heading,title,chunk_type,attrs_json,task_id,content_role,text,created_at)
-                   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   section_path,heading,title,chunk_type,attrs_json,text,created_at)
+                   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (rvid, rid, kind, (r.get("namespace") or namespace_default), content_hash, status,
                  str(r.get("authority_level") or "derived"), str(r.get("sensitivity_class") or "default"),
                  r.get("valid_from"), r.get("valid_to"), run_id, r.get("source_version_id"),
@@ -1170,8 +1093,7 @@ class Catalog:
                  r.get("parser_fingerprint"), r.get("chunker_fingerprint"), r.get("extractor_fingerprint"),
                  str(r.get("schema_version") or (kind + "/1")), int(token_count), r.get("embedding_space_id"),
                  r.get("section_path"), r.get("heading"), r.get("title"), r.get("chunk_type"),
-                 (canon_json(r.get("attrs")) if r.get("attrs") is not None else None), task_id, content_role,
-                 text, created))
+                 (canon_json(r.get("attrs")) if r.get("attrs") is not None else None), text, created))
             if text.strip() != "":
                 self.conn.execute(
                     "INSERT INTO records_fts(text,heading,section_path,record_kind,record_version_id,record_id) VALUES(?,?,?,?,?,?)",
@@ -1210,13 +1132,6 @@ class Catalog:
         if kind not in TYPED_RECORD_KINDS:
             return {"record_version_id": str(r["record_version_id"]), "reason": "unknown_record_kind",
                     "detail": "record_kind %r not in the s1 typed-record enum" % kind}
-        if kind == WORKING_KIND:
-            tid = r.get("task_id")
-            if (tid is None or str(tid).strip() == "") and isinstance(r.get("attrs"), dict):
-                tid = r.get("attrs").get("task_id")
-            if tid is None or str(tid).strip() == "":
-                return {"record_version_id": str(r["record_version_id"]), "reason": "working_requires_task_id",
-                        "detail": "a `working` record must carry a task_id (top-level or attrs.task_id) for task-scoped isolation (A4)"}
         text = r.get("text")
         if (text is None or str(text).strip() == "") and not r.get("content_hash"):
             return {"record_version_id": str(r["record_version_id"]), "reason": "missing_content",
@@ -1272,7 +1187,6 @@ class Catalog:
             "section_path": row["section_path"], "heading": row["heading"], "title": row["title"],
             "chunk_type": row["chunk_type"],
             "attrs": (json.loads(row["attrs_json"]) if row["attrs_json"] else None),
-            "task_id": row["task_id"], "content_role": row["content_role"],   # A4/D-0092 (working-memory seam)
             "parent_edges": parent, "child_edges": child,
         }
 
@@ -1322,18 +1236,6 @@ class Catalog:
                 clauses.append("namespace=?"); params.append(filters["namespace"])
             if filters.get("status"):
                 clauses.append("status=?"); params.append(filters["status"])
-            # A4/D-0092 (U3): a `working` record surfaces ONLY when the request scopes to its own task_id.
-            scope = filters.get("task_id") or filters.get("working_task_id")
-            if kind == WORKING_KIND:
-                if scope:
-                    clauses.append("task_id=?"); params.append(str(scope))
-                else:
-                    clauses.append("1=0")   # no task scope -> working records never surface
-            elif kind is None:
-                if scope:
-                    clauses.append("(record_kind != ? OR task_id = ?)"); params.extend([WORKING_KIND, str(scope)])
-                else:
-                    clauses.append("record_kind != ?"); params.append(WORKING_KIND)
             if clauses:
                 q += " WHERE " + " AND ".join(clauses)
             q += " ORDER BY record_kind, record_id, record_version_id"
@@ -1348,52 +1250,33 @@ class Catalog:
         filters = filters or {}
         if not query or not str(query).strip():
             raise ASError("empty_query", "search query is empty")
-        # `mode` is the LEXICAL backend (fts|exact). A4/D-0092 (U4) adds a retrieval TEMPORAL mode
-        # `current_only`; #36 locates it under `filters.mode` (canonical) to avoid colliding with the shipped
-        # lexical `mode`, but ALSO accepts it in the top-level `mode` slot (the contract's retriever
-        # `mode: current_only`) as a compat shim -> the lexical backend defaults to fts.
-        top_temporal = None
-        if mode == "current_only":
-            top_temporal = "current_only"
-            mode = "fts"
         if mode not in ("fts", "exact"):
-            raise ASError("invalid_mode", "mode must be fts|exact|current_only (got %r)" % mode)
-        temporal_mode = str(filters.get("mode") or top_temporal or "default").lower()
-        # current_only hard-excludes any non-`current` candidate (NOT a demotion). `filters.exclude_stale`
-        # (shipped 0.2) + `filters.current_only` are accepted aliases of the same mode.
-        current_only = (temporal_mode == "current_only") or bool(filters.get("current_only")) or bool(filters.get("exclude_stale", False))
+            raise ASError("invalid_mode", "mode must be fts|exact (got %r)" % mode)
         corpus_version = self._get_corpus_version()
         want_status = filters.get("status") or filters.get("currentness")
+        exclude_stale = bool(filters.get("exclude_stale", False))
         kind_filter = filters.get("record_kind")
-        ns_allowed = _namespace_request(filters)   # A4/D-0092 (U1): the enforced hard-namespace set (or None)
 
         if mode == "fts":
             scored = self._search_fts(query, filters, kind_filter)
         else:
             scored = self._search_exact(query, filters, kind_filter)
-        # A4/D-0092 (U4): current_only is a real retrieval MODE -- hard-EXCLUDE non-`current` candidates BEFORE
-        # ranking (never a demotion). historical/version-specific temporal intents (s6) are the eval/#37 side.
-        if current_only:
-            scored = [x for x in scored if x["base"].get("status") == STATUS_CURRENT]
         # deterministic fused order (lexical-only this wave): (-lexical_score, tie_break_key)
         scored.sort(key=lambda x: (-x["lexical_score"], x["tie_break_key"]))
         for lex_rank, s in enumerate(scored, start=1):
             s["lexical_rank"] = lex_rank
         filter_decisions = {
-            "mode": mode, "temporal_mode": temporal_mode, "current_only": current_only,
-            "record_kind": kind_filter, "source": filters.get("source"),
+            "mode": mode, "record_kind": kind_filter, "source": filters.get("source"),
             "type": filters.get("type"), "path_prefix": filters.get("path_prefix"),
             "content_hash": filters.get("content_hash"), "namespace": filters.get("namespace"),
-            "namespace_enforced": (ns_allowed is not None),
-            "namespace_allowed": (sorted(ns_allowed) if ns_allowed is not None else None),
-            "task_id": filters.get("task_id"),
-            "status": want_status, "exclude_stale": bool(filters.get("exclude_stale", False)),
-            "channels": ["lexical"],
+            "status": want_status, "exclude_stale": exclude_stale, "channels": ["lexical"],
         }
         selected = []
         for x in scored:
             st = x["base"].get("status")
             if want_status and st != want_status:
+                continue
+            if exclude_stale and st != STATUS_CURRENT:
                 continue
             selected.append(x)
             if len(selected) >= k:
@@ -1417,16 +1300,6 @@ class Catalog:
             hit["snippet"] = x["snippet"]
             hit["rank"] = fused_rank
             hits.append(hit)
-        # A4/D-0092 (U1) all-hits-match assertion: namespace is a hard partition -- if ANY returned hit is
-        # outside the requested set, that is a fail-closed internal error (`namespace_leak`), NEVER a
-        # low-ranked hit. Uses the SAME predicate as the pre-ranking exclusion, so it can only fire on a real
-        # invariant break (defense in depth).
-        if ns_allowed is not None:
-            for h in hits:
-                if not _namespace_ok(h.get("namespace"), ns_allowed):
-                    raise ASError("namespace_leak",
-                                  "retriever produced a hit (%s, kind=%s) in namespace %r outside the requested set %r"
-                                  % (h.get("record_version_id"), h.get("record_kind"), h.get("namespace"), sorted(ns_allowed)))
         return {"query": query, "mode": mode, "k": k, "count": len(hits),
                 "filters": filters, "corpus_version": corpus_version,
                 "fusion_algo": "lexical_only", "fusion_version": "1",
@@ -1483,8 +1356,7 @@ class Catalog:
     def _chunk_passes(self, c, filters):
         if filters.get("source") and c["source_id"] != _slug(filters["source"]):
             return False
-        # A4/D-0092 (U1): namespace is a HARD boundary (single value or an explicit set), applied BEFORE ranking.
-        if not _namespace_ok(c["source_id"], _namespace_request(filters)):
+        if filters.get("namespace") and c["source_id"] != _slug(filters["namespace"]):
             return False
         if filters.get("type") and c["chunk_type"] != filters["type"]:
             return False
@@ -1495,15 +1367,8 @@ class Catalog:
         return True
 
     def _record_passes(self, r, filters):
-        # A4/D-0092 (U1): namespace is a HARD boundary (single value or an explicit set), applied BEFORE ranking.
-        if not _namespace_ok(r["namespace"], _namespace_request(filters)):
+        if filters.get("namespace") and (r["namespace"] or "") != filters["namespace"]:
             return False
-        # A4/D-0092 (U3): a `working` record surfaces ONLY when the request explicitly scopes to its own
-        # task_id (filters.task_id) -- it never leaks into ordinary retrieval.
-        if r["record_kind"] == WORKING_KIND:
-            scope = filters.get("task_id") or filters.get("working_task_id")
-            if not scope or (r["task_id"] or "") != str(scope):
-                return False
         if filters.get("source") and (r["namespace"] or "") != filters["source"] and (r["namespace"] or "") != _slug(filters["source"]):
             return False
         if filters.get("content_hash") and r["content_hash"] != filters["content_hash"]:
@@ -1802,38 +1667,6 @@ def _slug(s):
     return s.strip("-") or "src"
 
 
-def _namespace_request(filters):
-    """A4/D-0092 (U1): normalize `filters.namespace` (a single value OR an explicit set) to the allowed set,
-    carrying BOTH the raw and the _slug-normalized form of each requested value so the retriever's hard filter
-    and its all-hits-match assertion apply IDENTICAL logic (chunk namespaces are slugged source_ids; record
-    namespaces are the raw envelope value). Returns None when no namespace filter is present -- the documented
-    back-compat: absent `filters.namespace` = today's behavior (the compiler now always supplies it)."""
-    if not filters:
-        return None
-    req = filters.get("namespace")
-    if req is None:
-        return None
-    vals = list(req) if isinstance(req, (list, tuple, set)) else [req]
-    allowed = set()
-    for v in vals:
-        if v is None:
-            continue
-        allowed.add(str(v))
-        allowed.add(_slug(v))
-    return allowed
-
-
-def _namespace_ok(ns, allowed):
-    """True iff `ns` is inside the requested namespace set (None = no filter -> always True). The SAME predicate
-    backs BOTH the pre-ranking exclusion AND the post-rank all-hits-match assertion, so they cannot disagree (a
-    disagreement is exactly the `namespace_leak` fail-closed error). `namespace` is a HARD partition, not a
-    score boost -- a non-matching candidate is EXCLUDED before ranking, never a low-ranked hit."""
-    if allowed is None:
-        return True
-    ns = ns or ""
-    return ns in allowed or _slug(ns) in allowed
-
-
 def _safe(o):
     try:
         json.dumps(o)
@@ -2007,8 +1840,7 @@ def run(args):
                    "migration_actions": cat.migration_actions,
                    "migrated": (len(cat.migration_actions) > 0),
                    "counts": cat.counts(), "integrity": cat.integrity(),
-                   "catalog_digest": cat.catalog_digest(),
-                   "shipped_tables_schema_sha": cat.shipped_tables_schema_sha()}
+                   "catalog_digest": cat.catalog_digest()}
             out["result"] = res
             art("migrate_report.json", res, "json")
 
@@ -2035,8 +1867,7 @@ def run(args):
 
         elif op == "catalog":
             res = {"db": os.path.abspath(db_path), "schema_version": cat.schema_version(),
-                   "digest": cat.catalog_digest(), "counts": cat.counts(),
-                   "shipped_tables_schema_sha": cat.shipped_tables_schema_sha()}
+                   "digest": cat.catalog_digest(), "counts": cat.counts()}
             out["result"] = res
             art("catalog.json", res, "json")
 

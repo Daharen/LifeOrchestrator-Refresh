@@ -98,8 +98,8 @@ Check 'manifest is schema-valid' ([bool]$mv.valid) (($mv.errors) -join '; ')
 $man = (Get-Content -LiteralPath $mf -Raw) | ConvertFrom-Json
 Check 'manifest determinism=deterministic' ($man.determinism -eq 'deterministic')
 Check 'manifest skill_id=artifact.search' ($man.skill_id -eq 'artifact.search')
-Check 'manifest version=0.2.0' ($man.version -eq '0.2.0')
-Check 'manifest contract_version=0.2' ($man.contract_version -eq '0.2')
+Check 'manifest version=0.3.0' ($man.version -eq '0.3.0')
+Check 'manifest contract_version=0.3' ($man.contract_version -eq '0.3')
 Check 'manifest batch=false & streaming=false' (($man.batch -eq $false) -and ($man.streaming -eq $false))
 
 # ---------- 2) ingest the bundled fixture repo ----------
@@ -326,13 +326,14 @@ $v1m = $null; try { $v1m = (Get-Content -LiteralPath $v1meta -Raw) | ConvertFrom
 Check 'migrate: v1 seed db built at schema_version 1' ($null -ne $v1m -and [bool]$v1m.ok -and [string]$v1m.worker.schema_version -eq '1' -and (Test-Path -LiteralPath $v1db))
 $v1chunks = [int]$v1m.result.counts_total.chunks
 $v1emb = [int]$v1m.result.counts_total.embeddings
-# migrate op is the FIRST op to touch the v1 db (so it reports the migration actions)
+# migrate op is the FIRST op to touch the v1 db (so it reports the migration actions); 0.3 chains 1->2->3
 $mg = Payload (Run-AS @{ op='migrate'; db=$v1db })
-Check 'migrate: schema_version 1 -> 2 in place, migrated=true' ($null -ne $mg -and [bool]$mg.migrated -and [string]$mg.schema_version -eq '2')
+Check 'migrate: schema_version 1 -> 3 in place (chained), migrated=true' ($null -ne $mg -and [bool]$mg.migrated -and [string]$mg.schema_version -eq '3')
+Check 'migrate: reports from:1 + the A4 reserved-seam action' ($null -ne $mg -and (@($mg.migration_actions) -contains 'from:1') -and (@($mg.migration_actions | Where-Object { $_ -match 'reserve_a4' }).Count -ge 1))
 Check 'migrate: integrity ok + NO chunk loss' ($null -ne $mg -and [bool]$mg.integrity.ok -and [int]$mg.counts.chunks -eq $v1chunks) "chunks=$($mg.counts.chunks) v1=$v1chunks"
 Check 'migrate: chunk_embeddings JSON retired -> float32 BLOB vectors (count preserved)' ([int]$mg.counts.embeddings -eq $v1emb) "emb=$($mg.counts.embeddings) v1=$v1emb"
 $mg2 = Payload (Run-AS @{ op='migrate'; db=$v1db })
-Check 'migrate: idempotent (second migrate is a no-op)' ($null -ne $mg2 -and (-not [bool]$mg2.migrated) -and [string]$mg2.schema_version -eq '2')
+Check 'migrate: idempotent (second migrate is a no-op)' ($null -ne $mg2 -and (-not [bool]$mg2.migrated) -and [string]$mg2.schema_version -eq '3')
 Check 'migrate: shipped search regression-green on migrated db' ([int](Payload (Run-AS @{ op='search'; query='frobnicator'; mode='fts'; db=$v1db })).count -ge 1)
 Check 'migrate: shipped integrity regression-green on migrated db' ([bool](Payload (Run-AS @{ op='integrity'; db=$v1db })).ok)
 Check 'migrate: source_chunk view works on migrated db' ([int](Payload (Run-AS @{ op='list-records'; db=$v1db; filters=@{ record_kind='source_chunk' }; limit=3 })).count -ge 1)
@@ -456,6 +457,118 @@ Run-AS @{ op='ingest'; source='fixture'; root=$fixtureRepo; db=$recdbB } | Out-N
 Run-AS @{ op='ingest-records'; db=$recdbB; ingest_run=@{ producer='repo.intel'; producer_version='0.1'; namespace='fixture' }; records=$recs } | Out-Null
 $dgB = [string](Payload (Run-AS @{ op='catalog'; db=$recdbB })).digest
 Check 'digest: identical corpus+records -> identical digest across fresh dbs' ($dgB -eq $recDigest) "B=$dgB expected=$recDigest"
+
+# ================= 0.3 (MEMORY_CONTRACT Amendment A4 / D-0092 Tier-0 seams) additions =================
+
+# ---------- 25) A4/U1 GATE TEST 1: namespace is a HARD retrieval boundary (+ all-hits-match assertion) ----------
+$nsdb = Join-Path $tmpRoot 'ns.db'
+$recsA = @( [ordered]@{ record_id='a.1'; record_version_id='a.1@1'; record_kind='claim'; namespace='ns-a'; text='OVERLAP_TOKEN alpha claim in A' } )
+$recsB = @( [ordered]@{ record_id='b.1'; record_version_id='b.1@1'; record_kind='claim'; namespace='ns-b'; text='OVERLAP_TOKEN beta claim in B' } )
+Run-AS @{ op='ingest-records'; db=$nsdb; ingest_run=@{ producer='p' }; records=$recsA } | Out-Null
+Run-AS @{ op='ingest-records'; db=$nsdb; ingest_run=@{ producer='p' }; records=$recsB } | Out-Null
+# two ingested SOURCES sharing a chunk token (a chunk's namespace == its source_id)
+$nsSrcA = Join-Path $tmpRoot 'nsSrcA'; $nsSrcB = Join-Path $tmpRoot 'nsSrcB'
+New-Item -ItemType Directory -Path $nsSrcA -Force | Out-Null; New-Item -ItemType Directory -Path $nsSrcB -Force | Out-Null
+Set-Content -LiteralPath (Join-Path $nsSrcA 'f.md') -Value "# A`n`nCHUNKOVERLAP token in source A`n"
+Set-Content -LiteralPath (Join-Path $nsSrcB 'f.md') -Value "# B`n`nCHUNKOVERLAP token in source B`n"
+Run-AS @{ op='ingest'; source='ns-a'; root=$nsSrcA; db=$nsdb } | Out-Null
+Run-AS @{ op='ingest'; source='ns-b'; root=$nsSrcB; db=$nsdb } | Out-Null
+# a no-namespace query returns BOTH namespaces
+$allq = Payload (Run-AS @{ op='search'; query='OVERLAP_TOKEN'; mode='fts'; k=10; db=$nsdb })
+$nsAll = @(@($allq.results) | ForEach-Object { [string]$_.namespace } | Select-Object -Unique)
+Check 'A4/U1: no-namespace query returns BOTH namespaces' (($nsAll -contains 'ns-a') -and ($nsAll -contains 'ns-b')) "seen=$($nsAll -join ',')"
+# scoped to ns-a returns ZERO ns-b hits (the hard boundary)
+$qa = Payload (Run-AS @{ op='search'; query='OVERLAP_TOKEN'; mode='fts'; k=10; db=$nsdb; filters=@{ namespace='ns-a' } })
+$qaNs = @(@($qa.results) | ForEach-Object { [string]$_.namespace })
+Check 'A4/U1: scoped ns-a returns >=1 hit, ALL namespace==ns-a (zero ns-b leakage)' ([int]$qa.count -ge 1 -and (@($qaNs | Where-Object { $_ -ne 'ns-a' }).Count -eq 0)) "ns=$($qaNs -join ',')"
+Check 'A4/U1: filter_decisions.namespace_enforced true when scoped' ([bool](@($qa.results)[0].filter_decisions.namespace_enforced))
+# an explicit SET returns both
+$qset = Payload (Run-AS @{ op='search'; query='OVERLAP_TOKEN'; mode='fts'; k=10; db=$nsdb; filters=@{ namespace=@('ns-a','ns-b') } })
+$qsetNs = @(@($qset.results) | ForEach-Object { [string]$_.namespace } | Select-Object -Unique)
+Check 'A4/U1: explicit set {ns-a,ns-b} returns both' (($qsetNs -contains 'ns-a') -and ($qsetNs -contains 'ns-b')) "ns=$($qsetNs -join ',')"
+# chunk-namespace: scoped to ns-a returns zero ns-b chunk hits
+$qc = Payload (Run-AS @{ op='search'; query='CHUNKOVERLAP'; mode='fts'; k=10; db=$nsdb; filters=@{ namespace='ns-a' } })
+$qcNs = @(@($qc.results) | ForEach-Object { [string]$_.namespace })
+Check 'A4/U1(chunks): scoped ns-a returns only ns-a chunk hits' ([int]$qc.count -ge 1 -and (@($qcNs | Where-Object { $_ -ne 'ns-a' }).Count -eq 0)) "ns=$($qcNs -join ',')"
+
+# ---------- 26) A4/U4: current_only retrieval MODE (superseded twin) ----------
+$codb = Join-Path $tmpRoot 'co.db'
+Run-AS @{ op='ingest'; source='co'; root=$fixtureRepo; db=$codb } | Out-Null
+$coVer = [string](@((Payload (Run-AS @{ op='search'; query='QUOKKA_MARKER_7'; mode='exact'; k=1; db=$codb })).results)[0].source_version_id)
+$twins = @(
+  [ordered]@{ record_id='sum.cur'; record_version_id='sum.cur@1'; record_kind='summary'; namespace='co'; text='TWIN_TOKEN current summary'; source_version_id=$coVer; status='current' },
+  [ordered]@{ record_id='sum.old'; record_version_id='sum.old@1'; record_kind='summary'; namespace='co'; text='TWIN_TOKEN superseded summary'; source_version_id=$coVer; status='source_stale' }
+)
+Run-AS @{ op='ingest-records'; db=$codb; ingest_run=@{ producer='p'; namespace='co' }; records=$twins } | Out-Null
+Check 'A4/U4: default mode returns BOTH twins' ([int](Payload (Run-AS @{ op='search'; query='TWIN_TOKEN'; mode='exact'; db=$codb; filters=@{ record_kind='summary' } })).count -eq 2)
+$conly = Payload (Run-AS @{ op='search'; query='TWIN_TOKEN'; mode='exact'; db=$codb; filters=@{ record_kind='summary'; mode='current_only' } })
+Check 'A4/U4: filters.mode=current_only returns ONLY the current twin' ([int]$conly.count -eq 1 -and [string](@($conly.results)[0].status) -eq 'current') "count=$($conly.count)"
+$conly2 = Payload (Run-AS @{ op='search'; query='TWIN_TOKEN'; mode='current_only'; db=$codb; filters=@{ record_kind='summary' } })
+Check 'A4/U4: top-level mode=current_only shim works (lexical backend fts)' ([int]$conly2.count -eq 1 -and [string]$conly2.mode -eq 'fts')
+
+# ---------- 27) A4/U3: working-memory record isolation (task-scoped only) ----------
+$wkdb = Join-Path $tmpRoot 'wk.db'
+Run-AS @{ op='ingest'; source='w'; root=$fixtureRepo; db=$wkdb } | Out-Null
+$work = @(
+  [ordered]@{ record_id='wk.t1'; record_version_id='wk.t1@1'; record_kind='working'; namespace='w'; task_id='task-1'; text='WORKING_TOKEN state for task 1' },
+  [ordered]@{ record_id='wk.t2'; record_version_id='wk.t2@1'; record_kind='working'; namespace='w'; attrs=@{ task_id='task-2' }; text='WORKING_TOKEN state for task 2' },
+  [ordered]@{ record_id='wk.bad'; record_version_id='wk.bad@1'; record_kind='working'; namespace='w'; text='WORKING_TOKEN no task id' }
+)
+$wr = Payload (Run-AS @{ op='ingest-records'; db=$wkdb; ingest_run=@{ producer='p'; namespace='w' }; records=$work })
+Check 'A4/U3: working without task_id rejected (working_requires_task_id)' ([int]$wr.counts.accepted -eq 2 -and (@($wr.rejected | ForEach-Object { [string]$_.reason }) -contains 'working_requires_task_id')) "counts=$($wr.counts | ConvertTo-Json -Compress)"
+Check 'A4/U3: ordinary retrieval EXCLUDES working records' ([int](Payload (Run-AS @{ op='search'; query='WORKING_TOKEN'; mode='exact'; db=$wkdb })).count -eq 0)
+$t1 = Payload (Run-AS @{ op='search'; query='WORKING_TOKEN'; mode='exact'; db=$wkdb; filters=@{ task_id='task-1' } })
+Check 'A4/U3: task-scoped retrieval surfaces ONLY that task_id' ([int]$t1.count -eq 1 -and [string](@($t1.results)[0].record_version_id) -eq 'wk.t1@1') "count=$($t1.count)"
+Check 'A4/U3: list-records(working) without scope returns none' ([int](Payload (Run-AS @{ op='list-records'; db=$wkdb; filters=@{ record_kind='working' } })).count -eq 0)
+Check 'A4/U3: list-records(working, task-2) returns only task-2' ([int](Payload (Run-AS @{ op='list-records'; db=$wkdb; filters=@{ record_kind='working'; task_id='task-2' } })).count -eq 1)
+
+# ---------- 28) A4/U2 GATE TEST 2: schema-evolution (v2->v3; node+edges additive; shipped tables byte-identical) ----------
+$v2worker = Join-Path $SkillDir 'fixtures/artifact_search_v2.py'
+Check 'A4/U2: frozen shipped-0.2 worker fixture present' (Test-Path -LiteralPath $v2worker -PathType Leaf)
+# a fresh v3 db -> the EXPECTED shipped-tables schema sha (unchanged by a 2->3 migration)
+$freshv3 = Join-Path $tmpRoot 'fresh_v3.db'
+Run-AS @{ op='ingest'; source='fixture'; root=$fixtureRepo; db=$freshv3 } | Out-Null
+$freshSha = [string](Payload (Run-AS @{ op='catalog'; db=$freshv3 })).shipped_tables_schema_sha
+Check 'A4/U2: fresh v3 exposes shipped_tables_schema_sha (64 hex)' ($freshSha -match '^[0-9a-f]{64}$')
+# build a v2 seed db with the FROZEN v2 worker (mirrors the v1 migration fixture)
+$v2db = Join-Path $tmpRoot 'v2seed.db'
+$v2args = Join-Path $tmpRoot 'v2args.json'; $v2meta = Join-Path $tmpRoot 'v2meta.json'
+[System.IO.File]::WriteAllText($v2args, ([ordered]@{ op='ingest'; source='fixture'; root=$fixtureRepo; db=$v2db; meta_path=$v2meta; output_dir=(Join-Path $tmpRoot 'v2out') } | ConvertTo-Json -Depth 8), $utf8)
+& $PythonPath $v2worker $v2args 2>$null | Out-Null
+$v2m = $null; try { $v2m = (Get-Content -LiteralPath $v2meta -Raw) | ConvertFrom-Json } catch { }
+Check 'A4/U2: v2 seed db built at schema_version 2' ($null -ne $v2m -and [bool]$v2m.ok -and [string]$v2m.worker.schema_version -eq '2')
+$v2chunks = [int]$v2m.result.counts_total.chunks
+# migrate v2 -> v3 in place (additive; no shipped-table rewrite)
+$mg3 = Payload (Run-AS @{ op='migrate'; db=$v2db })
+Check 'A4/U2: migrate 2 -> 3 in place, migrated=true' ($null -ne $mg3 -and [bool]$mg3.migrated -and [string]$mg3.schema_version -eq '3')
+Check 'A4/U2: migrate reports from:2 + the reserved-seam action' ((@($mg3.migration_actions) -contains 'from:2') -and (@($mg3.migration_actions | Where-Object { $_ -match 'reserve_a4' }).Count -ge 1)) "acts=$($mg3.migration_actions -join ',')"
+Check 'A4/U2: NO chunk loss across 2->3 migration' ([int]$mg3.counts.chunks -eq $v2chunks) "chunks=$($mg3.counts.chunks) v2=$v2chunks"
+Check 'A4/U2: shipped tables BYTE-IDENTICAL pre/post (migrated sha == fresh v3 sha)' ([string]$mg3.shipped_tables_schema_sha -eq $freshSha) "migrated=$($mg3.shipped_tables_schema_sha) fresh=$freshSha"
+Check 'A4/U2: migrate integrity ok' ([bool]$mg3.integrity.ok)
+# INGEST a node record + member_of_node (record->node) + child_of_node (node->node) + contradicts edges
+$ndVer = [string](@((Payload (Run-AS @{ op='search'; query='QUOKKA_MARKER_7'; mode='exact'; k=1; db=$v2db })).results)[0].source_version_id)
+$nodeRecs = @(
+  [ordered]@{ record_id='nd.root'; record_version_id='nd.root@1'; record_kind='node'; namespace='fixture'; text='NODE_TOKEN root navigation node'; attrs=@{ synopsis='root'; child_ids=@('nd.child@1') }; edges=@(@{ edge_kind='child_of_node'; dst_ref='nd.child@1'; dst_kind='record' }) },
+  [ordered]@{ record_id='nd.child'; record_version_id='nd.child@1'; record_kind='node'; namespace='fixture'; text='NODE_TOKEN child navigation node'; attrs=@{ synopsis='child' } },
+  [ordered]@{ record_id='mem.sym'; record_version_id='mem.sym@1'; record_kind='symbol'; namespace='fixture'; text='NODE_MEMBER_TOKEN a member symbol'; source_version_id=$ndVer; edges=@(@{ edge_kind='member_of_node'; dst_ref='nd.child@1'; dst_kind='record' }, @{ edge_kind='contradicts'; dst_ref='mem.other@1'; dst_kind='record' }) }
+)
+$nr = Payload (Run-AS @{ op='ingest-records'; db=$v2db; ingest_run=@{ producer='repo.intel'; namespace='fixture' }; records=$nodeRecs })
+Check 'A4/U2: node + edges ingest additively (3 accepted, 0 rejected)' ([int]$nr.counts.accepted -eq 3 -and [int]$nr.counts.rejected -eq 0) "counts=$($nr.counts | ConvertTo-Json -Compress)"
+Check 'A4/U2: integrity ok after node ingest on migrated db' ([bool]$nr.integrity_ok)
+# node RETRIEVES through the normal envelope (list-records) + the retriever hit shape (search)
+$ln = Payload (Run-AS @{ op='list-records'; db=$v2db; filters=@{ record_kind='node' } })
+Check 'A4/U2: node retrievable via envelope (2 nodes, all record_kind=node)' ([int]$ln.count -eq 2 -and (@($ln.records | Where-Object { [string]$_.record_kind -ne 'node' }).Count -eq 0))
+$ndRoot = @($ln.records | Where-Object { [string]$_.record_id -eq 'nd.root' })[0]
+Check 'A4/U2: node envelope carries the child_of_node edge' (@($ndRoot.parent_edges | Where-Object { [string]$_.edge_kind -eq 'child_of_node' }).Count -ge 1)
+$sn = @((Payload (Run-AS @{ op='search'; query='NODE_TOKEN'; mode='fts'; db=$v2db; filters=@{ record_kind='node' } })).results)[0]
+Check 'A4/U2: node retrievable via retriever hit shape (span + fused_score)' ($null -ne $sn -and [string]$sn.record_kind -eq 'node' -and (Has $sn 'span') -and (Has $sn 'fused_score'))
+$mem = @((Payload (Run-AS @{ op='list-records'; db=$v2db; filters=@{ record_kind='symbol' } })).records | Where-Object { [string]$_.record_id -eq 'mem.sym' })[0]
+$memEdges = @(@($mem.parent_edges) | ForEach-Object { [string]$_.edge_kind })
+Check 'A4/U2: member_of_node + contradicts edges materialized' (($memEdges -contains 'member_of_node') -and ($memEdges -contains 'contradicts')) "edges=$($memEdges -join ',')"
+# re-ingest idempotent (digest stable)
+$predig = [string](Payload (Run-AS @{ op='catalog'; db=$v2db })).digest
+Run-AS @{ op='ingest-records'; db=$v2db; ingest_run=@{ producer='repo.intel'; namespace='fixture' }; records=$nodeRecs } | Out-Null
+Check 'A4/U2: node re-ingest idempotent (digest stable)' ([string](Payload (Run-AS @{ op='catalog'; db=$v2db })).digest -eq $predig)
 
 # ---------- cleanup ----------
 try { Remove-Item -LiteralPath $tmpRoot -Recurse -Force -ErrorAction SilentlyContinue } catch { }
