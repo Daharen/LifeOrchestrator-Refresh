@@ -1,0 +1,30 @@
+# PROCESS_BACKLOG -- cross-cutting process / tooling / doc-hygiene debt (router, not a spec)
+
+Owns the deferred **process / orchestration / doc-hygiene** work that is NOT a single module's follow-on (those
+live per-module in `MODULE_ROADMAP.md`) and NOT a runtime review item (`REVIEW_QUEUE.md`). ONE terse row per open
+item: an id, one line, a deterministic **Trigger** (when to act), and a `D-ref` for the full rationale. Keep it a
+ROUTER -- detail goes in the D-entry, NEVER here (same per-row discipline as `DECISION_LOG_INDEX.md`; budget in
+`DOC_PROTOCOL.md` s2).
+
+**Capture rule (ongoing):** anyone -- Nicholas, an orchestrator, a worker, a frontier reviewer -- who defers a
+cross-cutting process/tooling/hygiene fix ADDS a one-line row here + a D-entry, instead of leaving it as a handoff
+"named residual" (rewritten every session -> drifts) or a scattered "doc debt" mention. Close a row with `DONE
+(D-00xx)` and move detail to the D-entry; compact closed rows periodically.
+
+**Forcing function (honest):** a prose "revisit the backlog" checklist step is NOT reliable -- `DOC_PROTOCOL` s9
+step 5 already mandates a size check and it was skipped for several iterations (PB-1 evidence). The durable pawl is
+the **mechanical commit gate (PB-1)**: it refuses a commit that violates a budget/brevity rule, forcing the matching
+item at the moment it bites. The backlog is the memory; the gate is the alarm. Triggers below are for the JUDGMENT
+items the gate can only DETECT, not FIX.
+
+## Open
+
+| id | item | trigger | D-ref |
+|---|---|---|---|
+| PB-1 | Doc-budget + index-brevity commit GATE (lint): fail a core-docs commit if any DOC_PROTOCOL-budgeted hot doc exceeds budget OR any DECISION_LOG_INDEX decision cell exceeds ~160 chars. The forcing function for every other doc-hygiene item. | Next doc-tooling / executor touch, or opportunistically -- high value, low cost. Evidence it is needed: handoff 51 KB/24, CURRENT_STATE 53/34, MODULE_ROADMAP 44/37 all over budget; the D-0090/91/92 index rows re-bloated one session after the index was slimmed. | D-0093 |
+| PB-2 | Reserved delegation seam: a `DELEGATION_PROTOCOL` + a bounded delegation-index + subagent brief templates for recurring JUDGMENT doc-hygiene (handoff slim, producer/consumer divergence reconcile). RESERVE now, BUILD later (Tier-1-style). | Subagents are available in the orchestrator workflow AND >= ~3 recurring judgment-hygiene tasks have accumulated. Until then PB-1 is the guardrail -- do NOT build a router to a capability that does not exist yet. | D-0093 |
+| PB-3 | Slim the over-budget hot docs (FANOUT_ORCHESTRATOR_HANDOFF 51/24, CURRENT_STATE 53/34, MODULE_ROADMAP 44/37) back under DOC_PROTOCOL budget (snapshot pre-slim per DOC_PROTOCOL s5; compress history to D-refs). The long-drifting "doc debt". | The i32 fold/close (handoff + CURRENT_STATE already named there) + the next MODULE_ROADMAP touch; OR forced by PB-1 once it lands. | D-0093 |
+
+## Closed
+
+_(none yet)_
