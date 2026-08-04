@@ -1,4 +1,4 @@
-# SCHEMA_NOTES -- retrieval.eval (Module 37, contract v0.3 / eval-0.3 + selpol_rrf_v1, plan fo-30-dd453156, SELECTION-POLICY-i30)
+# SCHEMA_NOTES -- retrieval.eval (Module 37, contract v0.4 / eval-0.4 + selpol_rrf_v1 1.1.0, plan fo-32-0fb25203, RETRIEVAL-EVAL-SELPOL-TIER0-i32; prior: v0.3 / SELECTION-POLICY-i30, s9-13)
 
 **REQUIRED by D-0077.** This module is BOTH the CONSUMER side of a retriever pair (it calls the real
 `artifact.search` #36 retriever-0.2 at fold / its own lexical baseline now, and scores the ranked hits + #40's
@@ -383,3 +383,118 @@ selection; #40 will instead pass `hard_filter` from `control_plane.permission_gr
   fresh-9B acceptance suite (P1-8); the synthetic precomputed-vector fixture that would exercise multi-channel
   RRF + vector-rescue end-to-end (P1-9). The eval accepts these labels additively (ignored when absent) so the
   follow-on is plumbing, not a schema break.
+
+## 14. i32 (D-0092) -- folding the CONTEXT_PACKET_CONTRACT amendment into `selpol_rrf_v1` 1.0.0 -> 1.1.0 + eval 0.3 -> 0.4
+
+The Tier-0 memory-architecture seam repairs. selpol is the PRODUCER of the selection semantics; #40 IMPORTS the
+canonical library and the orchestrator runs the D-0077 selpol byte-identity smoke at fold. Governing:
+`CONTEXT_PACKET_CONTRACT.md` s4 (PINNED, D-0089) + its i32 amendment (s0), `MEMORY_CONTRACT.md` Amendment A4,
+`MEMORY_ARCHITECTURE.md` s5 (query classes) + s9 (Tier-0 invariants). Every change is ADDITIVE; a 1.0.0 caller
+that supplies NONE of the new signals gets BYTE-IDENTICAL selection (proof below).
+
+**Stage list (i32).** `POLICY_VERSION 1.0.0 -> 1.1.0`; `STAGES` grows to eight:
+`namespace_filter -> hard_filter -> temporal -> supersession -> authority -> rank_fusion_rrf -> diversity -> budget`
+(namespace_filter + supersession are the i32 additions). The `select()` result adds `contradicts_pairs[]`,
+`temporal_mode`, and `allowed_namespaces` (additive; the frozen `selected/ranked/policy_id/policy_version/
+features_by_candidate/omission_manifest/stages` surface is unchanged). New reason_codes fold into the stable
+sort order additively: `hard_filter_namespace`, `hard_filter_stale`, `superseded_demote` (inserted so the
+relative order of the pre-i32 codes is preserved -> default-path reason_codes are byte-identical).
+
+**(U1) `hard_filter_namespace` + soft-bonus retirement.** `params.allowed_namespaces` (a set/list/str; normalized
+to a `frozenset`, or `None`) is a HARD boundary: a candidate whose `namespace` is not in the set is SUNK
+(`base -= hard_demote`, `selected=False`, reason `hard_filter_namespace`), exactly like `hard_filter_forbidden`.
+An explicit EMPTY set fails closed (filters everything). **The soft namespace/'project-match' descriptor bonus is
+RETIRED the moment allowed_namespaces is supplied** (the `project` feature weight contributes 0;
+component/task_stage/failure/procedural descriptor matches REMAIN, intra-namespace). Interpretation resolving the
+"retire the soft boost" vs "absent-param byte-identical to 1.0.0" tension: the retirement is CONDITIONAL on the
+hard boundary being engaged -- **absent `allowed_namespaces`, the 1.0.0 soft project bonus is preserved
+byte-for-byte** (back-compat). #40 ALWAYS supplies `allowed_namespaces` (from `task_input.namespace` / the
+`control_plane` grant naming the namespaces), so in production the soft boost is always retired and namespace is a
+hard packet+selection boundary (a cross-namespace item reaching selection is a fail-closed contract violation).
+
+**(U4) `current_only` HARD stale filter + `prefer_current` soft relocation.** selpol resolves an effective
+temporal MODE (below) instead of a bare boolean. Under `current_only`, a candidate that is stale -- its own s5
+`status` in `STALE_STATUSES`, OR matched by an eval `stale[]` label, OR a `required_versions` content_hash
+mismatch -- is HARD-filtered (`hard_filter_stale`, excluded), NOT soft-demoted. **The 1.0.0 soft `stale_penalty`/
+`stale_demote` SURVIVES ONLY for the non-current_only `prefer_current` mode** (it reproduces the old
+current_only-soft arithmetic, so a caller wanting the pre-i32 behavior selects `temporal_mode="prefer_current"`).
+`any`/`historical_as_of`/`version_specific`/`any_valid_version` apply NO temporal action (stale allowed).
+**Intended semantic change, documented:** a 1.0.0 caller that passed `current_only=True` AND had a stale
+candidate now gets HARD exclusion where 1.0.0 soft-demoted -- this is the A4 semantic and what the D-0077 fold
+requires. It is the ONLY divergence from 1.0.0; a current_only call on all-`current` candidates is byte-identical.
+(Shipped selpol unit test 5's stale assertion was updated from `stale_demote` to `hard_filter_stale`
+accordingly; a new prefer_current test covers the surviving soft path.)
+
+**(U4) `superseded_demote` (rank-affecting).** A separate stage AFTER greedy diversity ordering: a STABLE
+topological reorder of the surviving (non-hard-filtered) candidates so that whenever a superseded candidate AND
+its live successor BOTH survive, the successor precedes the superseded one (reason `superseded_demote` on the
+superseded), independent of `selection_score`. The base (stage-5 diversity) order is the tie-break, so with NO
+supersession edges the reorder is the IDENTITY permutation (byte-identical). Supersession is read from the
+candidate/hit, channel-agnostically: `superseded_by` (str|list of successor ids) and/or `supersedes` (str|list of
+records THIS supersedes) and/or `edges`/`record_edges` entries `{type: "superseded_by"|"supersedes", target|
+target_record_version_id|target_record_id}`. Identities match on `record_version_id` then `record_id`. Cycles
+(should not occur) are broken deterministically by base order.
+
+**(U4) `contradicts` PROPAGATION (not detection).** selpol reads `contradicts` (str|list) / an `{type:
+"contradicts", target}` edge and surfaces every unordered pair of SELECTED items linked by it in the result's
+`contradicts_pairs[]` (sorted; ids are `record_version_id`/`record_id`) and stamps `contradicts_with` on the
+involved features. This drives #40's `packet_disposition = conflicted`. selpol PROPAGATES the edge only --
+detection is Tier 2 and is NOT done here. (The eval's `compute_packet_disposition` keeps `conflicted` as a
+reserved hook -- the disposition is #40's job; the eval only MEASURES `queries_with_contradicts`.)
+
+**(U5) `query_class` -> temporal mode (deterministic Tier-0 stub) + OPEN channels.** `descriptor.query_class`
+(or `params.query_class`) maps to the temporal mode as the deterministic DEFAULT when `current_only`/
+`temporal_mode` are not explicitly set. `QUERY_CLASS_TEMPORAL_MODE` (the 9 `MEMORY_ARCHITECTURE` s5 classes):
+`current_state -> current_only` and `procedure_selection -> current_only` (ask for the current truth / a current
+healthy procedure -> HARD-exclude stale); `local_factual -> prefer_current` and `global_synthesis ->
+prefer_current` (prefer current facts but do not exclude -> SOFT demote); `exact_reference -> version_specific`,
+`historical_reconstruction -> historical_as_of`, `temporal_change -> any_valid_version`, `causal_diagnosis ->
+any_valid_version`, `precedent_search -> any_valid_version` (identity-pinned or inherently historical -> allow
+stale). Rationale: only classes that inherently ask "what is true NOW" hard-exclude; the historical/temporal/
+identity classes must not drop the stale sources they need; the two "scope" classes soft-prefer current. This is
+an explicit Tier-0 STUB -- the multi-channel query-aware ROUTER is Tier 1 -- so the map is small, auditable, and
+easily refined. **Channels stay OPEN (U5):** `_occurrences_of` now honors an explicit `retrieval_occurrences[]`
+(`[{channel,rank}]`) channel-AGNOSTICALLY, so a novel graph/temporal/statistics channel FUSES through RRF with
+NO code change (lexical+vector are no longer hard-coded); a hit WITHOUT `retrieval_occurrences` derives exactly
+the 1.0.0 set (byte-identical).
+
+**Temporal-mode resolution precedence (pure):** explicit `params.current_only is True` > explicit
+`params.temporal_mode` (a known mode string) > `descriptor.time_horizon == "current_only"` > the `query_class`
+map > a direct `descriptor.time_horizon` mode string > `any` (the byte-identical default).
+
+**1.0.0 -> 1.1.0 REGRESSION PROOF (selpol unit test 13, pins captured from selpol 1.0.0).** The SELECTION output
+(`ranked`/`selected`/`omission_manifest`) is BYTE-IDENTICAL for: the default path with descriptor bonuses
+(ranked sha `47179d1d...`); `current_only=True` on all-`current` candidates (ranked sha `ca885642...`); and a
+forbidden+dedup+budget mix (ranked sha `d364068b...`, omission sha `4f53cda1...`). `features_by_candidate` grows
+three ADDITIVE diagnostic keys (`namespace_filtered`, `temporal_mode`, `is_stale`); the pre-existing feature
+keys are unchanged and the 9 legacy keys the shipped A/B report emits are unchanged, so the shipped eval
+reports stay regression-green at the metric-value level (`rerank_compat` is the same thin wrapper).
+
+**eval 0.3 -> 0.4 (the SCORING).** `GENERATOR_VERSION 0.4.0`, report schema `lifeorch.retrieval_eval_report/0.4`,
+skill.json `0.4.0`/contract `0.4`. The wiring: `_policy_params_from_query` + `default_descriptor` +
+`normalize_query` pass `allowed_namespaces` (U1) and `query_class` (U5) through to selpol when the benchmark
+supplies them (absent -> back-compat: the soft project path + no namespace filter). `temporal_intent` forces
+`current_only` ONLY when NO `query_class` is present, so a `query_class` (the #40-aligned path) DRIVES the mode.
+`normalize_hit` now PRESERVES `superseded_by`/`supersedes`/`contradicts`/`record_edges` (U4). A NEW
+`selection_conformance` report block (aggregate + `per_query_selection_conformance`) MEASURES, integer-only +
+byte-identical on re-run: **namespace isolation** (a labeled cross-namespace distractor must NOT be selected ->
+`namespace_isolation_violations`), **current_only correctness** (a status-stale candidate must not be selected
+under current_only -> `current_only_stale_leaks`), **supersession ordering** (a selected successor above its
+superseded twin -> `supersession_order_violations` / `supersession_pairs_correct`/`_total`), and **reason-code
+coverage** (`reason_code_coverage`). NEW fixture `benchmark4.json` (+ `benchmark4-plan.json`, a canned
+retriever-0.2 stream via `mock-retriever.py`) exercises all four with real cross-namespace / status-stale /
+supersession-edge / contradicts candidates; the existing fixtures report the new metrics trivially (0 violations)
+and every shipped RAW/reranked/packet metric VALUE is PRESERVED (the current_only hard filter did not move any
+pinned K-window metric -- verified). Report SHA + input_digest pins were re-computed (the version string + the
+new block change the bytes); `REPORT_SCHEMA` is part of `input_digest`, so all input_digests changed too.
+
+**Fold notes for #40 (D-0077 selpol byte-identity smoke, i32 mixed-namespace).** #40 imports the canonical
+`selpol_rrf_v1` (per D-0089, path-resolved) and must pass: `params.allowed_namespaces` (from
+`task_input.namespace` + any `control_plane` grant) so namespace is a HARD boundary; `descriptor.query_class`
+(from its query-classification front) OR an explicit `current_only`/`temporal_mode` so the temporal mode is
+resolved; and rely on each candidate's own s5 `status` + `superseded_by`/`supersedes`/`contradicts` edges (from
+#36's retriever-0.2 hits) for the temporal + supersession + contradicts stages. The fold asserts #40-via-canonical
+selects BYTE-IDENTICALLY to a direct `select()` on the same real #36 hits: zero cross-namespace leakage,
+superseded ordered below successor, stale excluded under current_only, a `node`/reserved kind additively
+ingested + never selected out-of-namespace, deterministic `packet_id`. selpol carries NO catalog/packet logic --
+it consumes the hit array + descriptor + params only.

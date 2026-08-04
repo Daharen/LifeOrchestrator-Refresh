@@ -80,8 +80,8 @@ if _HERE not in sys.path:
 from lib import selpol_rrf_v1 as selpol  # noqa: E402
 
 GENERATOR_NAME = "retrieval.eval"
-GENERATOR_VERSION = "0.3.0"
-REPORT_SCHEMA = "lifeorch.retrieval_eval_report/0.3"
+GENERATOR_VERSION = "0.4.0"
+REPORT_SCHEMA = "lifeorch.retrieval_eval_report/0.4"
 BENCHMARK_SCHEMA = "lifeorch.retrieval_benchmark/0.2"
 BENCHMARK_SCHEMA_V1 = "lifeorch.retrieval_benchmark/0.1"
 SELECTION_POLICY_ID = selpol.POLICY_ID
@@ -717,6 +717,12 @@ def normalize_hit(h, rank):
         "currentness": h.get("currentness", status),
         "authority_level": h.get("authority_level"),
         "namespace": h.get("namespace"),
+        # i32/U4 (D-0092): preserve the supersession + contradiction edges so selpol_rrf_v1 can order a
+        # superseded record below its live successor and propagate a contradicts pair (additive; None when absent).
+        "superseded_by": h.get("superseded_by"),
+        "supersedes": h.get("supersedes"),
+        "contradicts": h.get("contradicts"),
+        "record_edges": (h.get("record_edges") if isinstance(h.get("record_edges"), list) else h.get("edges")),
         "source_version_id": h.get("source_version_id"),
         "embedding_space_id": h.get("embedding_space_id"),
         "retrieval_channels": channels,
@@ -814,6 +820,9 @@ def normalize_query(q):
         "query": q.get("query"),
         "filters": q.get("filters"),
         "temporal_intent": ti,
+        # i32 (D-0092): U1 hard namespace boundary + U5 query_class (both optional; absent -> back-compat).
+        "allowed_namespaces": q.get("allowed_namespaces"),
+        "query_class": q.get("query_class"),
         "required_sources": required,
         "evidence_groups": groups,
         "stale_sources": [_norm_member(s) for s in (q.get("stale_sources") or [])],
@@ -1259,7 +1268,13 @@ def _policy_params_from_query(q):
         hard_filter.append({"source_path": f["source_path"], "content_hash": f.get("content_hash"),
                             "reason": "privacy"})
     return {
-        "current_only": q.get("temporal_intent") == "current_only",
+        # temporal_intent is the benchmark's temporal LABEL; it forces current_only ONLY when no query_class is
+        # supplied. When a query_class IS present (the #40-aligned path) it DRIVES selpol's temporal mode (U5).
+        "current_only": (q.get("temporal_intent") == "current_only") and not q.get("query_class"),
+        # i32 (D-0092): U1 allowed_namespaces hard boundary + U5 query_class temporal-mode signal. Absent ->
+        # None (back-compat: the soft project bonus survives + no namespace hard filter; #40 always supplies them).
+        "allowed_namespaces": q.get("allowed_namespaces"),
+        "query_class": q.get("query_class"),
         "hard_filter": hard_filter,
         "stale": [{"source_path": s["source_path"], "content_hash": s.get("content_hash")}
                   for s in q.get("stale_sources", [])],
@@ -1291,10 +1306,108 @@ def default_descriptor(rawq):
     """Build a deterministic task/query descriptor from the benchmark query (no model)."""
     d = {"query": rawq.get("query"), "query_tokens": content_tokens(str(rawq.get("query", "")))}
     rd = rawq.get("rerank_descriptor") or {}
-    for kname in ("namespace", "component", "task_stage", "seeking_failures"):
+    for kname in ("namespace", "component", "task_stage", "seeking_failures", "query_class", "time_horizon"):
         if kname in rd:
             d[kname] = rd[kname]
+    # i32/U5 (D-0092): a top-level query_class flows into the selection descriptor (drives selpol temporal mode).
+    if rawq.get("query_class") and "query_class" not in d:
+        d["query_class"] = rawq.get("query_class")
     return d
+
+
+# ------------------------------------------------------------------ selection conformance (eval-0.4, i32 D-0092)
+# eval-0.4 MEASURES the i32 selection stages on the PACKET-STAGE selection: U1 namespace isolation (a
+# cross-namespace distractor must NOT be selected), U4 current_only correctness (a status-stale candidate must
+# not be selected under current_only) + supersession ordering (a live successor above its superseded twin), and
+# reason-code coverage. All integer-only + deterministic (byte-identical on re-run). Queries that supply no i32
+# signal (no allowed_namespaces, no current_only, no supersession edges) report trivially (0 violations).
+
+def selection_conformance(q, norm_hits, selres):
+    """Per-query i32 selection-conformance record (see the section header). Scored on selres (the packet stage)."""
+    allowed = selres.get("allowed_namespaces")             # sorted list | None
+    allowed_set = set(allowed) if allowed is not None else None
+    mode = selres.get("temporal_mode")
+    current_only = (mode == "current_only")
+    selected = selres.get("selected") or []
+    ranked = selres.get("ranked") or []
+
+    def _is_stale(h):
+        return h.get("status") in STALE_STATUSES
+
+    cross_cand = sum(1 for h in norm_hits if allowed_set is not None and h.get("namespace") not in allowed_set)
+    cross_sel = sum(1 for h in selected if allowed_set is not None and h.get("namespace") not in allowed_set)
+    stale_cand = sum(1 for h in norm_hits if _is_stale(h))
+    stale_sel_co = sum(1 for h in selected if current_only and _is_stale(h))
+
+    # supersession: a SELECTED superseded record whose live successor is ALSO selected must rank BELOW it.
+    sel_by_id = {}
+    for h in selected:
+        for idv in selpol._identities(h):
+            sel_by_id.setdefault(idv, h)
+    sup_total = 0
+    sup_correct = 0
+    for h in selected:
+        succ = None
+        for sid in selpol._successor_ids(h):               # records that supersede h
+            cand = sel_by_id.get(sid)
+            if cand is not None and cand is not h:
+                succ = cand
+                break
+        if succ is not None:
+            sup_total += 1
+            sr, hr = succ.get("selection_rank"), h.get("selection_rank")
+            if isinstance(sr, int) and isinstance(hr, int) and sr < hr:
+                sup_correct += 1
+
+    codes = set()
+    for h in ranked:
+        for c in (h.get("reason_codes") or []):
+            codes.add(c)
+
+    return {
+        "query_id": q.get("query_id"),
+        "allowed_namespaces": allowed,
+        "temporal_mode": mode,
+        "current_only": current_only,
+        "candidate_count": len(norm_hits),
+        "selected_count": len(selected),
+        "cross_namespace_candidates": cross_cand,
+        "cross_namespace_selected": cross_sel,
+        "namespace_isolation_ok": (cross_sel == 0),
+        "stale_candidates": stale_cand,
+        "stale_selected_under_current_only": stale_sel_co,
+        "current_only_isolation_ok": (stale_sel_co == 0),
+        "supersession_pairs_total": sup_total,
+        "supersession_pairs_correct": sup_correct,
+        "supersession_order_ok": (sup_total == sup_correct),
+        "contradicts_pairs": selres.get("contradicts_pairs") or [],
+        "reason_codes_observed": sorted(codes),
+    }
+
+
+def aggregate_selection_conformance(per_q):
+    """Aggregate the per-query i32 conformance into integer counters + reason-code coverage (deterministic)."""
+    n = len(per_q)
+    codes = set()
+    for q in per_q:
+        codes.update(q["reason_codes_observed"])
+    return {
+        "num_queries": n,
+        "queries_with_allowed_namespaces": sum(1 for q in per_q if q["allowed_namespaces"] is not None),
+        "queries_current_only": sum(1 for q in per_q if q["current_only"]),
+        "cross_namespace_candidates_total": sum(q["cross_namespace_candidates"] for q in per_q),
+        "cross_namespace_selected_total": sum(q["cross_namespace_selected"] for q in per_q),
+        "namespace_isolation_violations": sum(1 for q in per_q if not q["namespace_isolation_ok"]),
+        "stale_candidates_total": sum(q["stale_candidates"] for q in per_q),
+        "current_only_stale_leaks": sum(q["stale_selected_under_current_only"] for q in per_q),
+        "queries_with_current_only_leak": sum(1 for q in per_q if not q["current_only_isolation_ok"]),
+        "supersession_pairs_total": sum(q["supersession_pairs_total"] for q in per_q),
+        "supersession_pairs_correct": sum(q["supersession_pairs_correct"] for q in per_q),
+        "supersession_order_violations": sum(1 for q in per_q if not q["supersession_order_ok"]),
+        "queries_with_contradicts": sum(1 for q in per_q if q["contradicts_pairs"]),
+        "reason_code_coverage": sorted(codes),
+        "reason_code_coverage_count": len(codes),
+    }
 
 
 # ------------------------------------------------------------------ hybrid attribution (per-channel)
@@ -1667,6 +1780,20 @@ def render_markdown(report):
     L.append("| total hits | %d | %d | %d |" % (sm["raw"]["total_hits"], sm["post_filter"]["total_hits"],
                                                 sm["packet"]["total_hits"]))
     L.append("")
+    sc = report.get("selection_conformance")
+    if sc is not None:
+        L.append("## Selection conformance (i32 / D-0092)")
+        L.append("")
+        L.append("- namespace isolation (U1): %d violation(s) over %d query(ies) with an allowed_namespaces set"
+                 % (sc["namespace_isolation_violations"], sc["queries_with_allowed_namespaces"]))
+        L.append("- current_only (U4): %d stale leak(s) over %d current_only query(ies)"
+                 % (sc["current_only_stale_leaks"], sc["queries_current_only"]))
+        L.append("- supersession ordering (U4): %d/%d selected superseded/successor pair(s) correctly ordered; %d violation(s)"
+                 % (sc["supersession_pairs_correct"], sc["supersession_pairs_total"], sc["supersession_order_violations"]))
+        L.append("- contradicts (U4): %d query(ies) surfaced a contradicts pair" % sc["queries_with_contradicts"])
+        L.append("- reason-code coverage: %d codes -- %s" % (sc["reason_code_coverage_count"],
+                 ", ".join("`%s`" % c for c in sc["reason_code_coverage"])))
+        L.append("")
     de = report["packet_disposition_eval"]
     L.append("## Packet disposition (P0-3)")
     L.append("")
@@ -1834,6 +1961,7 @@ def run(request):
     per_query_raw = []
     per_query_reranked = []
     per_query_packet = []
+    per_query_selconf = []
     dispo_records = []
     hybrid = []
     rerank_diag = []
@@ -1862,6 +1990,7 @@ def run(request):
         pk_eval["packet_size"] = len(packet_hits)
         pk_eval["candidate_count"] = len(norm_hits)
         dispo_records.append(packet_disposition_record(rawq, q, packet_hits, norm_hits, corpus))
+        per_query_selconf.append(selection_conformance(q, norm_hits, selres))  # i32 (D-0092) eval-0.4
         per_query_raw.append(raw_eval)
         per_query_reranked.append(rr_eval)
         per_query_packet.append(pk_eval)
@@ -1871,6 +2000,7 @@ def run(request):
     agg_raw = aggregate(per_query_raw, k_values, retrieval_depth, "raw")
     agg_rr = aggregate(per_query_reranked, k_values, retrieval_depth, "reranked")
     agg_packet = aggregate(per_query_packet, k_values, retrieval_depth, "packet")
+    sel_conf_agg = aggregate_selection_conformance(per_query_selconf)  # i32 (D-0092) eval-0.4
     ab = rerank_ab(per_query_raw, per_query_reranked, k_values)
     dispo = aggregate_disposition(dispo_records)
     vstatus = "active" if vector_seen else "empty"
@@ -1895,9 +2025,8 @@ def run(request):
         "provenance_validated": bool(corpus.available),
         "vector_channel_status": vstatus,
         "selection_policy": {"policy_id": SELECTION_POLICY_ID, "policy_version": SELECTION_POLICY_VERSION,
-                             "rrf_k": selpol.RRF_K_DEFAULT,
-                             "stages": ["hard_filter", "temporal", "authority", "rank_fusion_rrf",
-                                        "diversity", "budget"]},
+                             "rrf_k": selpol.RRF_K_DEFAULT, "stages": list(selpol.STAGES)},
+        "selection_conformance": sel_conf_agg,
         "hybrid_applicability": hybrid_applicability,
         "corpus": corpus_manifest,
         "aggregate_raw": agg_raw,
@@ -1911,6 +2040,7 @@ def run(request):
         "per_query_raw": per_query_raw,
         "per_query_reranked": per_query_reranked,
         "per_query_packet": per_query_packet,
+        "per_query_selection_conformance": per_query_selconf,
     }
 
     report_bytes = canon_bytes(report)
@@ -1944,6 +2074,13 @@ def run(request):
         "selection_policy": {"policy_id": SELECTION_POLICY_ID, "policy_version": SELECTION_POLICY_VERSION},
         "packet_disposition": {"scored": dispo["scored"], "num_labeled": dispo["num_labeled"],
                                "num_correct": dispo["num_correct"], "accuracy_ppm": dispo["accuracy_ppm"]},
+        "selection_conformance": {  # i32 (D-0092) eval-0.4 compact
+            "namespace_isolation_violations": sel_conf_agg["namespace_isolation_violations"],
+            "current_only_stale_leaks": sel_conf_agg["current_only_stale_leaks"],
+            "supersession_order_violations": sel_conf_agg["supersession_order_violations"],
+            "supersession_pairs_total": sel_conf_agg["supersession_pairs_total"],
+            "queries_with_contradicts": sel_conf_agg["queries_with_contradicts"],
+            "reason_code_coverage_count": sel_conf_agg["reason_code_coverage_count"]},
         "rerank_ab": {"queries_with_rescue": ab["queries_with_rescue"],
                       "queries_with_demote": ab["queries_with_demote"], "deltas": ab["deltas"]},
         "report_json": {"path": os.path.abspath(report_json_path), "sha256": sha256_hex(report_bytes), "bytes": len(report_bytes)},

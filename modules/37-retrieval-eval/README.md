@@ -1,4 +1,17 @@
-# Module 37 -- retrieval.eval (Retrieval Evaluation Harness + Selection Policy) -- contract v0.3 / eval-0.3
+# Module 37 -- retrieval.eval (Retrieval Evaluation Harness + Selection Policy) -- contract v0.4 / eval-0.4
+
+**i32 (D-0092) -- Tier-0 seam repairs, `selpol_rrf_v1` 1.0.0 -> 1.1.0 (ADDITIVE) + eval 0.3 -> 0.4.** Folds the
+`CONTEXT_PACKET_CONTRACT` i32 amendment into the selection library: **(U1)** `allowed_namespaces` is a HARD
+boundary -- a cross-namespace candidate is SUNK (`hard_filter_namespace`) and the soft namespace/project bonus is
+retired when it is engaged; **(U4)** under the resolved `current_only` mode a non-`current` candidate is
+HARD-filtered (`hard_filter_stale`; the soft `stale_penalty` survives only for the `prefer_current` mode),
+supersession is rank-affecting (`superseded_demote` orders a superseded record below its live successor), and a
+`contradicts` edge between two selected current items is PROPAGATED for #40's `conflicted`; **(U5)** a
+`query_class` drives the temporal mode deterministically (a Tier-0 stub) and the retriever channel set stays OPEN
+(an explicit `retrieval_occurrences[]` fuses a novel channel with no code change). A 1.0.0 caller supplying none
+of these signals gets BYTE-IDENTICAL selection (regression-proven). eval 0.4 adds a `selection_conformance` block
+measuring namespace isolation, current_only correctness, supersession ordering, and reason-code coverage. Full
+interpretation record: `SCHEMA_NOTES.md` s14.
 
 Two jobs, ONE module:
 
@@ -14,7 +27,8 @@ Two jobs, ONE module:
 
 ```
 select(candidates, descriptor, policy_id="selpol_rrf_v1", params=None)
-  -> { selected[], ranked[], policy_id, policy_version, features_by_candidate, omission_manifest[], stages }
+  -> { selected[], ranked[], policy_id, policy_version, features_by_candidate, omission_manifest[],
+       stages, contradicts_pairs[], temporal_mode, allowed_namespaces }   # last 3 additive (i32)
 ```
 
 **PURE + DETERMINISTIC** (no model, no I/O, no state, no wall-clock, no randomness; byte-identical on re-run,

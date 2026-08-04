@@ -51,29 +51,35 @@ $fxDir   = Join-Path $moduleRoot 'tests/fixtures'
 $benchmark  = Join-Path $fxDir 'benchmark.json'
 $benchmark2 = Join-Path $fxDir 'benchmark2.json'
 $benchmark3 = Join-Path $fxDir 'benchmark3.json'
+$benchmark4 = Join-Path $fxDir 'benchmark4.json'
 $mockBench  = Join-Path $fxDir 'mock-benchmark.json'
 $mock2Bench = Join-Path $fxDir 'mock2-benchmark.json'
 $mockRetr   = Join-Path $fxDir 'mock-retriever.py'
 $selpolLib  = Join-Path $moduleRoot 'lib/selpol_rrf_v1.py'
 $selpolTest = Join-Path $moduleRoot 'tests/test_selpol.py'
 
-# ---- KNOWN pins (hand-verified; also the cross-env byte-identity pins). eval-0.3 / report schema 0.3:
-#      selpol_rrf_v1 selection library + per-stage + packet_disposition + additive selection fields. Every
-#      shipped-0.2 metric VALUE is preserved (asserted below); only the report SHAPE grew, so the pins are
-#      re-computed. Verified byte-identical cloud CPython 3.11 == the pinned values (double-run + the -Live
-#      executor re-assert cross-env). ----
-$BASELINE_REPORT_JSON_SHA = 'ba7e972a655bd54d83cc875721cf39d33d6402acfbb6d48459804c5c9b858111'
-$BASELINE_REPORT_MD_SHA   = '1217146b279843e1cce078ec675f99ec1206ef98e104f593c899bcc99eb1090b'
-$BASELINE_INPUT_DIGEST    = 'sha256:ad7c86b3626ce465f82c788103b07246a0035fc9ed0944b9992d16704b450252'
-$B2_REPORT_JSON_SHA       = '3625248a6a06b597d67da3b1a6ca2204f649234e6d3cf71914c8cdbec3ab03c1'
-$B2_REPORT_MD_SHA         = 'b59578bff3376c09198825ccd967aff2f968f4b9cd5a497e0876febd78fe1d59'
-$B2_INPUT_DIGEST          = 'sha256:00b8c1f6f09cb58a079cc0e10c68fef8f8a15c6122ecefcea40dcbdb60ecc5db'
-$MOCK_REPORT_JSON_SHA     = '6beb2a5c6c05eaee949273f335dd7e8f8ea2debe7a1e6cb0ee11427b67a2c1f8'
-$MOCK2_REPORT_JSON_SHA    = '6c161982a8d11ffb76f7ecd7b143757f55dc5c0b0c3decb5c02cfb8a91581981'
-$MOCK2_INPUT_DIGEST       = 'sha256:a1a1f4bb8d277eb09f75b4968aae3a079385627d044a921c3cee5767f0f96c86'
-$B3_REPORT_JSON_SHA       = 'b36431a3fcfca256042fa375c034b3f103e6bc32e97e081c3f45dd17be9baf4d'
-$B3_REPORT_MD_SHA         = '676ac4ef202500088b642f54e1841749833766314aef63ea80c1952ed10ac633'
-$B3_INPUT_DIGEST          = 'sha256:a2baceeb6cd0946af06b4cf0e14523099c4d863bf7d42c5ccf45531105d782d7'
+# ---- KNOWN pins (hand-verified; also the cross-env byte-identity pins). eval-0.4 / report schema 0.4
+#      (i32 / D-0092): selpol_rrf_v1 1.1.0 + the NEW selection_conformance block (namespace isolation U1,
+#      current_only correctness + supersession ordering U4, reason-code coverage) + the 8-stage list. Every
+#      shipped-0.3 RAW/reranked/packet metric VALUE is PRESERVED (asserted below -- the current_only hard
+#      filter did not move any pinned K-window metric); the report SHAPE grew (version string + the
+#      selection_conformance block) so the SHA/input_digest pins are re-computed. Verified byte-identical
+#      cloud CPython 3.11 == the pinned values (double-run + the -Live executor re-assert cross-env). ----
+$BASELINE_REPORT_JSON_SHA = '200a91c458d26a5f14b86e1152681fc4857e43ec4184bc7bca5683d8fbd2b030'
+$BASELINE_REPORT_MD_SHA   = '34ed28ffdf43fdcadbe897a7c8e63e9356329c9c2f96996ced7ee11c24ac30e6'
+$BASELINE_INPUT_DIGEST    = 'sha256:5cb21c0a6f4469dd3048caa1f90048510ed986c4b456f302dbee50f7e59e369d'
+$B2_REPORT_JSON_SHA       = '02c6da1b3218d31837008e17b4b8634a726bf27b7f6356868e078ff8bb3cd736'
+$B2_REPORT_MD_SHA         = 'b18b9e481d992f2cdb116144aab5913eb2decfc098bcfca1c124f803779f5579'
+$B2_INPUT_DIGEST          = 'sha256:88ffd936cbed7d993667d953629cf0e606a337e3d6946ababecbf7174dae78be'
+$MOCK_REPORT_JSON_SHA     = '7a4c4fbc8cd67c0a48edb7b67ab66161fb6da7c388ede535afaaa7a0f9dc04ee'
+$MOCK2_REPORT_JSON_SHA    = '8fc664c4cfc3fe0ec69c2eefc7049c30062a5067f35c8eeb164b7d7e53d3f7a8'
+$MOCK2_INPUT_DIGEST       = 'sha256:6cc3f5de5eb603a071995532e320b97b5bcf49ccce31dc7256294c7f974379f8'
+$B3_REPORT_JSON_SHA       = 'b8957b4086eab94cc117a4ec1cb82bcddba09e20aa919809d6be9cdc64676cd5'
+$B3_REPORT_MD_SHA         = '1c1cd2ddaffd7523808ec2fe3134782b814a39bbbd9705779f307e36e279ef46'
+$B3_INPUT_DIGEST          = 'sha256:316cf8f527b1d440383cd865360ba54c1cc20978ccc4a4dbbb5b38b61fa8e8b9'
+$B4_REPORT_JSON_SHA       = '66b3c38fec0c6bbf56b270fd0e640371b327cf54e5dac1e02c1501313e806b98'
+$B4_REPORT_MD_SHA         = 'f853dd6e7f27fb006013a5d40e71d0b96c778f08edcb185ca36b6a337d730318'
+$B4_INPUT_DIGEST          = 'sha256:dd2452ef36182ca210e1353ee6c5246753c998315b7ae8708db4b8f32a97f1ac'
 
 $mode = if ($Live) { 'LIVE (on-device)' } else { 'cloud/real' }
 $pyLabel = if ([string]::IsNullOrEmpty($PythonPath)) { '(auto)' } else { $PythonPath }
@@ -157,8 +163,8 @@ Check 'manifest validates' ([bool]$mv.valid)
 if (-not $mv.valid) { $mv.errors | ForEach-Object { [Console]::Out.WriteLine("      - $_") } }
 $manifest = (Get-Content -LiteralPath $mf -Raw) | ConvertFrom-Json
 Check 'manifest skill_id retrieval.eval' ($manifest.skill_id -eq 'retrieval.eval')
-Check 'manifest version 0.3.0' ($manifest.version -eq '0.3.0')
-Check 'manifest contract_version 0.3' ($manifest.contract_version -eq '0.3')
+Check 'manifest version 0.4.0' ($manifest.version -eq '0.4.0')
+Check 'manifest contract_version 0.4' ($manifest.contract_version -eq '0.4')
 Check 'manifest deterministic' ($manifest.determinism -eq 'deterministic')
 Check 'manifest parallel_safe' ([bool]$manifest.parallel_safe)
 
@@ -171,7 +177,7 @@ if ($null -ne $env1) {
     Check 'baseline: envelope validates against contract' ([bool]$ev.valid)
     if (-not $ev.valid) { $ev.errors | ForEach-Object { [Console]::Out.WriteLine("      - $_") } }
     Check 'baseline: status ok' ($env1.status -eq 'ok')
-    Check 'baseline: skill_version 0.3.0' ($env1.skill_version -eq '0.3.0')
+    Check 'baseline: skill_version 0.4.0' ($env1.skill_version -eq '0.4.0')
     Check 'baseline: retriever_kind lexical_baseline' ($env1.result.retriever_kind -eq 'lexical_baseline')
     Check 'baseline: input_digest pinned' ($env1.result.input_digest -eq $BASELINE_INPUT_DIGEST)
     Check 'baseline: vector_channel_status empty' ($env1.result.vector_channel_status -eq 'empty')
@@ -187,7 +193,7 @@ if ($null -ne $env1) {
         Check 'baseline: report.json declared sha == file sha' ($rep.sha -eq $rep.declared_sha)
         Check 'baseline: report.json sha == pinned (deterministic + known bytes)' ($rep.sha -eq $BASELINE_REPORT_JSON_SHA)
         Check 'baseline: report.md sha == pinned' ($repMd.sha -eq $BASELINE_REPORT_MD_SHA)
-        Check 'baseline: report schema 0.3' ($rep.obj.schema -eq 'lifeorch.retrieval_eval_report/0.3')
+        Check 'baseline: report schema 0.4' ($rep.obj.schema -eq 'lifeorch.retrieval_eval_report/0.4')
         # eval-0.3 additive surface present + selection library stamped
         Check 'baseline: selection_policy selpol_rrf_v1' ($rep.obj.selection_policy.policy_id -eq 'selpol_rrf_v1')
         Check 'baseline: hybrid_applicability not_applicable (vector channel empty; P1-4)' ($rep.obj.hybrid_applicability.status -eq 'not_applicable')
@@ -437,6 +443,55 @@ if ($null -ne $env8) {
     $env8b = ParseEnv (RunEntry @($benchmark3))
     $rep8b = ReadReport $env8b 'report.json'
     Check 'eval03: double-run report.json byte-identical' ($null -ne $rep8b -and $rep8b.sha -eq $B3_REPORT_JSON_SHA)
+}
+
+# ================================================================= eval-0.4 selection conformance (benchmark4, i32 D-0092)
+# selpol_rrf_v1 1.1.0 through the harness on a canned retriever-0.2 stream: U1 namespace isolation (a
+# cross-namespace distractor SUNK), U4 current_only correctness (a status-stale candidate HARD-excluded) +
+# supersession ordering (a live successor above its superseded twin) + contradicts propagation, and the
+# selection_conformance measurement block. KNOWN fixture values; deterministic (pinned + double-run).
+function QSelConf([object]$report, [string]$id) { return (@($report.per_query_selection_conformance | Where-Object { $_.query_id -eq $id }) | Select-Object -First 1) }
+$env9 = ParseEnv (RunEntry @($benchmark4))
+Check 'eval04: envelope parses' ($null -ne $env9)
+if ($null -ne $env9) {
+    Check 'eval04: status ok' ($env9.status -eq 'ok')
+    Check 'eval04: skill_version 0.4.0' ($env9.skill_version -eq '0.4.0')
+    Check 'eval04: external_command retriever seam works' ($env9.result.retriever_kind -eq 'external_command')
+    Check 'eval04: input_digest pinned' ($env9.result.input_digest -eq $B4_INPUT_DIGEST)
+    $rep9 = ReadReport $env9 'report.json'
+    $rep9Md = ReadReport $env9 'report.md'
+    if ($null -ne $rep9) {
+        [Console]::Out.WriteLine("CANONICAL-HASH eval04-report.json=$($rep9.sha)")
+        [Console]::Out.WriteLine("CANONICAL-HASH eval04-report.md=$($rep9Md.sha)")
+        Check 'eval04: report.json sha == pinned (deterministic)' ($rep9.sha -eq $B4_REPORT_JSON_SHA)
+        Check 'eval04: report.md sha == pinned' ($rep9Md.sha -eq $B4_REPORT_MD_SHA)
+        Check 'eval04: report schema 0.4' ($rep9.obj.schema -eq 'lifeorch.retrieval_eval_report/0.4')
+        Check 'eval04: selection policy version 1.1.0' ($rep9.obj.selection_policy.policy_version -eq '1.1.0')
+        Check 'eval04: stages include namespace_filter + supersession (i32)' ((@($rep9.obj.selection_policy.stages | Where-Object { $_ -eq 'namespace_filter' }).Count -ge 1) -and (@($rep9.obj.selection_policy.stages | Where-Object { $_ -eq 'supersession' }).Count -ge 1))
+
+        # the selection_conformance aggregate: ZERO violations across the four measured properties
+        $sc = $rep9.obj.selection_conformance
+        Check 'eval04: selection_conformance present' ($null -ne $sc)
+        Check 'eval04 U1: namespace_isolation_violations == 0 (with 1 cross-namespace candidate present)' ($sc.namespace_isolation_violations -eq 0 -and $sc.cross_namespace_candidates_total -ge 1)
+        Check 'eval04 U4: current_only_stale_leaks == 0 (with a status-stale candidate present)' ($sc.current_only_stale_leaks -eq 0 -and $sc.stale_candidates_total -ge 1)
+        Check 'eval04 U4: supersession_order_violations == 0 over >=1 pair' ($sc.supersession_order_violations -eq 0 -and $sc.supersession_pairs_total -ge 1 -and $sc.supersession_pairs_correct -eq $sc.supersession_pairs_total)
+        Check 'eval04 U4: 1 query surfaced a contradicts pair' ($sc.queries_with_contradicts -eq 1)
+        Check 'eval04: reason-code coverage includes the i32 codes' ((@($sc.reason_code_coverage | Where-Object { $_ -eq 'hard_filter_namespace' }).Count -ge 1) -and (@($sc.reason_code_coverage | Where-Object { $_ -eq 'hard_filter_stale' }).Count -ge 1) -and (@($sc.reason_code_coverage | Where-Object { $_ -eq 'superseded_demote' }).Count -ge 1))
+
+        # per-query proofs
+        $n1 = QSelConf $rep9.obj 'n1-namespace-isolation'
+        Check 'eval04 n1 (U1): a cross-namespace candidate exists but 0 were selected' ($null -ne $n1 -and $n1.cross_namespace_candidates -ge 1 -and $n1.cross_namespace_selected -eq 0 -and $n1.namespace_isolation_ok)
+        $n2 = QSelConf $rep9.obj 'n2-current-only'
+        Check 'eval04 n2 (U4): current_only mode; no stale leaked into selection' ($null -ne $n2 -and $n2.current_only -and $n2.stale_selected_under_current_only -eq 0)
+        $n3 = QSelConf $rep9.obj 'n3-supersession'
+        Check 'eval04 n3 (U4): the selected superseded/successor pair is correctly ordered' ($null -ne $n3 -and $n3.supersession_pairs_total -eq 1 -and $n3.supersession_order_ok)
+        $n4 = QSelConf $rep9.obj 'n4-contradiction'
+        Check 'eval04 n4 (U4): a contradicts pair is surfaced (propagated, not detected)' ($null -ne $n4 -and @($n4.contradicts_pairs).Count -eq 1)
+    }
+    # double-run identity
+    $env9b = ParseEnv (RunEntry @($benchmark4))
+    $rep9b = ReadReport $env9b 'report.json'
+    Check 'eval04: double-run report.json byte-identical' ($null -ne $rep9b -and $rep9b.sha -eq $B4_REPORT_JSON_SHA)
 }
 
 # ================================================================= fail-closed error paths

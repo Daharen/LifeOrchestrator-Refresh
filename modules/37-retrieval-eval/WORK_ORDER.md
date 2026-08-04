@@ -1,4 +1,35 @@
-# Work Order: retrieval.eval -- 0.2.0 -> 0.3.0 (selpol_rrf_v1 + eval-0.3)
+# Work Order: retrieval.eval -- 0.3.0 -> 0.4.0 (selpol_rrf_v1 1.1.0 + eval-0.4, i32 Tier-0 seams)
+
+**Contract version targeted:** 0.4 · **Author:** FANOUT_AGENT_002 (RETRIEVAL-EVAL-SELPOL-TIER0-i32) / 2026-08-04 ·
+**Roadmap:** i32 Tier-0 MEMORY-ARCHITECTURE seam repairs, CPU lane B (plan fo-32-0fb25203; D-0092
+CONTEXT_PACKET_CONTRACT i32 amendment + MEMORY_CONTRACT A4). Predecessor: 0.3.0 (SELECTION-POLICY-i30 / SETTLE-i31).
+
+### Problem being solved (i32)
+
+Tier 0 makes `namespace` a HARD retrieval/partition boundary, `current_only` a real retrieval MODE with
+supersession-aware ranking, keeps the retriever channel set OPEN, and adds a query-classification seam. As the
+SELECTION-POLICY OWNER, this revision folds those into `selpol_rrf_v1` (1.0.0 -> 1.1.0, ADDITIVE) and scores them
+(eval 0.3 -> 0.4). #40 IMPORTS the library; the orchestrator runs the D-0077 selpol byte-identity smoke at fold.
+
+### Scope (in) -- touch ONLY `modules/37-retrieval-eval`
+
+- **`lib/selpol_rrf_v1.py` 1.0.0 -> 1.1.0** (additive stages): (U1) stage-1 `hard_filter_namespace` +
+  soft-project-bonus retirement (conditional on `allowed_namespaces`); (U4) `current_only` HARD `hard_filter_stale`
+  + `prefer_current` soft relocation + a rank-affecting `superseded_demote` (stable topological reorder) +
+  `contradicts` propagation (`contradicts_pairs[]`); (U5) `query_class` -> temporal mode (Tier-0 stub) + OPEN
+  channels (`retrieval_occurrences[]` honored channel-agnostically). `POLICY_VERSION 1.1.0`; a 1.0.0-default call
+  is BYTE-IDENTICAL (regression-pinned). New reason_codes fold in additively; `STAGES` -> 8.
+- **eval 0.3 -> 0.4:** a `selection_conformance` block measuring namespace isolation / current_only correctness /
+  supersession ordering / reason-code coverage (integer-only, deterministic) + NEW `benchmark4.json` fixture;
+  report schema `/0.4`; `skill.json` 0.4.0 / contract 0.4. Every shipped RAW/reranked/packet metric VALUE preserved.
+- **Docs:** `SCHEMA_NOTES.md` s14 (every i32 interpretation, for the fold), this WORK_ORDER, README.
+
+### Acceptance -- see `SCHEMA_NOTES.md` s14; the selpol unit suite (`tests/test_selpol.py`) + the pwsh suite
+(`tests/Invoke-RetrievalEvalTests.ps1`, benchmark4 section) prove U1/U4/U5 + the 1.0.0 byte-identity regression.
+
+---
+
+# Work Order (historical): retrieval.eval -- 0.2.0 -> 0.3.0 (selpol_rrf_v1 + eval-0.3)
 
 **Contract version targeted:** 0.3 · **Author:** FANOUT_AGENT_002 (SELECTION-POLICY-i30) / 2026-08-03 ·
 **Roadmap:** Wave 3 CONTRACT-HARDENING, CPU lane (plan fo-30-dd453156; D-0087 CONTEXT_PACKET_CONTRACT s4 +
