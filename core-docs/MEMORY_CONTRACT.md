@@ -75,6 +75,69 @@ split (the analog of `SKILL_CONTRACT.md` for the memory substrate). Rationale li
   (`CONTEXT_PACKET_CONTRACT`); the router is Tier 1. **Re-verify list** = {#36 (retriever hard namespace +
   `current_only` mode + the reserved kinds/edges + the additive migration + the schema-evolution gate test); #37
   selpol + #40 compiler (`CONTEXT_PACKET_CONTRACT` i32); the `MEMORY_ARCHITECTURE` Tier-0 gate}.
+- **Amendment A5 -- Tier-0 NAMESPACE-CLOSURE + SUPERSESSION-HARDENING (D-0096, i33).** Folds the frontier Tier-0
+  red-team (pack 159e9cb5, `research/2026-08-04-tier0-amendment-redteam.md`): the A4 seams are a correct
+  ENVELOPE-level FIRST layer but INCOMPLETE -- namespace was only an envelope filter (leakage via derived records,
+  diagnostic metadata, per-hop/traversal gaps) and supersession was candidate-set-dependent. A5 is ADDITIVE +
+  backward-compatible and hardens the RECORD/RETRIEVER half; the packet/selection half is
+  `CONTEXT_PACKET_CONTRACT` (its i33 amendment). **(U1' namespace CLOSURE -- SAFETY-CRITICAL):** `namespace` is an
+  end-to-end information-flow boundary, not just an envelope filter. (a) The retriever enforces ONE canonical
+  predicate `ns_permitted(candidate.namespace, effective_allowed_namespaces)` at EVERY retrieval stage AND every
+  graph hop/edge-walk/rerank input -- never only the seed candidate. (b) EVERY returned or graph-reachable object
+  is scope-checked (source_span/derivation_refs, edges walked, any diagnostic array the retriever emits), not just
+  the hit envelope. (c) Derived records, aggregates, dedup clusters, and `node` records MUST be
+  namespace-HOMOGENEOUS across their transitive provenance closure; a persisted cross-namespace derivative is
+  FORBIDDEN at Tier 0 (a shared-scope contract is a later tier). (d) A cross-namespace candidate is EXCLUDED before
+  ranking and leaves NO identifying metadata in any output -- the violation surfaces only as a
+  `namespace_violation_count` + a fail-closed status; identifying detail (ids, paths, snippets) goes to a
+  privileged local security log, never to a caller. A returned hit outside the effective set is a fail-closed ERROR
+  that ABORTS, never a low-ranked hit. (e) `effective_allowed_namespaces` is CALLER-SUPPLIED (the compiler computes
+  it = intersection(request, grant); the retriever treats it as a closed set and never widens it); empty set =>
+  zero hits, fail-closed; no implicit all/wildcard/prefix/parent/shared namespace. (f) The SAME predicate +
+  rejection policy is authored ONCE (owned by #37 `lib/`, imported by #40; #36's retriever implements the identical
+  decision -- the fold asserts byte-identical accept/reject across the three), never re-implemented per module
+  (risk 6). **(U4' candidate-INDEPENDENT supersession):** (a) NEW s5 currentness value `superseded` (the enum
+  lacked a literal one); (b) NEW first-class edges `superseded_by` (record -> its live successor) + inverse
+  `supersedes`, joining the s1 edge set (reserved-additive; A4's `contradicts` stays); (c) `effective_current(record)`
+  is computed from the CATALOG/graph, not the retrieved pair: `status == current` AND no valid reachable live
+  successor within scope at the pinned snapshot -- so `current_only` (s3) excludes a predecessor even when its
+  successor is ABSENT from the candidate pool (A4's by-construction ordering was pool-dependent -- the defect); (d)
+  chain invariants: acyclic, canonical single direction, NO cross-namespace supersession, a branch (two live
+  successors) -> `conflicted` (surfaced, never a silent pick), immediate-vs-terminal successor distinguished, a
+  stale/deleted successor does not silently resurrect its predecessor; (e) `contradicts` stays reserved with
+  extensible attributes -- ABSENCE of the edge is NOT proof of no contradiction (detection is Tier 2). **(U2'
+  hierarchy hit-shape):** retriever s3 provenance fields are CONDITIONAL on `provenance_mode` (A2) -- `direct_span`
+  (path+span), `derived_record` (record_content_hash + derivation_refs; span OPTIONAL -- a node/summary/symbol has
+  no single source span), `aggregate` (constituent refs), `tombstone` (deletion provenance); hits reserve
+  `candidate_role` (`navigation | evidence`) + retrieval-stage lineage
+  (`retrieval_stage_id`/`parent_stage_id`/`retrieval_plan_id`) because a compile is MULTI-STAGE (shortlist ->
+  descend), NOT one flat top-k, with stage-local rankings (no new flat-top-k-only hardening); NAVIGATIONAL
+  staleness (`summary_stale` `node`) may ROUTE but MUST NOT ANSWER; `child_of_node`/`member_of_node` EDGES are
+  canonical, a node's stored child list is a rebuildable PROJECTION, no cross-namespace membership, acyclic. **(U3'
+  working-state STORE seam):** the `working` kind (A4) is CONTINUITY-authoritative (the recorded current state of
+  THIS task, NOT world-truth, NOT execution authority -- `can_instruct: false`, permissions live ONLY in
+  control_plane). Reserve the store fields NOW: `working_state_id`, `task_id`, `state_version`,
+  `parent_state_version`, `namespace_scope`, `grant_snapshot_ref`, `created_from_packet_id`, `content_hash`,
+  `lifecycle_state` (`active | closed | archived`), `content_role: working_state`, `writer_authority`. Freeze the
+  store semantics (STORE built at Tier 1): immutable versioned snapshots; CAS on `parent_state_version` at update;
+  exactly one active head per task; explicit fork; a SEPARATE fixed working-memory budget; a closed state is not
+  ordinarily retrievable; archive != evidence; PROMOTION creates a NEW derived long-term record with provenance +
+  validation (never re-labels the working record). Access is CONJUNCTIVE -- `task_id` AND current-namespace
+  authorization (task-isolation and namespace-isolation are DIFFERENT mechanisms; expansion never widens parent
+  scope). Ordinary `search` MUST REJECT `record_kind = working` by default (retrievable only by an
+  exact-`task_id` op) -- "excluded by default" is too weak; prefer a small `working_state/0.1` sub-contract. **(U5'
+  classifier seam):** `query_class` (semantic) and `temporal_intent` (`current_only | historical_as_of |
+  version_specific | any_valid_version`, s6) are INDEPENDENT dimensions -- an explicit user time/version OUTRANKS
+  the class->mode stub; the classifier + the class->mode mapping are VERSIONED
+  (`classifier_policy_id`/`classifier_policy_version`) with `composite` + `unclassified` fallback classes
+  (packet-identity coverage = `CONTEXT_PACKET_CONTRACT` i33). **Re-verify list** = {#36 (per-hop `ns_permitted` +
+  all-object scope-check + homogeneous derivations + sanitized fail-closed rejection + catalog
+  `effective_current`/`superseded`/`superseded_by` + provenance_mode-conditional hit shape +
+  candidate_role/stage-lineage reservations + `search` working-rejection; schema_version 3->4 additive); #37 (the
+  canonical `ns_permitted` + rejection-policy owner; selpol supersession-chain demote; classifier-policy
+  versioning) + #40 (import the predicate; conjunctive working-state access; classifier/temporal split) via
+  `CONTEXT_PACKET_CONTRACT` i33; the `MEMORY_ARCHITECTURE` Tier-0 gate}. The A4 envelope-level wave STANDS as the
+  foundation.
 - **Adoption.** Wave 1 modules keep running as shipped at 0.1; each adopts 0.2 on its NEXT named revision
   (§9). Wave 2 NEW modules build to 0.2 from day one.
 - **Grounding.** The frozen shapes reconcile the two shipped-0.1 interfaces (#35 embedding.local, #36
@@ -125,7 +188,7 @@ stay; expose chunks through this envelope via a **view/adapter** (no premature w
 - `token_count`.
 - `embedding_space_id` -- nullable until embedded (§2).
 - `parent_edges` / `child_edges` -- first-class derivation + relationship edges (chunk<-document; later
-  summary<-descendants, symbol->symbol, decision supersedes decision; **(A4)** `member_of_node`/`child_of_node` node membership + tree, `contradicts` conflicting claims). NOT denormalized path fields.
+  summary<-descendants, symbol->symbol, decision supersedes decision; **(A4)** `member_of_node`/`child_of_node` node membership + tree, `contradicts` conflicting claims, **(A5)** `superseded_by`/`supersedes` supersession chains). NOT denormalized path fields.
 
 **Chunk -> envelope mapping (Wave 1, normative for the #36 adapter):** `record_id` <- `document_id`+chunk
 locator; `record_version_id` <- `chunk_id` (occurrence, below); `record_kind`=`source_chunk`;
@@ -179,7 +242,7 @@ consumed a zero-vector-for-skipped + `input_status[]` -- BOTH are superseded):
 ## 3. Retriever contract 0.2
 
 Op `search`: `{ query, k, filters?, mode? }` -> a ranked hit array in DETERMINISTIC order. A consumer treats
-array position as rank (`rank = index + 1`) and NEVER re-sorts. **(A4)** `filters.namespace` is an ENFORCED hard filter with an all-hits-match assertion; `mode` includes `current_only` (hard-excludes any non-`current` s5 status); `retrieval_occurrences[].channel` (below) is FROZEN OPEN -- do NOT hard-code `{lexical, vector}`.
+array position as rank (`rank = index + 1`) and NEVER re-sorts. **(A4)** `filters.namespace` is an ENFORCED hard filter with an all-hits-match assertion; `mode` includes `current_only` (hard-excludes any non-`current` s5 status); `retrieval_occurrences[].channel` (below) is FROZEN OPEN -- do NOT hard-code `{lexical, vector}`. **(A5)** the namespace predicate is enforced at EVERY stage + graph hop (not just the seed) and every returned/reachable object is scope-checked; a cross-namespace hit is a fail-closed abort leaving no identifying metadata; `current_only` uses catalog-computed `effective_current` (the `superseded_by` chain); and hit provenance fields are conditional on `provenance_mode` with reserved `candidate_role`/retrieval-stage lineage.
 
 **Frozen hit fields:**
 
@@ -231,9 +294,9 @@ array position as rank (`rank = index + 1`) and NEVER re-sorts. **(A4)** `filter
 at least one of: `source_stale` (superseded document version); `derivation_stale`
 (parser/chunker/extractor changed); `embedding_stale` (active embedding space changed); `relationship_stale`
 (source version changed, edges need regeneration); `summary_stale` (a descendant changed); `authority_stale`
-(no longer governs current truth); `temporal_expiry` (`valid_to` passed); `deleted` (occurrence gone);
+(no longer governs current truth); `temporal_expiry` (`valid_to` passed); **`superseded`** (a valid live successor exists in the chain -- A5); `deleted` (occurrence gone);
 `unverified` (ingestion/provenance check failed). Retrieval filters current-source queries on this without
-destroying historical memory; historical/version-specific queries (§6) may request stale/specific versions. **(A4)** `current_only` is a real retriever mode: a non-`current` candidate is HARD-EXCLUDED, not demoted.
+destroying historical memory; historical/version-specific queries (§6) may request stale/specific versions. **(A4)** `current_only` is a real retriever mode: a non-`current` candidate is HARD-EXCLUDED, not demoted. **(A5)** on catalog-computed `effective_current` (the `superseded_by` chain), so a superseded record is excluded even when its successor is absent from the candidate pool.
 The `{state, stale_reasons, verified}` OBJECT form is RETIRED (D-0085): the effective value is the single
 string `status`; any extra simultaneous reasons live in `attrs.stale_reasons`.
 

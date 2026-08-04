@@ -3,6 +3,8 @@
 Machine-checkable header (an orchestrator reads these at session start):
 - `mandate_id: 01`
 - `opened_iteration: 32`
+- `current_iteration: 33`   (updated each orchestrator session)
+- `iterations_to_sunset: 7`   (COUNTDOWN -- at 0, state -> REPORT_DUE; s1)
 - `sunset_iteration: 40`
 - `sealed_check_offset_iterations: 7`
 - `state: ACTIVE`   (ACTIVE | REPORT_DUE | SUNSET | RE-LICENSED)
@@ -18,6 +20,9 @@ the mechanical gate (PB-1) is the ALARM.
 
 ## 1. The per-session check (the ONLY mandatory step; keep it cheap)
 At the START of every orchestrator session, after the handoff:
+**First, update the COUNTDOWN:** set `current_iteration` to this session's iteration and recompute
+`iterations_to_sunset = sunset_iteration - current_iteration` (the handoff TL;DR surfaces it) -- the
+machine-checkable sunset countdown, so the i40 expiry is never forgotten. Then:
 1. Read the header. If `current_iteration >= sunset_iteration` -> set state REPORT_DUE and produce the s3 report
    BEFORE new wave work, then archive (s4).
 2. Else: for each open item (s2), confirm on-track / blocked / deliberately-deferred, and that NO item has sat

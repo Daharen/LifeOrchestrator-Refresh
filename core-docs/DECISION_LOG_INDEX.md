@@ -118,3 +118,4 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0093 | 2026-08-04 | provisional | Establish PROCESS_BACKLOG (process/doc-hygiene router) + capture rule; the mechanical commit gate, not the prose checklist, is the forcing function. |
 | D-0094 | 2026-08-04 | provisional | Adopt a sunsetting PROCESS_MANDATE (time-boxed, self-deleting, mandatory sunset report) + a blind sealed-check regression test for process health. |
 | D-0095 | 2026-08-04 | provisional | Frontier red-team (159e9cb5): NO-GO on i32 as-written (envelope-only namespace; candidate-dependent supersession); open i33 namespace-closure hardening. |
+| D-0096 | 2026-08-04 | provisional | i33 p1: MEMORY_CONTRACT A5 + CONTEXT_PACKET_CONTRACT i33 re-amend the Tier-0 seams end-to-end (namespace-closure + supersession-hardening; per-hop ns predicate, catalog effective_current, working-state store, classifier split); + a machine-checkable mandate sunset countdown. |

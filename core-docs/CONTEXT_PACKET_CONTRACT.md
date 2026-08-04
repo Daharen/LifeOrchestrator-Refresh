@@ -63,6 +63,42 @@ This doc is the normative distillate.
   selpol's temporal mode (e.g. `current_state`->`current_only`; `historical_reconstruction`->historical). At
   Tier 0 it is a deterministic task_type->class map (a stub); the multi-channel query-aware ROUTER is Tier 1.
   `non_execution: true` (s0) is UNCHANGED -- none of these regions relax the P0-1 gate.
+- **i33 (D-0096) NAMESPACE-CLOSURE + SUPERSESSION-HARDENING.** Hardens the packet/selection half after the
+  frontier Tier-0 red-team (159e9cb5) found the i32 amendments were an ENVELOPE-level first layer only
+  (record/retriever half = `MEMORY_CONTRACT` A5). ADDITIVE over the i32 amendment; #40 + #37 conform this wave.
+  **(U1' namespace CLOSURE -- SAFETY-CRITICAL):** `task_input.namespace` is a REQUEST, NOT authorization -- it can
+  never WIDEN scope (reconciles P0-1: `control_plane` is the only authority). The compiler computes
+  `effective_allowed_namespaces = intersection(task_input.namespace REQUEST, control_plane.permission_grants
+  GRANT)` and passes THAT (never raw `task_input.namespace`) to selpol (`params.allowed_namespaces`) and the
+  retriever (`filters.namespace`, `MEMORY_CONTRACT` A5); an empty intersection FAILS CLOSED (no compile); no
+  implicit all/wildcard/prefix/parent/shared namespace. The scope check covers EVERY packet-visible object, not
+  just `evidence[]`: `working_memory`, all provenance/derivation refs, and every diagnostic array -- `ranked[]`,
+  `features_by_candidate`, `stages[]`, `retrieval_occurrences[]`, `omission_manifest[]` entries, `expand_hint`s,
+  and `evaluation_hooks.retrieved[]`. A cross-namespace item reaching selection or the packet is a fail-closed
+  contract violation: the compile ABORTS with `compile_status = failed_closed` + a `namespace_violation_count` and
+  NO identifying metadata in the packet (ids/paths/snippets -> a privileged local security log). The one canonical
+  `ns_permitted` predicate + rejection policy is IMPORTED (owned by #37, `MEMORY_CONTRACT` A5 risk-6), never
+  re-implemented. **(U4' candidate-independent supersession):** selpol's supersession demote uses `MEMORY_CONTRACT`
+  A5 `effective_current` computed from the CATALOG (the `superseded_by` chain), not the retrieved pair -- a
+  superseded candidate is HARD-filtered under `current_only` even when its successor is absent from the pool; a
+  branch (two live successors) -> `packet_disposition = conflicted`; the `superseded_demote` code survives only for
+  the non-`current_only` modes where both are shown. `current_only` applies only AFTER temporal intent resolves to
+  it (U5'), not universally. **(U2' navigation vs evidence):** selection/compile reserve `candidate_role`
+  (`navigation | evidence`) -- a `node`/navigation candidate may ROUTE (multi-stage shortlist -> descend) but is
+  NEVER emitted as answer-evidence, and NAVIGATIONAL staleness (`summary_stale`) does not fail an evidence coverage
+  requirement (s2); evidence provenance follows `provenance_mode` (A2/A5), so a derived/aggregate item needs no
+  single source span. **(U3' working_memory hardening):** the `working_memory` region (i32) is
+  CONTINUITY-authoritative (recorded current state of THIS task, not world-truth, not execution authority --
+  `content_role: working_state`, `can_instruct: false`, permissions stay ONLY in `control_plane`); access is
+  CONJUNCTIVE (`task_id` AND effective-namespace authorization); items carry the `MEMORY_CONTRACT` A5
+  `state_version`, and packet identity (s6) includes it. The STORE is Tier 1; Tier 0 reserves the region + these
+  invariants. **(U5' query_class vs temporal_intent split):** `query_class` (semantic, the s0/i32 map) and
+  `temporal_intent` (`current_only | historical_as_of | version_specific | any_valid_version`, `MEMORY_CONTRACT`
+  s6) are INDEPENDENT dimensions -- the class->mode map is a DEFAULT that an explicit user time/version OUTRANKS;
+  the classifier + the class->mode map are VERSIONED (`classifier_policy_id`/`classifier_policy_version`) with
+  `composite` + `unclassified` fallback classes; packet identity (s6) covers the classifier policy id/version + the
+  resulting `temporal_intent` + the `working_memory` `state_version` + the retrieval-plan/stage trace.
+  `non_execution: true` (s0) is UNCHANGED -- no region relaxes the P0-1 gate.
 
 ## 1. P0-1 (SAFETY-CRITICAL) -- control plane vs evidence, structurally separated
 
@@ -161,7 +197,7 @@ by #37's own eval A/B** -- there is exactly one selection owner.
 - **Output is ADDITIVE -- it never destroys the retrieval order.** The library preserves each candidate's
   channel ranks and adds selection fields; per candidate: `retrieval_rank`, `lexical_rank`, `vector_rank`,
   `fused_rank` (from s3, PRESERVED), `selection_rank`, `selection_score` (integer millionths/points),
-  `selection_policy_id`, `selected` (bool), `reason_codes[]` (e.g. `hard_filter_forbidden`, `hard_filter_namespace` (i32), `hard_filter_stale` (i32), `superseded_demote` (i32), `stale_demote`,
+  `selection_policy_id`, `selected` (bool), `reason_codes[]` (e.g. `hard_filter_forbidden`, `hard_filter_namespace` (i32), `hard_filter_stale` (i32), `superseded_demote` (i32), `namespace_closure_violation` (i33), `stale_demote`,
   `authority_boost`, `fusion_rrf`, `diversity_capped`, `budget_omitted`, `rescued`, `selected`). This resolves
   the P1-1 conflict with "`rank = index+1`, never re-sort": the ORIGINAL retrieval array keeps `rank=index+1`
   untouched; selection produces a SEPARATE `selection_rank` ordering -- reordering is expressed as new fields,
@@ -172,7 +208,7 @@ by #37's own eval A/B** -- there is exactly one selection owner.
   selection is RETIRED and its features fold into the library. `policy_version` is stamped into packet
   identity (section 6) and every eval report.
 - **Selection stages (deterministic, versioned baseline).** In order: (1) hard filters -- `forbidden` /
-  `privacy` / `deleted` sink or exclude; (2) temporal -- stale demote under `current_only` (`MEMORY_CONTRACT`
+  `privacy` / `deleted` sink or exclude; (2) temporal -- stale demote under `current_only` **(i33: a HARD filter on `MEMORY_CONTRACT` A5 catalog-computed `effective_current`, excluding a superseded candidate even when its successor is absent from the pool)** (`MEMORY_CONTRACT`
   s5/s6); (3) authority weighting (`epistemic_authority`); (4) **rank fusion by versioned RRF over CHANNEL
   RANKS, not cross-query raw scores** (P1-2: FTS scores from different queries/kinds are not one scale, so
   fuse ranks, keeping `retrieval_occurrences[]` per candidate); (5) diversity clustering that **dedups DISPLAY
@@ -227,7 +263,7 @@ A `provenance` failure on any packet-carried item drives `packet_disposition = p
   `packet_content_hash` vs `parent_packet_id` / `expansion_id` (for an expansion delta). Canonical
   serialization + excluded volatile fields are retained from 0.1 (no wall-clock, no `abs_path`, integer-only,
   sorted keys, trailing `\n`).
-- **Identity must be complete.** `packet_id` MUST cover: `compiler` version, `selection_policy` id+version, `query_class` + `allowed_namespaces` (i32),
+- **Identity must be complete.** `packet_id` MUST cover: `compiler` version, `selection_policy` id+version, `query_class` + `allowed_namespaces` (i32), **(i33)** `classifier_policy` id+version + the resolved `temporal_intent` + the `working_memory` `state_version` + the retrieval-plan/stage trace,
   `consumer_profile` (tokenizer) id+fingerprint, budget, the `control_plane` grant-snapshot ref,
   `corpus_version`, the selected `record_version_id`s, and the `omission_manifest`. Same task + same corpus
   snapshot + same grants + same profile => identical `packet_id`.
