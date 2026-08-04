@@ -138,6 +138,88 @@ split (the analog of `SKILL_CONTRACT.md` for the memory substrate). Rationale li
   versioning) + #40 (import the predicate; conjunctive working-state access; classifier/temporal split) via
   `CONTEXT_PACKET_CONTRACT` i33; the `MEMORY_ARCHITECTURE` Tier-0 gate}. The A4 envelope-level wave STANDS as the
   foundation.
+- **Amendment A6 -- Tier-1 BOUNDED-FANOUT HIERARCHY build (D-0098, i34).** Turns the A4/A5 RESERVED hierarchy
+  seam (`node` kind, `member_of_node`/`child_of_node` edges) into a real deterministic build, folding the
+  frontier design red-team (pack b4c90545, `research/2026-08-04-i34-hierarchy-design-redteam.md`; verdict NO-GO
+  to freeze the first draft -- an envelope-level design hid a recall/pruning defect -- GO after this redraft).
+  ADDITIVE + backward-compatible; the packet/selection half is `CONTEXT_PACKET_CONTRACT` (its i34 amendment);
+  `MEMORY_ARCHITECTURE` s3 layer 6 / s6 / s9 governs. schema_version 4->5, additive in-place migration (new
+  `nodes` + hierarchy-meta + node-edge rows; sources/documents/versions/chunks/records UNTOUCHED; zero nodes ==
+  today's flat retrieval byte-for-byte). **The load-bearing invariant (SAFE PRUNING, P0):** a navigation-derived
+  value may POSITIVELY prioritize a branch but MUST NOT NEGATIVELY EXCLUDE one unless a deterministic,
+  channel-specific, NO-FALSE-NEGATIVE pruning predicate proves the subtree cannot satisfy the query/requirement
+  at the pinned snapshot; otherwise the plan expands / switches channel / flat-falls-back / returns
+  `needs_expansion`|`abstain` (`CONTEXT_PACKET` i34). A STALE synopsis is NEVER eligible to supply a pruning
+  proof. Channel-specific safe pruning: exact id/path/symbol -> exact index bypass; time/kind/authority -> exact
+  subtree ranges/histograms exclude impossible branches; lexical/entity -> ONLY an exact-membership or
+  no-false-negative (Bloom-style) filter proves absence (a bounded top-N descriptor does NOT); dense-vector ->
+  centroid alone cannot exclude (needs an admissible bound = centroid + covering radius, reserved). **(H1) the
+  `node` record BUILD fields** (freeze the A4 reservation; `provenance_mode = derived_record`, `content_role =
+  navigation`, `candidate_role = navigation`, one parent within one hierarchy, acyclic, namespace-homogeneous):
+  `node_id`, `record_version_id`, `namespace`, `hierarchy_id`, `level`, `child_of_node` parent + inverse edges +
+  `member_of_node` leaf edges (CANONICAL; the stored `child_ids[]`/`member_ids[]` are a rebuildable PROJECTION
+  whose digest must equal the canonical edges); deterministic structural synopsis = `child_count`,
+  `subtree_record_count`, bounded `entity_union[]` (deterministic top-N by subtree frequency, stable tie-break),
+  bounded `lexical_descriptor` (term->df, deterministic), `time_range`, `authority_range`, `kind_histogram`; the
+  vector aggregate is a SUFFICIENT-STATISTICS record NOT a mean-of-normalized-child-centroids -- `{vector_sum,
+  vector_count, missing_vector_count, embedding_space_id, canonical_member_order, accumulation_precision,
+  accumulation_algo}` with canonical quantization BEFORE hashing (the centroid = normalized aggregate sum;
+  topology-independent + byte-reproducible); ABSENT while the vector channel is empty (lexical+entity shortlist
+  stands alone -- a heuristic feature, NEVER a no-false-negative oracle). Reserved (NOT built i34):
+  `synopsis_text` (model prose, a Tier-2 provisional derived view) + `covering_radius`/`medoids` (safe vector
+  bounds). `synopsis_provenance` = `derives_from` to the IMMEDIATE canonical members/child-node versions (NOT the
+  transitive leaf list) + `synopsis_input_digest`; transitive reconstruction follows the bounded-fanout graph.
+  **(H2) three SEPARATED state axes** (do NOT overload evidence `status`): evidence-record `status`/`currentness`
+  (s5, unchanged); TOPOLOGY state `{valid | rebuild_required | corrupt}`; NAVIGATION-synopsis freshness `{fresh |
+  stale}` via MONOTONIC GENERATIONS `{subtree_generation, synopsis_generation, synopsis_built_from_corpus_version,
+  synopsis_input_digest}` -- a node is FRESH iff `synopsis_generation` covers `subtree_generation` AND the input
+  digest matches the current canonical immediate child/member versions; clearing freshness is CAS / transactional
+  (closes the ABA/lost-update stale-clear race). A node may be a valid CURRENT topology object with a stale
+  synopsis. Staleness propagation is DETERMINISTIC + normative over ALL mutation paths (add / content-edit /
+  grouping-key-changing edit [dirty BOTH old+new ancestor paths] / delete / tombstone / split / re-parent [dirty
+  source+dest paths + LCA-up] / collapse-merge / authority-temporal-kind-entity-lexical-embedding change /
+  builder-or-extractor-policy change [invalidate/rebuild the hierarchy] / edge repair; a child still stale during
+  a parent recompute keeps the parent stale). **(H3) hierarchy identity + atomic versioning** (avoid the "one
+  tree per namespace" foreclosure): a `hierarchies` meta row = `{hierarchy_id, hierarchy_kind, namespace,
+  builder_policy_id, builder_policy_version, tree_version, root_node_id, tree_digest, topology_state}`; i34 builds
+  ONE hierarchy per namespace (`hierarchy_kind = source_module`), but a leaf may join multiple hierarchies later.
+  A tree is published as an ATOMIC VERSION (shadow-build -> validate -> atomic root swap); a pinned compile keeps
+  its `tree_version` for the whole traversal (never mixes generations); the prior version stays available for
+  already-pinned compiles. **(H4) MINIMAL build (D-0098 -- live incremental split -> i35/Tier-2):** DETERMINISTIC
+  BALANCED bulk-build by a total order `(coarse_group_key, stable_secondary_key, record_id)` into balanced pages
+  (max occupancy MAX_FANOUT [default 16, ratifiable], a defined min non-root occupancy, deterministic
+  median/page-boundary split, stable tie-break, fallback from path/entity refinement to the stable order when a
+  partition isn't balanced+nonempty -- balance MUST NOT depend on the grouping key being well distributed); simple
+  in-place updates ONLY while every invariant holds; on overflow / grouping-changing re-parent / any invariant
+  fail -> mark the namespace hierarchy `rebuild_required` + serve the EXACT flat path until a deterministic
+  shadow-rebuild + atomic root-swap completes. Deterministic rebuild/flat-fallback TRIGGERS: fanout/cycle/orphan/
+  namespace/generation invariant fail; builder/grouping/extractor policy change; depth >> balanced ideal by a
+  ratified allowance; occupancy/tombstone fragmentation threshold; unrepairable overflow; stale-fraction /
+  max-stale-age threshold; measured hierarchy recall below baseline; `tree_digest` != canonical edge projection.
+  **(H5) namespace CLOSURE over the build (SAFETY-CRITICAL, extends A5 U1'):** write-time + transitive
+  homogeneity -- every edge insert asserts `parent.namespace == child.namespace == member.namespace`; every
+  synopsis recompute asserts all immediate inputs + their transitive derivation closure are homogeneous;
+  `entity_union`/`lexical_descriptor`/ranges/histograms/vector-aggregate/counts/hashes are PROTECTED derived info
+  (a permitted-envelope node with a forbidden constituent is a fail-closed violation, not partially usable); a
+  multi-namespace authorized compile traverses SEPARATE roots + fuses later (never a mixed root/aggregate). **(H6)
+  authorization-bound hierarchy ops (SAFETY-CRITICAL):** the retriever exposes `shortlist(query,
+  effective_allowed_namespaces, hierarchy_version, corpus_snapshot, k)` -> top `node` candidates (`candidate_role
+  = navigation`) and `descend(node_id, retrieval_plan_id, effective_allowed_namespaces, hierarchy_version,
+  corpus_snapshot)` -> the node's children (nodes/leaves), `ns_permitted` at EVERY hop + on every
+  returned/reachable object (A5); an arbitrary `node_id` NEVER makes the retriever a confused deputy (a descend
+  outside the effective set fails closed with NO identifying metadata). These are FRONTIER-EXPANSION ops (rank
+  authorized roots, then children of the current frontier per stage) -- not a flat scan of every node at every
+  level; stage-local rankings + the A5 `retrieval_stage_id`/`parent_stage_id`/`retrieval_plan_id` lineage; no new
+  flat-top-k-only hardening. **Re-verify list** = {#36 (the node layer + balanced bulk-builder + generations/CAS
+  staleness + write-time+transitive homogeneity + authorization-bound frontier ops + atomic tree-version
+  publication + the SAFE-PRUNING channel predicates + schema 4->5 migration + the hierarchy gate tests); #37
+  (navigation-cost + hierarchy-path-recall + packet-evidence-recall measures + adversarial scale fixtures + the
+  ~200MB rehearsal, `CONTEXT_PACKET` i34); #40 (the shortlist-and-descend PLAN + safe-pruning enforcement +
+  `retrieval_completeness` + navigation_refs, `CONTEXT_PACKET` i34); the `MEMORY_ARCHITECTURE` Tier-1 hierarchy
+  gate}. The A4/A5 envelope+closure waves STAND as the foundation. §1's CLOSED `node` kind gains the H1 build
+  fields (still CLOSED); §5's `summary_stale` is a NAVIGATION-synopsis freshness signal (H2), decoupled from the
+  evidence `current_only` hard-exclude -- the three state axes (evidence status / topology state / synopsis
+  freshness) are distinct.
 - **Adoption.** Wave 1 modules keep running as shipped at 0.1; each adopts 0.2 on its NEXT named revision
   (§9). Wave 2 NEW modules build to 0.2 from day one.
 - **Grounding.** The frozen shapes reconcile the two shipped-0.1 interfaces (#35 embedding.local, #36

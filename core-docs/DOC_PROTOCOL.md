@@ -33,8 +33,8 @@ describe NOW and stay ingestable whole; history is never deleted, it moves to la
 | PROJECT_DIRECTION.md | doctrine (stable) | 9 KB |
 | ARCHITECTURE_MAP.md | long-horizon spine (stable) | 15 KB |
 | SKILL_CONTRACT.md | the skill interface (versioned) | 12 KB |
-| MEMORY_CONTRACT.md | the Collective Agent memory/retrieval contract (versioned): record+provenance envelope, embedding 0.2, retriever 0.2, catalog/eval/privacy gates | 38 KB |
-| CONTEXT_PACKET_CONTRACT.md | the context-packet + selection contract (versioned): control/evidence separation, packet_disposition, consumer profile, the selection-policy library, packet identity/lineage | 29 KB |
+| MEMORY_CONTRACT.md | the Collective Agent memory/retrieval contract (versioned): record+provenance envelope, embedding 0.2, retriever 0.2, catalog/eval/privacy gates + A6 Tier-1 hierarchy build | 48 KB |
+| CONTEXT_PACKET_CONTRACT.md | the context-packet + selection contract (versioned): control/evidence separation, packet_disposition, consumer profile, the selection-policy library, packet identity/lineage + i34 hierarchy shortlist-and-descend | 37 KB |
 | MEMORY_ARCHITECTURE.md | the long-horizon memory design (governing doctrine): target + Tier-0 invariants + typed memory + bounded-fanout hierarchy + query-aware retrieval + consolidation + procedural promotion + reconstructability + T0-T3 roadmap | 30 KB |
 | MEMORY_BENCHMARK.md | the memory-quality + foreign-corpus validation architecture: corpora, independent mutation/withholding harness, executable + hidden ground truth, lifecycle measures | 14 KB |
 | ADAPTIVE_RESOURCE_GOVERNOR.md | governor design + measured truth | 22 KB |

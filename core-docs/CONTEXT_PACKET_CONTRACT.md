@@ -100,6 +100,44 @@ This doc is the normative distillate.
   resulting `temporal_intent` + the `working_memory` `state_version` + the retrieval-plan/stage trace.
   `non_execution: true` (s0) is UNCHANGED -- no region relaxes the P0-1 gate.
 
+- **i34 (D-0098) Tier-1 HIERARCHY -- shortlist-and-descend + safe pruning + retrieval completeness.** The
+  packet/selection half of `MEMORY_CONTRACT` A6; folds the b4c90545 design red-team (NO-GO to freeze the first
+  draft; GO after this redraft). ADDITIVE over 0.2; #40 + #37 conform; context_packet stays 0.2 (a
+  zero-node/flat compile is byte-identical to today). **(V1) shortlist-and-descend is a MULTI-STAGE retrieval
+  PLAN.** A deterministic descend-decision (the i32 `query_class` stub; the multi-channel router is i35) routes a
+  `global_synthesis`/overview/`precedent_search` class to: `shortlist` authorized roots -> `descend` the frontier
+  (bounded B nodes/level, bounded D depth) -> collect leaf candidates -> the EXISTING selpol/budget/packet path;
+  a local/exact class stays flat-top-k. #40 passes `effective_allowed_namespaces` (i33 = intersection(request,
+  grant)) + `hierarchy_version` + the pinned `corpus_version` to `shortlist`/`descend` (`MEMORY_CONTRACT` A6 H6).
+  Nodes (`candidate_role = navigation`) NEVER enter `evidence[]`, never satisfy a requirement, are never quoted
+  as support; they appear ONLY in `navigation_refs` + the packet-identity retrieval-plan/stage trace. **(V2) SAFE
+  PRUNING (P0, enforce `MEMORY_CONTRACT` A6):** the compiler may prune a branch ONLY via a deterministic
+  channel-specific no-false-negative predicate at the pinned snapshot; else it MUST expand / switch channel /
+  flat-fall-back / set disposition `needs_expansion`|`abstain`. A stale-synopsis branch is never pruned on the
+  synopsis; it is regenerated against the snapshot, conservatively retained/expanded, pruned only by a sound
+  non-synopsis bound, or handed to fallback. **(V3) RETRIEVAL COMPLETENESS (distinct from evidence coverage).** A
+  hierarchy MISS must NOT read as proved ABSENCE. New packet/plan fields: `retrieval_completeness`,
+  `frontier_exhausted` (bool), `pruned_branch_count`, `prune_policy_id`/`prune_policy_version`, `prune_reasons[]`,
+  `fallback_used`, `stale_navigation_encountered`, `unresolved_branch_count`, `max_unexpanded_bound?`.
+  Evidence-coverage (s2) is unchanged and a `summary_stale`/navigation node NEVER enters `missing_requirements[]`;
+  but an UNRESOLVED pruned frontier BLOCKS any claim of complete search / definitive absence -- a packet may be
+  `answerable` from strong evidence without global exhaustion, but must not present a hierarchy miss as proved
+  absence. **(V4) packet identity += hierarchy.** `packet_id` (s6) now also covers `hierarchy_id` +
+  `tree_version` + `builder_policy` id/version + `prune_policy` id/version + the retrieval-plan/stage trace (atop
+  the i33 classifier/temporal/ns/state_version coverage). One pinned `tree_version` per compile (drift aborts,
+  like `corpus_version`). **(V5) navigation-vs-evidence closure** (extends i33 U2'): selection cannot cast/copy a
+  navigation candidate into evidence; every navigation-visible object (`navigation_refs`, stage traces,
+  pruned-branch diagnostics, node ids/paths/scores/descriptors, `expand_hint`s) is namespace-closure-checked (i33
+  U1') + fail-closed with no identifying metadata. `non_execution: true` (s0) UNCHANGED. **Applies-to:** #40
+  (V1-V5, import #37 READ-ONLY), #37 (the eval measures + fixtures: navigation-cost [nodes examined vs leaf count
+  -> O(B*log_F N), p50/p95, NOT constant], HIERARCHY-PATH recall [traversal exposed the required leaf] AND
+  end-to-end PACKET-EVIDENCE recall [the final packet retained an acceptable required span/version OR correctly
+  returned `needs_expansion`/`abstain`], shortlist regret + fallback frequency + stale-window recall; adversarial
+  scale fixtures [identical path prefixes / one dominant entity / rare decisive term / cross-cutting / multimodal
+  + absent vectors / insert-delete-tombstone-move-split-collapse / mutation-during-regen / cross-namespace
+  contamination attempts / exact+global mixtures] PLUS the real ~200MB foreign-corpus rehearsal required before
+  freeze/activation). D-0077 hierarchy fold smoke at close.
+
 ## 1. P0-1 (SAFETY-CRITICAL) -- control plane vs evidence, structurally separated
 
 **The single most important freeze.** A retrieved README / log / note / imported page can contain imperative
