@@ -69,3 +69,18 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 - `i33-RETRIEVAL-EVAL-NSCLOSURE.md` | the filled Lane-B brief (retrieval.eval #37 eval 0.4->0.5 / selpol 1.1->1.2; the canonical ns_permitted + classifier_policy owner) dispatched in i33 (plan fo-33-d7b55e46) | used brief archived at the i34 re-scoping | 2026-08-04 | D-0096
 - `i33-CONTEXT-COMPILER-NSCLOSURE.md` | the filled Lane-C brief (context.compiler #40 0.4.0->0.5.0; effective-namespace closure + all-object scope-check + query_class/temporal_intent split) dispatched in i33 (plan fo-33-d7b55e46) | used brief archived at the i34 re-scoping | 2026-08-04 | D-0096
 - `i31-SELECTION-POLICY-SETTLE-SHIP-STATE.md` | the i31 FANOUT_AGENT_002 SHIP-STATE (context.compiler #40 0.3.0, selpol settle) left stale in the live core-docs/fanout/ dir | moved to archive (stale-file cleanup) at the i34 re-scoping | 2026-08-04 | D-0091
+- `i23-SHIP-STATE.md` | the i23 SUPERVISOR-HARDENING wave ship-state (model.gateway #7 0.6.0, d289ba9) | committed to archive (was untracked on disk) at the i34 mirror-hygiene cleanup | 2026-08-04 | D-0078
+- `i25-SHIP-STATE.md` | the i25 WAVE-1 memory-substrate ship-state (#35/#36/#37 0.1.0) | committed to archive (was untracked) at the i34 cleanup | 2026-08-04 | D-0082
+- `i27-SHIP-STATE.md` | the i27 WAVE-2 memory-records ship-state (#36 0.2 + #38 + #39) | committed to archive (was untracked) at the i34 cleanup | 2026-08-04 | D-0084
+- `i28-SHIP-STATE.md` | the i28 CONTRACT-SETTLE ship-state (MEMORY_CONTRACT A1 + #39 0.1.1) | committed to archive (was untracked) at the i34 cleanup | 2026-08-04 | D-0085
+- `RESLEASE-R1a-split-SHIP-STATE.md` | the i18 res.lease 0.2.0 ship-state | preserved from the stale Project mirror to disk archive at the i34 cleanup | 2026-08-04 | D-0072
+- `RESLEASE-R1b-consumers-i19-SHIP-STATE.md` | the i19 res.lease 0.3.0 + red-team fold ship-state | preserved from the stale Project mirror at the i34 cleanup | 2026-08-04 | D-0073
+- `RESLEASE-R1bprime-i20-SHIP-STATE.md` | the i20 res.lease 0.4.0 primitive-hardening ship-state | preserved from the stale Project mirror at the i34 cleanup | 2026-08-04 | D-0075
+- `RESLEASE-R1b-consumers-i21-SHIP-STATE.md` | the i21 R1b consumer + live-GPU proof ship-state (#7 0.5.0) | preserved from the stale Project mirror at the i34 cleanup | 2026-08-04 | D-0076
+- `TRACK-STABLE-i22-SHIP-STATE.md` | the i22 track.objects #33 0.2.0 ship-state | preserved from the stale Project mirror at the i34 cleanup | 2026-08-04 | D-0077
+- `VIDEO-TIMELINE-i22-SHIP-STATE.md` | the i22 video.timeline #34 0.1.0 ship-state | preserved from the stale Project mirror at the i34 cleanup | 2026-08-04 | D-0077
+- `VIDEO-TIMELINE-i22-FOLD-ADDENDUM.md` | the i22 video.timeline 0.1.1 orchestrator fold addendum | preserved from the stale Project mirror at the i34 cleanup | 2026-08-04 | D-0077
+- `RETRIEVAL-QUALITY-i29-SHIP-STATE.md` | the i29 retrieval.eval #37 0.2.0 ship-state | preserved from the stale Project mirror at the i34 cleanup | 2026-08-04 | D-0086
+- `SELECTION-POLICY-i30-SHIP-STATE.md` | the i30 retrieval.eval #37 0.3.0 selpol_rrf_v1 ship-state | preserved from the stale Project mirror at the i34 cleanup | 2026-08-04 | D-0088
+- `SKILL-SUMMARY-i30-SHIP-STATE.md` | the i30 skill.card #41 0.2.0 (A3 skill->summary) ship-state | preserved from the stale Project mirror at the i34 cleanup | 2026-08-04 | D-0088
+- `2026-08-04-FANOUT_ORCHESTRATOR_HANDOFF-i33.md` | snapshot of the handoff at the i33-in-flight state (before the D-0097 close rewrite; from git 33a8158^) | backfilled the missing DOC_PROTOCOL s5 snapshot at the i34 cleanup | 2026-08-04 | D-0097

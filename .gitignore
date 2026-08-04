@@ -2,3 +2,5 @@
 *.lnk
 review_queue.jsonl
 review_resolved.jsonl
+__pycache__/
+_to_delete/
