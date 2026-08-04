@@ -1,9 +1,27 @@
-# Work Order: Context Compiler (`context.compile`) 0.3.0 -- i31 SELECTION-POLICY SETTLE
+# Work Order: Context Compiler (`context.compile`) 0.4.0 -- i32 Tier-0 SEAM REPAIRS
 
-**Contract targeted:** `CONTEXT_PACKET_CONTRACT.md` `context_packet/0.2` with **s4 PINNED (D-0089)** +
-`MEMORY_CONTRACT.md` A2/A3 · **Author:** CONTEXT-COMPILER-SELPOL-i31 (2026-08-03) · **Roadmap entry:**
-`MODULE_ROADMAP.md#40-context-compiler` · **Wave:** i31 (plan `fo-31-eca37c08`) · **Supersedes:** the i30
-0.2.0 build (CONTEXT-COMPILER-i30, plan `fo-30-dd453156`).
+**Contract targeted:** `CONTEXT_PACKET_CONTRACT.md` `context_packet/0.2` with **s4 PINNED (D-0089)** + the
+**i32 amendment (D-0092)** + `MEMORY_CONTRACT.md` A2/A3/**A4** + `MEMORY_ARCHITECTURE.md` s5/s9 · **Author:**
+CONTEXT-COMPILER-TIER0-i32 (2026-08-04) · **Roadmap entry:** `MODULE_ROADMAP.md#40-context-compiler` ·
+**Wave:** i32 (plan `fo-32-0fb25203`) · **Supersedes:** the i31 0.3.0 build (CONTEXT-COMPILER-SELPOL-i31,
+plan `fo-31-eca37c08`).
+
+### i32 delta (D-0092) -- Tier-0 seam repairs, ADDITIVE over context_packet/0.2 (schema string UNCHANGED; semver 0.3.0 -> 0.4.0)
+Plumbs the Tier-0 memory-architecture seams THROUGH the packet + selection (full interpretation:
+`SCHEMA_NOTES.md` s15): **(U1)** `namespace` is a HARD boundary passed BOTH ways (`filters.namespace` +
+`params.allowed_namespaces`) with a fail-closed `namespace_leak` backstop + namespace-guarded refs +
+multi-namespace-by-grant; **(U5)** a deterministic query-classification STAGE stamps `query_class` (one of the
+`MEMORY_ARCHITECTURE` s5 nine) into `task_input` + descriptor + identity and drives the temporal mode;
+**(U4)** `current_only` derives from `query_class` (explicit `time_horizon` overrides) + a `contradicts` edge
+among current selected evidence -> `conflicted`; **(U3)** the FOURTH region `working_memory` is RESERVED
+(present-but-empty; store is Tier 1); the selpol import passes the new i32 params + carries the new
+reason_codes. Off-machine (cloud python + REAL selpol 1.0.0): 203/203 -- the selpol NEW-behavior + `-Live`
+legs are DEFERRED to the orchestrator D-0077 mixed-namespace fold with #37's shipped 1.1.0. The i31 scope
+below is retained for reference.
+
+---
+
+## i31 scope (retained for reference)
 
 ### Problem being solved
 i30 shipped `context_packet/0.2` with the s4 selection-policy interface consumed via an in-module

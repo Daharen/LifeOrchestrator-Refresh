@@ -1,0 +1,112 @@
+{
+  "_leak_rvid": "b_doc_v1",
+  "retrieval_batches": [
+    {
+      "hits": [
+        {
+          "abs_path": null,
+          "authority_level": "source_material",
+          "chunk_content_hash": "1fb51d029625a356a587cc2e4d7c2354a45de263b2f904b5cfd029389d76e50b",
+          "chunk_id": "chk_6c87d39cd892830c2c944d59",
+          "chunk_type": "markdown_section",
+          "content_hash": "1fb51d029625a356a587cc2e4d7c2354a45de263b2f904b5cfd029389d76e50b",
+          "corpus_version": "digest_nsx_0001",
+          "currentness": "current",
+          "embedding_space_id": null,
+          "filter_decisions": {},
+          "fused_rank": 1,
+          "fused_score": 1.0,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "heading": null,
+          "index_snapshot": "digest_nsx_0001",
+          "lexical_rank": 1,
+          "lexical_score": 1.0,
+          "namespace": "projA",
+          "rank": 1,
+          "record_id": "a_doc",
+          "record_kind": "source_chunk",
+          "record_version_id": "a_doc_v1",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "section_path": null,
+          "snippet": "# Project A doctrine\n\nProject A pins the lease TTL to 1800 seconds.\n",
+          "source": "projA",
+          "source_path": "projA/doctrine.md",
+          "source_version_id": "ver_6f83a749af9f6554b2785d18",
+          "span": {
+            "end": 68,
+            "start": 0
+          },
+          "span_label": "bytes:0-68",
+          "status": "current",
+          "tie_break_key": "a_doc_v1",
+          "vector_rank": null,
+          "vector_similarity": null
+        },
+        {
+          "abs_path": null,
+          "authority_level": "source_material",
+          "chunk_content_hash": "6fb7ddba8904588d68cc5b1b9d7b766866584c2b35778749fb10974e572ea63d",
+          "chunk_id": "chk_714a91121f40dd57eb7cf21b",
+          "chunk_type": "markdown_section",
+          "content_hash": "6fb7ddba8904588d68cc5b1b9d7b766866584c2b35778749fb10974e572ea63d",
+          "corpus_version": "digest_nsx_0001",
+          "currentness": "current",
+          "embedding_space_id": null,
+          "filter_decisions": {},
+          "fused_rank": 2,
+          "fused_score": 0.99,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "heading": null,
+          "index_snapshot": "digest_nsx_0001",
+          "lexical_rank": 2,
+          "lexical_score": 0.99,
+          "namespace": "projB",
+          "rank": 2,
+          "record_id": "b_doc",
+          "record_kind": "source_chunk",
+          "record_version_id": "b_doc_v1",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "section_path": null,
+          "snippet": "# Project B doctrine\n\nProject B pins the lease TTL to 900 seconds.\n",
+          "source": "projB",
+          "source_path": "projB/doctrine.md",
+          "source_version_id": "ver_b4e30cb909558b5cfdf5f1fd",
+          "span": {
+            "end": 67,
+            "start": 0
+          },
+          "span_label": "bytes:0-67",
+          "status": "current",
+          "tie_break_key": "b_doc_v1",
+          "vector_rank": null,
+          "vector_similarity": null
+        }
+      ],
+      "query_index": 0
+    }
+  ],
+  "retrieval_meta": {
+    "corpus_version": "digest_nsx_0001",
+    "retriever": "mock"
+  },
+  "source_texts": {
+    "projA/doctrine.md": "# Project A doctrine\n\nProject A pins the lease TTL to 1800 seconds.\n",
+    "projB/doctrine.md": "# Project B doctrine\n\nProject B pins the lease TTL to 900 seconds.\n"
+  },
+  "task": {
+    "config": {
+      "per_source_cap": 3,
+      "token_budget": 2000
+    },
+    "namespace": "projA",
+    "original_goal": "State Project A's lease TTL.",
+    "request_text": "project lease TTL",
+    "task_type": "documentation"
+  }
+}

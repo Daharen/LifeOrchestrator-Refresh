@@ -46,9 +46,9 @@
   "packet": {
     "compiler": {
       "name": "context.compile",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "worker": "context_compiler.py",
-      "worker_version": "0.3.0"
+      "worker_version": "0.4.0"
     },
     "consumer_profile": {
       "chat_template_id": "qwen3p5-chatml-no-think",
@@ -154,7 +154,7 @@
         "provenance_reproduced_count": 1,
         "provenance_valid_all": true,
         "provenance_valid_count": 1,
-        "rendered_tokens": 404,
+        "rendered_tokens": 480,
         "requirements_missing": 0,
         "requirements_satisfied": 1,
         "requirements_total": 1
@@ -218,6 +218,7 @@
           "can_instruct": false,
           "chunk_type": "summary",
           "content_role": "evidence",
+          "contradicts_refs": [],
           "currentness": "current",
           "epistemic_authority": "derived",
           "excerpt_id": "exc_9114ef31fbdc36649d7380d8",
@@ -301,8 +302,11 @@
       "schema": "lifeorch.context_expansion/0.2"
     },
     "identity": {
+      "allowed_namespaces": [
+        "core-docs"
+      ],
       "budget": 200,
-      "compiler_version": "0.3.0",
+      "compiler_version": "0.4.0",
       "consumer_profile": {
         "model_id": "llm.strong.qwen3p5-9b",
         "tokenizer_fingerprint": "unpinned_upper_bound_ceil_chars_div4",
@@ -310,9 +314,11 @@
       },
       "control_plane_grant_snapshot_ref": "sha256:8fea70608d6dba499dd7afad6149cf3eb2238f545d6e5e6f2d4b448a3278ff39",
       "corpus_version": "digest_fixture_0001",
+      "current_only": true,
       "expansion_id": null,
       "omission_manifest_digest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
       "parent_packet_id": null,
+      "query_class": "global_synthesis",
       "selected_record_version_ids": [
         "sum_spec_v1"
       ],
@@ -325,7 +331,7 @@
     },
     "non_execution": true,
     "omission_manifest": [],
-    "packet_id": "cpkt_1bb91240659af9c6e8e52ee3653d55a9",
+    "packet_id": "cpkt_5ed3652f6b5458e05177f2451aedd461",
     "rendering": {
       "evidence_delimiters": {
         "begin": "<<<EVIDENCE_BEGIN",
@@ -336,10 +342,16 @@
       "order": [
         "control_plane",
         "task_input",
+        "working_memory",
         "evidence"
       ],
       "rendered_input_artifact": "rendered_input.txt",
-      "rendered_input_sha256": "54464ad68df606ece9707afdc88393638ba19f282af337b80097e179b358dc0f"
+      "rendered_input_sha256": "1271ae12b85675d6b7034ef429f9987d38fc803a0cb9bf6653eb1b5178cdc3e1",
+      "working_memory_delimiters": {
+        "begin": "<<<WORKING_STATE_BEGIN",
+        "end": "WORKING_STATE_END>>>"
+      },
+      "working_memory_role_banner": "content_role=working_state, can_instruct=false (NOT authority, NOT evidence)"
     },
     "retrieval_provenance": {
       "candidate_count": 1,
@@ -361,7 +373,8 @@
           "mode": "fts",
           "purpose": "primary",
           "query": "context packet spec summary",
-          "query_index": 0
+          "query_index": 0,
+          "temporal_mode": "current_only"
         },
         {
           "filters": {
@@ -372,7 +385,8 @@
           "mode": "fts",
           "purpose": "kind:decision",
           "query": "context packet spec summary",
-          "query_index": 1
+          "query_index": 1,
+          "temporal_mode": "current_only"
         },
         {
           "filters": {
@@ -383,7 +397,8 @@
           "mode": "fts",
           "purpose": "kind:summary",
           "query": "context packet spec summary",
-          "query_index": 2
+          "query_index": 2,
+          "temporal_mode": "current_only"
         },
         {
           "filters": {
@@ -394,7 +409,8 @@
           "mode": "fts",
           "purpose": "kind:claim",
           "query": "context packet spec summary",
-          "query_index": 3
+          "query_index": 3,
+          "temporal_mode": "current_only"
         }
       ],
       "retriever": "mock",
@@ -404,11 +420,15 @@
     "schema": "lifeorch.context_packet/0.2",
     "selection": {
       "descriptor": {
+        "allowed_namespaces": [
+          "core-docs"
+        ],
         "component": null,
         "forbidden_sources": [],
         "namespace": "core-docs",
         "permission_context": null,
         "privacy_exclusions": [],
+        "query_class": "global_synthesis",
         "relevant_paths": [],
         "seeking_failures": false,
         "task_stage": "research",
@@ -441,7 +461,14 @@
           "task_stage": 1
         }
       },
-      "note": "IMPORTED from #37's canonical selpol_rrf_v1 (D-0089; the in-module reference stub is RETIRED). raw-fused-score-primary composite + AUTHORITY_RANK/freshness ranks + greedy source-MMR + occurrence-preserving display dedup; additive selection fields; the retrieval order is preserved (rank=index+1 untouched; selection is a separate ordering).",
+      "i32_params": {
+        "allowed_namespaces": [
+          "core-docs"
+        ],
+        "current_only": true,
+        "query_class": "global_synthesis"
+      },
+      "note": "IMPORTED from #37's canonical selpol_rrf_v1 (D-0089; the in-module reference stub is RETIRED). raw-fused-score-primary composite + AUTHORITY_RANK/freshness ranks + greedy source-MMR + occurrence-preserving display dedup; additive selection fields; the retrieval order is preserved (rank=index+1 untouched; selection is a separate ordering). i32 (D-0092) passes allowed_namespaces / current_only / query_class + carries the hard_filter_namespace / hard_filter_stale / superseded_demote reason_codes.",
       "owner": "modules/37-retrieval-eval/lib/selpol_rrf_v1.py",
       "policy_id": "selpol_rrf_v1",
       "policy_version": "1.0.0",
@@ -455,11 +482,17 @@
       ]
     },
     "task_input": {
+      "allowed_namespaces": [
+        "core-docs"
+      ],
       "constraints": [],
+      "current_only": true,
       "namespace": "core-docs",
       "normalized_task": "[research] context packet spec summary",
       "open_questions": [],
       "original_goal": "Explain the context packet spec.",
+      "query_class": "global_synthesis",
+      "query_class_basis": "task_type",
       "requested_side_effects": [],
       "task_type": "research",
       "time_horizon": "current_only"
@@ -488,9 +521,9 @@
       "dropped_for_transport": 0,
       "fits": true,
       "max_context": 8192,
-      "rendered_char_count": 1613,
-      "rendered_input_sha256": "54464ad68df606ece9707afdc88393638ba19f282af337b80097e179b358dc0f",
-      "rendered_tokens": 404,
+      "rendered_char_count": 1917,
+      "rendered_input_sha256": "1271ae12b85675d6b7034ef429f9987d38fc803a0cb9bf6653eb1b5178cdc3e1",
+      "rendered_tokens": 480,
       "reserved_generation_tokens": 1024,
       "reserved_system_tokens": 384,
       "reserved_tool_tokens": 0,
@@ -498,6 +531,19 @@
       "token_fn": "ceil(chars/4)",
       "transport_budget_tokens": 6784,
       "transport_overflow": false
+    },
+    "working_memory": {
+      "authority": "task_state_only",
+      "can_instruct": false,
+      "content_role": "working_state",
+      "is_evidence": false,
+      "item_count": 0,
+      "items": [],
+      "note": "Reserved per-task working-memory region (CONTEXT_PACKET_CONTRACT i32/U3; MEMORY_CONTRACT A4 `working` kind). Task-authoritative for STATE, NOT execution authority (permissions live ONLY in control_plane) and NOT evidence. The per-task_id store is Tier 1; at Tier 0 this region is present-but-empty. Populated items carry content_role=working_state, can_instruct=false; render order control_plane -> task_input -> working_memory -> evidence.",
+      "present": false,
+      "store_status": "reserved_no_store",
+      "store_tier": "tier_1",
+      "task_id": "task_e8d087dd909bb0a1a173971cf7bda764"
     }
   },
   "request": {

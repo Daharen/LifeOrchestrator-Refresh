@@ -1,6 +1,6 @@
 #requires -Version 7.0
 <#
-  Test harness for context.compile 0.3 (Module 40, i31 SELECTION-POLICY SETTLE). Exercises the
+  Test harness for context.compile 0.4 (Module 40, i32 Tier-0 seam repairs, D-0092). Exercises the
   Invoke-ContextCompiler.ps1 entrypoint END-TO-END with the deterministic MOCK retriever (off-machine +
   -Live), and -- when -Db/-RepoRoot are supplied -- the REAL artifact.search #36 retriever-0.2 seam
   (-Live acceptance). Validates the lifeorch.context_packet/0.2 shape: three regions (control_plane /
@@ -42,18 +42,22 @@ function Run-CC([string[]]$ccArgs) {
     return $text | ConvertFrom-Json -Depth 60
 }
 
-Write-Host "== context.compile 0.3 entrypoint harness =="
+Write-Host "== context.compile 0.4 entrypoint harness (i32 Tier-0 seam repairs) =="
 Write-Host "[mock: compile end-to-end over fixtures/compile_case.json -> context_packet/0.2]"
 $env1 = Run-CC @('-Op','compile','-Retriever','mock','-CaseFile',(Join-Path $Fix 'compile_case.json'))
 Check "envelope status ok/partial" ($env1.status -in @('ok','partial')) "status=$($env1.status)"
 Check "skill_id context.compile" ($env1.skill_id -eq 'context.compile')
-Check "skill_version 0.3.0" ($env1.skill_version -eq '0.3.0') "ver=$($env1.skill_version)"
+Check "skill_version 0.4.0" ($env1.skill_version -eq '0.4.0') "ver=$($env1.skill_version)"
 $packet = $env1.result.result.packet
 Check "packet schema 0.2" ($packet.schema -eq 'lifeorch.context_packet/0.2')
 Check "packet_id present" ($packet.packet_id -like 'cpkt_*')
 Check "P0-1 non_execution true" ($packet.non_execution -eq $true)
 Check "P0-1 three regions present" ($null -ne $packet.control_plane -and $null -ne $packet.task_input -and $null -ne $packet.evidence)
 Check "control_plane descriptor-only provenance" ($packet.control_plane.provenance -eq 'descriptor_authority_fields_only')
+Check "i32/U3 working_memory reserved region present + empty (no store)" ($null -ne $packet.working_memory -and $packet.working_memory.present -eq $false -and @($packet.working_memory.items).Count -eq 0)
+Check "i32/U3 render order control->task->working_memory->evidence" (($packet.rendering.order -join ',') -eq 'control_plane,task_input,working_memory,evidence')
+Check "i32/U5 query_class stamped in task_input + identity" ($null -ne $packet.task_input.query_class -and $packet.identity.query_class -eq $packet.task_input.query_class)
+Check "i32/U1 allowed_namespaces stamped in task_input + identity" ($null -ne $packet.task_input.allowed_namespaces -and $null -ne $packet.identity.allowed_namespaces)
 Check "evidence excerpts present" (@($packet.evidence.excerpts).Count -gt 0)
 Check "every excerpt content_role=evidence/can_instruct=false" (@($packet.evidence.excerpts | Where-Object { $_.content_role -ne 'evidence' -or $_.can_instruct -ne $false }).Count -eq 0)
 Check "P0-3 packet_disposition present" ($null -ne $packet.disposition.packet_disposition)

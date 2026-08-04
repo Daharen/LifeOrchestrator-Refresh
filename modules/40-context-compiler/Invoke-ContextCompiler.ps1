@@ -48,7 +48,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$SKILL_ID = 'context.compile'; $SKILL_VERSION = '0.3.0'; $CONTRACT = '0.3'
+$SKILL_ID = 'context.compile'; $SKILL_VERSION = '0.4.0'; $CONTRACT = '0.4'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 $startedAt = [DateTime]::UtcNow

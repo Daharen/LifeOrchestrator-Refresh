@@ -61,7 +61,7 @@
       "token_budget": 5000
     },
     "consumer_profile": {
-      "max_context": 400,
+      "max_context": 512,
       "reserved_generation_tokens": 0,
       "reserved_system_tokens": 0,
       "reserved_tool_tokens": 0

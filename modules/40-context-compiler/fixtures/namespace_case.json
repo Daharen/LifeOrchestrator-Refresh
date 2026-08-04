@@ -1,0 +1,114 @@
+{
+  "_allowed_namespaces": [
+    "projA"
+  ],
+  "retrieval_batches": [
+    {
+      "hits": [
+        {
+          "abs_path": null,
+          "authority_level": "source_material",
+          "chunk_content_hash": "e9d21d843c908e416af1f5d7c13d52a214502f7eb299fdf25dc21f8cb86e7154",
+          "chunk_id": "chk_6c87d39cd892830c2c944d59",
+          "chunk_type": "markdown_section",
+          "content_hash": "e9d21d843c908e416af1f5d7c13d52a214502f7eb299fdf25dc21f8cb86e7154",
+          "corpus_version": "digest_ns_0001",
+          "currentness": "current",
+          "embedding_space_id": null,
+          "filter_decisions": {},
+          "fused_rank": 1,
+          "fused_score": 1.0,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "heading": null,
+          "index_snapshot": "digest_ns_0001",
+          "lexical_rank": 1,
+          "lexical_score": 1.0,
+          "namespace": "projA",
+          "rank": 1,
+          "record_id": "a_doc",
+          "record_kind": "source_chunk",
+          "record_version_id": "a_doc_v1",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "section_path": null,
+          "snippet": "# Project A doctrine\n\nProject A pins the lease TTL to 1800 seconds under res.lease #29.\n",
+          "source": "projA",
+          "source_path": "projA/doctrine.md",
+          "source_version_id": "ver_4a9288106d41c740a2343499",
+          "span": {
+            "end": 88,
+            "start": 0
+          },
+          "span_label": "bytes:0-88",
+          "status": "current",
+          "tie_break_key": "a_doc_v1",
+          "vector_rank": null,
+          "vector_similarity": null
+        },
+        {
+          "abs_path": null,
+          "authority_level": "source_material",
+          "chunk_content_hash": "2138a087f5291f4f80b0c7f700461ac71ee7dc2fd5f6287b8be7e64e7b537e88",
+          "chunk_id": "chk_dfcc807cbc71703f5b086a84",
+          "chunk_type": "markdown_section",
+          "content_hash": "2138a087f5291f4f80b0c7f700461ac71ee7dc2fd5f6287b8be7e64e7b537e88",
+          "corpus_version": "digest_ns_0001",
+          "currentness": "current",
+          "embedding_space_id": null,
+          "filter_decisions": {},
+          "fused_rank": 2,
+          "fused_score": 0.99,
+          "fusion_algo": "lexical_only",
+          "fusion_version": "1",
+          "heading": null,
+          "index_snapshot": "digest_ns_0001",
+          "lexical_rank": 2,
+          "lexical_score": 0.99,
+          "namespace": "projA",
+          "rank": 2,
+          "record_id": "a_fen",
+          "record_kind": "source_chunk",
+          "record_version_id": "a_fen_v1",
+          "retrieval_channels": [
+            "lexical"
+          ],
+          "section_path": null,
+          "snippet": "# Project A fencing\n\nProject A uses three-identity fencing to reject a stale holder.\n",
+          "source": "projA",
+          "source_path": "projA/fencing.md",
+          "source_version_id": "ver_79f3b3b82940a48f3dc32e99",
+          "span": {
+            "end": 85,
+            "start": 0
+          },
+          "span_label": "bytes:0-85",
+          "status": "current",
+          "tie_break_key": "a_fen_v1",
+          "vector_rank": null,
+          "vector_similarity": null
+        }
+      ],
+      "query_index": 0
+    }
+  ],
+  "retrieval_meta": {
+    "corpus_version": "digest_ns_0001",
+    "retriever": "mock"
+  },
+  "source_texts": {
+    "projA/doctrine.md": "# Project A doctrine\n\nProject A pins the lease TTL to 1800 seconds under res.lease #29.\n",
+    "projA/fencing.md": "# Project A fencing\n\nProject A uses three-identity fencing to reject a stale holder.\n"
+  },
+  "task": {
+    "config": {
+      "per_source_cap": 3,
+      "token_budget": 2000
+    },
+    "namespace": "projA",
+    "original_goal": "Summarise Project A's lease + fencing doctrine.",
+    "request_text": "project A lease TTL fencing stale holder",
+    "task_type": "documentation"
+  }
+}

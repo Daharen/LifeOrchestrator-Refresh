@@ -59,6 +59,24 @@ def compile_case(name):
         name = name + ".json"
     return cc.run(dict(load(name), op="compile"))
 
+def _hit(path, text, rvid, rid, ns="projA", rank=1, contradicts=None, currentness="current"):
+    """A minimal deterministic retriever-0.2 hit whose direct_span reproduces `text` (chunk_content_hash =
+    sha256(span bytes)) -- used to build small i32 cases inline."""
+    b = text.encode("utf-8")
+    ch = sha256_hex(b)
+    h = {"record_id": rid, "record_version_id": rvid, "record_kind": "source_chunk",
+         "chunk_id": "chk_" + rvid, "source_path": path, "abs_path": None,
+         "content_hash": ch, "chunk_content_hash": ch, "span": {"start": 0, "end": len(b)},
+         "span_label": "bytes:0-%d" % len(b), "status": currentness, "currentness": currentness,
+         "authority_level": "source_material", "namespace": ns, "source": ns,
+         "source_version_id": "ver_" + rvid, "lexical_rank": rank, "lexical_score": 1.0 - (rank - 1) * 0.01,
+         "vector_rank": None, "fused_rank": rank, "fused_score": 1.0 - (rank - 1) * 0.01,
+         "index_snapshot": "digest_i32_0001", "corpus_version": "digest_i32_0001",
+         "tie_break_key": rvid, "snippet": text, "rank": rank}
+    if contradicts is not None:
+        h["contradicts"] = contradicts
+    return h
+
 # ----------------------------------------------------------------------------- primitives -------
 def test_primitives():
     print("[primitives]")
@@ -100,8 +118,8 @@ def test_three_regions():
           "requested_side_effects" in p["task_input"])
     check("permission_grants live ONLY in control_plane",
           "permission_grants" in p["control_plane"] and "permission_grants" not in p["task_input"])
-    check("rendering contract order control->task->evidence",
-          p["rendering"]["order"] == ["control_plane", "task_input", "evidence"])
+    check("rendering contract order control->task->working_memory->evidence (i32/U3)",
+          p["rendering"]["order"] == ["control_plane", "task_input", "working_memory", "evidence"])
 
 def test_injection():
     print("[acceptance a: P0-1 INJECTION -- evidence cannot populate control_plane / alter contract / selection]")
@@ -424,13 +442,179 @@ def test_error_paths():
     check("empty-pool packet still deterministic id", m["result"]["packet"]["packet_id"].startswith("cpkt_"))
     check("empty-pool packet is non_execution", m["result"]["packet"]["non_execution"] is True)
 
+# =============================================================== i32 Tier-0 seam repairs (D-0092) ===
+
+def test_query_classification():
+    print("[i32/U5 acceptance b: deterministic query-classification stage -- all 9 classes reachable]")
+    # all nine MEMORY_ARCHITECTURE s5 classes are reachable by SOME task_type (a stub; router is Tier 1).
+    reachable = set(cc.TASK_TYPE_QUERY_CLASS.values())
+    check("all 9 query classes reachable by task_type", reachable == cc.QUERY_CLASS_SET,
+          "%s vs %s" % (sorted(reachable), sorted(cc.QUERY_CLASS_SET)))
+    check("classifier maps documentation -> global_synthesis",
+          cc.classify_query({}, "documentation", [])[0] == "global_synthesis")
+    check("classifier maps coding -> procedure_selection",
+          cc.classify_query({}, "coding", [])[0] == "procedure_selection")
+    check("explicit task.query_class overrides",
+          cc.classify_query({"query_class": "precedent_search"}, "coding", [])[0] == "precedent_search")
+    check("unmapped task_type + literals -> exact_reference",
+          cc.classify_query({}, "weird", ["D-0092"])[0] == "exact_reference")
+    # stamped into task_input + selection descriptor + identity (packet_id coverage, s6).
+    p = compile_case("compile_case.json")["result"]["packet"]
+    check("query_class in task_input", p["task_input"]["query_class"] in cc.QUERY_CLASS_SET)
+    check("query_class in selection.descriptor",
+          p["selection"]["descriptor"]["query_class"] == p["task_input"]["query_class"])
+    check("query_class in identity", p["identity"]["query_class"] == p["task_input"]["query_class"])
+    # query_class is part of packet identity: change it, the packet_id changes.
+    base = load("compile_case.json")
+    alt = json.loads(json.dumps(base)); alt["task"]["query_class"] = "precedent_search"
+    palt = cc.run(dict(alt, op="compile"))["result"]["packet"]
+    check("query_class change alters packet_id (identity coverage)", palt["packet_id"] != p["packet_id"])
+    check("altered query_class stamped", palt["identity"]["query_class"] == "precedent_search")
+
+def test_current_only_propagation():
+    print("[i32/U4 acceptance b: current_only derives from query_class; explicit time_horizon overrides]")
+    def params_for(task):
+        config = cc._resolve_config(task, {}); norm = cc.normalize_task(task, config)
+        cp = cc.build_control_plane(task, norm["original_goal"])
+        desc = cc.build_selection_descriptor(task, norm)
+        return norm, cc.build_selection_params(cp, desc)
+    n1, p1 = params_for({"original_goal": "g", "request_text": "state", "task_type": "documentation"})
+    check("current-leaning class -> current_only True", p1["current_only"] is True and n1["current_only"] is True)
+    n2, p2 = params_for({"original_goal": "g", "request_text": "history", "task_type": "history"})
+    check("time-spanning class (history) -> current_only False",
+          p2["current_only"] is False and n2["query_class"] == "historical_reconstruction")
+    n3, p3 = params_for({"original_goal": "g", "request_text": "history", "task_type": "history",
+                         "time_horizon": "current_only"})
+    check("explicit time_horizon overrides the class", p3["current_only"] is True)
+    check("query temporal_mode carried on the retriever query set",
+          all(q.get("temporal_mode") in ("current_only", "any_valid_version") for q in n1["query_set"]))
+    # a current-vs-current `contradicts` edge among selected evidence -> packet_disposition conflicted (U4).
+    t = "Alpha current claim.\n"; u = "Beta current claim.\n"
+    ha = _hit("projA/a.md", t, "ca_v1", "ca", contradicts=["cb_v1"])
+    hb = _hit("projA/b.md", u, "cb_v1", "cb", rank=2)
+    args = {"op": "compile", "task": {"original_goal": "reconcile", "request_text": "current claim",
+            "namespace": "projA", "task_type": "documentation"},
+            "retrieval_batches": [{"query_index": 0, "hits": [ha, hb]}],
+            "source_texts": {"projA/a.md": t, "projA/b.md": u},
+            "retrieval_meta": {"retriever": "mock", "corpus_version": "digest_i32_0001"}}
+    pc = cc.run(args)["result"]["packet"]
+    check("contradicts edge among current evidence -> conflicted",
+          pc["disposition"]["packet_disposition"] == "conflicted")
+    check("contradicts_edge contradiction recorded",
+          any(x["kind"] == "contradicts_edge" for x in pc["disposition"]["contradictions"]))
+
+def test_namespace_hard_boundary():
+    print("[i32/U1 acceptance a: namespace passed BOTH ways + fail-closed on a cross-namespace item]")
+    # single-namespace compile: allowed_namespaces stamped both-ways; every evidence item in-namespace.
+    p = compile_case("namespace_case.json")["result"]["packet"]
+    check("allowed_namespaces in task_input", p["task_input"]["allowed_namespaces"] == ["projA"])
+    check("allowed_namespaces in identity (packet_id coverage)", p["identity"]["allowed_namespaces"] == ["projA"])
+    ex_ns = set(e["namespace"] for e in p["evidence"]["excerpts"])
+    check("every excerpt is in-namespace", ex_ns <= {"projA"} and len(p["evidence"]["excerpts"]) >= 1)
+    # GATE TEST 3 (i32): provenance-expansion on a NAMESPACED fixture -- every excerpt reconstructs to source.
+    for e in p["evidence"]["excerpts"]:
+        if e["provenance"]["provenance_mode"] == cc.PROV_DIRECT_SPAN:
+            src = load("namespace_case.json")["source_texts"][e["source_path"]]
+            raw = src.encode("utf-8")[e["span"]["start"]:e["span"]["end"]].decode("utf-8")
+            check("namespaced direct_span reproduces source bytes", raw == e["text"] and e["provenance"]["reproduced"])
+    check("gate test 3: provenance_reproduced_all on the namespaced fixture",
+          p["evaluation_hooks"]["packet_metrics"]["provenance_reproduced_all"]
+          and p["evaluation_hooks"]["packet_metrics"]["provenance_valid_all"])
+    ref_ns = set()
+    for key in ("current_state_refs", "candidate_skills", "relevant_procedures",
+                "relevant_failures", "similar_episodes"):
+        for r in p["evidence"][key]:
+            if r.get("namespace") is not None:
+                ref_ns.add(r["namespace"])
+    check("every ref is in-namespace", ref_ns <= {"projA"})
+    # filters.namespace reaches the retriever query set (U1, the retriever-side half).
+    for q in p["retrieval_provenance"]["query_set"]:
+        check("query carries filters.namespace", q["filters"].get("namespace") == "projA")
+        break
+    # the selection params carry allowed_namespaces (the selpol-side half).
+    case = load("namespace_case.json"); task = case["task"]
+    config = cc._resolve_config(task, {}); norm = cc.normalize_task(task, config)
+    cp = cc.build_control_plane(task, norm["original_goal"]); desc = cc.build_selection_descriptor(task, norm)
+    params = cc.build_selection_params(cp, desc)
+    check("params.allowed_namespaces passed to selpol", params["allowed_namespaces"] == ["projA"])
+    check("descriptor.allowed_namespaces passed to selpol", desc["allowed_namespaces"] == ["projA"])
+    # FAIL-CLOSED: a mixed pool (projB leak) -> compile aborts (no packet emitted carrying the projB item).
+    mm = cc.run(dict(load("namespace_mixed_case.json"), op="compile"))
+    check("cross-namespace item fails closed (namespace_leak)",
+          (not mm["ok"]) and mm.get("error_code") == "namespace_leak", json.dumps(mm))
+    # multi-namespace requires an EXPLICIT control_plane grant naming the namespaces.
+    grant = json.loads(json.dumps(load("namespace_mixed_case.json")))
+    grant["task"]["control_plane"] = {"permission_grants": [{"namespaces": ["projA", "projB"]}]}
+    mg = cc.run(dict(grant, op="compile"))
+    check("multi-namespace grant admits both namespaces (no leak)", mg["ok"], json.dumps(
+        {k: mg.get(k) for k in ("ok", "error_code")}))
+    pg = mg["result"]["packet"]
+    check("granted compile carries both namespaces",
+          set(e["namespace"] for e in pg["evidence"]["excerpts"]) == {"projA", "projB"})
+    check("identity allowed_namespaces covers both", set(pg["identity"]["allowed_namespaces"]) == {"projA", "projB"})
+
+def test_working_memory_region():
+    print("[i32/U3 acceptance c: working_memory reserved region -- present, empty, NOT authority/evidence]")
+    p = compile_case("compile_case.json")["result"]["packet"]
+    check("working_memory is a FOURTH top-level region", "working_memory" in p)
+    wm = p["working_memory"]
+    check("working_memory reserved + empty (no store)",
+          wm["present"] is False and wm["items"] == [] and wm["item_count"] == 0)
+    check("working_memory items carry content_role=working_state, can_instruct=false",
+          wm["content_role"] == "working_state" and wm["can_instruct"] is False)
+    check("working_memory is NOT evidence + NOT execution authority",
+          wm["is_evidence"] is False and wm["authority"] == "task_state_only")
+    check("working_memory keyed by task_id", wm["task_id"] == p["identity"]["task_id"])
+    check("working_memory is a DISTINCT region (not inside control_plane/evidence)",
+          "working_memory" not in p["control_plane"] and "working_memory" not in p["evidence"])
+    check("render order control->task->working_memory->evidence",
+          p["rendering"]["order"] == ["control_plane", "task_input", "working_memory", "evidence"])
+    # the region is actually rendered THIRD in the final model-facing input.
+    rendered = cc.render_packet_input(p["control_plane"], p["task_input"], wm, p["evidence"]["excerpts"])
+    i_task = rendered.index("=== TASK ===")
+    i_wm = rendered.index("=== WORKING MEMORY")
+    i_ev = rendered.index("=== EVIDENCE")
+    check("working_memory rendered between task and evidence", i_task < i_wm < i_ev)
+
+def test_new_reason_codes_carry():
+    print("[i32/U-import acceptance d: the new selpol reason_codes are CARRIED onto evidence + omission]")
+    # #40 copies selpol reason_codes verbatim onto the excerpt (proven end-to-end by byte-identity); here we
+    # prove #40 HANDLES the NEW i32 codes (produced by selpol 1.1.0 at the fold): superseded_demote is
+    # carried onto a SELECTED excerpt; a hard_filter_namespace/-stale SUNK row maps to omission 'hard_filter'.
+    txt = "superseded but still selected below its successor.\n"
+    hit = {"record_version_id": "r_sup", "record_id": "rr", "record_kind": "source_chunk",
+           "source_path": "projA/s.md", "namespace": "projA", "authority_level": "source_material",
+           "status": "current", "currentness": "current", "content_hash": sha256_hex(txt),
+           "chunk_content_hash": sha256_hex(txt), "span": {"start": 0, "end": len(txt.encode())},
+           "span_label": "b", "snippet": txt, "token_count": 8}
+    pool = {"r_sup": {"hit": hit, "record_version_id": "r_sup", "best_rank": 2,
+                      "matched_queries": [0], "occurrences": []}}
+    rows = [{"record_version_id": "r_sup", "selection_rank": 2, "selection_score": 5,
+             "selection_policy_id": "selpol_rrf_v1", "selected": True, "rrf_score": 100,
+             "reason_codes": ["superseded_demote", "fusion_rrf", "selected"],
+             "retrieval_rank": 1, "lexical_rank": 1, "vector_rank": None, "fused_rank": 1}]
+    ex, om, acc = cc.select_into_budget(rows, pool, cc.DEFAULT_CONFIG, {"projA/s.md": txt}, None, [])
+    check("superseded_demote carried onto the excerpt",
+          len(ex) == 1 and "superseded_demote" in ex[0]["selection"]["reason_codes"])
+    for code in ("hard_filter_namespace", "hard_filter_stale"):
+        h2 = dict(hit, record_version_id="r_" + code, namespace="projB")
+        pool2 = {h2["record_version_id"]: {"hit": h2, "record_version_id": h2["record_version_id"],
+                 "best_rank": 1, "matched_queries": [0], "occurrences": []}}
+        rows2 = [{"record_version_id": h2["record_version_id"], "selection_rank": 1, "selection_score": -9,
+                  "selected": False, "reason_codes": [code], "retrieval_rank": 1}]
+        ex2, om2, _ = cc.select_into_budget(rows2, pool2, cc.DEFAULT_CONFIG, {}, None, [])
+        check("%s -> omission reason hard_filter, not excerpted" % code,
+              not ex2 and any(o["reason"] == "hard_filter" for o in om2))
+
 def main():
-    print("== context.compile 0.2 off-machine test gate ==")
+    print("== context.compile 0.4 off-machine test gate (i32 Tier-0 seam repairs) ==")
     for t in (test_primitives, test_normalize, test_three_regions, test_injection,
               test_dispositions, test_consumer_profile_and_transport, test_selpol_interface,
               test_selpol_stale_demote, test_selection_byte_identity, test_provenance_modes,
               test_identity_and_determinism, test_corpus_pin, test_omission_and_diversity,
-              test_a3_skill_cards, test_eval_hooks, test_expand, test_error_paths):
+              test_a3_skill_cards, test_eval_hooks, test_expand, test_error_paths,
+              test_query_classification, test_current_only_propagation, test_namespace_hard_boundary,
+              test_working_memory_region, test_new_reason_codes_carry):
         t()
     total = _passed + _failed
     print("\n== %d/%d passed, %d failed ==" % (_passed, total, _failed))

@@ -377,11 +377,14 @@ def build_transport_overflow_case():
     h = chunk_hit("core-docs/big.md", big, 0, len(bb), rank=1, record_id="big_rec",
                   record_version_id="big_rec_v1")
     h["corpus_version"] = "digest_tx_0001"; h["index_snapshot"] = "digest_tx_0001"
+    # i32 (D-0092): max_context sized so the control+task+working_memory FRAME (~405 tokens, incl the U3
+    # reserved working_memory section) fits with margin, while the ~900-token evidence still overflows the
+    # transport window and drops (transport_overflow) -> needs_expansion, frame never truncated.
     task = {"original_goal": "Answer from the big source.", "request_text": "oversize required source",
             "namespace": "core-docs", "task_type": "documentation",
             "relevant_paths": ["core-docs/big.md"],
             "config": {"token_budget": 5000},
-            "consumer_profile": {"max_context": 400, "reserved_system_tokens": 0,
+            "consumer_profile": {"max_context": 512, "reserved_system_tokens": 0,
                                  "reserved_tool_tokens": 0, "reserved_generation_tokens": 0}}
     return {"task": task, "retrieval_batches": [{"query_index": 0, "hits": [h]}],
             "source_texts": {"core-docs/big.md": big},
@@ -457,11 +460,54 @@ def build_expand_case_full(compile_module):
     return {"packet": packet, "request": ec["expand_request"],
             "expansion_candidates": ec["expansion_candidates"], "source_texts": ec["source_texts"]}
 
+def build_namespace_case():
+    # i32/U1 + GATE TEST 3: a SINGLE-namespace (projA) fixture. Every excerpt + ref must be projA, the
+    # provenance-expansion gate must reproduce each cited direct_span, and allowed_namespaces must be
+    # [projA]. task_type documentation -> query_class global_synthesis -> current_only True.
+    a1 = "# Project A doctrine\n\nProject A pins the lease TTL to 1800 seconds under res.lease #29.\n"
+    a2 = "# Project A fencing\n\nProject A uses three-identity fencing to reject a stale holder.\n"
+    b1 = a1.encode("utf-8"); b2 = a2.encode("utf-8")
+    h1 = chunk_hit("projA/doctrine.md", a1, 0, len(b1), rank=1, record_id="a_doc",
+                   record_version_id="a_doc_v1", namespace="projA", corpus="digest_ns_0001")
+    h2 = chunk_hit("projA/fencing.md", a2, 0, len(b2), rank=2, record_id="a_fen",
+                   record_version_id="a_fen_v1", namespace="projA", corpus="digest_ns_0001")
+    task = {"original_goal": "Summarise Project A's lease + fencing doctrine.",
+            "request_text": "project A lease TTL fencing stale holder",
+            "namespace": "projA", "task_type": "documentation",
+            "config": {"token_budget": 2000, "per_source_cap": 3}}
+    return {"task": task, "retrieval_batches": [{"query_index": 0, "hits": [h1, h2]}],
+            "source_texts": {"projA/doctrine.md": a1, "projA/fencing.md": a2},
+            "retrieval_meta": {"retriever": "mock", "corpus_version": "digest_ns_0001"},
+            "_allowed_namespaces": ["projA"]}
+
+def build_namespace_mixed_case():
+    # i32/U1 FAIL-CLOSED: a projA compile whose injected pool ALSO carries a projB hit (a cross-namespace
+    # leak the shipped selpol 1.0.0 does NOT filter). #40's own namespace backstop MUST abort the compile
+    # (error_code namespace_leak) -- no packet is ever emitted carrying the projB item. At the orchestrator
+    # fold with selpol 1.1.0 the projB candidate is SUNK (hard_filter_namespace) before the backstop, so a
+    # clean projA-only packet emits; that leg is proven at the fold. Both hits share ONE corpus_version.
+    a1 = "# Project A doctrine\n\nProject A pins the lease TTL to 1800 seconds.\n"
+    b1 = "# Project B doctrine\n\nProject B pins the lease TTL to 900 seconds.\n"
+    ab = a1.encode("utf-8"); bb = b1.encode("utf-8")
+    ha = chunk_hit("projA/doctrine.md", a1, 0, len(ab), rank=1, record_id="a_doc",
+                   record_version_id="a_doc_v1", namespace="projA", corpus="digest_nsx_0001")
+    hb = chunk_hit("projB/doctrine.md", b1, 0, len(bb), rank=2, record_id="b_doc",
+                   record_version_id="b_doc_v1", namespace="projB", corpus="digest_nsx_0001")
+    task = {"original_goal": "State Project A's lease TTL.", "request_text": "project lease TTL",
+            "namespace": "projA", "task_type": "documentation",
+            "config": {"token_budget": 2000, "per_source_cap": 3}}
+    return {"task": task, "retrieval_batches": [{"query_index": 0, "hits": [ha, hb]}],
+            "source_texts": {"projA/doctrine.md": a1, "projB/doctrine.md": b1},
+            "retrieval_meta": {"retriever": "mock", "corpus_version": "digest_nsx_0001"},
+            "_leak_rvid": "b_doc_v1"}
+
 def main():
     import sys
     sys.path.insert(0, os.path.dirname(HERE))
     import context_compiler as _cc
     cases = {
+        "namespace_case.json": build_namespace_case(),
+        "namespace_mixed_case.json": build_namespace_mixed_case(),
         "compile_case.json": build_compile_case(),
         "diversity_case.json": build_diversity_case(),
         "expand_case.json": build_expand_case(),

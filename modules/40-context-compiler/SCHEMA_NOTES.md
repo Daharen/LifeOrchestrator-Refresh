@@ -1,27 +1,36 @@
-# context.compile -- SCHEMA_NOTES (Module 40, skill `context.compile` 0.3.0, i31 SELECTION-POLICY SETTLE)
+# context.compile -- SCHEMA_NOTES (Module 40, skill `context.compile` 0.4.0, i32 Tier-0 SEAM REPAIRS)
 
 **Authority.** This file records EVERY schema/interface interpretation for the D-0077 cross-module fold.
 The orchestrator's fold smoke (this compiler's REAL packets -> retrieval.eval #37 + a fresh 9B, and #40
-selecting via #37's canonical `selpol_rrf_v1`) depends on it. context.compile 0.3 CONSUMES the FROZEN
-`core-docs/MEMORY_CONTRACT.md` retriever-0.2 hit (s3) + s5 staleness enum + s1/A2 provenance envelope AND
-#37's CANONICAL `selpol_rrf_v1` (the s4 selection-policy library, PINNED, D-0089), and PRODUCES
-`lifeorch.context_packet/0.2`. On any conflict those contracts + their live gates win; a divergence is
-reconciled at fold, never silently. Governing: CONTEXT_PACKET_CONTRACT s0-s8 (s4 PINNED, D-0089; target
-D-0087); MEMORY_CONTRACT s1/s3/s5 + A2/A3; the directive `research/2026-07-31-...-cognitive-virtual-memory.md`
-s8; the frontier digest `research/2026-08-02-frontier-wave3-design-redteam.md` (P0-1..P0-5, P1-1);
-SKILL_CONTRACT; D-0089/D-0088/D-0087/D-0086/D-0080/D-0083/D-0085/D-0077.
+selecting via #37's canonical `selpol_rrf_v1`) depends on it. context.compile 0.4 CONSUMES the FROZEN
+`core-docs/MEMORY_CONTRACT.md` retriever-0.2 hit (s3) + s5 staleness enum + s1/A2 provenance envelope + A4
+(the i32 Tier-0 seams) AND #37's CANONICAL `selpol_rrf_v1` (the s4 selection-policy library, PINNED D-0089;
+i32-amended, D-0092), and PRODUCES `lifeorch.context_packet/0.2` (i32 amendment, ADDITIVE). On any conflict
+those contracts + their live gates win; a divergence is reconciled at fold, never silently. Governing:
+CONTEXT_PACKET_CONTRACT s0-s8 (s4 PINNED D-0089; i32 amendment D-0092); MEMORY_CONTRACT s1/s3/s5 + A2/A3/A4;
+MEMORY_ARCHITECTURE s5 (the 9 query classes) + s9 (Tier-0 invariants); the directive
+`research/2026-07-31-...-cognitive-virtual-memory.md` s8; the frontier digest
+`research/2026-08-02-frontier-wave3-design-redteam.md` (P0-1..P0-5, P1-1); SKILL_CONTRACT;
+D-0092/D-0090/D-0089/D-0087/D-0086/D-0083/D-0085/D-0080/D-0077.
 
-**i31 delta (D-0089 -- one selection owner; read s8 + s12 + s7 for the fold).** The ONLY behavioral change
-vs 0.2: #40 RETIRES the in-module `selpol_reference.py` (rank-RRF-primary) and IMPORTS #37's canonical
-`selpol_rrf_v1` (raw-fused-score-primary composite; `policy_version=1.0.0`) by a resolved portable path.
-The packet SCHEMA is unchanged (`context_packet/0.2`). Selection order/scores/`packet_id` CHANGE (the
-canonical composite differs from the retired reference), so every fixture is REGENERATED to the canonical
-selection; all P0-1/P0-3/P0-4/P1-5/A2 structural tests stay green (they assert STRUCTURE, not a specific
-selection order). `worker_version`/`compiler_version` bump `0.2.0 -> 0.3.0`.
+**i32 delta (D-0092 -- Tier-0 seam repairs; ADDITIVE over `context_packet/0.2`, schema string UNCHANGED,
+module semver `0.3.0 -> 0.4.0`; the FULL interpretation is s15).** Five seams: (U1) `namespace` is a HARD
+boundary passed BOTH ways (`filters.namespace` + `params.allowed_namespaces`) with a fail-closed backstop; (U5)
+a deterministic query-classification STAGE stamps `query_class`; (U4) `current_only` derives from `query_class`
+(explicit `time_horizon` overrides) + a `contradicts`-edge -> `conflicted`; (U3) the FOURTH region
+`working_memory` is RESERVED (empty); the selpol import now passes the new i32 params + carries the new
+reason_codes. Packet identity now COVERS `query_class` + `allowed_namespaces` (s6). Two fixtures REGENERATED
+(`transport_overflow_case` for the new frame size; `expand_case_full` recompiled) + two NEW
+(`namespace_case`, `namespace_mixed_case`). All P0-1/P0-3/P0-4/P1-5/A2 + `non_execution:true` tests stay green.
+
+**i31 delta (D-0089 -- one selection owner; read s8 + s12 + s7 for the fold).** #40 RETIRED the in-module
+`selpol_reference.py` (rank-RRF-primary) and IMPORTS #37's canonical `selpol_rrf_v1` (raw-fused-score-primary
+composite; `policy_version=1.0.0`) by a resolved portable path. The packet SCHEMA is unchanged
+(`context_packet/0.2`). `worker_version`/`compiler_version` bumped `0.2.0 -> 0.3.0` (now `0.4.0` at i32).
 
 Worker: `context_compiler.py` (stdlib only); `_load_canonical_selpol()` imports #37's library. Entrypoint:
-`Invoke-ContextCompiler.ps1` (pwsh-file). CPU-only, no model, no network. `worker_version=0.3.0`,
-`compiler_version=0.3.0`, `packet_schema=lifeorch.context_packet/0.2`,
+`Invoke-ContextCompiler.ps1` (pwsh-file). CPU-only, no model, no network. `worker_version=0.4.0`,
+`compiler_version=0.4.0`, `packet_schema=lifeorch.context_packet/0.2`,
 `expansion_schema=lifeorch.context_expansion/0.2`.
 
 ---
@@ -315,3 +324,91 @@ channel may be null); the retriever/catalog DB (#36); skill-card content (#41); 
 metrics (#37); the 9B / any model; episode recording (#39); the FULL P0-1 adversarial injection SUITE + the
 action-capable gate release; a real tokenizer (retire count_is_exact=false); skill routing / plan validation;
 UI; web search. Does NOT touch model modules / models.json or any core-doc (`docs:[]`).
+
+## 15. i32 Tier-0 seam repairs (D-0092) -- the full interpretation (REQUIRED for the D-0077 fold)
+
+Realizes the packet/selection half of the seam-audit Tier-0 corrections (`MEMORY_ARCHITECTURE` s9;
+`CONTEXT_PACKET_CONTRACT` i32 amendment; `MEMORY_CONTRACT` A4). ADDITIVE over `context_packet/0.2` -- the
+packet SCHEMA STRING is UNCHANGED; only the module semver moves `0.3.0 -> 0.4.0`. #40 is the CONSUMER of #37's
+`selpol_rrf_v1`; the NEW selpol BEHAVIOR proves at the orchestrator fold with #37's shipped **1.1.0**.
+
+**Off-machine vs fold (load-bearing).** The shipped `selpol_rrf_v1` **1.0.0** `_resolve_params` reads only its
+known keys, so the new params (`allowed_namespaces`, `query_class`) are ignored additively; `current_only` is
+already honoured. Therefore off-machine (cloud python importing the REAL #37 1.0.0) proves: the params are
+PASSED; `query_class` stamping + `current_only` derivation + the `working_memory` region + the reason-code
+CARRY + #40's OWN namespace FAIL-CLOSED backstop. The selpol NEW behavior -- SINKING a cross-namespace
+candidate (`hard_filter_namespace`), HARD-filtering stale under `current_only` (`hard_filter_stale`), and
+demoting a superseded record below its live successor (`superseded_demote`) -- is proven at the fold with
+1.1.0. This split is stated plainly wherever a leg is deferred.
+
+**(U1) namespace HARD boundary, BOTH ways + fail-closed.** `task_input.namespace` is the authoritative compile
+namespace. `normalize_task` sets `filters.namespace` on every retriever query (the retriever-side hard filter,
+`MEMORY_CONTRACT` A4) and computes `allowed_namespaces` = the compile namespace + any namespaces named by an
+explicit `control_plane` grant (`_resolve_allowed_namespaces`; a grant is coordinator authority, NEVER an
+evidence field -- the P0-1 boundary). `build_selection_params` passes `params.allowed_namespaces` to selpol
+(the selection-side hard filter). `build_selection_descriptor` + `build_task_input` + the identity block all
+carry `allowed_namespaces`. FAIL-CLOSED: after `select()`, `enforce_namespace_boundary(sel_rows, allowed)`
+ABORTS the compile (`CompilerError` code `namespace_leak`) if ANY SELECTED candidate is outside the allowed
+set -- a cross-namespace item reaching selection output is a contract violation, so NO packet is emitted
+carrying it. `build_evidence_refs` also SKIPS any cross-namespace hit (a ref is an evidence item). With 1.1.0
+the cross-namespace candidate is SUNK before the backstop -> a clean single-namespace packet emits; with the
+shipped 1.0.0 (no namespace filter) a MIXED pool trips the backstop off-machine (proven by `namespace_mixed_
+case`). Single-namespace is the default; MULTI-namespace requires an explicit grant (proven: the mixed case +
+a `{permission_grants:[{namespaces:[projA,projB]}]}` grant compiles with both). Empty `allowed_namespaces` (no
+namespace declared) = a single global scope, not enforced. `filters.allowed_namespaces` is also stamped on the
+queries when the set has >1 member.
+
+**(U5) the query-classification STAGE (a stub; the router is Tier 1).** `classify_query(task, task_type,
+literals)` deterministically maps to one of the `MEMORY_ARCHITECTURE` s5 NINE `query_class` values. Priority:
+an explicit valid `task.query_class` override; else `TASK_TYPE_QUERY_CLASS` (every one of the nine is a value,
+so ALL NINE are reachable by task_type -- acceptance b); else an unmapped task_type with literals ->
+`exact_reference`, else `local_factual`. `query_class` (+ `query_class_basis`) is stamped into `task_input`,
+the selection `descriptor`, and packet `identity` (so `packet_id` COVERS it, s6). The existing task_types
+(coding/verification/research/planning/documentation/life/default) ALL map to CURRENT-leaning classes, so a
+0.3 task that omits `time_horizon` keeps its shipped `current_only` default -- NO 0.3 fixture flips. This is a
+deterministic map ONLY; the multi-channel query-aware ROUTER is Tier 1 (a NON-GOAL here).
+
+**(U4) current_only + supersession + contradicts.** `current_only` derives from `query_class`
+(`QUERY_CLASS_CURRENT_ONLY`: current_state/local_factual/global_synthesis/procedure_selection -> True; the
+time-spanning classes -> False) UNLESS the task sets an EXPLICIT `time_horizon`, which overrides. It flows to
+`norm.current_only` -> `params.current_only` (+ `descriptor.time_horizon`) -> selpol, and to each retriever
+query as `temporal_mode` (`current_only|any_valid_version`; distinct from the query `mode` = fts/exact
+CHANNEL). Supersession demote is selpol 1.1.0's (`superseded_demote`, carried through). A current-vs-current
+`contradicts` EDGE (A4) among selected CURRENT evidence drives `packet_disposition = conflicted`:
+`make_excerpt` carries `contradicts_refs` (`_contradicts_of` reads a `contradicts` list or a typed
+`child_edges`/`edges` entry), and `detect_contradictions` CONSUMES the declared edge (it does NOT semantically
+DETECT contradiction -- that is Tier 2, a NON-GOAL) in addition to the existing same-record two-current-version
+rule.
+
+**(U3) the working_memory region (RESERVED; store is Tier 1).** `build_working_memory(task)` adds the FOURTH
+top-level region between `task_input` and `evidence`: present-but-empty (`present:false`, `items:[]`,
+`item_count:0`, `store_status:reserved_no_store`), keyed by `task_id`. Trust: `content_role:working_state`,
+`can_instruct:false`, `authority:task_state_only`, `is_evidence:false` -- task-authoritative for STATE, NOT
+execution authority (permissions stay ONLY in `control_plane`) and NOT evidence. Render order (s1) is
+`control_plane -> task_input -> working_memory -> evidence` (`render_packet_input` + `rendering.order`); the
+region renders THIRD with a role banner, empty at Tier 0. NO store/promote/demote/working-memory retrieval is
+built (Tier 1, a NON-GOAL) -- ONLY the region + rendering + the exclusion rule.
+
+**(U-import) selpol import + new reason_codes.** #40 keeps importing #37's canonical `selpol_rrf_v1` by the
+resolved portable path (the D-0089 pattern). `build_selection_params` now also passes `allowed_namespaces`,
+`current_only`, `query_class`. #40 CARRIES selpol's additive reason_codes onto each excerpt verbatim (proven
+byte-identical by acceptance e/f), so the new codes `hard_filter_namespace` / `hard_filter_stale` /
+`superseded_demote` flow through automatically; `select_into_budget` maps a `hard_filter_*` sunk row to the
+`omission_manifest` reason `hard_filter` (the s6 enum has no per-cause bucket). `selection.i32_params` records
+what was passed for the fold. `select() -> byte-identical selection` on the same candidates + the same new
+params (acceptance f) holds under BOTH 1.0.0 and 1.1.0 because #40 delegates selection and never re-ranks.
+
+**Acceptance coverage (off-machine, `tests/context_compiler_tests.py`, 203/203):** (a) `test_namespace_hard_
+boundary` -- namespace passed both ways + stamped, mixed pool fails closed (`namespace_leak`), multi-namespace
+grant admits both, GATE TEST 3 provenance-expansion on the namespaced fixture. (b) `test_query_classification`
+(all 9 reachable + stamped + packet_id coverage) + `test_current_only_propagation` (derive/override +
+contradicts-edge -> conflicted). (c) `test_working_memory_region` (reserved, empty, not authority/evidence,
+rendered third). (d) `test_new_reason_codes_carry` (superseded_demote carried; hard_filter_* -> omission).
+(e/f) the existing `test_selection_byte_identity` now runs with the new descriptor/params. (g) determinism +
+`non_execution:true` unchanged. The `-Live` real-#36 leg + the selpol-1.1.0 NEW-behavior leg are DEFERRED to
+the orchestrator D-0077 mixed-namespace fold.
+
+**Fixtures.** REGENERATED: `transport_overflow_case` (`max_context` 400 -> 512 so the control+task+working_
+memory frame fits with margin while the ~900-token evidence still overflows -> `needs_expansion`);
+`expand_case_full` (recompiled -> a 0.4 packet). NEW: `namespace_case` (single-namespace projA, GATE TEST 3);
+`namespace_mixed_case` (projA + a projB leak -> fail-closed). All other input fixtures are byte-unchanged.

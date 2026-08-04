@@ -1,16 +1,17 @@
-# Module 40 -- context.compile (Context Compiler) 0.3.0
+# Module 40 -- context.compile (Context Compiler) 0.4.0
 
 The Collective Agent's context-compilation centerpiece (D-0080 directive Priority 4 / section 8),
-conformed to `core-docs/CONTEXT_PACKET_CONTRACT.md` (`context_packet/0.2`; **s4 PINNED, D-0089**). A
-**deterministic, CPU-only, no-model, no-network** skill that turns a task descriptor into a versioned,
-token-budgeted, SAFE, self-describing `lifeorch.context_packet/0.2` the coordinator hands a disposable model:
+conformed to `core-docs/CONTEXT_PACKET_CONTRACT.md` (`context_packet/0.2`; **s4 PINNED, D-0089**; **i32
+amendment, D-0092**). A **deterministic, CPU-only, no-model, no-network** skill that turns a task descriptor
+into a versioned, token-budgeted, SAFE, self-describing `lifeorch.context_packet/0.2` the coordinator hands a
+disposable model:
 
 ```
-normalize (8.1) -> retrieve via the retriever-0.2 seam (8.2)
--> select via #37's CANONICAL selpol_rrf_v1 (P1-1 / D-0089: IMPORTED, not reimplemented; policy_version 1.0.0)
+normalize + query-classify (8.1 + i32/U5) -> retrieve via the retriever-0.2 seam (8.2; namespace HARD filter)
+-> select via #37's CANONICAL selpol_rrf_v1 (P1-1 / D-0089: IMPORTED; i32 passes allowed_namespaces/current_only/query_class)
 -> token budget with EXACT accounting (8.4/16.3) + fail-closed transport (P0-4)
--> context_packet/0.2 = THREE regions (control_plane / task_input / evidence, P0-1),
-   packet_disposition (P0-3), A2 provenance modes (P0-2), identity/lineage (P1-5),
+-> context_packet/0.2 = FOUR regions (control_plane / task_input / working_memory / evidence, P0-1 + i32/U3),
+   packet_disposition (P0-3), A2 provenance modes (P0-2), identity/lineage covering query_class + allowed_namespaces (P1-5 + i32/s6),
    an omission_manifest, an immutable expand seam (8.5), and packet-evaluation hooks (8.6)
 ```
 
@@ -18,6 +19,32 @@ It **consumes** the FROZEN `MEMORY_CONTRACT` retriever-0.2 hit shape (s3) + s5 s
 provenance envelope AND the `CONTEXT_PACKET_CONTRACT` s4 selection-policy interface, and **produces**
 packets that retrieval.eval #37 0.2 and a fresh 9B consume at the orchestrator fold (D-0077). The 9B is
 NOT run here -- this module is deterministic; the model consumes the packet downstream.
+
+## The i32 Tier-0 seam repairs (D-0092)
+
+context.compile 0.4 plumbs the Tier-0 memory-architecture seams THROUGH the packet + selection (ADDITIVE
+over `context_packet/0.2` -- the schema string is unchanged; module semver `0.3.0 -> 0.4.0`):
+
+- **(U1) namespace is a HARD boundary, both ways.** `task_input.namespace` is passed as `filters.namespace`
+  to the retriever AND `params.allowed_namespaces` to selpol. A packet NEVER carries a cross-namespace
+  evidence item: a cross-namespace item reaching selection output FAILS CLOSED (`namespace_leak` compile
+  abort), and refs are namespace-guarded. Multi-namespace requires an explicit `control_plane` grant.
+- **(U5) a deterministic query-classification stage** maps `task_type` + descriptor to `query_class` (one of
+  the nine `MEMORY_ARCHITECTURE` s5 classes), stamped into `task_input` + the selection descriptor + packet
+  identity; it drives the temporal mode. (The multi-channel router is Tier 1 -- this is a stub.)
+- **(U4) `current_only`** derives from `query_class` (an explicit `time_horizon` overrides), flows to selpol
+  + each retriever query's `temporal_mode`; a current-vs-current `contradicts` edge among selected evidence
+  drives `packet_disposition = conflicted`.
+- **(U3) a fourth region `working_memory`** is RESERVED (present-but-empty; the per-`task_id` store is Tier 1):
+  render order `control_plane -> task_input -> working_memory -> evidence`; items carry
+  `content_role=working_state, can_instruct=false` -- task-authoritative for STATE, NOT execution authority
+  and NOT evidence.
+
+#40 remains the CONSUMER of #37's `selpol_rrf_v1`: it carries the new i32 reason_codes
+(`hard_filter_namespace` / `hard_filter_stale` / `superseded_demote`) onto evidence. Off-machine the shipped
+selpol 1.0.0 ignores the additive params (they are additive dict keys) and #40's own namespace fail-closed
+backstop is proven; the new selpol BEHAVIOR (namespace/stale hard-filter + supersession demote) is proven at
+the orchestrator D-0077 mixed-namespace fold with #37's shipped 1.1.0. See `SCHEMA_NOTES.md` s15.
 
 ## The i31 settle (D-0089): one selection owner
 
