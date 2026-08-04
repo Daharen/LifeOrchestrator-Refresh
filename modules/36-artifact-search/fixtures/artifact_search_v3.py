@@ -1,44 +1,6 @@
 #!/usr/bin/env python
 # artifact_search.py -- deterministic SQLite catalog + hybrid LEXICAL (FTS5) search worker
-# for artifact.search (Life Orchestrator, Module 36; skill id artifact.search). SCHEMA v4 / worker 0.4.0.
-#
-# 0.4 realizes MEMORY_CONTRACT Amendment A5 (D-0096, i33): Tier-0 NAMESPACE-CLOSURE + SUPERSESSION-HARDENING.
-# It folds the frontier Tier-0 red-team (pack 159e9cb5): the A4 seams (0.3) are a correct ENVELOPE-level FIRST
-# layer but INCOMPLETE. #36 is the retriever/catalog ENFORCEMENT POINT. ADDITIVE + backward-compatible:
-#   (U1') namespace CLOSURE -- SAFETY-CRITICAL. ONE canonical predicate `ns_permitted(candidate_ns, effective_
-#         allowed)` (the A5 mirror of #37's canonical, byte-identical accept/reject -- asserted at the fold) is
-#         enforced at EVERY retrieval stage AND every graph hop (the superseded_by chain walk; list-records edge
-#         walk), never only the seed candidate. EVERY returned/graph-reachable object is scope-checked (hit
-#         envelope, walked edges, any diagnostic array). A cross-namespace candidate is EXCLUDED before ranking
-#         and leaves NO identifying metadata in output -- only `namespace_violation_count` surfaces; identifying
-#         detail goes to a PRIVILEGED LOCAL security log (append-only file under the module runtime, NEVER
-#         returned). A returned hit outside the effective set is a fail-closed ERROR (`namespace_leak`) that
-#         ABORTS. Persisted DERIVED records/aggregates/dedup-clusters/`node`s MUST be namespace-HOMOGENEOUS
-#         across their provenance closure -- a cross-namespace derivative is REJECTED at ingest (fail-closed).
-#         `effective_allowed` is CALLER-SUPPLIED (the compiler computes intersection(request,grant)); absent =
-#         UNSCOPED (back-compat), an explicit EMPTY set => zero hits; NO implicit all/wildcard/prefix/parent.
-#   (U4') candidate-INDEPENDENT supersession. NEW s5 value `superseded`; NEW first-class edges `superseded_by`
-#         (record -> live successor) + inverse `supersedes`. `effective_current(record)` is computed from the
-#         CATALOG/graph -- status==current AND no valid reachable LIVE successor within scope at the snapshot --
-#         NOT from the retrieved pair, so `current_only` excludes a predecessor EVEN WHEN its successor is ABSENT
-#         from the returned pool (the i32 defect fixed). Chain invariants: acyclic; canonical direction; NO
-#         cross-namespace supersession (a cross-ns successor edge is IGNORED per-hop + REJECTED at ingest); a
-#         branch (>=2 live successors) is FLAGGED conflicted (surfaced, never a silent pick); a stale/deleted
-#         successor does not silently resurrect its predecessor.
-#   (U2') provenance_mode-conditional hit shape (A2): direct_span (path+span) | derived_record (record_content_
-#         hash + derivation_refs; span OPTIONAL) | aggregate (constituent refs) | tombstone (deletion prov).
-#         Hits RESERVE `candidate_role` (navigation|evidence) + retrieval-stage lineage (retrieval_stage_id/
-#         parent_stage_id/retrieval_plan_id) -- a compile is MULTI-STAGE (data only; the router is Tier 1).
-#   (U3') working-state STORE seam HARDENED. Reserve the store fields on the `working` kind (working_state_id/
-#         state_version/parent_state_version/namespace_scope/grant_snapshot_ref/created_from_packet_id/
-#         lifecycle_state/writer_authority; task_id/content_role/content_hash already present) as additive
-#         columns (NO store lifecycle -- Tier 1). Ordinary `search` REJECTS record_kind=working by DEFAULT;
-#         retrievable ONLY by an EXACT op that is CONJUNCTIVE -- task_id AND an in-scope namespace authorization.
-# schema_version 3 -> 4 is ADDITIVE in place: `records` gains the provenance_mode + working-store reservation
-# columns and a NEW privileged `security_log` table is created; sources/documents/document_versions/chunks are
-# rewritten by NONE of it (byte-identical -- the schema-evolution gate test). SCHEMA_NOTES.md is authoritative
-# for every A5 interpretation (the canonical-predicate mirror, per-hop + all-object scope-check, sanitized
-# rejection + security log, homogeneous-derivation rejection, catalog effective_current + the v3->v4 migration).
+# for artifact.search (Life Orchestrator, Module 36; skill id artifact.search). SCHEMA v3 / worker 0.3.0.
 #
 # 0.2 adopts the FROZEN MEMORY_CONTRACT (D-0083): the s1 record+provenance envelope, a generic
 # `ingest_records` SINK for TYPED records (from repo.intel #38 / episode.memory #39), the retriever-0.2
@@ -79,9 +41,9 @@
 #   * search results are emitted in a fully deterministic order with a stable tie-break (tie_break_key).
 import sys, os, json, time, hashlib, math, re, sqlite3, fnmatch, struct, traceback
 
-SCHEMA_VERSION = "4"                 # 1->2 (D-0083); 2->3 (A4/D-0092); 3->4 (A5/D-0096); forward-migrated in place
-PRIOR_SCHEMA_VERSIONS = ("1", "2", "3")
-WORKER_VERSION = "0.4.0"
+SCHEMA_VERSION = "3"                 # 1->2 (D-0083); 2->3 (A4/D-0092 Tier-0 seams); forward-migrated in place
+PRIOR_SCHEMA_VERSIONS = ("1", "2")
+WORKER_VERSION = "0.3.0"
 
 PARSER_MARKDOWN = ("markdown", "1")
 PARSER_TEXT = ("text", "1")
@@ -104,13 +66,10 @@ DEFAULT_MAX_EMBED_CHARS = 100_000
 VECTOR_ENCODING_VERSION = "f32le/1"
 
 # s5 staleness taxonomy -- status/currentness is an ENUM, never a boolean. 'current' is the healthy state.
-# A5/D-0096 adds `superseded` (a valid live successor exists in the supersession chain).
 STATUS_CURRENT = "current"
-STATUS_SUPERSEDED = "superseded"
-STATUS_DELETED = "deleted"
 STATUS_ENUM = {
     "current", "source_stale", "derivation_stale", "embedding_stale", "relationship_stale",
-    "summary_stale", "authority_stale", "temporal_expiry", "superseded", "deleted", "unverified",
+    "summary_stale", "authority_stale", "temporal_expiry", "deleted", "unverified",
 }
 
 # s1 record_kind enum (CLOSED). 'source_chunk' is produced by the chunk pipeline (via the envelope view),
@@ -130,25 +89,10 @@ ALL_RECORD_KINDS = TYPED_RECORD_KINDS | {"source_chunk"}
 # s1 record_edge canonical kinds. edge_kind is a free-text column (any producer edge is accepted), but this
 # is the DOCUMENTED canonical set; A4 (D-0092) adds `member_of_node` (record->node), `child_of_node`
 # (node->node) and `contradicts` (a current-vs-current conflict; detection is Tier 2 -- the edge is reserved).
-# A5 (D-0096) adds first-class `superseded_by` (record -> its live successor) + inverse `supersedes` (the
-# 0.3 `supersedes` name is kept -- it is now the canonical inverse of `superseded_by`).
 RECORD_EDGE_KINDS = {
-    "derives_from", "supersedes", "superseded_by", "relates_to", "references", "has_stage",
-    "describes_structural_skill",
+    "derives_from", "supersedes", "relates_to", "references", "has_stage", "describes_structural_skill",
     "member_of_node", "child_of_node", "contradicts",   # A4/D-0092 reserved-additive edges
 }
-# A5/U4': the supersession chain edges (record -> successor). `superseded_by` is the canonical forward
-# direction (predecessor -> its newer successor); `supersedes` is the inverse (successor -> predecessor).
-SUPERSESSION_FWD_KIND = "superseded_by"     # src = predecessor, dst = successor
-SUPERSESSION_INV_KIND = "supersedes"        # src = successor,   dst = predecessor
-# A5/U1'(c): edge kinds that create a DERIVATION / MEMBERSHIP provenance link -- their target must be
-# namespace-HOMOGENEOUS with the source (a cross-namespace target is a laundering path -> REJECT at ingest).
-# `supersedes`/`superseded_by` are checked separately (U4'd: no cross-namespace supersession). `relates_to`/
-# `references`/`contradicts` are non-derivational cross-references (not a provenance/laundering path).
-DERIVATION_EDGE_KINDS = {"derives_from", "member_of_node", "child_of_node"}
-
-# A2/A5 provenance modes -- select the s3 hit's provenance-field validation rule (U2').
-PROVENANCE_MODES = {"direct_span", "derived_record", "aggregate", "tombstone"}
 
 DEFAULT_EXCLUDE_DIRS = [
     ".git", "node_modules", "__pycache__", "runtime", "artifacts",
@@ -591,15 +535,6 @@ CREATE TABLE IF NOT EXISTS records (
   attrs_json          TEXT,
   task_id             TEXT,                    -- A4/D-0092: per-task_id working-memory scope (working kind)
   content_role        TEXT,                    -- A4/D-0092: 'evidence' baseline; a working record != evidence
-  provenance_mode     TEXT,                    -- A5/A2 (U2'): direct_span|derived_record|aggregate|tombstone
-  working_state_id    TEXT,                    -- A5/U3' working-store reservation (store lifecycle = Tier 1)
-  state_version       TEXT,                    -- A5/U3'
-  parent_state_version TEXT,                   -- A5/U3'
-  namespace_scope     TEXT,                    -- A5/U3'
-  grant_snapshot_ref  TEXT,                    -- A5/U3'
-  created_from_packet_id TEXT,                 -- A5/U3'
-  lifecycle_state     TEXT,                    -- A5/U3' active|closed|archived (reserved)
-  writer_authority    TEXT,                    -- A5/U3'
   text                TEXT,
   created_at          TEXT
 );
@@ -644,15 +579,6 @@ CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
 CREATE VIRTUAL TABLE IF NOT EXISTS records_fts USING fts5(
   text, heading, section_path, record_kind UNINDEXED, record_version_id UNINDEXED, record_id UNINDEXED,
   tokenize = 'unicode61'
-);
--- A5/U1'(d): the PRIVILEGED namespace-closure security log. Identifying detail (ids/paths/snippets) of a
--- cross-namespace REJECTED candidate is written HERE and NEVER returned to a caller. EXCLUDED from
--- catalog_digest (determinism) and from every op's result. Append-only in practice.
-CREATE TABLE IF NOT EXISTS security_log (
-  seq         INTEGER PRIMARY KEY AUTOINCREMENT,
-  created_at  TEXT,
-  event       TEXT,                            -- namespace_violation | namespace_leak | cross_namespace_derivation
-  detail_json TEXT
 );
 CREATE TABLE IF NOT EXISTS ingest_runs (
   run_id       TEXT PRIMARY KEY,
@@ -762,16 +688,13 @@ class Catalog:
             self.migration_actions.append("add_col:%s.%s" % (table, name))
 
     def _migrate(self, from_version):
-        # forward, in-place, version-chained: 1->2 (D-0083), 2->3 (A4/D-0092), 3->4 (A5/D-0096). Each step is
-        # additive; NONE of them rewrites a shipped table (sources/documents/document_versions/chunks stay
-        # byte-identical). Idempotent (a re-open of a current db reports no work).
+        # forward, in-place, version-chained: 1->2 (D-0083) then 2->3 (A4/D-0092). Each step is additive; the
+        # 2->3 step rewrites NONE of the shipped tables. Idempotent (a re-open of a current db reports no work).
         acts = self.migration_actions
         acts.append("from:%s" % from_version)
         if from_version == "1":
             self._migrate_1_to_2()
-        if from_version in ("1", "2"):
-            self._migrate_2_to_3()
-        self._migrate_3_to_4()
+        self._migrate_2_to_3()
         self.conn.execute("INSERT OR REPLACE INTO catalog_meta(key,value) VALUES('schema_version',?)", (SCHEMA_VERSION,))
         self.conn.execute("INSERT OR REPLACE INTO catalog_meta(key,value) VALUES('migrated_at',?)", (now_utc(),))
         self.conn.execute("INSERT OR REPLACE INTO catalog_meta(key,value) VALUES('migrated_from',?)", (from_version,))
@@ -863,22 +786,6 @@ class Catalog:
         self._add_col("records", "content_role", "TEXT")
         # (idx_records_task is created in _ensure_views AFTER migration, once the column exists.)
         self.migration_actions.append("reserve_a4:node+working_kinds;member_of_node+child_of_node+contradicts_edges")
-
-    def _migrate_3_to_4(self):
-        # A5/D-0096 NAMESPACE-CLOSURE + SUPERSESSION-HARDENING. ADDITIVE ONLY -- rewrites NO shipped table
-        # (sources/documents/document_versions/chunks byte-identical -- the schema-evolution gate test). The
-        # `superseded` s5 value + `superseded_by`/`supersedes` edges need NO new column (status/edge_kind are
-        # free-text). The deltas: the provenance_mode + working-store reservation columns on `records`, and the
-        # new privileged `security_log` table (created by SCHEMA_SQL above; ensured here for an older db).
-        for name in ("provenance_mode", "working_state_id", "state_version", "parent_state_version",
-                     "namespace_scope", "grant_snapshot_ref", "created_from_packet_id", "lifecycle_state",
-                     "writer_authority"):
-            self._add_col("records", name, "TEXT")
-        self.conn.execute(
-            "CREATE TABLE IF NOT EXISTS security_log (seq INTEGER PRIMARY KEY AUTOINCREMENT, "
-            "created_at TEXT, event TEXT, detail_json TEXT)")
-        self.migration_actions.append(
-            "reserve_a5:superseded_status+superseded_by/supersedes_edges;provenance_mode+working_store_cols;security_log")
 
     def schema_version(self):
         r = self.conn.execute("SELECT value FROM catalog_meta WHERE key='schema_version'").fetchone()
@@ -1199,14 +1106,6 @@ class Catalog:
         for r in [x for x in records if not isinstance(x, dict)]:
             rejected.append({"record_version_id": None, "reason": "not_an_object", "detail": repr(r)[:120]})
 
-        # A5/U1'(c): the in-BATCH namespace map (record_version_id -> declared namespace) so the homogeneity
-        # check resolves same-batch parents (a batch may declare a derived record next to its provenance).
-        batch_ns = {}
-        for r in ordered:
-            rv = _rvid(r)
-            if rv:
-                batch_ns[rv] = (r.get("namespace") or namespace_default)
-
         for r in ordered:
             rej = self._validate_record(r)
             if rej is not None:
@@ -1235,20 +1134,6 @@ class Catalog:
             if status not in STATUS_ENUM:
                 rejected.append({"record_version_id": rvid, "reason": "invalid_status", "detail": "status %r not in the s5 enum" % status})
                 continue
-            namespace = (r.get("namespace") or namespace_default)
-            # A5/U1'(c) + U4'd: FAIL-CLOSED reject a persisted cross-namespace derivative (a laundering path).
-            # A derived/aggregate/node/member record + every supersession-chain edge MUST be namespace-
-            # HOMOGENEOUS across its (resolvable) provenance closure -- Tier 0 forbids cross-namespace
-            # derivatives (a shared-scope contract is a later tier).
-            hv = self._homogeneity_violation(r, namespace, batch_ns)
-            if hv is not None:
-                self._security_log("cross_namespace_derivation",
-                                   {"record_version_id": rvid, "namespace": namespace,
-                                    "relation": hv[0], "ref": hv[1], "other_namespace": hv[2]})
-                rejected.append({"record_version_id": rvid, "reason": "cross_namespace_derivation",
-                                 "detail": "a %s to %r spans namespace %r != %r (Tier-0 forbids cross-namespace derivatives)"
-                                 % (hv[0], hv[1], hv[2], namespace)})
-                continue
             span = r.get("source_span") or {}
             ss = span.get("start") if isinstance(span, dict) else None
             se = span.get("end") if isinstance(span, dict) else None
@@ -1270,38 +1155,14 @@ class Catalog:
             if content_role is None:
                 content_role = "working" if kind == WORKING_KIND else "evidence"
             content_role = str(content_role)
-            # A5/U2': provenance_mode (explicit producer value wins; else inferred from the s1 shape).
-            prov_mode = r.get("provenance_mode")
-            if prov_mode not in PROVENANCE_MODES:
-                prov_mode = _infer_provenance_mode(kind, (ss is not None and se is not None), bool(derivation_refs), status)
-            # A5/U3': reserved working-store fields (top-level or attrs; NO store lifecycle built -- Tier 1).
-            def _wf(name):
-                v = r.get(name)
-                if (v is None) and attrs_obj is not None:
-                    v = attrs_obj.get(name)
-                return (str(v) if v is not None else None)
-            working_state_id = _wf("working_state_id")
-            state_version = _wf("state_version")
-            parent_state_version = _wf("parent_state_version")
-            namespace_scope = _wf("namespace_scope")
-            if namespace_scope is None and kind == WORKING_KIND:
-                namespace_scope = namespace          # a working record's default scope is its own namespace
-            grant_snapshot_ref = _wf("grant_snapshot_ref")
-            created_from_packet_id = _wf("created_from_packet_id")
-            lifecycle_state = _wf("lifecycle_state")
-            if lifecycle_state is None and kind == WORKING_KIND:
-                lifecycle_state = "active"           # reserved default (store promote/demote is Tier 1)
-            writer_authority = _wf("writer_authority")
             self.conn.execute(
                 """INSERT INTO records(record_version_id,record_id,record_kind,namespace,content_hash,status,
                    authority_level,sensitivity_class,valid_from,valid_to,created_by_ingest_run,source_version_id,
                    source_path,source_span_start,source_span_end,derivation_refs,parser_fingerprint,
                    chunker_fingerprint,extractor_fingerprint,record_schema_version,token_count,embedding_space_id,
-                   section_path,heading,title,chunk_type,attrs_json,task_id,content_role,provenance_mode,
-                   working_state_id,state_version,parent_state_version,namespace_scope,grant_snapshot_ref,
-                   created_from_packet_id,lifecycle_state,writer_authority,text,created_at)
-                   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                (rvid, rid, kind, namespace, content_hash, status,
+                   section_path,heading,title,chunk_type,attrs_json,task_id,content_role,text,created_at)
+                   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (rvid, rid, kind, (r.get("namespace") or namespace_default), content_hash, status,
                  str(r.get("authority_level") or "derived"), str(r.get("sensitivity_class") or "default"),
                  r.get("valid_from"), r.get("valid_to"), run_id, r.get("source_version_id"),
                  r.get("source_path"), ss, se,
@@ -1310,8 +1171,6 @@ class Catalog:
                  str(r.get("schema_version") or (kind + "/1")), int(token_count), r.get("embedding_space_id"),
                  r.get("section_path"), r.get("heading"), r.get("title"), r.get("chunk_type"),
                  (canon_json(r.get("attrs")) if r.get("attrs") is not None else None), task_id, content_role,
-                 prov_mode, working_state_id, state_version, parent_state_version, namespace_scope,
-                 grant_snapshot_ref, created_from_packet_id, lifecycle_state, writer_authority,
                  text, created))
             if text.strip() != "":
                 self.conn.execute(
@@ -1338,52 +1197,6 @@ class Catalog:
                        "rejected": len(rejected), "kinds": kinds},
             "accepted": sorted(accepted), "unchanged": sorted(unchanged), "rejected": rejected,
         }
-
-    # ---- A5/U1'(c) namespace-homogeneity of a derived record's provenance closure ----
-    def _resolve_ref_ns(self, ref, batch_ns):
-        if ref in batch_ns:
-            return batch_ns[ref]
-        row = self.conn.execute("SELECT namespace FROM records WHERE record_version_id=?", (str(ref),)).fetchone()
-        return row["namespace"] if row else None
-
-    def _source_version_ns(self, source_version_id):
-        if not source_version_id:
-            return None
-        row = self.conn.execute("SELECT source_id FROM chunks WHERE version_id=? LIMIT 1", (str(source_version_id),)).fetchone()
-        return row["source_id"] if row else None
-
-    def _homogeneity_violation(self, r, namespace, batch_ns):
-        """Return (relation, offending_ref, other_namespace) for the FIRST RESOLVABLE cross-namespace parent /
-        derivation / membership / supersession target of `r`, else None. Only RESOLVABLE refs are checked (an
-        unresolved forward ref is not proof of a violation). Transitive closure holds by induction: every
-        ingested derivative is validated homogeneous with its direct parents, and parents ingest first (or are
-        in the same batch map). Non-derivational cross-references (relates_to/references/contradicts) are NOT a
-        provenance/laundering path and are not constrained here."""
-        def _neq(other):
-            # representation-tolerant: a record namespace (raw) vs a chunk source_id (slug) still compares equal
-            return other is not None and other != namespace and _slug(other) != _slug(namespace)
-        sns = self._source_version_ns(r.get("source_version_id"))
-        if _neq(sns):
-            return ("source_version", r.get("source_version_id"), sns)
-        for d in (r.get("derivation_refs") or []):
-            ref = d if isinstance(d, str) else ((d.get("ref") or d.get("dst_ref")) if isinstance(d, dict) else None)
-            if not ref:
-                continue
-            other = self._resolve_ref_ns(ref, batch_ns)
-            if _neq(other):
-                return ("derivation_ref", ref, other)
-        for e in (r.get("edges") or []):
-            if not isinstance(e, dict):
-                continue
-            ek = e.get("edge_kind") or "relates_to"
-            dst = e.get("dst_ref") or e.get("dst")
-            if not dst:
-                continue
-            if ek in DERIVATION_EDGE_KINDS or ek in (SUPERSESSION_FWD_KIND, SUPERSESSION_INV_KIND):
-                other = self._resolve_ref_ns(dst, batch_ns)
-                if _neq(other):
-                    return (ek, dst, other)
-        return None
 
     def _validate_record(self, r):
         for req in ("record_id", "record_version_id", "record_kind"):
@@ -1430,38 +1243,20 @@ class Catalog:
                 _add(d.get("ref") or d.get("dst_ref"), d.get("kind") or "record", "derives_from", None)
 
     # -------------------------------------------- record / envelope adapters ----
-    def _edges_for(self, rvid, effective_allowed=None):
-        """Return (parent_edges, child_edges, dropped_count). A5/U1'(b): when a namespace scope is active, an
-        edge whose OTHER endpoint resolves to an out-of-scope record is DROPPED from the returned envelope (a
-        cross-namespace `relates_to`/`references`/`contradicts` must not disclose a forbidden record id/ns) --
-        only the count surfaces. Derivation/membership/supersession edges are guaranteed intra-namespace at
-        ingest, so this only ever redacts non-derivational cross-references."""
-        parent, child, dropped = [], [], 0
-
-        def _endpoint_out_of_scope(ref):
-            if effective_allowed is None:
-                return False
-            row = self.conn.execute("SELECT namespace FROM records WHERE record_version_id=?", (str(ref),)).fetchone()
-            if row is None:
-                return False                    # unresolved endpoint (e.g. a document_version) -> not disclosed
-            return not ns_permitted(row["namespace"], effective_allowed)
-
+    def _edges_for(self, rvid):
+        parent, child = [], []
         for e in self.conn.execute("SELECT dst_ref,dst_kind,edge_kind FROM record_edges WHERE src_ref=? ORDER BY edge_kind,dst_ref", (rvid,)):
-            if _endpoint_out_of_scope(e["dst_ref"]):
-                dropped += 1; continue
             parent.append({"edge_kind": e["edge_kind"], "dst_ref": e["dst_ref"], "dst_kind": e["dst_kind"]})
         for e in self.conn.execute("SELECT src_ref,src_kind,edge_kind FROM record_edges WHERE dst_ref=? ORDER BY edge_kind,src_ref", (rvid,)):
-            if _endpoint_out_of_scope(e["src_ref"]):
-                dropped += 1; continue
             child.append({"edge_kind": e["edge_kind"], "src_ref": e["src_ref"], "src_kind": e["src_kind"]})
-        return parent, child, dropped
+        return parent, child
 
-    def _record_envelope(self, row, effective_allowed=None):
-        parent, child, dropped = self._edges_for(row["record_version_id"], effective_allowed)
+    def _record_envelope(self, row):
+        parent, child = self._edges_for(row["record_version_id"])
         span = None
         if row["source_span_start"] is not None and row["source_span_end"] is not None:
             span = {"start": row["source_span_start"], "end": row["source_span_end"]}
-        env = {
+        return {
             "record_id": row["record_id"], "record_version_id": row["record_version_id"],
             "record_kind": row["record_kind"], "namespace": row["namespace"],
             "content_hash": row["content_hash"], "status": row["status"],
@@ -1478,21 +1273,8 @@ class Catalog:
             "chunk_type": row["chunk_type"],
             "attrs": (json.loads(row["attrs_json"]) if row["attrs_json"] else None),
             "task_id": row["task_id"], "content_role": row["content_role"],   # A4/D-0092 (working-memory seam)
-            # A5/U2' provenance_mode + A5/U3' reserved working-store fields (data only; no store lifecycle).
-            "provenance_mode": (row["provenance_mode"] if _has_col(row, "provenance_mode") else None),
-            "working_state_id": (row["working_state_id"] if _has_col(row, "working_state_id") else None),
-            "state_version": (row["state_version"] if _has_col(row, "state_version") else None),
-            "parent_state_version": (row["parent_state_version"] if _has_col(row, "parent_state_version") else None),
-            "namespace_scope": (row["namespace_scope"] if _has_col(row, "namespace_scope") else None),
-            "grant_snapshot_ref": (row["grant_snapshot_ref"] if _has_col(row, "grant_snapshot_ref") else None),
-            "created_from_packet_id": (row["created_from_packet_id"] if _has_col(row, "created_from_packet_id") else None),
-            "lifecycle_state": (row["lifecycle_state"] if _has_col(row, "lifecycle_state") else None),
-            "writer_authority": (row["writer_authority"] if _has_col(row, "writer_authority") else None),
             "parent_edges": parent, "child_edges": child,
         }
-        if effective_allowed is not None:
-            env["out_of_scope_edges_dropped"] = dropped   # A5/U1' sanitized (count ONLY)
-        return env
 
     def _source_chunk_envelope(self, row):
         span = {"start": row["source_span_start"], "end": row["source_span_end"]}
@@ -1555,107 +1337,11 @@ class Catalog:
             if clauses:
                 q += " WHERE " + " AND ".join(clauses)
             q += " ORDER BY record_kind, record_id, record_version_id"
-            # A5/U1'(b): when a namespace scope is supplied, pass it so each envelope's edges are scope-checked
-            # (a cross-namespace edge target is redacted; only a count surfaces).
-            eff = effective_allowed_namespaces(filters)
             for row in self.conn.execute(q, params):
-                out.append(self._record_envelope(row, eff))
+                out.append(self._record_envelope(row))
                 if limit and len(out) >= limit:
                     break
         return {"count": len(out), "records": out}
-
-    # --------------------------------------- A5/U4' candidate-independent supersession (graph walk) ----
-    def _direct_successors(self, rvid):
-        """The IMMEDIATE successors of `rvid` in the supersession chain, with each successor's namespace +
-        status, read from the CATALOG/graph (never from a candidate pool). A successor is reachable via a
-        forward `superseded_by` edge (src=rvid) OR an inverse `supersedes` edge (dst=rvid). Deterministic order."""
-        out = {}
-        for e in self.conn.execute(
-                "SELECT dst_ref AS svid FROM record_edges WHERE src_ref=? AND edge_kind=?",
-                (rvid, SUPERSESSION_FWD_KIND)):
-            out[e["svid"]] = True
-        for e in self.conn.execute(
-                "SELECT src_ref AS svid FROM record_edges WHERE dst_ref=? AND edge_kind=?",
-                (rvid, SUPERSESSION_INV_KIND)):
-            out[e["svid"]] = True
-        res = []
-        for svid in sorted(out.keys()):
-            row = self.conn.execute("SELECT namespace,status FROM records WHERE record_version_id=?", (svid,)).fetchone()
-            res.append((svid, (row["namespace"] if row else None), (row["status"] if row else None), (row is not None)))
-        return res
-
-    def _supersession_info(self, rvid, namespace, effective_allowed):
-        """Catalog-computed supersession state for one record (A5/U4'). Returns
-        {live_successors:[svid...], conflicted:bool, has_live_successor:bool}. Walks the `superseded_by`/
-        `supersedes` chain transitively with an ACYCLIC guard; ENFORCES the canonical `ns_permitted` predicate
-        at EVERY hop AND same-namespace-only (a cross-namespace successor edge is IGNORED -- NO cross-namespace
-        supersession, U4'd), so a walk that would reach an out-of-scope node is blocked per-hop. A `live`
-        successor is one whose status == current; the walk continues THROUGH non-live successors to a terminal
-        (immediate-vs-terminal distinguished). A branch = >=2 DISTINCT immediate live in-scope successors."""
-        immediate_live = []
-        any_live = [False]
-        seen = set([rvid])
-
-        def walk(node):
-            for (svid, sns, sstatus, exists) in self._direct_successors(node):
-                if svid in seen:
-                    continue                       # acyclic guard
-                # per-hop enforcement: same-namespace + within the caller's closed scope; else IGNORE the edge
-                if sns is None or sns != namespace or not ns_permitted(sns, effective_allowed):
-                    continue
-                seen.add(svid)
-                if not exists:
-                    continue
-                if sstatus == STATUS_CURRENT:
-                    any_live[0] = True
-                    if node == rvid:
-                        immediate_live.append(svid)
-                else:
-                    walk(svid)                     # non-live successor -> keep walking toward a live terminal
-
-        walk(rvid)
-        return {"live_successors": sorted(set(immediate_live)),
-                "conflicted": len(set(immediate_live)) >= 2,
-                "has_live_successor": any_live[0]}
-
-    def _effective_current(self, rvid, record_kind, status, namespace, effective_allowed):
-        """A5/U4': effective_current = (stored status == current) AND (no valid reachable LIVE successor within
-        scope at the snapshot). Computed from the CATALOG, so `current_only` excludes a predecessor EVEN WHEN
-        its successor is absent from the returned pool (the i32 defect fixed). `source_chunk` has no record
-        supersession graph -> its stored status is authoritative."""
-        if status != STATUS_CURRENT:
-            return False
-        if record_kind == "source_chunk":
-            return True
-        return not self._supersession_info(rvid, namespace, effective_allowed)["has_live_successor"]
-
-    # ------------------------------------------------- A5/U1' privileged namespace security log (sink) ----
-    def set_security_log_path(self, path):
-        self._security_log_path = path
-
-    def _security_log(self, event, detail):
-        """Append-only PRIVILEGED local security log for namespace-closure violations (A5/U1'(d)). Identifying
-        detail (ids/paths/snippets) is written HERE and NEVER returned to the caller. A DB `security_log` table
-        (privileged, excluded from catalog_digest + never returned by any op) is the durable sink; a configured
-        `security_log_path` file additionally receives an append-only JSONL line. Best-effort + fail-safe:
-        logging must never break a query (nor leak via an exception message)."""
-        try:
-            self.conn.execute(
-                "INSERT INTO security_log(created_at,event,detail_json) VALUES(?,?,?)",
-                (now_utc(), str(event), canon_json(detail)))
-            self.conn.commit()
-        except Exception:
-            pass
-        p = getattr(self, "_security_log_path", None)
-        if p:
-            try:
-                d = os.path.dirname(os.path.abspath(p))
-                if d and not os.path.isdir(d):
-                    os.makedirs(d, exist_ok=True)
-                with open(p, "a", encoding="utf-8") as fh:
-                    fh.write(canon_json({"at": now_utc(), "event": event, "detail": detail}) + "\n")
-            except Exception:
-                pass
 
     # --------------------------------------------------------------- search ----
     def search(self, query, k, mode, filters):
@@ -1679,46 +1365,27 @@ class Catalog:
         corpus_version = self._get_corpus_version()
         want_status = filters.get("status") or filters.get("currentness")
         kind_filter = filters.get("record_kind")
-        # A5/U1': the ONE canonical CLOSED effective-allowed set (or None = unscoped). Enforced at EVERY stage.
-        effective_allowed = effective_allowed_namespaces(filters)
+        ns_allowed = _namespace_request(filters)   # A4/D-0092 (U1): the enforced hard-namespace set (or None)
 
-        # A5/U1': the searchers scope-check EVERY candidate with the canonical predicate BEFORE any other
-        # filter; a cross-namespace candidate is EXCLUDED and its identifying detail is written to the
-        # privileged security log (`violations`), NEVER surfaced -- only the COUNT is returned.
-        violations = []
         if mode == "fts":
-            scored = self._search_fts(query, filters, kind_filter, effective_allowed, violations)
+            scored = self._search_fts(query, filters, kind_filter)
         else:
-            scored = self._search_exact(query, filters, kind_filter, effective_allowed, violations)
-        # A5/U4': current_only is a real retrieval MODE keyed on CATALOG-computed effective_current (status==
-        # current AND no reachable live in-scope successor), so a superseded predecessor is HARD-EXCLUDED EVEN
-        # WHEN its successor is absent from this pool (the i32 pool-dependence defect fixed). Per-candidate
-        # supersession state is computed once + reused for the hit's reserved conflict flag.
-        sinfo = {}
-        for x in scored:
-            b = x["base"]
-            rvid = b.get("record_version_id")
-            si = self._supersession_info(rvid, b.get("namespace"), effective_allowed) if b.get("record_kind") != "source_chunk" else {"has_live_successor": False, "conflicted": False, "live_successors": []}
-            sinfo[rvid] = si
-            x["effective_current"] = (b.get("status") == STATUS_CURRENT) and (b.get("record_kind") == "source_chunk" or not si["has_live_successor"])
+            scored = self._search_exact(query, filters, kind_filter)
+        # A4/D-0092 (U4): current_only is a real retrieval MODE -- hard-EXCLUDE non-`current` candidates BEFORE
+        # ranking (never a demotion). historical/version-specific temporal intents (s6) are the eval/#37 side.
         if current_only:
-            scored = [x for x in scored if x["effective_current"]]
+            scored = [x for x in scored if x["base"].get("status") == STATUS_CURRENT]
         # deterministic fused order (lexical-only this wave): (-lexical_score, tie_break_key)
         scored.sort(key=lambda x: (-x["lexical_score"], x["tie_break_key"]))
         for lex_rank, s in enumerate(scored, start=1):
             s["lexical_rank"] = lex_rank
-        # A5/U1'(d): only the sanitized COUNT surfaces; the security log (privileged) already holds the detail.
-        namespace_violation_count = len(violations)
-        for v in violations:
-            self._security_log("namespace_violation", v)
         filter_decisions = {
             "mode": mode, "temporal_mode": temporal_mode, "current_only": current_only,
             "record_kind": kind_filter, "source": filters.get("source"),
             "type": filters.get("type"), "path_prefix": filters.get("path_prefix"),
             "content_hash": filters.get("content_hash"), "namespace": filters.get("namespace"),
-            "namespace_enforced": (effective_allowed is not None),
-            "namespace_allowed": (sorted(effective_allowed) if effective_allowed is not None else None),
-            "namespace_violation_count": namespace_violation_count,   # A5/U1' sanitized (count ONLY)
+            "namespace_enforced": (ns_allowed is not None),
+            "namespace_allowed": (sorted(ns_allowed) if ns_allowed is not None else None),
             "task_id": filters.get("task_id"),
             "status": want_status, "exclude_stale": bool(filters.get("exclude_stale", False)),
             "channels": ["lexical"],
@@ -1749,31 +1416,20 @@ class Catalog:
             hit["tie_break_key"] = x["tie_break_key"]
             hit["snippet"] = x["snippet"]
             hit["rank"] = fused_rank
-            # A5/U4': reserved catalog-computed supersession flags on the hit (never a silent pick).
-            si = sinfo.get(hit.get("record_version_id")) or {}
-            hit["effective_current"] = bool(x.get("effective_current"))
-            hit["supersession_conflicted"] = bool(si.get("conflicted"))
-            hit["superseded_by"] = list(si.get("live_successors") or [])
             hits.append(hit)
-        # A5/U1' all-hits-match assertion (per-hop + all-object closure, defense in depth): if ANY returned hit
-        # is outside the effective set, that is a fail-closed ERROR (`namespace_leak`) that ABORTS -- never a
-        # low-ranked hit. Uses the SAME canonical predicate as the pre-ranking exclusion, so it can only fire on
-        # a real invariant break. The abort message carries NO cross-namespace identifying detail (the leaked
-        # record's ids/namespace go to the privileged security log, not the caller-visible error).
-        if effective_allowed is not None:
+        # A4/D-0092 (U1) all-hits-match assertion: namespace is a hard partition -- if ANY returned hit is
+        # outside the requested set, that is a fail-closed internal error (`namespace_leak`), NEVER a
+        # low-ranked hit. Uses the SAME predicate as the pre-ranking exclusion, so it can only fire on a real
+        # invariant break (defense in depth).
+        if ns_allowed is not None:
             for h in hits:
-                if not ns_permitted(h.get("namespace"), effective_allowed):
-                    self._security_log("namespace_leak", {
-                        "record_version_id": h.get("record_version_id"), "record_kind": h.get("record_kind"),
-                        "namespace": h.get("namespace"), "effective_allowed": sorted(effective_allowed)})
+                if not _namespace_ok(h.get("namespace"), ns_allowed):
                     raise ASError("namespace_leak",
-                                  "retriever produced a hit outside the requested namespace scope (fail-closed abort; "
-                                  "detail in the privileged security log)")
+                                  "retriever produced a hit (%s, kind=%s) in namespace %r outside the requested set %r"
+                                  % (h.get("record_version_id"), h.get("record_kind"), h.get("namespace"), sorted(ns_allowed)))
         return {"query": query, "mode": mode, "k": k, "count": len(hits),
                 "filters": filters, "corpus_version": corpus_version,
                 "fusion_algo": "lexical_only", "fusion_version": "1",
-                "namespace_enforced": (effective_allowed is not None),
-                "namespace_violation_count": namespace_violation_count,   # A5/U1' sanitized (count ONLY)
                 "retrieval_channels": ["lexical"], "results": hits}
 
     def _chunk_hit_base(self, chunk_id):
@@ -1783,8 +1439,7 @@ class Catalog:
         d = self.conn.execute("SELECT abs_path FROM documents WHERE document_id=?", (row["document_id"],)).fetchone()
         section = row["section_path"]
         span_label = section if section else ("bytes:%d-%d" % (row["source_span_start"], row["source_span_end"]))
-        span = {"start": row["source_span_start"], "end": row["source_span_end"]}
-        base = {
+        return {
             "record_id": row["record_id"], "record_version_id": row["record_version_id"],
             "record_kind": "source_chunk", "chunk_id": chunk_id,
             "source_path": row["source_path"], "abs_path": (d["abs_path"] if d else None),
@@ -1793,25 +1448,13 @@ class Catalog:
             # own canonical-text hash is exposed separately as chunk_content_hash.
             "content_hash": row["doc_content_hash"],
             "chunk_content_hash": row["content_hash"],
-            # A2 provenance hash split (additive; legacy names kept above): a source_chunk's own bytes ARE the
-            # cited span, so record_content_hash == excerpt_hash == chunk_content_hash; source_content_hash is
-            # the document version identity.
-            "record_content_hash": row["content_hash"], "source_content_hash": row["doc_content_hash"],
-            "excerpt_hash": row["content_hash"],
-            "span": span,
+            "span": {"start": row["source_span_start"], "end": row["source_span_end"]},
             "span_label": span_label, "section_path": row["section_path"], "heading": row["heading"],
             "chunk_type": row["chunk_type"], "status": row["status"], "currentness": row["status"],
             "authority_level": row["authority_level"], "namespace": row["namespace"],
             "source": row["namespace"], "embedding_space_id": row["embedding_space_id"],
             "source_version_id": row["source_version_id"],
         }
-        # A5/U2': provenance_mode-conditional shape + reserved candidate_role + retrieval-stage lineage.
-        base["provenance_mode"] = "direct_span"
-        base["provenance"] = {"mode": "direct_span", "source_path": row["source_path"], "span": span,
-                              "source_content_hash": row["doc_content_hash"], "excerpt_hash": row["content_hash"]}
-        base["candidate_role"] = "evidence"
-        base.update(_reserved_stage_lineage())
-        return base
 
     def _record_hit_base(self, rvid):
         row = self.conn.execute("SELECT * FROM records WHERE record_version_id=?", (rvid,)).fetchone()
@@ -1827,48 +1470,21 @@ class Catalog:
             span_label = "bytes:%d-%d" % (row["source_span_start"], row["source_span_end"])
         else:
             span_label = "record:%s" % row["record_kind"]
-        derivation_refs = (json.loads(row["derivation_refs"]) if row["derivation_refs"] else None)
-        kind = row["record_kind"]
-        pmode = row["provenance_mode"] if _has_col(row, "provenance_mode") and row["provenance_mode"] else \
-            _infer_provenance_mode(kind, has_span, bool(derivation_refs), row["status"])
-        base = {
-            "record_id": row["record_id"], "record_version_id": rvid, "record_kind": kind,
+        return {
+            "record_id": row["record_id"], "record_version_id": rvid, "record_kind": row["record_kind"],
             "chunk_id": None, "source_path": row["source_path"], "abs_path": None,
-            "content_hash": row["content_hash"], "record_content_hash": row["content_hash"],
-            "source_content_hash": None, "excerpt_hash": None,
-            "span": span, "span_label": span_label,
+            "content_hash": row["content_hash"], "span": span, "span_label": span_label,
             "section_path": row["section_path"], "heading": row["heading"], "chunk_type": row["chunk_type"],
             "status": row["status"], "currentness": row["status"], "authority_level": row["authority_level"],
             "namespace": row["namespace"], "source": row["namespace"],
             "embedding_space_id": row["embedding_space_id"], "source_version_id": row["source_version_id"],
         }
-        # A5/U2': provenance fields CONDITIONAL on provenance_mode (a node/summary/aggregate has no single
-        # source span; a tombstone carries deletion provenance). span is retained for back-compat but the
-        # `provenance` block is the authoritative per-mode shape.
-        if pmode == "direct_span":
-            prov = {"mode": pmode, "source_path": row["source_path"], "span": (span if has_span else None)}
-        elif pmode == "aggregate":
-            prov = {"mode": pmode, "record_content_hash": row["content_hash"], "constituent_refs": (derivation_refs or [])}
-        elif pmode == "tombstone":
-            prov = {"mode": pmode, "record_content_hash": row["content_hash"], "deleted": True,
-                    "derivation_refs": derivation_refs}
-        else:  # derived_record (default for a typed record without a single source span)
-            prov = {"mode": "derived_record", "record_content_hash": row["content_hash"],
-                    "derivation_refs": derivation_refs, "span": (span if has_span else None)}
-        base["provenance_mode"] = pmode
-        base["provenance"] = prov
-        base["candidate_role"] = "navigation" if kind == NODE_KIND else "evidence"
-        base.update(_reserved_stage_lineage())
-        return base
 
-    # A5/U1': the namespace scope-check is factored OUT of the per-filter passes so the search loops can
-    # COUNT + LOG a cross-namespace rejection (sanitized) with the ONE canonical predicate. The passes helpers
-    # still assert namespace (defense in depth: export/list-records paths call them directly) using the
-    # precomputed effective set.
-    def _chunk_passes(self, c, filters, effective_allowed):
+    def _chunk_passes(self, c, filters):
         if filters.get("source") and c["source_id"] != _slug(filters["source"]):
             return False
-        if not ns_permitted(c["source_id"], effective_allowed):
+        # A4/D-0092 (U1): namespace is a HARD boundary (single value or an explicit set), applied BEFORE ranking.
+        if not _namespace_ok(c["source_id"], _namespace_request(filters)):
             return False
         if filters.get("type") and c["chunk_type"] != filters["type"]:
             return False
@@ -1878,17 +1494,15 @@ class Catalog:
             return False
         return True
 
-    def _record_passes(self, r, filters, effective_allowed):
-        if not ns_permitted(r["namespace"], effective_allowed):
+    def _record_passes(self, r, filters):
+        # A4/D-0092 (U1): namespace is a HARD boundary (single value or an explicit set), applied BEFORE ranking.
+        if not _namespace_ok(r["namespace"], _namespace_request(filters)):
             return False
-        # A5/U3': a `working` record surfaces ONLY under CONJUNCTIVE access -- the request scopes to its exact
-        # task_id AND supplies an in-scope namespace authorization (task-isolation and namespace-isolation are
-        # DIFFERENT mechanisms). "excluded by default" is too weak: absent EITHER, the working record is hidden.
+        # A4/D-0092 (U3): a `working` record surfaces ONLY when the request explicitly scopes to its own
+        # task_id (filters.task_id) -- it never leaks into ordinary retrieval.
         if r["record_kind"] == WORKING_KIND:
             scope = filters.get("task_id") or filters.get("working_task_id")
             if not scope or (r["task_id"] or "") != str(scope):
-                return False
-            if effective_allowed is None:      # no explicit namespace authorization -> not authorized
                 return False
         if filters.get("source") and (r["namespace"] or "") != filters["source"] and (r["namespace"] or "") != _slug(filters["source"]):
             return False
@@ -1900,12 +1514,7 @@ class Catalog:
                 return False
         return True
 
-    def _ns_reject(self, violations, kind, ident, ns):
-        # A5/U1'(d): record the SANITIZED violation (identifying detail stays in `violations` -> the privileged
-        # security log; ONLY the count is ever surfaced to the caller).
-        violations.append({"candidate_kind": kind, "id": ident, "namespace": ns})
-
-    def _search_fts(self, query, filters, kind_filter, effective_allowed, violations):
+    def _search_fts(self, query, filters, kind_filter):
         match = _fts_query(query)
         if not match:
             return []
@@ -1918,11 +1527,7 @@ class Catalog:
                 (match,)).fetchall()
             for r in rows:
                 c = self.conn.execute("SELECT * FROM chunks WHERE chunk_id=?", (r["chunk_id"],)).fetchone()
-                if c is None:
-                    continue
-                if not ns_permitted(c["source_id"], effective_allowed):
-                    self._ns_reject(violations, "source_chunk", c["chunk_id"], c["source_id"]); continue
-                if not self._chunk_passes(c, filters, effective_allowed):
+                if c is None or not self._chunk_passes(c, filters):
                     continue
                 base = self._chunk_hit_base(c["chunk_id"])
                 if base is None:
@@ -1936,11 +1541,7 @@ class Catalog:
                 (match,)).fetchall()
             for r in rows:
                 rec = self.conn.execute("SELECT * FROM records WHERE record_version_id=?", (r["rvid"],)).fetchone()
-                if rec is None:
-                    continue
-                if not ns_permitted(rec["namespace"], effective_allowed):
-                    self._ns_reject(violations, rec["record_kind"], rec["record_version_id"], rec["namespace"]); continue
-                if not self._record_passes(rec, filters, effective_allowed):
+                if rec is None or not self._record_passes(rec, filters):
                     continue
                 if kind_filter is not None and rec["record_kind"] != kind_filter:
                     continue
@@ -1950,7 +1551,7 @@ class Catalog:
                             "snippet": _snippet(rec["text"] or "", query, mode="fts")})
         return out
 
-    def _search_exact(self, query, filters, kind_filter, effective_allowed, violations):
+    def _search_exact(self, query, filters, kind_filter):
         q = str(query)
         ql = q.lower()
         out = []
@@ -1958,14 +1559,7 @@ class Catalog:
         want_records = (kind_filter is None or kind_filter in TYPED_RECORD_KINDS)
         if want_chunks:
             for c in self.conn.execute("SELECT * FROM chunks ORDER BY rel_path, chunk_index, chunk_id").fetchall():
-                if not ns_permitted(c["source_id"], effective_allowed):
-                    # count a violation ONLY when the candidate would otherwise match the query (a real leak
-                    # attempt), so an unscoped-corpus exact scan does not inflate the count with non-matches.
-                    text0 = c["text"]
-                    if text0.lower().count(ql) > 0 or ql in c["rel_path"].lower():
-                        self._ns_reject(violations, "source_chunk", c["chunk_id"], c["source_id"])
-                    continue
-                if not self._chunk_passes(c, filters, effective_allowed):
+                if not self._chunk_passes(c, filters):
                     continue
                 text = c["text"]
                 occ = text.lower().count(ql)
@@ -1981,17 +1575,13 @@ class Catalog:
                             "snippet": _snippet(text, q, mode="exact")})
         if want_records:
             for rec in self.conn.execute("SELECT * FROM records ORDER BY record_kind, record_id, record_version_id").fetchall():
-                text = rec["text"] or ""
-                occ = text.lower().count(ql)
-                path_hit = bool(rec["source_path"]) and ql in rec["source_path"].lower()
-                if not ns_permitted(rec["namespace"], effective_allowed):
-                    if occ > 0 or path_hit:
-                        self._ns_reject(violations, rec["record_kind"], rec["record_version_id"], rec["namespace"])
-                    continue
-                if not self._record_passes(rec, filters, effective_allowed):
+                if not self._record_passes(rec, filters):
                     continue
                 if kind_filter is not None and rec["record_kind"] != kind_filter:
                     continue
+                text = rec["text"] or ""
+                occ = text.lower().count(ql)
+                path_hit = bool(rec["source_path"]) and ql in rec["source_path"].lower()
                 if occ == 0 and not path_hit:
                     continue
                 score = float(occ) + (100.0 if path_hit else 0.0)
@@ -2071,49 +1661,8 @@ class Catalog:
             "WHERE d.status='active' AND d.serving_status='active' AND v.parse_status!='ok'").fetchone()["n"]
         add("serving_docs_point_at_parsed_version", incomplete_current == 0, "%d serving-active docs whose current version is not parse_status=ok" % incomplete_current)
 
-        # A5/U4' supersession-chain invariants (both endpoints must resolve to catalog records to be judged).
-        xns = self.conn.execute(
-            "SELECT COUNT(*) n FROM record_edges e JOIN records a ON e.src_ref=a.record_version_id "
-            "JOIN records b ON e.dst_ref=b.record_version_id "
-            "WHERE e.edge_kind IN ('superseded_by','supersedes') AND a.namespace IS NOT b.namespace "
-            "AND a.namespace != b.namespace").fetchone()["n"]
-        add("no_cross_namespace_supersession", xns == 0, "%d cross-namespace supersession edges" % xns)
-
-        add("supersession_chain_acyclic", not self._supersession_has_cycle(), "a superseded_by/supersedes cycle exists")
-
         ok = all(c["ok"] for c in checks)
         return {"ok": ok, "checks": checks}
-
-    def _supersession_has_cycle(self):
-        """DFS cycle detection over the canonical supersession direction (predecessor -> successor): a
-        `superseded_by` edge src->dst, plus an inverse `supersedes` edge dst->src (successor->predecessor)
-        read as predecessor(dst)->successor(src). Records-only (both endpoints resolvable)."""
-        adj = {}
-        for e in self.conn.execute("SELECT src_ref,dst_ref,edge_kind FROM record_edges WHERE edge_kind IN ('superseded_by','supersedes')"):
-            if e["edge_kind"] == SUPERSESSION_FWD_KIND:
-                a, b = e["src_ref"], e["dst_ref"]     # predecessor -> successor
-            else:
-                a, b = e["dst_ref"], e["src_ref"]     # supersedes: successor(src) supersedes predecessor(dst)
-            adj.setdefault(a, set()).add(b)
-        WHITE, GREY, BLACK = 0, 1, 2
-        color = {}
-
-        def visit(u):
-            color[u] = GREY
-            for v in sorted(adj.get(u, ())):
-                cv = color.get(v, WHITE)
-                if cv == GREY:
-                    return True
-                if cv == WHITE and visit(v):
-                    return True
-            color[u] = BLACK
-            return False
-
-        for node in sorted(adj.keys()):
-            if color.get(node, WHITE) == WHITE:
-                if visit(node):
-                    return True
-        return False
 
     # -------------------------------------------------------- catalog digest ----
     def catalog_digest(self):
@@ -2181,9 +1730,8 @@ class Catalog:
             "chunk_occurrence_id,chunker_fingerprint,source_id,chunk_type FROM chunks "
             "ORDER BY rel_path,chunk_index,chunk_id").fetchall()
         out = []
-        eff = effective_allowed_namespaces(filters or {})
         for c in rows:
-            if not self._chunk_passes(c, filters or {}, eff):
+            if not self._chunk_passes(c, filters or {}):
                 continue
             out.append({"chunk_id": c["chunk_id"], "rel_path": c["rel_path"],
                         "content_hash": c["content_hash"],
@@ -2254,49 +1802,13 @@ def _slug(s):
     return s.strip("-") or "src"
 
 
-# ============================================================================================================
-# A5/U1' -- the ONE canonical namespace predicate + rejection policy (MEMORY_CONTRACT A5, D-0096).
-#
-# CANONICAL-PREDICATE MIRROR NOTE (risk 6): A5(f) requires ONE predicate + rejection policy authored ONCE
-# (owned by #37 `lib/`, imported by #40) with #36's retriever implementing the IDENTICAL decision -- the i33
-# fold asserts byte-identical accept/reject across #36/#37/#40. #37's standalone `ns_permitted` was NOT yet on
-# disk at this worker's build time (only `selpol_rrf_v1.py` existed in modules/37-retrieval-eval/lib/), so per
-# the worker prompt's sanctioned fallback this is an EXACT MIRROR of the A5 semantics, kept intentionally
-# minimal + pure so the fold's byte-identity check is trivial. The decision is PURE membership of the
-# candidate's namespace string in the caller-supplied CLOSED effective set -- no wildcard/prefix/parent/shared.
-# ============================================================================================================
-
-def ns_permitted(candidate_namespace, effective_allowed):
-    """The canonical Tier-0 namespace predicate (A5/U1'). `effective_allowed` is a CLOSED set (frozenset/set)
-    of permitted namespace tokens supplied by the caller (the compiler computes it = intersection(request,
-    grant); the retriever NEVER widens it), OR None = UNSCOPED (no namespace boundary engaged -- the documented
-    back-compat / admin / eval path). Returns True iff the candidate is permitted:
-      * effective_allowed is None            -> True  (unscoped)
-      * candidate_namespace is None/missing   -> False (a record with no namespace is never permitted under a
-                                                        closed set -- fail-closed)
-      * otherwise                             -> str(candidate_namespace) in effective_allowed  (membership ONLY)
-    An EMPTY closed set permits NOTHING (fail-closed). There is NO implicit all/wildcard/prefix/parent/shared
-    namespace. The SAME predicate backs every retrieval stage, every graph hop, and the post-rank all-hits
-    assertion -- so a disagreement is exactly the `namespace_leak` fail-closed error (defense in depth)."""
-    if effective_allowed is None:
-        return True
-    if candidate_namespace is None:
-        return False
-    return str(candidate_namespace) in effective_allowed
-
-
-def effective_allowed_namespaces(filters):
-    """Build #36's CLOSED effective-allowed set from `filters.namespace` (a single value OR an explicit set),
-    or None when no namespace filter is present (UNSCOPED back-compat: absent `filters.namespace` = today's
-    behavior; the compiler now always supplies it). An explicit EMPTY set/list stays EMPTY (fail-closed: zero
-    hits). The set carries BOTH the raw and the `_slug`-normalized form of each requested value: #36 stores TWO
-    namespace representations -- record namespaces are the raw envelope value, chunk namespaces are the slugged
-    `source_id` -- so both must resolve against the SAME caller request. This dual-form expansion is #36's
-    storage-bridging of the effective SET; the PREDICATE (`ns_permitted`, membership) is byte-identical to the
-    #37/#40 canonical (the fold asserts identical accept/reject on identical (candidate, set) inputs)."""
+def _namespace_request(filters):
+    """A4/D-0092 (U1): normalize `filters.namespace` (a single value OR an explicit set) to the allowed set,
+    carrying BOTH the raw and the _slug-normalized form of each requested value so the retriever's hard filter
+    and its all-hits-match assertion apply IDENTICAL logic (chunk namespaces are slugged source_ids; record
+    namespaces are the raw envelope value). Returns None when no namespace filter is present -- the documented
+    back-compat: absent `filters.namespace` = today's behavior (the compiler now always supplies it)."""
     if not filters:
-        return None
-    if "namespace" not in filters:
         return None
     req = filters.get("namespace")
     if req is None:
@@ -2308,47 +1820,18 @@ def effective_allowed_namespaces(filters):
             continue
         allowed.add(str(v))
         allowed.add(_slug(v))
-    return frozenset(allowed)
-
-
-# 0.3 internal names kept as thin aliases (some callers/tests reference the enforced set / predicate by the
-# A4 spelling). `_namespace_request` == the effective-allowed builder; `_namespace_ok` == the canonical predicate.
-def _namespace_request(filters):
-    return effective_allowed_namespaces(filters)
+    return allowed
 
 
 def _namespace_ok(ns, allowed):
-    return ns_permitted(ns, allowed)
-
-
-# A5/U2': reserved retrieval-stage lineage on every hit. A packet compile is MULTI-STAGE (shortlist ->
-# descend) with stage-local rankings; #36's flat lexical retrieval is a SINGLE reserved stage this wave (the
-# router is Tier 1). Deterministic constant values -- data only, no behavior.
-RETRIEVAL_STAGE_ID = "stage:lexical:1"
-
-
-def _reserved_stage_lineage():
-    return {"retrieval_stage_id": RETRIEVAL_STAGE_ID, "parent_stage_id": None, "retrieval_plan_id": None}
-
-
-def _infer_provenance_mode(record_kind, has_span, has_derivation, status):
-    """A2/A5 provenance_mode inference when a producer did not supply one. `tombstone` for a deleted record;
-    `aggregate` for a `node` (a navigation synopsis over a bounded child set -- no single source span);
-    `direct_span` for a record with a real source span; `derived_record` otherwise."""
-    if status == STATUS_DELETED:
-        return "tombstone"
-    if record_kind == NODE_KIND:
-        return "aggregate"
-    if has_span:
-        return "direct_span"
-    return "derived_record"
-
-
-def _has_col(row, name):
-    try:
-        return name in row.keys()
-    except Exception:
-        return False
+    """True iff `ns` is inside the requested namespace set (None = no filter -> always True). The SAME predicate
+    backs BOTH the pre-ranking exclusion AND the post-rank all-hits-match assertion, so they cannot disagree (a
+    disagreement is exactly the `namespace_leak` fail-closed error). `namespace` is a HARD partition, not a
+    score boost -- a non-matching candidate is EXCLUDED before ranking, never a low-ranked hit."""
+    if allowed is None:
+        return True
+    ns = ns or ""
+    return ns in allowed or _slug(ns) in allowed
 
 
 def _safe(o):
@@ -2458,13 +1941,6 @@ def run(args):
         raise ASError("missing_db", "no db path supplied")
 
     cat = Catalog(db_path)
-    # A5/U1'(d): the privileged namespace-closure security log. A DB `security_log` table is always written;
-    # a file sink (append-only JSONL) defaults to a `security/` dir beside the catalog db, overridable via
-    # `security_log_path`. NEVER surfaced in any result.
-    slp = args.get("security_log_path")
-    if not slp:
-        slp = os.path.join(os.path.dirname(os.path.abspath(db_path)), "security", "namespace_violations.log")
-    cat.set_security_log_path(slp)
     try:
         if op == "ingest":
             res = cat.ingest(

@@ -2,9 +2,13 @@
 <#
 .SYNOPSIS
   artifact.search -- deterministic SQLite catalog + hybrid LEXICAL (FTS5) search (Life Orchestrator,
-  Module 36, contract v0.3). The Collective Agent's authoritative catalog substrate (D-0080 Wave 1); 0.3
-  enforces the MEMORY_CONTRACT A4 Tier-0 seams (D-0092): a HARD namespace boundary, a current_only retrieval
-  mode, and the reserved-additive node/working record kinds + member_of_node/child_of_node/contradicts edges.
+  Module 36, contract v0.4). The Collective Agent's authoritative catalog substrate (D-0080 Wave 1); 0.4
+  realizes the MEMORY_CONTRACT A5 Tier-0 NAMESPACE-CLOSURE + SUPERSESSION-HARDENING (D-0096): #36 is the
+  retriever/catalog ENFORCEMENT POINT -- ONE canonical ns_permitted predicate at every stage + graph hop, a
+  sanitized fail-closed cross-namespace rejection (namespace_violation_count + a privileged security log),
+  homogeneous-derivation rejection at ingest, catalog-computed candidate-INDEPENDENT effective_current
+  (superseded status + superseded_by/supersedes edges), provenance_mode-conditional hits, and a hardened
+  conjunctive working-record access. Builds on the A4 (0.3) envelope-level seams (D-0092).
 .DESCRIPTION
   A thin PowerShell entrypoint over a stdlib-only Python worker (artifact_search.py) that owns a SQLite
   database (the authoritative catalog) with SQLite FTS5. One op per invocation:
@@ -63,7 +67,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$SKILL_ID = 'artifact.search'; $SKILL_VERSION = '0.3.0'; $CONTRACT = '0.3'
+$SKILL_ID = 'artifact.search'; $SKILL_VERSION = '0.4.0'; $CONTRACT = '0.4'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 $startedAt = [DateTime]::UtcNow

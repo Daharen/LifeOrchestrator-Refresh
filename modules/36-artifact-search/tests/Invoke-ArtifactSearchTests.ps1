@@ -98,8 +98,8 @@ Check 'manifest is schema-valid' ([bool]$mv.valid) (($mv.errors) -join '; ')
 $man = (Get-Content -LiteralPath $mf -Raw) | ConvertFrom-Json
 Check 'manifest determinism=deterministic' ($man.determinism -eq 'deterministic')
 Check 'manifest skill_id=artifact.search' ($man.skill_id -eq 'artifact.search')
-Check 'manifest version=0.3.0' ($man.version -eq '0.3.0')
-Check 'manifest contract_version=0.3' ($man.contract_version -eq '0.3')
+Check 'manifest version=0.4.0' ($man.version -eq '0.4.0')
+Check 'manifest contract_version=0.4' ($man.contract_version -eq '0.4')
 Check 'manifest batch=false & streaming=false' (($man.batch -eq $false) -and ($man.streaming -eq $false))
 
 # ---------- 2) ingest the bundled fixture repo ----------
@@ -326,14 +326,14 @@ $v1m = $null; try { $v1m = (Get-Content -LiteralPath $v1meta -Raw) | ConvertFrom
 Check 'migrate: v1 seed db built at schema_version 1' ($null -ne $v1m -and [bool]$v1m.ok -and [string]$v1m.worker.schema_version -eq '1' -and (Test-Path -LiteralPath $v1db))
 $v1chunks = [int]$v1m.result.counts_total.chunks
 $v1emb = [int]$v1m.result.counts_total.embeddings
-# migrate op is the FIRST op to touch the v1 db (so it reports the migration actions); 0.3 chains 1->2->3
+# migrate op is the FIRST op to touch the v1 db (so it reports the migration actions); 0.4 chains 1->2->3->4
 $mg = Payload (Run-AS @{ op='migrate'; db=$v1db })
-Check 'migrate: schema_version 1 -> 3 in place (chained), migrated=true' ($null -ne $mg -and [bool]$mg.migrated -and [string]$mg.schema_version -eq '3')
-Check 'migrate: reports from:1 + the A4 reserved-seam action' ($null -ne $mg -and (@($mg.migration_actions) -contains 'from:1') -and (@($mg.migration_actions | Where-Object { $_ -match 'reserve_a4' }).Count -ge 1))
+Check 'migrate: schema_version 1 -> 4 in place (chained), migrated=true' ($null -ne $mg -and [bool]$mg.migrated -and [string]$mg.schema_version -eq '4')
+Check 'migrate: reports from:1 + the A4 + A5 reserved-seam actions' ($null -ne $mg -and (@($mg.migration_actions) -contains 'from:1') -and (@($mg.migration_actions | Where-Object { $_ -match 'reserve_a4' }).Count -ge 1) -and (@($mg.migration_actions | Where-Object { $_ -match 'reserve_a5' }).Count -ge 1))
 Check 'migrate: integrity ok + NO chunk loss' ($null -ne $mg -and [bool]$mg.integrity.ok -and [int]$mg.counts.chunks -eq $v1chunks) "chunks=$($mg.counts.chunks) v1=$v1chunks"
 Check 'migrate: chunk_embeddings JSON retired -> float32 BLOB vectors (count preserved)' ([int]$mg.counts.embeddings -eq $v1emb) "emb=$($mg.counts.embeddings) v1=$v1emb"
 $mg2 = Payload (Run-AS @{ op='migrate'; db=$v1db })
-Check 'migrate: idempotent (second migrate is a no-op)' ($null -ne $mg2 -and (-not [bool]$mg2.migrated) -and [string]$mg2.schema_version -eq '3')
+Check 'migrate: idempotent (second migrate is a no-op)' ($null -ne $mg2 -and (-not [bool]$mg2.migrated) -and [string]$mg2.schema_version -eq '4')
 Check 'migrate: shipped search regression-green on migrated db' ([int](Payload (Run-AS @{ op='search'; query='frobnicator'; mode='fts'; db=$v1db })).count -ge 1)
 Check 'migrate: shipped integrity regression-green on migrated db' ([bool](Payload (Run-AS @{ op='integrity'; db=$v1db })).ok)
 Check 'migrate: source_chunk view works on migrated db' ([int](Payload (Run-AS @{ op='list-records'; db=$v1db; filters=@{ record_kind='source_chunk' }; limit=3 })).count -ge 1)
@@ -517,8 +517,10 @@ $work = @(
 $wr = Payload (Run-AS @{ op='ingest-records'; db=$wkdb; ingest_run=@{ producer='p'; namespace='w' }; records=$work })
 Check 'A4/U3: working without task_id rejected (working_requires_task_id)' ([int]$wr.counts.accepted -eq 2 -and (@($wr.rejected | ForEach-Object { [string]$_.reason }) -contains 'working_requires_task_id')) "counts=$($wr.counts | ConvertTo-Json -Compress)"
 Check 'A4/U3: ordinary retrieval EXCLUDES working records' ([int](Payload (Run-AS @{ op='search'; query='WORKING_TOKEN'; mode='exact'; db=$wkdb })).count -eq 0)
-$t1 = Payload (Run-AS @{ op='search'; query='WORKING_TOKEN'; mode='exact'; db=$wkdb; filters=@{ task_id='task-1' } })
-Check 'A4/U3: task-scoped retrieval surfaces ONLY that task_id' ([int]$t1.count -eq 1 -and [string](@($t1.results)[0].record_version_id) -eq 'wk.t1@1') "count=$($t1.count)"
+# A5/U3': working access is CONJUNCTIVE -- a task_id ALONE (no in-scope namespace authorization) is too weak.
+Check 'A5/U3prime: task_id ALONE (no namespace) still EXCLUDES working' ([int](Payload (Run-AS @{ op='search'; query='WORKING_TOKEN'; mode='exact'; db=$wkdb; filters=@{ task_id='task-1' } })).count -eq 0)
+$t1 = Payload (Run-AS @{ op='search'; query='WORKING_TOKEN'; mode='exact'; db=$wkdb; filters=@{ task_id='task-1'; namespace='w' } })
+Check 'A5/U3prime: task_id AND in-scope namespace surfaces ONLY that task_id' ([int]$t1.count -eq 1 -and [string](@($t1.results)[0].record_version_id) -eq 'wk.t1@1') "count=$($t1.count)"
 Check 'A4/U3: list-records(working) without scope returns none' ([int](Payload (Run-AS @{ op='list-records'; db=$wkdb; filters=@{ record_kind='working' } })).count -eq 0)
 Check 'A4/U3: list-records(working, task-2) returns only task-2' ([int](Payload (Run-AS @{ op='list-records'; db=$wkdb; filters=@{ record_kind='working'; task_id='task-2' } })).count -eq 1)
 
@@ -540,10 +542,10 @@ Check 'A4/U2: v2 seed db built at schema_version 2' ($null -ne $v2m -and [bool]$
 $v2chunks = [int]$v2m.result.counts_total.chunks
 # migrate v2 -> v3 in place (additive; no shipped-table rewrite)
 $mg3 = Payload (Run-AS @{ op='migrate'; db=$v2db })
-Check 'A4/U2: migrate 2 -> 3 in place, migrated=true' ($null -ne $mg3 -and [bool]$mg3.migrated -and [string]$mg3.schema_version -eq '3')
-Check 'A4/U2: migrate reports from:2 + the reserved-seam action' ((@($mg3.migration_actions) -contains 'from:2') -and (@($mg3.migration_actions | Where-Object { $_ -match 'reserve_a4' }).Count -ge 1)) "acts=$($mg3.migration_actions -join ',')"
-Check 'A4/U2: NO chunk loss across 2->3 migration' ([int]$mg3.counts.chunks -eq $v2chunks) "chunks=$($mg3.counts.chunks) v2=$v2chunks"
-Check 'A4/U2: shipped tables BYTE-IDENTICAL pre/post (migrated sha == fresh v3 sha)' ([string]$mg3.shipped_tables_schema_sha -eq $freshSha) "migrated=$($mg3.shipped_tables_schema_sha) fresh=$freshSha"
+Check 'A4/U2: migrate 2 -> 4 in place (chained 2->3->4), migrated=true' ($null -ne $mg3 -and [bool]$mg3.migrated -and [string]$mg3.schema_version -eq '4')
+Check 'A4/U2: migrate reports from:2 + the A4 + A5 reserved-seam actions' ((@($mg3.migration_actions) -contains 'from:2') -and (@($mg3.migration_actions | Where-Object { $_ -match 'reserve_a4' }).Count -ge 1) -and (@($mg3.migration_actions | Where-Object { $_ -match 'reserve_a5' }).Count -ge 1)) "acts=$($mg3.migration_actions -join ',')"
+Check 'A4/U2: NO chunk loss across 2->4 migration' ([int]$mg3.counts.chunks -eq $v2chunks) "chunks=$($mg3.counts.chunks) v2=$v2chunks"
+Check 'A4/U2: shipped tables BYTE-IDENTICAL pre/post (migrated sha == fresh v4 sha)' ([string]$mg3.shipped_tables_schema_sha -eq $freshSha) "migrated=$($mg3.shipped_tables_schema_sha) fresh=$freshSha"
 Check 'A4/U2: migrate integrity ok' ([bool]$mg3.integrity.ok)
 # INGEST a node record + member_of_node (record->node) + child_of_node (node->node) + contradicts edges
 $ndVer = [string](@((Payload (Run-AS @{ op='search'; query='QUOKKA_MARKER_7'; mode='exact'; k=1; db=$v2db })).results)[0].source_version_id)
@@ -569,6 +571,143 @@ Check 'A4/U2: member_of_node + contradicts edges materialized' (($memEdges -cont
 $predig = [string](Payload (Run-AS @{ op='catalog'; db=$v2db })).digest
 Run-AS @{ op='ingest-records'; db=$v2db; ingest_run=@{ producer='repo.intel'; namespace='fixture' }; records=$nodeRecs } | Out-Null
 Check 'A4/U2: node re-ingest idempotent (digest stable)' ([string](Payload (Run-AS @{ op='catalog'; db=$v2db })).digest -eq $predig)
+
+# ================= 0.4 (MEMORY_CONTRACT Amendment A5 / D-0096 Tier-0 NAMESPACE-CLOSURE + SUPERSESSION) =====
+
+# ---------- 29) A5/U1' GATE TEST 1: namespace CLOSURE (per-hop + derived + diagnostic + ingest rejection) ----------
+$g1 = Join-Path $tmpRoot 'a5g1.db'
+$g1recs = @(
+  [ordered]@{ record_id='ca.1'; record_version_id='ca.1@1'; record_kind='claim'; namespace='ns-a'; text='OVERLAP_A5 alpha claim in A' },
+  [ordered]@{ record_id='cb.1'; record_version_id='cb.1@1'; record_kind='claim'; namespace='ns-b'; text='OVERLAP_A5 beta claim in B' }
+)
+$g1r = Payload (Run-AS @{ op='ingest-records'; db=$g1; ingest_run=@{ producer='p' }; records=$g1recs })
+Check 'A5/U1prime: mixed-ns fixture ingested (2 accepted)' ([int]$g1r.counts.accepted -eq 2) "counts=$($g1r.counts | ConvertTo-Json -Compress)"
+$qa5 = Payload (Run-AS @{ op='search'; query='OVERLAP_A5'; mode='fts'; k=10; db=$g1; filters=@{ namespace='ns-a' } })
+$qa5ns = @(@($qa5.results) | ForEach-Object { [string]$_.namespace })
+Check 'A5/U1prime: scoped ns-a returns >=1 hit, ZERO ns-b leakage' ([int]$qa5.count -ge 1 -and (@($qa5ns | Where-Object { $_ -ne 'ns-a' }).Count -eq 0)) "ns=$($qa5ns -join ',')"
+Check 'A5/U1prime: namespace_violation_count >=1 surfaces (ns-b excluded)' ([int]$qa5.namespace_violation_count -ge 1) "count=$($qa5.namespace_violation_count)"
+# ONLY the sanitized COUNT surfaces -- NO ns-b identifying data anywhere in the serialized result (incl every diagnostic array)
+$blob = ($qa5 | ConvertTo-Json -Depth 40 -Compress)
+Check 'A5/U1prime: NO ns-b identifying metadata in output (hits + diagnostics sanitized)' (($blob -notmatch 'ns-b') -and ($blob -notmatch 'cb\.1')) "leak in output"
+Check 'A5/U1prime: filter_decisions carries only the count (no rejected-candidate detail)' ($null -ne (@($qa5.results)[0].filter_decisions.namespace_violation_count))
+# (c) a DERIVED record whose provenance spans a foreign namespace is REJECTED at ingest (fail-closed)
+$derv = Payload (Run-AS @{ op='ingest-records'; db=$g1; ingest_run=@{ producer='p' }; records=@(
+  [ordered]@{ record_id='lnd'; record_version_id='lnd@1'; record_kind='summary'; namespace='ns-a'; text='launder attempt'; derivation_refs=@('cb.1@1') }) })
+Check 'A5/U1prime: cross-namespace DERIVATION rejected at ingest' (@($derv.rejected | ForEach-Object { [string]$_.reason }) -contains 'cross_namespace_derivation') "rej=$($derv.rejected | ConvertTo-Json -Compress -Depth 6)"
+# (c2) a cross-namespace SUPERSESSION edge (resolvable) is likewise rejected at ingest
+$xsup = Payload (Run-AS @{ op='ingest-records'; db=$g1; ingest_run=@{ producer='p' }; records=@(
+  [ordered]@{ record_id='xs'; record_version_id='xs@1'; record_kind='claim'; namespace='ns-a'; text='xs'; edges=@(@{ edge_kind='superseded_by'; dst_ref='cb.1@1'; dst_kind='record' }) }) })
+Check 'A5/U1prime: cross-namespace SUPERSESSION edge rejected at ingest' (@($xsup.rejected | ForEach-Object { [string]$_.reason }) -contains 'cross_namespace_derivation')
+# (d) per-hop WALK guard: a forward-ref cross-ns successor that slipped in as an unresolved ref is IGNORED per-hop
+$g1b = Join-Path $tmpRoot 'a5g1b.db'
+Run-AS @{ op='ingest-records'; db=$g1b; ingest_run=@{ producer='p' }; records=@(
+  [ordered]@{ record_id='hop'; record_version_id='hop@1'; record_kind='claim'; namespace='ns-a'; status='current'; text='HOPTOKEN a5 predecessor';
+              edges=@(@{ edge_kind='superseded_by'; dst_ref='ghost@1'; dst_kind='record' }) }) } | Out-Null
+Run-AS @{ op='ingest-records'; db=$g1b; ingest_run=@{ producer='p' }; records=@(
+  [ordered]@{ record_id='ghost'; record_version_id='ghost@1'; record_kind='claim'; namespace='ns-b'; status='current'; text='GHOSTONLY successor in B' }) } | Out-Null
+$hop = Payload (Run-AS @{ op='search'; query='HOPTOKEN'; mode='exact'; db=$g1b; filters=@{ namespace='ns-a'; mode='current_only' } })
+Check 'A5/U1prime: cross-ns successor IGNORED per-hop (predecessor stays effective_current under scope)' ([int]$hop.count -eq 1 -and [bool](@($hop.results)[0].effective_current)) "count=$($hop.count)"
+Check 'A5/U1prime: per-hop walk leaks NO ns-b data' ((($hop | ConvertTo-Json -Depth 40 -Compress) -notmatch 'ns-b') -and (($hop | ConvertTo-Json -Depth 40 -Compress) -notmatch 'ghost'))
+
+# ---------- 30) A5/U4' GATE TEST 2: POOL-INDEPENDENT current_only (superseded even when successor is ABSENT) ----------
+$g2 = Join-Path $tmpRoot 'a5g2.db'
+# predecessor matches PRETOKEN; successor matches SUCTOKEN (disjoint) so the successor is ABSENT from a PRETOKEN pool
+$g2recs = @(
+  [ordered]@{ record_id='pre'; record_version_id='pre@1'; record_kind='summary'; namespace='co'; status='current'; text='PRETOKEN predecessor summary';
+              edges=@(@{ edge_kind='superseded_by'; dst_ref='suc@1'; dst_kind='record' }) },
+  [ordered]@{ record_id='suc'; record_version_id='suc@1'; record_kind='summary'; namespace='co'; status='current'; text='SUCTOKEN successor summary' }
+)
+Run-AS @{ op='ingest-records'; db=$g2; ingest_run=@{ producer='p'; namespace='co' }; records=$g2recs } | Out-Null
+$g2def = Payload (Run-AS @{ op='search'; query='PRETOKEN'; mode='exact'; db=$g2 })
+Check 'A5/U4prime: default mode returns the predecessor' ([int]$g2def.count -eq 1 -and [string](@($g2def.results)[0].record_version_id) -eq 'pre@1') "count=$($g2def.count)"
+$g2co = Payload (Run-AS @{ op='search'; query='PRETOKEN'; mode='exact'; db=$g2; filters=@{ mode='current_only' } })
+Check 'A5/U4prime: current_only EXCLUDES the predecessor EVEN WHEN its successor is ABSENT from the pool' ([int]$g2co.count -eq 0) "count=$($g2co.count)"
+$g2cs = Payload (Run-AS @{ op='search'; query='SUCTOKEN'; mode='exact'; db=$g2; filters=@{ mode='current_only' } })
+Check 'A5/U4prime: the live successor IS effective_current' ([int]$g2cs.count -eq 1 -and [bool](@($g2cs.results)[0].effective_current))
+# branch: two live successors of one predecessor -> conflicted flagged (surfaced, never a silent pick)
+$g2b = Join-Path $tmpRoot 'a5g2b.db'
+Run-AS @{ op='ingest-records'; db=$g2b; ingest_run=@{ producer='p'; namespace='co' }; records=@(
+  [ordered]@{ record_id='br'; record_version_id='br@1'; record_kind='summary'; namespace='co'; status='current'; text='BRANCHTOKEN root';
+              edges=@(@{ edge_kind='superseded_by'; dst_ref='s1@1'; dst_kind='record' }, @{ edge_kind='superseded_by'; dst_ref='s2@1'; dst_kind='record' }) },
+  [ordered]@{ record_id='s1'; record_version_id='s1@1'; record_kind='summary'; namespace='co'; status='current'; text='BRANCHTOKEN successor one' },
+  [ordered]@{ record_id='s2'; record_version_id='s2@1'; record_kind='summary'; namespace='co'; status='current'; text='BRANCHTOKEN successor two' }) } | Out-Null
+$brh = @((Payload (Run-AS @{ op='search'; query='BRANCHTOKEN'; mode='exact'; db=$g2b })).results | Where-Object { [string]$_.record_version_id -eq 'br@1' })[0]
+Check 'A5/U4prime: a branch (>=2 live successors) is FLAGGED conflicted (surfaced)' ([bool]$brh.supersession_conflicted) "conflicted=$($brh.supersession_conflicted)"
+# integrity: cross-namespace supersession + cycle checks are present + pass on a clean db
+$g2int = Payload (Run-AS @{ op='integrity'; db=$g2 })
+Check 'A5/U4prime: integrity includes no_cross_namespace_supersession (passes on clean db)' ((@($g2int.checks | Where-Object { [string]$_.name -eq 'no_cross_namespace_supersession' -and [bool]$_.ok }).Count -eq 1))
+Check 'A5/U4prime: integrity includes supersession_chain_acyclic (passes on clean db)' ((@($g2int.checks | Where-Object { [string]$_.name -eq 'supersession_chain_acyclic' -and [bool]$_.ok }).Count -eq 1))
+
+# ---------- 31) A5/U3' GATE TEST 3: working search-rejection (conjunctive task_id + in-scope namespace) ----------
+# (core coverage in section 27; here the exact-op path proves list-records is NOT ordinary search)
+$g3 = Join-Path $tmpRoot 'a5g3.db'
+Run-AS @{ op='ingest-records'; db=$g3; ingest_run=@{ producer='p'; namespace='wns' }; records=@(
+  [ordered]@{ record_id='wk'; record_version_id='wk@1'; record_kind='working'; namespace='wns'; task_id='T9'; text='WK9TOKEN working state';
+              state_version='3'; parent_state_version='2'; writer_authority='task-agent' }) } | Out-Null
+Check 'A5/U3prime: ordinary search never returns a working record' ([int](Payload (Run-AS @{ op='search'; query='WK9TOKEN'; mode='exact'; db=$g3 })).count -eq 0)
+Check 'A5/U3prime: conjunctive (task_id + namespace) EXACT op surfaces the working record' ([int](Payload (Run-AS @{ op='search'; query='WK9TOKEN'; mode='exact'; db=$g3; filters=@{ task_id='T9'; namespace='wns' } })).count -eq 1)
+$we2 = @((Payload (Run-AS @{ op='list-records'; db=$g3; filters=@{ record_kind='working'; task_id='T9' } })).records)[0]
+Check 'A5/U3prime: working envelope reserves the store fields (state_version/writer_authority)' ([string]$we2.state_version -eq '3' -and [string]$we2.writer_authority -eq 'task-agent' -and [string]$we2.lifecycle_state -eq 'active')
+
+# ---------- 32) A5/U2' provenance_mode-conditional hit shape + candidate_role + retrieval-stage lineage ----------
+$g4 = Join-Path $tmpRoot 'a5g4.db'
+Run-AS @{ op='ingest'; source='fixture'; root=$fixtureRepo; db=$g4 } | Out-Null
+Run-AS @{ op='ingest-records'; db=$g4; ingest_run=@{ producer='p'; namespace='fixture' }; records=@(
+  [ordered]@{ record_id='nd2'; record_version_id='nd2@1'; record_kind='node'; namespace='fixture'; text='NAV2TOKEN navigation node'; attrs=@{ synopsis='s' } },
+  [ordered]@{ record_id='sup2'; record_version_id='sup2@1'; record_kind='claim'; namespace='fixture'; status='superseded'; text='SUP2TOKEN a superseded claim' }) } | Out-Null
+$chit = @((Payload (Run-AS @{ op='search'; query='QUOKKA_MARKER_7'; mode='exact'; k=1; db=$g4 })).results)[0]
+Check 'A5/U2prime: source_chunk hit provenance_mode=direct_span' ([string]$chit.provenance_mode -eq 'direct_span' -and [string]$chit.candidate_role -eq 'evidence')
+Check 'A5/U2prime: hit reserves retrieval-stage lineage (retrieval_stage_id + null plan/parent)' ((Has $chit 'retrieval_stage_id') -and (Has $chit 'parent_stage_id') -and (Has $chit 'retrieval_plan_id') -and [string]$chit.retrieval_stage_id -ne '')
+Check 'A5/U2prime: hit provenance block carries the per-mode fields' ((Has $chit 'provenance') -and [string]$chit.provenance.mode -eq 'direct_span')
+$nhit = @((Payload (Run-AS @{ op='search'; query='NAV2TOKEN'; mode='exact'; db=$g4; filters=@{ record_kind='node' } })).results)[0]
+Check 'A5/U2prime: node hit candidate_role=navigation + provenance_mode=aggregate' ([string]$nhit.candidate_role -eq 'navigation' -and [string]$nhit.provenance_mode -eq 'aggregate')
+Check 'A5/U2prime: superseded is a first-class s5 status (accepted + queryable)' ([int](Payload (Run-AS @{ op='search'; query='SUP2TOKEN'; mode='exact'; db=$g4; filters=@{ status='superseded' } })).count -eq 1)
+
+# ---------- 33) A5 GATE: schema_version 3 -> 4 additive in-place migration (shipped tables byte-identical) ----------
+$v3worker = Join-Path $SkillDir 'fixtures/artifact_search_v3.py'
+Check 'A5: frozen shipped-0.3 (v3) worker fixture present' (Test-Path -LiteralPath $v3worker -PathType Leaf)
+$freshv4 = Join-Path $tmpRoot 'fresh_v4.db'
+Run-AS @{ op='ingest'; source='fixture'; root=$fixtureRepo; db=$freshv4 } | Out-Null
+$freshSha4 = [string](Payload (Run-AS @{ op='catalog'; db=$freshv4 })).shipped_tables_schema_sha
+$v3db = Join-Path $tmpRoot 'v3seed.db'
+$v3args = Join-Path $tmpRoot 'v3args.json'; $v3meta = Join-Path $tmpRoot 'v3meta.json'
+[System.IO.File]::WriteAllText($v3args, ([ordered]@{ op='ingest'; source='fixture'; root=$fixtureRepo; db=$v3db; meta_path=$v3meta; output_dir=(Join-Path $tmpRoot 'v3out') } | ConvertTo-Json -Depth 8), $utf8)
+& $PythonPath $v3worker $v3args 2>$null | Out-Null
+$v3m = $null; try { $v3m = (Get-Content -LiteralPath $v3meta -Raw) | ConvertFrom-Json } catch { }
+Check 'A5: v3 seed db built at schema_version 3' ($null -ne $v3m -and [bool]$v3m.ok -and [string]$v3m.worker.schema_version -eq '3')
+# a typed record into the v3 seed (via the frozen v3 worker) so the migration preserves records too
+$v3rargs = Join-Path $tmpRoot 'v3rargs.json'; $v3rmeta = Join-Path $tmpRoot 'v3rmeta.json'
+[System.IO.File]::WriteAllText($v3rargs, ([ordered]@{ op='ingest-records'; db=$v3db; ingest_run=@{ producer='repo.intel'; namespace='fixture' }; records=@([ordered]@{ record_id='sy3'; record_version_id='sy3@1'; record_kind='symbol'; namespace='fixture'; text='SY3TOKEN sym' }); meta_path=$v3rmeta; output_dir=(Join-Path $tmpRoot 'v3rout') } | ConvertTo-Json -Depth 10), $utf8)
+& $PythonPath $v3worker $v3rargs 2>$null | Out-Null
+# capture the v3 baseline with the FROZEN v3 worker (opening the v3 db with the NEW worker would migrate it in
+# place BEFORE the migrate op runs). migrate must be the FIRST new-worker op to touch the v3 db.
+$v3cargs = Join-Path $tmpRoot 'v3cargs.json'; $v3cmeta = Join-Path $tmpRoot 'v3cmeta.json'
+[System.IO.File]::WriteAllText($v3cargs, ([ordered]@{ op='catalog'; db=$v3db; meta_path=$v3cmeta; output_dir=(Join-Path $tmpRoot 'v3cout') } | ConvertTo-Json -Depth 8), $utf8)
+& $PythonPath $v3worker $v3cargs 2>$null | Out-Null
+$v3cm = $null; try { $v3cm = (Get-Content -LiteralPath $v3cmeta -Raw) | ConvertFrom-Json } catch { }
+$v3cat = $v3cm.result; $v3digest = [string]$v3cat.digest; $v3chunks = [int]$v3cat.counts.chunks; $v3recs = [int]$v3cat.counts.records
+Check 'A5: v3 baseline read at schema_version 3 (frozen worker)' ([string]$v3cat.schema_version -eq '3') "sv=$($v3cat.schema_version)"
+$mg4 = Payload (Run-AS @{ op='migrate'; db=$v3db })
+Check 'A5: migrate 3 -> 4 in place, migrated=true' ($null -ne $mg4 -and [bool]$mg4.migrated -and [string]$mg4.schema_version -eq '4')
+Check 'A5: migrate reports from:3 + reserve_a5 action' ((@($mg4.migration_actions) -contains 'from:3') -and (@($mg4.migration_actions | Where-Object { $_ -match 'reserve_a5' }).Count -ge 1)) "acts=$($mg4.migration_actions -join ',')"
+Check 'A5: NO chunk loss across 3->4' ([int]$mg4.counts.chunks -eq $v3chunks) "chunks=$($mg4.counts.chunks) v3=$v3chunks"
+Check 'A5: NO record loss across 3->4' ([int]$mg4.counts.records -eq $v3recs) "recs=$($mg4.counts.records) v3=$v3recs"
+Check 'A5: shipped tables BYTE-IDENTICAL pre/post 3->4 (migrated sha == fresh v4 sha)' ([string]$mg4.shipped_tables_schema_sha -eq $freshSha4) "migrated=$($mg4.shipped_tables_schema_sha) fresh=$freshSha4"
+Check 'A5: catalog_digest UNCHANGED across 3->4 (no re-ingest)' ([string]$mg4.catalog_digest -eq $v3digest) "post=$($mg4.catalog_digest) pre=$v3digest"
+Check 'A5: migrate 3->4 integrity ok' ([bool]$mg4.integrity.ok)
+$mg4b = Payload (Run-AS @{ op='migrate'; db=$v3db })
+Check 'A5: 3->4 migration idempotent (re-open is a no-op)' ((-not [bool]$mg4b.migrated) -and [string]$mg4b.schema_version -eq '4')
+Check 'A5: shipped search regression-green on the 3->4 migrated db' ([int](Payload (Run-AS @{ op='search'; query='frobnicator'; mode='fts'; db=$v3db })).count -ge 1)
+
+# ---------- 34) A5 determinism: double-run byte-identical catalog_digest WITH supersession edges ----------
+$dd1 = Join-Path $tmpRoot 'a5d1.db'; $dd2 = Join-Path $tmpRoot 'a5d2.db'
+$ddrecs = @(
+  [ordered]@{ record_id='d1'; record_version_id='d1@1'; record_kind='summary'; namespace='d'; status='current'; text='det one'; edges=@(@{ edge_kind='superseded_by'; dst_ref='d2@1'; dst_kind='record' }) },
+  [ordered]@{ record_id='d2'; record_version_id='d2@1'; record_kind='summary'; namespace='d'; status='current'; text='det two' }
+)
+Run-AS @{ op='ingest-records'; db=$dd1; ingest_run=@{ producer='p'; namespace='d' }; records=$ddrecs } | Out-Null
+Run-AS @{ op='ingest-records'; db=$dd2; ingest_run=@{ producer='p'; namespace='d' }; records=$ddrecs } | Out-Null
+Check 'A5: identical corpus (with supersession) -> identical catalog_digest across fresh dbs' ([string](Payload (Run-AS @{ op='catalog'; db=$dd1 })).digest -eq [string](Payload (Run-AS @{ op='catalog'; db=$dd2 })).digest)
 
 # ---------- cleanup ----------
 try { Remove-Item -LiteralPath $tmpRoot -Recurse -Force -ErrorAction SilentlyContinue } catch { }

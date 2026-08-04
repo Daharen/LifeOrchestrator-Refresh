@@ -1,10 +1,28 @@
-# Work Order: Artifact Search (`artifact.search`) -- 0.2.0 -> 0.3.0 (i32, MEMORY_CONTRACT A4 Tier-0 seams)
+# Work Order: Artifact Search (`artifact.search`) -- 0.3.0 -> 0.4.0 (i33, MEMORY_CONTRACT A5 namespace-closure + supersession-hardening)
 
-**Contract version targeted:** 0.3 (SKILL_CONTRACT) + **MEMORY_CONTRACT Amendment A4 (D-0092, Tier-0 seams)** |
-**Author:** FANOUT_AGENT_001 (i32, plan fo-32-0fb25203) / 2026-08-04 |
-**Prior revisions:** 0.1.0 (i25, MVP) -> 0.2.0 (i27, MEMORY_CONTRACT 0.2/D-0083 record envelope + ingest_records) |
+**Contract version targeted:** 0.4 (SKILL_CONTRACT) + **MEMORY_CONTRACT Amendment A5 (D-0096, i33 Tier-0
+NAMESPACE-CLOSURE + SUPERSESSION-HARDENING)** |
+**Author:** FANOUT_AGENT_001 (i33, plan fo-33-d7b55e46, worker ARTIFACT-SEARCH-CLOSURE-i33) / 2026-08-04 |
+**Prior revisions:** 0.1.0 (i25, MVP) -> 0.2.0 (i27, record envelope + ingest_records) -> 0.3.0 (i32, A4 Tier-0
+envelope seams) |
 **Roadmap entry:** `MODULE_ROADMAP.md#artifact.search` (arch position 23); governed by `MEMORY_ARCHITECTURE.md`
-(D-0090) + `research/2026-08-03-memory-architecture-seam-audit.md` s3 (U1/U2/U4).
+(D-0090) + `research/2026-08-04-tier0-amendment-redteam.md` (frontier Tier-0 red-team, changes 1-4).
+
+### i33 problem being solved (A5 namespace-closure + supersession-hardening) -- DONE
+The frontier Tier-0 red-team (pack 159e9cb5, D-0095) found the A4 (0.3) seams a correct ENVELOPE-level FIRST
+layer but INCOMPLETE: namespace leaked via derived records + diagnostic metadata + per-hop/traversal gaps, and
+supersession was candidate-set-dependent (a predecessor stayed `current` when its successor was absent from the
+pool). #36 is the ENFORCEMENT POINT. 0.4 (schema_version 3->4, ADDITIVE) closes it: **(U1')** ONE canonical
+`ns_permitted` predicate at EVERY stage + graph hop, EVERY returned/reachable object scope-checked, a sanitized
+fail-closed rejection (`namespace_violation_count` + a privileged security log), and cross-namespace derivations
+REJECTED at ingest; **(U4')** candidate-INDEPENDENT `effective_current` from the catalog (a `superseded` s5
+value + `superseded_by`/`supersedes` edges + chain invariants); **(U2')** provenance_mode-conditional hits +
+reserved `candidate_role`/retrieval-stage lineage; **(U3')** working-store field reservations + hardened
+CONJUNCTIVE working access. Imports #37's canonical `ns_permitted` READ-ONLY (MIRRORED here per the sanctioned
+fallback -- #37's standalone predicate was not yet on disk at build time; the fold asserts byte-identity). Every
+interpretation: `SCHEMA_NOTES.md` **section 12**. Result: **179/179 off-machine** (regression + A5 gate tests).
+
+--- the i32 (A4) work order follows, for reference ---
 
 ### i32 problem being solved (A4 Tier-0 seams)
 The seam audit ranks the highest lock-in risks if the derived layers (indexes, hierarchy, packets) are built
