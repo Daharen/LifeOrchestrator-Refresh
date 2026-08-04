@@ -1,4 +1,4 @@
-# context.compile -- SCHEMA_NOTES (Module 40, skill `context.compile` 0.5.0, i33 NAMESPACE-CLOSURE + SUPERSESSION-HARDENING)
+# context.compile -- SCHEMA_NOTES (Module 40, skill `context.compile` 0.6.0, i34 Tier-1 BOUNDED-FANOUT HIERARCHY)
 
 **Authority.** This file records EVERY schema/interface interpretation for the D-0077 cross-module fold.
 The orchestrator's fold smoke (this compiler's REAL packets -> retrieval.eval #37 + a fresh 9B, and #40
@@ -590,3 +590,94 @@ query ROUTING; NO contradiction DETECTION (only consumption of declared edges + 
 param, STOP + report a fold reconciliation, never edit #37); NO P0-1 adversarial injection SUITE / action-
 capable release (the structural separation + `non_execution:true` stay); NO real embeddings/vector; NO 9B/
 models.json; NO UI; NO core-doc edits (`docs:[]` -- the orchestrator mirrors).
+
+## 17. i34 Tier-1 BOUNDED-FANOUT HIERARCHY -- shortlist-and-descend + SAFE PRUNING (D-0098) -- the full interpretation (REQUIRED for the D-0077 fold)
+
+**Scope + role.** i34 turns the A4/A5-RESERVED hierarchy seam (`node` kind, `member_of_node`/`child_of_node`
+edges) into a real CONSUMER-side retrieval PLAN. #40 is the CONSUMER of #36's authorization-bound
+`shortlist`/`descend` ops (`MEMORY_CONTRACT` A6 H6) + #36's channel-specific SAFE-PRUNING predicates; the OPS
+(ranking roots, listing children, the no-false-negative certificates) are #36's, the PLAN (descend-decision,
+bounded frontier, safe-pruning ENFORCEMENT, completeness accounting) is #40's. #40 NEVER invents a pruning
+certificate -- it only ENFORCES the rule. context_packet stays `0.2` (ADDITIVE); module semver `0.5.0 -> 0.6.0`.
+**GATING (byte-identity):** every i34 field is emitted ONLY when a plan runs (a hierarchy port is injected AND
+`query_class` is a descend class AND the namespace closure is enforced+non-empty). A zero-node/flat/non-descend/
+unscoped compile adds NOTHING to the packet body, so its packet + `packet_id` are BYTE-IDENTICAL to 0.5 (the 280
+0.5 gates stay green; `test_i34_flat_byte_identical` proves the no-port path).
+
+**The injected #36 port contract (what #36 implements; the off-machine fixture MIRRORS it).** #36 (Lane A) is a
+PARALLEL i34 producer NOT yet shipped, so the compiler consumes an INJECTED port object (`args['hierarchy_port']`;
+the real `artifact.search` retriever at the fold). The interface (A6 H6):
+- `policy_info() -> {hierarchy_id, hierarchy_kind, tree_version, builder_policy_id, builder_policy_version,
+  corpus_snapshot, prune_predicate_id, prune_predicate_version, topology_state('valid'|'rebuild_required'|
+  'corrupt')}`.
+- `shortlist(query, effective_allowed_namespaces, hierarchy_version, corpus_snapshot, k) -> [node hit]`
+  (`record_kind='node'`, `candidate_role='navigation'`, `node_id`, `level`, `namespace`, `prune_channels[]`,
+  `currentness`, structural-synopsis descriptors).
+- `descend(node_id, retrieval_plan_id, effective_allowed_namespaces, hierarchy_version, corpus_snapshot)
+  -> [node hit | leaf hit]` (leaves = retriever-0.2 hits, `candidate_role='evidence'`); `ns_permitted` at EVERY
+  hop -- an out-of-scope `node_id` fails closed with NO identifying metadata.
+- `prune_certificate(node_id, channel, query, effective_allowed_namespaces, hierarchy_version, corpus_snapshot)
+  -> {no_false_negative: bool, excludes: bool, channel, corpus_snapshot} | None`.
+If #36's shipped ops cannot serve this without a change THERE, the worker STOPS + reports a fold reconciliation --
+it never edits #36/#37 or a core-doc.
+
+**(V1) the multi-stage shortlist-and-descend PLAN** (`run_hierarchy_plan`). The descend-decision routes ONLY
+`DESCEND_QUERY_CLASSES = {global_synthesis, precedent_search}` (the multi-channel router is i35); every other
+class stays flat-top-k (today's path). It requires an ENFORCED, non-empty `effective_allowed_namespaces`
+(intersection(request,grant), i33) -- an unscoped/unenforced compile stays flat (shortlist cannot bind to
+authorized roots), preserving unscoped back-compat. Bounded frontier: `hier_shortlist_k`/`hier_beam_b`/
+`hier_depth_d` (DEFAULT_CONFIG 4/4/6; the tests pin 4/3/2) -> navigation cost O(B*D), INDEPENDENT of leaf count
+(`retrieval_completeness.navigation_nodes_examined` is the #37 sub-linear measure). The plan's LEAF hits +
+NODE hits are APPENDED as a synthetic batch so the EXISTING scope-check -> selpol -> navigation-routing path
+handles them uniformly: leaves become evidence candidates (through selpol/budget), nodes (candidate_role=
+navigation) are SKIPPED for excerpts and routed to `navigation_refs`. `retrieval_plan_id` is a DETERMINISTIC
+hash of the pinned hierarchy + query (no wall-clock).
+
+**(V2) SAFE PRUNING (P0)** (`_safe_prune_decision`). A branch is pruned ONLY when #36 supplies a deterministic
+channel-specific NO-FALSE-NEGATIVE certificate proving the subtree cannot satisfy the query at the pinned
+snapshot: `cert.no_false_negative AND cert.excludes AND cert.corpus_snapshot == pinned AND cert.channel in
+SOUND_PRUNE_CHANNELS`. `SOUND_PRUNE_CHANNELS = {exact_id, path, symbol, time, kind, authority, lexical_membership,
+entity_membership, vector_bound}`. A STALE synopsis (`summary_stale`, or `synopsis_fresh:false`) is NEVER eligible
+(`stale_synopsis_never_prunes`). A bounded descriptor channel (`lexical_descriptor`/`entity_union`/`centroid`) is
+NOT in the sound set -> it can only PRIORITIZE, never EXCLUDE. Absent a sound certificate the branch is RETAINED
+(descended within the bound) or, when a bound cuts it off, left UNRESOLVED -- never silently dropped as absent.
+The injected FLAT batch is retained alongside descend leaves (`fallback_used`), so recall is never lost.
+
+**(V3) RETRIEVAL COMPLETENESS** (distinct from evidence coverage). `packet.retrieval_completeness =
+{frontier_exhausted, pruned_branch_count, prune_policy_id(=safe_prune_v1)/version, prune_predicate_id/version
+(#36's), prune_reasons[], fallback_used, stale_navigation_encountered, unresolved_branch_count,
+max_unexpanded_bound, navigation_nodes_examined, leaf_candidates_collected, hierarchy_id, tree_version,
+topology_state, retrieval_plan}`. A hierarchy MISS is NOT proved ABSENCE: `frontier_exhausted` is True ONLY when
+there is no unresolved frontier AND `topology_state=='valid'`; an UNRESOLVED pruned frontier BLOCKS a
+definitive-absence claim. Evidence-coverage (s4) is UNCHANGED: a `summary_stale`/navigation node NEVER enters
+`missing_requirements[]` (nodes are never requirements). A packet may still be `answerable` from strong evidence
+without global exhaustion.
+
+**(V4) packet identity += hierarchy.** When a plan runs, `identity.hierarchy = {hierarchy_id, hierarchy_kind,
+tree_version, builder_policy{id,version}, prune_policy{id,version,predicate_id,predicate_version},
+plan_policy{id=shortlist_descend_v1,version}, retrieval_plan_stage_digest}` is added to the HASHED body, so
+`packet_id` COVERS it (atop the i33 classifier/temporal/ns/state_version coverage). ONE `tree_version` per compile
+(the port pins it; a different `tree_version` -> a different `packet_id`, `test_i34_packet_identity_hierarchy`).
+
+**(V5) navigation-vs-evidence closure** (extends i33 U2'/U1'). Selection cannot cast a navigation candidate into
+evidence (nodes are skipped for excerpts by construction). EVERY navigation-visible object the plan touches
+(shortlisted roots, descended children, node ids/paths/descriptors) is scope-checked via the canonical imported
+`ns_permitted`; a cross-namespace navigation/hierarchy object surfaced by the plan ABORTS SANITIZED
+(`namespace_closure_violation`, `compile_status=failed_closed`, only a `namespace_violation_count` surfaces;
+identifying detail -> the privileged security log, never the payload). The post-assembly closure sweep
+(`assert_packet_namespace_closure`) still runs as defense-in-depth. `test_i34_nav_evidence_closure` proves the
+cross-namespace `descend` child is dropped with no `projB`/`SECRET`/`leaf_leak` metadata.
+
+**Fold seam (D-0077, at close).** The orchestrator runs #40's REAL compile over a REAL #36 tree (a multi-namespace
+catalog with a superseded/successor pair, a reserved `node` layer, and a `working` record) and asserts: navigation
+cost sub-linear in leaf count; the required leaf recalled via descend; ZERO nodes in `evidence[]`; navigational
+staleness routes-but-doesn't-answer; namespace-homogeneous nodes + no cross-namespace hop (sanitized on a mixed
+fixture); every excerpt reconstructs to source; deterministic `packet_id` covering the hierarchy identity;
+byte-identical #40-vs-direct select; 0 orphans. OFF-MACHINE here the PLAN + safe-pruning ENFORCEMENT +
+completeness + closure + identity are proven over the injected port + the REAL #37 lib (322/322).
+
+**i34 non-goals (unchanged from the mission).** NO node-layer/tree-builder/shortlist-descend OPS (#36 -- CONSUMED);
+NO eval measures/fixtures (#37); NO working-memory STORE; NO multi-channel query ROUTER (the query_class stub
+stays); NO model-prose synopsis; NO change to #36/#37 (imported READ-ONLY -- if the ops cannot serve the plan,
+STOP + report a fold reconciliation); NO P0-1 adversarial injection SUITE / action-capable release; NO real
+embeddings/vector; NO 9B/models.json; NO UI; NO core-doc edits (`docs:[]` -- the orchestrator mirrors).

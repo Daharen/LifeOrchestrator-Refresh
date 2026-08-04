@@ -907,8 +907,197 @@ def test_i33_expand_no_widen():
           and "SECRET" not in json.dumps(exp))
 
 
+# ================================================================================================
+# i34 (D-0098) -- Tier-1 shortlist-and-descend + SAFE PRUNING (P0) + retrieval completeness + nav/evidence
+# closure + hierarchy identity. #40 is the CONSUMER; #36 (Lane A) is a PARALLEL producer NOT yet shipped,
+# so the PLAN is tested over a DETERMINISTIC in-memory port MIRRORING #36's A6 H6 ops; the real-tree
+# end-to-end recall proves at the orchestrator D-0077 fold. The compiler imports the REAL #37 lib.
+# ================================================================================================
+CORPUS_I34 = "digest_i34_0001"
+
+def _node(node_id, level, prune_channels=None, currentness="current", rank=1, ns="projA"):
+    return {"record_id": node_id, "record_version_id": node_id, "record_kind": "node",
+            "candidate_role": "navigation", "node_id": node_id, "level": level,
+            "namespace": ns, "source": ns, "source_version_id": "ver_" + node_id,
+            "content_hash": "nh_" + node_id, "chunk_content_hash": "nh_" + node_id,
+            "provenance_mode": "derived_record", "status": currentness, "currentness": currentness,
+            "authority_level": "derived", "prune_channels": list(prune_channels or []),
+            "lexical_rank": rank, "lexical_score": 1.0 - (rank - 1) * 0.01,
+            "vector_rank": None, "fused_rank": rank, "fused_score": 1.0 - (rank - 1) * 0.01,
+            "index_snapshot": CORPUS_I34, "corpus_version": CORPUS_I34, "tie_break_key": node_id,
+            "snippet": "node " + node_id, "rank": rank, "span": None, "span_label": None}
+
+class FixtureHierarchyPort(object):
+    """Off-machine stand-in for #36's authorization-bound hierarchy ops (A6 H6). DETERMINISTIC."""
+    def __init__(self, roots, children, certs, ns="projA", tree_version="tv_1", topology_state="valid"):
+        self.roots = roots; self.children = children; self.certs = certs
+        self.ns = ns; self.tree_version = tree_version; self.topology_state = topology_state
+
+    def policy_info(self):
+        return {"hierarchy_id": "hier_" + self.ns, "hierarchy_kind": "source_module",
+                "tree_version": self.tree_version, "builder_policy_id": "balanced_bulk_v1",
+                "builder_policy_version": "1.0.0", "corpus_snapshot": CORPUS_I34,
+                "prune_predicate_id": "chan_prune_v1", "prune_predicate_version": "1.0.0",
+                "topology_state": self.topology_state}
+
+    def shortlist(self, query, eff, hv, cs, k):
+        return list(self.roots)[:k]
+
+    def descend(self, node_id, plan_id, eff, hv, cs):
+        return list(self.children.get(node_id, []))
+
+    def prune_certificate(self, node_id, channel, query, effective_allowed_namespaces,
+                          hierarchy_version, corpus_snapshot):
+        c = (self.certs.get(node_id) or {}).get(channel)
+        if c is None:
+            return None
+        return {"no_false_negative": c[0], "excludes": c[1], "channel": channel,
+                "corpus_snapshot": corpus_snapshot}
+
+def _std_leaves():
+    lr = _hit("projA/req.md", "the REQUIRED global synthesis evidence about the fencing lease.\n",
+              "leaf_req", "req", ns="projA", rank=1, corpus=CORPUS_I34)
+    lo = _hit("projA/o1.md", "other projA evidence one about leases.\n", "leaf_o1", "o1",
+              ns="projA", rank=2, corpus=CORPUS_I34)
+    lc = _hit("projA/c.md", "projA branch-c evidence about leases.\n", "leaf_c", "c",
+              ns="projA", rank=3, corpus=CORPUS_I34)
+    return lr, lo, lc
+
+def _std_port(topology_state="valid", n_a_stale=False, cross_ns_child=False):
+    lr, lo, lc = _std_leaves()
+    n_a = _node("n_a", 1, prune_channels=["lexical_membership"], rank=1,
+                currentness=("summary_stale" if n_a_stale else "current"))
+    n_b = _node("n_b", 1, prune_channels=["kind"], rank=2)                 # SOUND cert excludes -> pruned
+    n_c = _node("n_c", 1, prune_channels=["lexical_descriptor"], rank=3)   # bounded/unsound -> never prunes
+    n_d = _node("n_d", 1, prune_channels=["kind"], rank=4)                 # beyond beam -> unresolved
+    a_children = [lr, lo]
+    if cross_ns_child:
+        a_children = [lr, _hit("projB/leak.md", "projB SECRET cross-namespace leak.\n", "leaf_leak",
+                               "leak", ns="projB", rank=2, corpus=CORPUS_I34)]
+    children = {"n_a": a_children, "n_c": [lc],
+                "n_b": [_hit("projA/b.md", "b\n", "leaf_b", "b", ns="projA", corpus=CORPUS_I34)]}
+    certs = {"n_b": {"kind": (True, True)},                # no_false_negative + excludes -> SOUND prune
+             "n_a": {"lexical_membership": (True, False)}, # sound channel, cannot exclude -> KEEP
+             "n_d": {"kind": (True, True)}}
+    return FixtureHierarchyPort([n_a, n_b, n_c, n_d], children, certs, topology_state=topology_state)
+
+def _compile_hier(port, task_extra=None):
+    st = {}
+    for nid in ("n_a", "n_b", "n_c", "n_d"):
+        for ch in port.children.get(nid, []):
+            if ch.get("record_kind") != "node":
+                st[ch["source_path"]] = ch["snippet"]
+    task = {"original_goal": "synthesize the fencing/lease state across projA",
+            "request_text": "global synthesis fencing lease current state",
+            "namespace": "projA", "task_type": "research", "query_class": "global_synthesis",
+            "control_plane": {"permission_grants": [{"namespaces": ["projA"]}]},
+            "config": {"hier_shortlist_k": 4, "hier_beam_b": 3, "hier_depth_d": 2}}
+    if task_extra:
+        task.update(task_extra)
+    return cc.run({"op": "compile", "task": task, "hierarchy_port": port, "source_texts": st,
+                   "retrieval_meta": {"retriever": "mock", "corpus_version": CORPUS_I34}})
+
+def test_i34_shortlist_descend():
+    print("[i34/V1: shortlist-and-descend reaches the required leaf; nodes route, never evidence]")
+    m = _compile_hier(_std_port())
+    check("hier compile ok", m["ok"], json.dumps({k: m.get(k) for k in ("ok", "error_code", "error")}))
+    p = m["result"]["packet"]
+    ev_rvids = set(e["record_version_id"] for e in p["evidence"]["excerpts"])
+    check("required leaf REACHED via descend (in evidence)", "leaf_req" in ev_rvids)
+    check("NO node in evidence[]", not any(rv in ev_rvids for rv in ("n_a", "n_b", "n_c", "n_d")))
+    check("no node record_kind among excerpts", all(e.get("record_kind") != "node"
+          for e in p["evidence"]["excerpts"]))
+    nav_ids = set(r["record_version_id"] for r in p["evidence"]["navigation_refs"])
+    check("navigation nodes routed to navigation_refs", {"n_a", "n_c"} <= nav_ids)
+    check("every navigation_ref candidate_role=navigation",
+          all(r.get("candidate_role") == "navigation" for r in p["evidence"]["navigation_refs"]))
+    check("retrieval_completeness present", "retrieval_completeness" in p)
+    check("identity.hierarchy present + tree_version pinned",
+          p["identity"].get("hierarchy", {}).get("tree_version") == "tv_1")
+
+def test_i34_safe_pruning():
+    print("[i34/V2 (P0): prune ONLY via a no-false-negative certificate; bounded descriptor never prunes]")
+    m = _compile_hier(_std_port())
+    p = m["result"]["packet"]
+    rc = p["retrieval_completeness"]
+    ev = set(e["record_version_id"] for e in p["evidence"]["excerpts"])
+    check("a SOUND-certificate branch (n_b/kind) WAS pruned", rc["pruned_branch_count"] >= 1)
+    check("a bounded-descriptor-only branch (n_c) is NOT pruned (its leaf reached)", "leaf_c" in ev)
+    check("unresolved frontier reflected (n_d beyond beam)", rc["unresolved_branch_count"] >= 1)
+    check("fallback_used when the frontier is unresolved", rc["fallback_used"] is True)
+    check("frontier NOT claimed exhausted", rc["frontier_exhausted"] is False)
+    ms = _compile_hier(_std_port(n_a_stale=True))
+    rcs = ms["result"]["packet"]["retrieval_completeness"]
+    evs = set(e["record_version_id"] for e in ms["result"]["packet"]["evidence"]["excerpts"])
+    check("stale navigation encountered is flagged", rcs["stale_navigation_encountered"] is True)
+    check("a stale-synopsis branch still ROUTES (required leaf reached; never synopsis-pruned)",
+          "leaf_req" in evs)
+
+def test_i34_retrieval_completeness_fields():
+    print("[i34/V3: a hierarchy MISS != proved absence; nav/summary_stale never in missing_requirements]")
+    p = _compile_hier(_std_port())["result"]["packet"]
+    rc = p["retrieval_completeness"]
+    for f in ("frontier_exhausted", "pruned_branch_count", "prune_policy_id", "prune_policy_version",
+              "prune_reasons", "fallback_used", "stale_navigation_encountered", "unresolved_branch_count",
+              "max_unexpanded_bound"):
+        check("retrieval_completeness has field: " + f, f in rc)
+    check("prune_policy_id = safe_prune_v1", rc["prune_policy_id"] == "safe_prune_v1")
+    mj = json.dumps(p["disposition"]["missing_requirements"])
+    check("no navigation node id in missing_requirements",
+          all(nid not in mj for nid in ("n_a", "n_b", "n_c", "n_d")))
+    check("an unresolved pruned frontier BLOCKS a definitive-absence claim",
+          rc["frontier_exhausted"] is False and rc["unresolved_branch_count"] >= 1)
+
+def test_i34_packet_identity_hierarchy():
+    print("[i34/V4: packet identity covers the hierarchy; deterministic; a different tree -> different id]")
+    p1 = _compile_hier(_std_port())["result"]["packet"]
+    p2 = _compile_hier(_std_port())["result"]["packet"]
+    check("packet_id byte-identical on re-run (deterministic)", p1["packet_id"] == p2["packet_id"])
+    h = p1["identity"]["hierarchy"]
+    check("identity.hierarchy has hierarchy_id + tree_version",
+          h.get("hierarchy_id") == "hier_projA" and h.get("tree_version") == "tv_1")
+    check("identity.hierarchy has builder + prune + plan policy",
+          h["builder_policy"]["id"] == "balanced_bulk_v1" and h["prune_policy"]["id"] == "safe_prune_v1"
+          and h["plan_policy"]["id"] == "shortlist_descend_v1")
+    check("identity.hierarchy has the stage-trace digest",
+          str(h.get("retrieval_plan_stage_digest", "")).startswith("sha256:"))
+    port_tv2 = _std_port(); port_tv2.tree_version = "tv_2"
+    p4 = _compile_hier(port_tv2)["result"]["packet"]
+    check("a different tree_version changes packet_id", p1["packet_id"] != p4["packet_id"])
+    check("packet_id == cpkt_+sha256(body)[:32] with the hierarchy in the hashed body",
+          p1["packet_id"] == "cpkt_" + cc.sha256_of_obj({k: v for k, v in p1.items() if k != "packet_id"})[:32])
+
+def test_i34_nav_evidence_closure():
+    print("[i34/V5: a cross-namespace navigation/hierarchy object -> SANITIZED abort (count only)]")
+    m = _compile_hier(_std_port(cross_ns_child=True))
+    check("cross-namespace descend child FAILS CLOSED", m["ok"] is False)
+    check("error_code = namespace_closure_violation", m.get("error_code") == "namespace_closure_violation")
+    check("compile_status failed_closed", m.get("compile_status") == "failed_closed")
+    check("a namespace_violation_count surfaces (>=1)", (m.get("namespace_violation_count") or 0) >= 1)
+    blob = json.dumps(m)
+    check("NO identifying projB / leak / SECRET metadata in the payload",
+          "projB" not in blob and "SECRET" not in blob and "leaf_leak" not in blob)
+
+def test_i34_flat_byte_identical():
+    print("[i34: a flat/zero-node compile (no port) is BYTE-IDENTICAL to 0.5 -- every i34 field gated]")
+    lr, lo, lc = _std_leaves()
+    st = {lr["source_path"]: lr["snippet"], lo["source_path"]: lo["snippet"]}
+    task = {"original_goal": "g", "request_text": "global synthesis lease",
+            "namespace": "projA", "task_type": "research", "query_class": "global_synthesis",
+            "control_plane": {"permission_grants": [{"namespaces": ["projA"]}]}}
+    args = {"op": "compile", "task": task,
+            "retrieval_batches": [{"query_index": 0, "hits": [lr, lo]}],
+            "source_texts": st, "retrieval_meta": {"retriever": "mock", "corpus_version": CORPUS_I34}}
+    p = cc.run(args)["result"]["packet"]
+    check("no-port global compile ok", "packet_id" in p)
+    check("NO retrieval_completeness on a flat compile", "retrieval_completeness" not in p)
+    check("NO identity.hierarchy on a flat compile", "hierarchy" not in p["identity"])
+    p2 = cc.run(dict(args))["result"]["packet"]
+    check("flat compile byte-identical on re-run", cc.canonical_json(p) == cc.canonical_json(p2))
+
+
 def main():
-    print("== context.compile 0.5 off-machine test gate (i33 namespace-closure + supersession-hardening) ==")
+    print("== context.compile 0.6 off-machine test gate (i34 Tier-1 hierarchy shortlist-and-descend + safe pruning) ==")
     for t in (test_primitives, test_normalize, test_three_regions, test_injection,
               test_dispositions, test_consumer_profile_and_transport, test_selpol_interface,
               test_selpol_stale_demote, test_selection_byte_identity, test_provenance_modes,
@@ -919,7 +1108,10 @@ def main():
               # i33 NAMESPACE-CLOSURE + SUPERSESSION-HARDENING (D-0096)
               test_i33_all_object_scope_check, test_i33_candidate_role_navigation,
               test_i33_catalog_effective_current_passthrough, test_i33_supersession_branch_conflicted,
-              test_i33_temporal_intent_split, test_i33_unscoped_and_determinism, test_i33_expand_no_widen):
+              test_i33_temporal_intent_split, test_i33_unscoped_and_determinism, test_i33_expand_no_widen,
+              # i34 Tier-1 HIERARCHY: shortlist-and-descend + safe pruning + completeness + closure (D-0098)
+              test_i34_shortlist_descend, test_i34_safe_pruning, test_i34_retrieval_completeness_fields,
+              test_i34_packet_identity_hierarchy, test_i34_nav_evidence_closure, test_i34_flat_byte_identical):
         t()
     total = _passed + _failed
     print("\n== %d/%d passed, %d failed ==" % (_passed, total, _failed))

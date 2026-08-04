@@ -1,11 +1,45 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-context_compiler.py -- Life Orchestrator Module 40 (skill `context.compile` 0.5.0)
+context_compiler.py -- Life Orchestrator Module 40 (skill `context.compile` 0.6.0)
 
 The Collective Agent's context-packet compiler (directive Priority 4 / section 8). DETERMINISTIC,
 CPU-only, NO model, NO network. Turns a task descriptor into a versioned, token-budgeted, SAFE,
 self-describing `lifeorch.context_packet/0.2` artifact the coordinator hands a disposable model.
+
+0.6 (i34 Tier-1 BOUNDED-FANOUT HIERARCHY -- shortlist-and-descend + SAFE PRUNING + retrieval
+completeness, D-0098) turns the A4/A5-RESERVED hierarchy seam into a real CONSUMER-side retrieval PLAN
+(CONTEXT_PACKET_CONTRACT i34 V1-V5; MEMORY_CONTRACT A6). ADDITIVE over `context_packet/0.2` -- schema
+string UNCHANGED; module semver 0.5.0 -> 0.6.0; a zero-node/flat/non-descend/unscoped compile is
+BYTE-IDENTICAL to 0.5 (every i34 field is GATED on a plan actually running). #40 is the CONSUMER of
+#36's authorization-bound `shortlist`/`descend` ops (A6 H6) + #36's channel-specific safe-pruning
+predicates; #36 (Lane A) is a PARALLEL i34 producer, so off-machine #40 tests the PLAN over an injected
+port + the REAL #37 lib, and the real-tree end-to-end recall proves at the orchestrator D-0077 fold.
+  (V1) shortlist-and-descend is a MULTI-STAGE PLAN: a DETERMINISTIC descend-decision (the i32 query_class
+       stub -- the multi-channel router is i35) routes a `global_synthesis`/`precedent_search` class to
+       shortlist authorized roots -> descend the frontier (bounded B nodes/level, D depth -> nav cost
+       O(B*D), sub-linear in leaf count) -> collect LEAF candidates -> the EXISTING selpol/budget/packet
+       path; a local/exact class stays flat-top-k. effective_allowed_namespaces (i33 intersection) +
+       hierarchy_version + the pinned corpus_snapshot are passed to shortlist/descend (H6). Nodes
+       (candidate_role=navigation) NEVER enter evidence[], never satisfy a requirement -- they route via
+       navigation_refs + the packet-identity stage trace only.
+  (V2) SAFE PRUNING (P0): a branch is pruned ONLY via a deterministic channel-specific NO-FALSE-NEGATIVE
+       certificate from #36 at the pinned snapshot; else the plan expands / falls back to flat / sets
+       disposition needs_expansion|abstain. A STALE synopsis never supplies a pruning proof; a bounded
+       lexical/entity/centroid descriptor is NEVER a pruning certificate (only prioritizes).
+  (V3) RETRIEVAL COMPLETENESS (distinct from evidence coverage): a hierarchy MISS is NOT proved ABSENCE.
+       frontier_exhausted / pruned_branch_count / prune_policy id+version / prune_reasons[] / fallback_used
+       / stale_navigation_encountered / unresolved_branch_count / max_unexpanded_bound. An UNRESOLVED
+       pruned frontier BLOCKS any definitive-absence claim; a navigation/summary_stale node NEVER enters
+       missing_requirements[].
+  (V4) packet identity += hierarchy_id + the PINNED tree_version + builder/prune/plan policy ids + the
+       retrieval-plan/stage trace (atop the i33 classifier/temporal/ns/state_version coverage); one
+       tree_version per compile (drift aborts, like corpus_version).
+  (V5) navigation-vs-evidence closure (extends i33 U2'/U1'): selection cannot cast a navigation candidate
+       into evidence; EVERY navigation-visible object (navigation_refs, stage traces, node ids/paths/
+       descriptors) is namespace-closure-checked via the canonical `ns_permitted` + fail-closed SANITIZED
+       (a cross-namespace navigation/hierarchy object ABORTS with only a namespace_violation_count).
+  non_execution:true (s0) UNCHANGED. #36 ops + #37 selpol/ns_permitted are imported/injected READ-ONLY.
 
 0.5 (i33 NAMESPACE-CLOSURE + SUPERSESSION-HARDENING, D-0096) hardens the packet/selection half after the
 frontier Tier-0 red-team (pack 159e9cb5) found the i32 amendments were an ENVELOPE-level first layer only
@@ -258,8 +292,8 @@ else:
     CLASSIFIER_POLICY_SOURCE = "local_offmachine_replica_pending_37_canonical"
 
 WORKER_NAME = "context_compiler.py"
-WORKER_VERSION = "0.5.0"
-COMPILER_VERSION = "0.5.0"
+WORKER_VERSION = "0.6.0"
+COMPILER_VERSION = "0.6.0"
 PACKET_SCHEMA = "lifeorch.context_packet/0.2"  # UNCHANGED at i33 -- A5/D-0096 amendment is ADDITIVE over 0.2
 EXPANSION_SCHEMA = "lifeorch.context_expansion/0.2"
 
@@ -317,6 +351,9 @@ DEFAULT_CONFIG = {
     "expand_max_tokens": 600,      # default budget for an expansion request
     "expand_max_depth": 1,         # P1-5: expansion depth bound
     "ref_cap": 8,                  # per-kind ref list cap
+    "hier_shortlist_k": 4,         # i34 (V1): authorized roots shortlisted (bounded)
+    "hier_beam_b": 4,              # i34 (V1): frontier nodes examined per level (bounded)
+    "hier_depth_d": 6,             # i34 (V1): max descend depth (bounded) -> nav cost O(B*D), sub-linear
 }
 
 # P0-4: the default consumer/tokenizer profile (names WHICH consumer the budget was computed for).
@@ -383,6 +420,266 @@ def _candidate_role(hit):
 
 def _is_navigation(hit_or_row):
     return _candidate_role(hit_or_row) == "navigation"
+
+# ================================================================================================
+# i34 (D-0098) -- Tier-1 BOUNDED-FANOUT HIERARCHY: the shortlist-and-descend PLAN + SAFE PRUNING
+# (P0) + RETRIEVAL COMPLETENESS + navigation-vs-evidence closure. CONTEXT_PACKET_CONTRACT i34 (V1-V5);
+# MEMORY_CONTRACT A6. #40 is the CONSUMER: it runs the multi-stage PLAN over #36's authorization-bound
+# `shortlist`/`descend` ops (H6) + #36's channel-specific SAFE-PRUNING predicates. The OPS (ranking
+# roots, listing children, the no-false-negative predicates) are #36's; the PLAN (descend-decision,
+# bounded frontier, safe-pruning ENFORCEMENT, completeness accounting) is #40's. #40 NEVER invents a
+# pruning certificate -- it only ENFORCES the rule. A zero-node/flat compile (no hierarchy port, or a
+# non-descend class, or an unscoped compile) is BYTE-IDENTICAL to 0.5 -- every field below is gated on
+# a plan actually running. #36 is a PARALLEL i34 producer (Lane A); off-machine #40 tests the PLAN
+# over an injected port (the real-tree end-to-end recall proves at the orchestrator D-0077 fold).
+#
+# The injected port contract (what #36 implements; the fixture mirrors it):
+#   port.policy_info() -> {hierarchy_id, hierarchy_kind, tree_version, builder_policy_id,
+#       builder_policy_version, corpus_snapshot, prune_predicate_id, prune_predicate_version,
+#       topology_state ('valid'|'rebuild_required'|'corrupt')}
+#   port.shortlist(query, effective_allowed_namespaces, hierarchy_version, corpus_snapshot, k)
+#       -> [ node hit ]  (record_kind='node', candidate_role='navigation', node_id, level, namespace,
+#           prune_channels[], status/currentness, corpus_version, structural synopsis descriptors)
+#   port.descend(node_id, retrieval_plan_id, effective_allowed_namespaces, hierarchy_version,
+#       corpus_snapshot) -> [ node hit | leaf hit ]  (leaves = retriever-0.2 hits, candidate_role
+#       'evidence'; ns_permitted at EVERY hop -- an out-of-scope node_id fails closed, no metadata)
+#   port.prune_certificate(node_id, channel, query, effective_allowed_namespaces, hierarchy_version,
+#       corpus_snapshot) -> {no_false_negative: bool, excludes: bool, channel, corpus_snapshot} | None
+# ================================================================================================
+
+# The descend-decision (V1): only a global/overview/precedent SEMANTIC class routes through the
+# hierarchy; local/exact classes stay flat-top-k (today's path). The multi-channel ROUTER is i35.
+DESCEND_QUERY_CLASSES = frozenset({"global_synthesis", "precedent_search"})
+
+# Bounded frontier (V1): <= BEAM_B nodes examined per level, <= DEPTH_D levels. Navigation cost is
+# O(BEAM_B * DEPTH_D) -- INDEPENDENT of leaf count -> sub-linear. Ratifiable defaults (config-overridable).
+HIER_DEFAULT_SHORTLIST_K = 4
+HIER_DEFAULT_BEAM_B = 4
+HIER_DEFAULT_DEPTH_D = 6
+
+# The PLAN + the safe-pruning ENFORCEMENT are versioned here (V4); the channel PREDICATES are #36's
+# (their id/version come from the port). packet identity covers all three.
+PLAN_POLICY_ID = "shortlist_descend_v1"
+PLAN_POLICY_VERSION = "1.0.0"
+PRUNE_POLICY_ID = "safe_prune_v1"
+PRUNE_POLICY_VERSION = "1.0.0"
+
+# The channels over which #36 can supply a NO-FALSE-NEGATIVE pruning certificate (A6 / the design
+# red-team). A bounded top-N lexical/entity DESCRIPTOR is NEVER a certificate; only an exact-membership
+# / no-false-negative (Bloom) filter, exact subtree ranges/histograms, an exact id/path/symbol index,
+# or an admissible vector bound (centroid+covering_radius, reserved) can PROVE a subtree cannot satisfy
+# the need. Any channel NOT in this set (incl. a bounded 'lexical_descriptor'/'entity_union'/'centroid')
+# can only PRIORITIZE, never EXCLUDE.
+SOUND_PRUNE_CHANNELS = frozenset({
+    "exact_id", "path", "symbol",                 # exact index bypass
+    "time", "kind", "authority",                  # exact subtree ranges / histograms
+    "lexical_membership", "entity_membership",     # exact-membership or Bloom (NOT a bounded top-N descriptor)
+    "vector_bound",                                # centroid + covering_radius (reserved; #36 supplies when present)
+})
+
+def _node_synopsis_stale(node):
+    """H2 / red-team delta 3: a NAVIGATION node whose structural synopsis is stale. A stale synopsis is
+    NEVER eligible to supply a pruning proof (it may still ROUTE). Detected via the s5 `summary_stale`
+    currentness OR an explicit `synopsis_fresh: false` / `topology_state != 'valid'` signal from #36."""
+    if str(node.get("currentness") or node.get("status") or "").strip().lower() == NAVIGATIONAL_STALE:
+        return True
+    if node.get("synopsis_fresh") is False:
+        return True
+    return False
+
+def _safe_prune_decision(port, node, query, effective_allowed, hierarchy_version, corpus_snapshot):
+    """V2 (P0): may `node`'s subtree be PRUNED? Returns (can_prune: bool, reason: str). Prune ONLY when
+    #36 supplies a deterministic channel-specific NO-FALSE-NEGATIVE certificate proving the subtree
+    cannot satisfy the query/requirement at the PINNED snapshot. A STALE synopsis is never eligible; a
+    bounded descriptor is never a certificate; an unsound/mismatched-snapshot certificate is ignored.
+    Absent a sound certificate the caller RETAINS/EXPANDS the branch (never a synopsis prune)."""
+    if _node_synopsis_stale(node):
+        return False, "stale_synopsis_never_prunes"
+    prune_cert = getattr(port, "prune_certificate", None)
+    if prune_cert is None:
+        return False, "no_prune_predicate_available"
+    # Only channels the node ADVERTISES a predicate for, intersected with the SOUND set. A node that
+    # advertises only a bounded 'lexical_descriptor'/'entity_union'/'centroid' yields NO sound channel.
+    advertised = node.get("prune_channels") or []
+    for ch in advertised:
+        if ch not in SOUND_PRUNE_CHANNELS:
+            continue
+        try:
+            cert = prune_cert(node_id=node.get("node_id"), channel=ch, query=query,
+                              effective_allowed_namespaces=list(effective_allowed or []),
+                              hierarchy_version=hierarchy_version, corpus_snapshot=corpus_snapshot)
+        except Exception:  # noqa: BLE001 -- a failing predicate is NOT a proof of absence
+            cert = None
+        if (isinstance(cert, dict) and cert.get("no_false_negative") is True and cert.get("excludes") is True
+                and cert.get("corpus_snapshot") == corpus_snapshot and cert.get("channel") in SOUND_PRUNE_CHANNELS):
+            return True, "certified_absent:" + str(cert.get("channel"))
+    return False, "no_sound_certificate"
+
+def _hier_config(config):
+    return (int(config.get("hier_shortlist_k", HIER_DEFAULT_SHORTLIST_K)),
+            int(config.get("hier_beam_b", HIER_DEFAULT_BEAM_B)),
+            int(config.get("hier_depth_d", HIER_DEFAULT_DEPTH_D)))
+
+def run_hierarchy_plan(port, task, norm, config, warnings):
+    """V1-V3+V5: the multi-stage shortlist-and-descend PLAN. DETERMINISTIC. Returns None for a flat
+    compile (no port / non-descend class / unscoped). Otherwise returns:
+      {leaf_hits[], node_hits[], retrieval_completeness{}, plan_trace{}, policy_info{}, hierarchy_version,
+       corpus_snapshot, reject_policy}. leaf_hits + node_hits are appended to the batches so the EXISTING
+      scope-check -> selpol -> navigation-routing machinery handles them (nodes NEVER become excerpts).
+    The plan scope-checks EVERY navigation-visible object it touches via the canonical `ns_permitted`
+    (V5); a violation is recorded on its NamespaceRejectionPolicy (op_compile aborts sanitized)."""
+    if port is None:
+        return None
+    query_class = norm.get("query_class")
+    if query_class not in DESCEND_QUERY_CLASSES:
+        return None
+    closure = norm.get("namespace_closure") or {}
+    effective = closure.get("effective")
+    # Authorization-bound ops REQUIRE a non-empty effective namespace set (an unscoped/unenforced compile
+    # stays flat -- shortlist cannot bind to authorized roots). This keeps unscoped-global back-compat.
+    if not closure.get("enforced") or not effective:
+        return None
+
+    info = dict(port.policy_info() or {})
+    hierarchy_version = info.get("tree_version")
+    corpus_snapshot = info.get("corpus_snapshot")
+    reject = NamespaceRejectionPolicy()
+    k, beam_b, depth_d = _hier_config(config)
+    query = {"query_set": norm.get("query_set"), "query_class": query_class,
+             "normalized_task": norm.get("normalized_task")}
+    # A DETERMINISTIC retrieval_plan_id (no wall-clock): hash of the pinned hierarchy + query.
+    retrieval_plan_id = "rplan_" + sha256_of_obj(
+        {"hierarchy_id": info.get("hierarchy_id"), "tree_version": hierarchy_version,
+         "corpus_snapshot": corpus_snapshot, "query": query})[:24]
+
+    def _scope_ok(obj):
+        ns = obj.get("namespace")
+        if ns_permitted(ns, effective):
+            return True
+        reject.reject(obj, effective, stage="hierarchy")   # sanitized: only a count surfaces
+        return False
+
+    leaf_hits, node_hits = [], []
+    seen_nodes, seen_leaves = set(), set()
+    pruned_branch_count = 0
+    prune_reasons = {}
+    unresolved_branch_count = 0
+    stale_navigation_encountered = False
+    stages = []
+
+    def _record_node(n):
+        nid = n.get("node_id")
+        if nid in seen_nodes:
+            return
+        seen_nodes.add(nid)
+        n = dict(n)
+        n.setdefault("record_kind", "node")
+        n["candidate_role"] = "navigation"
+        node_hits.append(n)
+
+    # Stage 0: shortlist authorized roots (bounded k). Every returned root is scope-checked (V5).
+    roots = list(port.shortlist(query, list(effective), hierarchy_version, corpus_snapshot, k) or [])
+    roots = [r for r in roots if _scope_ok(r)]
+    for r in roots:
+        if _node_synopsis_stale(r):
+            stale_navigation_encountered = True
+        _record_node(r)
+    frontier = roots[:beam_b]
+    if len(roots) > beam_b:
+        unresolved_branch_count += (len(roots) - beam_b)   # bounded, NOT proved absent
+    stages.append({"stage": "shortlist", "level": -1, "examined": len(roots),
+                   "kept": len(frontier), "unresolved": max(0, len(roots) - beam_b)})
+
+    # Stages 1..D: bounded frontier expansion. A node is pruned ONLY via a sound certificate; else it is
+    # descended (or, if the depth bound cuts it off, left UNRESOLVED -- never silently dropped as absent).
+    depth = 0
+    while frontier and depth < depth_d:
+        next_frontier, examined, pruned_here, descended_here = [], 0, 0, 0
+        for node in frontier[:beam_b]:
+            examined += 1
+            can_prune, reason = _safe_prune_decision(
+                port, node, query, effective, hierarchy_version, corpus_snapshot)
+            if can_prune:
+                pruned_branch_count += 1
+                pruned_here += 1
+                prune_reasons[reason] = prune_reasons.get(reason, 0) + 1
+                continue
+            # RETAIN -> descend. Every child (node or leaf) is scope-checked (V5); a stale child node may
+            # still route. Leaves become evidence candidates; child nodes join the next frontier.
+            children = list(port.descend(node.get("node_id"), retrieval_plan_id, list(effective),
+                                         hierarchy_version, corpus_snapshot) or [])
+            descended_here += 1
+            for ch in children:
+                if not _scope_ok(ch):
+                    continue
+                if _candidate_role(ch) == "navigation":
+                    if _node_synopsis_stale(ch):
+                        stale_navigation_encountered = True
+                    _record_node(ch)
+                    next_frontier.append(ch)
+                else:
+                    lid = ch.get("record_version_id")
+                    if lid not in seen_leaves:
+                        seen_leaves.add(lid)
+                        leaf_hits.append(ch)
+        if len(frontier) > beam_b:
+            unresolved_branch_count += (len(frontier) - beam_b)
+        stages.append({"stage": "descend", "level": depth, "examined": examined,
+                       "pruned": pruned_here, "descended": descended_here,
+                       "next_frontier": len(next_frontier)})
+        frontier = next_frontier[:beam_b] if len(next_frontier) > beam_b else next_frontier
+        if len(next_frontier) > beam_b:
+            unresolved_branch_count += (len(next_frontier) - beam_b)
+        depth += 1
+    # Depth bound hit with an un-expanded frontier -> those branches are UNRESOLVED (not proved absent).
+    if frontier:
+        unresolved_branch_count += len(frontier)
+
+    topology_state = info.get("topology_state", "valid")
+    # FALLBACK (V2): a non-`valid` topology, OR an unresolved frontier means the hierarchy did NOT
+    # prove global exhaustion -> the injected FLAT batch is retained alongside the descend leaves (the
+    # compiler keeps it), and the packet must NOT claim proved absence (V3). No branch is ever pruned
+    # without a sound certificate, so recall is never silently lost.
+    fallback_used = (topology_state != "valid") or (unresolved_branch_count > 0)
+    frontier_exhausted = (unresolved_branch_count == 0 and topology_state == "valid")
+    nodes_examined = len(seen_nodes)
+    max_unexpanded_bound = beam_b * depth_d
+
+    retrieval_completeness = {
+        "frontier_exhausted": bool(frontier_exhausted),
+        "pruned_branch_count": pruned_branch_count,
+        "prune_policy_id": PRUNE_POLICY_ID,
+        "prune_policy_version": PRUNE_POLICY_VERSION,
+        "prune_predicate_id": info.get("prune_predicate_id"),
+        "prune_predicate_version": info.get("prune_predicate_version"),
+        "prune_reasons": [{"reason": r, "count": prune_reasons[r]} for r in sorted(prune_reasons)],
+        "fallback_used": bool(fallback_used),
+        "stale_navigation_encountered": bool(stale_navigation_encountered),
+        "unresolved_branch_count": unresolved_branch_count,
+        "max_unexpanded_bound": max_unexpanded_bound,
+        "navigation_nodes_examined": nodes_examined,        # for #37's sub-linear-in-leaf-count measure
+        "leaf_candidates_collected": len(leaf_hits),
+        "note": ("a hierarchy MISS is NOT proved ABSENCE (V3); an UNRESOLVED pruned frontier blocks any "
+                 "definitive-absence claim -- a branch is pruned ONLY via a no-false-negative certificate, "
+                 "a stale synopsis never prunes, a bounded descriptor is never a certificate (V2/A6)."),
+    }
+    plan_trace = {
+        "plan_policy_id": PLAN_POLICY_ID, "plan_policy_version": PLAN_POLICY_VERSION,
+        "retrieval_plan_id": retrieval_plan_id,
+        "descend_decision": {"query_class": query_class, "routed": "shortlist_and_descend",
+                             "shortlist_k": k, "beam_b": beam_b, "depth_d": depth_d},
+        "stages": stages,
+    }
+    return {"leaf_hits": leaf_hits, "node_hits": node_hits,
+            "retrieval_completeness": retrieval_completeness, "plan_trace": plan_trace,
+            "policy_info": {"hierarchy_id": info.get("hierarchy_id"),
+                            "hierarchy_kind": info.get("hierarchy_kind"),
+                            "tree_version": hierarchy_version,
+                            "builder_policy_id": info.get("builder_policy_id"),
+                            "builder_policy_version": info.get("builder_policy_version"),
+                            "topology_state": topology_state},
+            "hierarchy_version": hierarchy_version, "corpus_snapshot": corpus_snapshot,
+            "reject_policy": reject}
 
 # ------------------------------------------------------------------------------------------------
 # U5 (i32): the query-classification STAGE -- a DETERMINISTIC task_type->class stub. The multi-channel
@@ -1937,6 +2234,29 @@ def op_compile(args, warnings):
     if batches is None and args.get("candidates") is not None:
         batches = [{"query_index": 0, "hits": args["candidates"]}]
     retrieval_meta = args.get("retrieval_meta") or {}
+
+    # i34 (V1, D-0098): the shortlist-and-descend PLAN. For a global/precedent class WITH an authorized
+    # (enforced, non-empty) namespace closure AND an injected hierarchy port, run shortlist -> bounded
+    # descend -> collect leaf candidates (+ navigation nodes), then APPEND them to the batches so the
+    # EXISTING scope-check -> selpol -> navigation-routing path handles them uniformly (nodes never
+    # become excerpts; leaves become evidence candidates). Returns None -> a flat compile, BYTE-IDENTICAL
+    # to 0.5. The port is a LIVE object (args['hierarchy_port']); at the orchestrator D-0077 fold it is
+    # #36's real retriever. A cross-namespace navigation/hierarchy object surfaced by the plan ABORTS
+    # SANITIZED (V5): only a namespace_violation_count surfaces, identifying detail -> the security log.
+    batches = list(batches or [])
+    hierarchy_plan = run_hierarchy_plan(args.get("hierarchy_port"), task, norm, config, warnings)
+    if hierarchy_plan is not None:
+        rp = hierarchy_plan["reject_policy"]
+        if rp.violation_count > 0:
+            raise NamespaceClosureError(
+                "namespace_closure_violation", rp.violation_count,
+                norm["namespace_closure"]["effective"], rp.security_log,
+                "a cross-namespace navigation/hierarchy object was surfaced by the shortlist-and-descend "
+                "plan -- fail-closed, no packet emitted; only a namespace_violation_count surfaces (V5/A6).")
+        plan_hits = list(hierarchy_plan["node_hits"]) + list(hierarchy_plan["leaf_hits"])
+        if plan_hits:
+            batches.append({"query_index": len(batches), "hits": plan_hits, "source": "hierarchy_plan"})
+
     corpus_version = _pin_corpus_version(batches or [], retrieval_meta)
 
     pool, per_query_counts = build_candidate_pool(batches or [])
@@ -2033,7 +2353,7 @@ def op_compile(args, warnings):
         task, norm, config, profile, control_plane, task_input, working_memory, excerpts, refs,
         requirements, coverage, missing, contradictions, disposition, provenance_failed,
         sel, sel_rows, pool, per_query_counts, omission, accounting, transport,
-        retrieval_meta, corpus_version, rendered_input, control_overflow, warnings)
+        retrieval_meta, corpus_version, rendered_input, control_overflow, warnings, hierarchy_plan)
 
     # U1' (i33) DEFENSE-IN-DEPTH: after assembly, assert EVERY packet-visible object references ONLY a
     # scope-permitted candidate (no rvid outside the pre-filtered pool; no namespace failing the closure).
@@ -2057,7 +2377,8 @@ def op_compile(args, warnings):
 def assemble_packet(task, norm, config, profile, control_plane, task_input, working_memory, excerpts, refs,
                     requirements, coverage, missing, contradictions, disposition, provenance_failed,
                     sel, sel_rows, pool, per_query_counts, omission, accounting, transport,
-                    retrieval_meta, corpus_version, rendered_input, control_overflow, warnings):
+                    retrieval_meta, corpus_version, rendered_input, control_overflow, warnings,
+                    hierarchy_plan=None):
     excerpt_rvids = set(e["record_version_id"] for e in excerpts)
 
     # ---- evaluation hooks (extended: per-stage + disposition + P0-1 injection probe) ----
@@ -2310,6 +2631,33 @@ def assemble_packet(task, norm, config, profile, control_plane, task_input, work
     }
     if warnings:
         packet_body["warnings"] = sorted(set(warnings))
+
+    # i34 (V3/V4, D-0098): when a shortlist-and-descend PLAN ran (a hierarchy port + a global/precedent
+    # class + an authorized closure), surface RETRIEVAL COMPLETENESS (distinct from evidence coverage --
+    # a hierarchy MISS is NOT proved ABSENCE) and extend packet IDENTITY with the hierarchy id + the
+    # pinned tree_version + builder/prune/plan policy ids + the retrieval-plan/stage trace. GATED: a
+    # flat/zero-node compile adds NOTHING here, so its packet + packet_id stay BYTE-IDENTICAL to 0.5.
+    if hierarchy_plan is not None:
+        pinfo = hierarchy_plan["policy_info"]
+        rc = hierarchy_plan["retrieval_completeness"]
+        trace = hierarchy_plan["plan_trace"]
+        packet_body["retrieval_completeness"] = dict(
+            rc, hierarchy_id=pinfo.get("hierarchy_id"), tree_version=pinfo.get("tree_version"),
+            topology_state=pinfo.get("topology_state"), retrieval_plan=trace)
+        packet_body["identity"]["hierarchy"] = {
+            "hierarchy_id": pinfo.get("hierarchy_id"),
+            "hierarchy_kind": pinfo.get("hierarchy_kind"),
+            "tree_version": pinfo.get("tree_version"),                 # V4: ONE pinned tree_version/compile
+            "builder_policy": {"id": pinfo.get("builder_policy_id"),
+                               "version": pinfo.get("builder_policy_version")},
+            "prune_policy": {"id": PRUNE_POLICY_ID, "version": PRUNE_POLICY_VERSION,
+                             "predicate_id": rc.get("prune_predicate_id"),
+                             "predicate_version": rc.get("prune_predicate_version")},
+            "plan_policy": {"id": PLAN_POLICY_ID, "version": PLAN_POLICY_VERSION},
+            # the retrieval-plan/stage trace is part of identity: a DIFFERENT traversal -> a DIFFERENT
+            # packet_id (V4), atop the i33 classifier/temporal/ns/state_version coverage.
+            "retrieval_plan_stage_digest": "sha256:" + sha256_of_obj(trace),
+        }
 
     # packet_id is the content hash of the WHOLE body (which already contains every identity field --
     # corpus_version, selection_policy, consumer_profile, grant snapshot, selected rvids, budget, the

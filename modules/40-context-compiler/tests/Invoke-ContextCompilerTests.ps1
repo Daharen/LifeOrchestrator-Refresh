@@ -42,12 +42,12 @@ function Run-CC([string[]]$ccArgs) {
     return $text | ConvertFrom-Json -Depth 60
 }
 
-Write-Host "== context.compile 0.5 entrypoint harness (i33 namespace-closure + supersession-hardening) =="
+Write-Host "== context.compile 0.6 entrypoint harness (i34 Tier-1 hierarchy shortlist-and-descend) =="
 Write-Host "[mock: compile end-to-end over fixtures/compile_case.json -> context_packet/0.2]"
 $env1 = Run-CC @('-Op','compile','-Retriever','mock','-CaseFile',(Join-Path $Fix 'compile_case.json'))
 Check "envelope status ok/partial" ($env1.status -in @('ok','partial')) "status=$($env1.status)"
 Check "skill_id context.compile" ($env1.skill_id -eq 'context.compile')
-Check "skill_version 0.5.0" ($env1.skill_version -eq '0.5.0') "ver=$($env1.skill_version)"
+Check "skill_version 0.6.0" ($env1.skill_version -eq '0.6.0') "ver=$($env1.skill_version)"
 $packet = $env1.result.result.packet
 Check "packet schema 0.2" ($packet.schema -eq 'lifeorch.context_packet/0.2')
 Check "packet_id present" ($packet.packet_id -like 'cpkt_*')

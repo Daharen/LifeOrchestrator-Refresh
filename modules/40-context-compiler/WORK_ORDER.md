@@ -1,10 +1,26 @@
-# Work Order: Context Compiler (`context.compile`) 0.5.0 -- i33 NAMESPACE-CLOSURE + SUPERSESSION-HARDENING
+# Work Order: Context Compiler (`context.compile`) 0.6.0 -- i34 Tier-1 BOUNDED-FANOUT HIERARCHY
 
 **Contract targeted:** `CONTEXT_PACKET_CONTRACT.md` `context_packet/0.2` with **s4 PINNED (D-0089)** + the
-**i32 amendment (D-0092)** + the **i33 amendment (D-0096)** + `MEMORY_CONTRACT.md` A2/A3/A4/**A5** +
-`MEMORY_ARCHITECTURE.md` s5/s9 · **Author:** CONTEXT-COMPILER-CLOSURE-i33 (2026-08-04) · **Roadmap entry:**
-`MODULE_ROADMAP.md#40-context-compiler` · **Wave:** i33 (plan `fo-33-d7b55e46`) · **Supersedes:** the i32 0.4.0
-build (CONTEXT-COMPILER-TIER0-i32, plan `fo-32-0fb25203`).
+**i32 amendment (D-0092)** + the **i33 amendment (D-0096)** + the **i34 amendment (D-0098)** +
+`MEMORY_CONTRACT.md` A2/A3/A4/A5/**A6** + `MEMORY_ARCHITECTURE.md` s5/s6/s9 · **Author:** SHORTLIST-DESCEND-i34
+(2026-08-04) · **Roadmap entry:** `MODULE_ROADMAP.md#40-context-compiler` · **Wave:** i34 (plan
+`fo-34-584fd656`) · **Supersedes:** the i33 0.5.0 build (CONTEXT-COMPILER-CLOSURE-i33, plan `fo-33-d7b55e46`).
+
+### i34 delta (D-0098) -- Tier-1 hierarchy shortlist-and-descend + SAFE PRUNING + retrieval completeness, ADDITIVE over context_packet/0.2 (schema string UNCHANGED; semver 0.5.0 -> 0.6.0)
+CONSUMER-side PLAN over #36's authorization-bound `shortlist`/`descend` ops (`MEMORY_CONTRACT` A6 H6); #36 (Lane A)
+is a PARALLEL producer, so off-machine #40 tests the PLAN over an injected `hierarchy_port` + the REAL #37 lib,
+and the real-tree recall proves at the orchestrator D-0077 fold. Every i34 field is GATED on a plan running -> a
+zero-node/flat/non-descend/unscoped compile is BYTE-IDENTICAL to 0.5. Full interpretation: `SCHEMA_NOTES.md`
+**s17**. **(V1)** the multi-stage descend-decision (query_class stub -> global_synthesis/precedent_search route;
+bounded B/D shortlist->descend->leaves->existing selpol/budget/packet; nodes route via `navigation_refs`, never
+`evidence[]`). **(V2 P0)** SAFE PRUNING -- prune ONLY via a #36 channel-specific NO-FALSE-NEGATIVE certificate;
+else expand/flat-fallback/`needs_expansion`|`abstain`; a stale synopsis never prunes; a bounded descriptor is
+never a certificate. **(V3)** `retrieval_completeness` (a hierarchy MISS != proved ABSENCE). **(V4)** packet
+identity += hierarchy_id + pinned tree_version + builder/prune/plan policy ids + the stage trace. **(V5)**
+navigation-vs-evidence closure -- every nav-visible object `ns_permitted`-checked + fail-closed SANITIZED.
+**Acceptance:** off-machine 322/322 (280 0.5 + 42 i34); flat byte-identity preserved; the `-Live`/real-tree
+end-to-end recall DEFERRED to the orchestrator D-0077 hierarchy fold (#36 not yet shipped). skill.json
+`0.5.0 -> 0.6.0`.
 
 ### i33 delta (D-0096) -- namespace closure + supersession hardening, ADDITIVE over context_packet/0.2 (schema string UNCHANGED; semver 0.4.0 -> 0.5.0)
 Hardens the packet/selection half (full interpretation: `SCHEMA_NOTES.md` **s16**): **(U1')** SAFETY-CRITICAL

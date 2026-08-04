@@ -1,8 +1,8 @@
-# Module 40 -- context.compile (Context Compiler) 0.5.0
+# Module 40 -- context.compile (Context Compiler) 0.6.0
 
 The Collective Agent's context-compilation centerpiece (D-0080 directive Priority 4 / section 8),
 conformed to `core-docs/CONTEXT_PACKET_CONTRACT.md` (`context_packet/0.2`; **s4 PINNED, D-0089**; **i32
-amendment, D-0092**; **i33 amendment, D-0096**). A **deterministic, CPU-only, no-model, no-network** skill
+amendment, D-0092**; **i33 amendment, D-0096**; **i34 amendment, D-0098**). A **deterministic, CPU-only, no-model, no-network** skill
 that turns a task descriptor into a versioned, token-budgeted, SAFE, self-describing
 `lifeorch.context_packet/0.2` the coordinator hands a disposable model:
 
@@ -26,6 +26,34 @@ provenance envelope AND the `CONTEXT_PACKET_CONTRACT` s4 selection-policy interf
 `ns_permitted` + versioned classifier map (all imported READ-ONLY), and **produces** packets that
 retrieval.eval #37 and a fresh 9B consume at the orchestrator fold (D-0077). The 9B is NOT run here -- this
 module is deterministic; the model consumes the packet downstream.
+
+## The i34 Tier-1 BOUNDED-FANOUT HIERARCHY (D-0098)
+
+**shortlist-and-descend + SAFE PRUNING (P0) + retrieval completeness**, ADDITIVE over `context_packet/0.2`
+(schema string UNCHANGED; semver `0.5.0 -> 0.6.0`). #40 is the CONSUMER of #36's authorization-bound
+`shortlist`/`descend` ops (`MEMORY_CONTRACT` A6 H6); #36 (Lane A) is a PARALLEL producer, so off-machine #40
+tests the PLAN over an injected `hierarchy_port` + the REAL #37 lib, and the real-tree recall proves at the
+orchestrator D-0077 fold. **Every i34 field is GATED on a plan running**, so a zero-node/flat/non-descend/
+unscoped compile is BYTE-IDENTICAL to 0.5.
+
+- **(V1)** a DETERMINISTIC descend-decision (the i32 `query_class` stub; the multi-channel router is i35) routes
+  a `global_synthesis`/`precedent_search` class to shortlist authorized roots -> descend the frontier (bounded
+  B nodes/level, D depth -> nav cost O(B*D), sub-linear in leaf count) -> collect LEAF candidates -> the EXISTING
+  selpol/budget/packet path; a local/exact class stays flat-top-k. `effective_allowed_namespaces` (i33) +
+  `hierarchy_version` + the pinned `corpus_snapshot` are passed to `shortlist`/`descend`. Nodes
+  (`candidate_role=navigation`) NEVER enter `evidence[]` -- they route via `navigation_refs` + the identity trace.
+- **(V2) SAFE PRUNING (P0):** a branch is pruned ONLY via a deterministic channel-specific NO-FALSE-NEGATIVE
+  certificate from #36 at the pinned snapshot; else expand / flat-fall-back / `needs_expansion`|`abstain`. A STALE
+  synopsis never supplies a pruning proof; a bounded lexical/entity/centroid descriptor is NEVER a certificate.
+- **(V3)** `retrieval_completeness` (distinct from evidence coverage): a hierarchy MISS is NOT proved ABSENCE
+  (`frontier_exhausted`/`pruned_branch_count`/`prune_policy`/`prune_reasons`/`fallback_used`/
+  `stale_navigation_encountered`/`unresolved_branch_count`/`max_unexpanded_bound`).
+- **(V4)** `packet_id` += `hierarchy_id` + the PINNED `tree_version` + builder/prune/plan policy ids + the
+  retrieval-plan/stage trace (one tree_version per compile; drift aborts).
+- **(V5)** navigation-vs-evidence closure: EVERY navigation-visible object is `ns_permitted`-checked + fail-closed
+  SANITIZED (a cross-namespace navigation/hierarchy object ABORTS with only a `namespace_violation_count`).
+
+SCHEMA_NOTES **s17** records every A6/i34 interpretation (REQUIRED for the D-0077 fold). Off-machine gate: 322/322.
 
 ## The i33 NAMESPACE-CLOSURE + SUPERSESSION-HARDENING (D-0096)
 
@@ -144,7 +172,7 @@ repeats on real #36 hits).
   canonical `selpol_rrf_v1` by a resolved portable path (`_load_canonical_selpol`); the i30
   `selpol_reference.py` stub is RETIRED (deleted).
 - `Invoke-ContextCompiler.ps1` -- the thin entrypoint + the retriever seam (mock off-machine; real #36 `-Live`).
-- `skill.json` -- the `lifeorch.skill.manifest/0.1` manifest (version 0.5.0, contract 0.5).
+- `skill.json` -- the `lifeorch.skill.manifest/0.1` manifest (version 0.6.0, contract 0.5).
 - `SCHEMA_NOTES.md` -- **the D-0077 fold contract** (every schema/interface interpretation; **s16 = i33**).
 - `WORK_ORDER.md`, `examples/`, `fixtures/`, `tests/`.
 - **cross-module (READ-ONLY import):** `../37-retrieval-eval/lib/selpol_rrf_v1.py` -- the ONE canonical
