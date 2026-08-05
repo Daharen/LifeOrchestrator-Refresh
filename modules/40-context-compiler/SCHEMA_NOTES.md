@@ -791,3 +791,82 @@ NO multi-channel query ROUTER (the query_class stub + DESCEND_QUERY_CLASSES stan
 FUSION (single effective namespace only -> multi-ns flat-falls-back); NO P0-1 adversarial injection SUITE /
 action-capable release (`non_execution:true` UNCHANGED); NO real embeddings/vector; NO 9B/models.json; NO UI; NO
 core-doc edits (`docs:[]` -- the orchestrator mirrors).
+
+## s19 -- i37 the multi-channel query ROUTER, BORN INSTRUMENTED (R-1, D-0101/D-0103) -- the full interpretation (REQUIRED for the D-0077 fold)
+
+**What shipped.** The i32 `query_class` stub + `DESCEND_QUERY_CLASSES` became a real DETERMINISTIC, VERSIONED
+multi-channel query ROUTER (`ROUTING_POLICY_ID = "multichannel_route_v1"`, `ROUTING_POLICY_VERSION = "1.0.0"`),
+BORN INSTRUMENTED with the CONTEXT_PACKET_CONTRACT s9 stage-trace. `context_packet/0.2` schema string UNCHANGED;
+module semver `0.7.0 -> 0.8.0`. Realizes the R-1 requirement (the audit-surface program,
+`research/2026-08-05-interpretability-audit-surface-scoping.md` s3) at router BIRTH so it is not a retrofit.
+
+**Activation (OPT-IN -> the flat path is untouched).** The router runs IFF `args.route` (or `task.route`) is
+truthy. When it is NOT set, `route_plan` stays `None`, `assemble_packet` adds NOTHING, and the packet -- incl.
+the i35 public `artifact_search` path -- is **BYTE-IDENTICAL to 0.7.0**. This is the HARD SCOPE GUARD: the frozen
+flat/legacy #40 the Tier-1 flip validated against is undisturbed. The entrypoint exposes it as `-Route` (a
+`[switch]`) wired into both the mock and the artifact_search compile branches.
+
+**Channels (`ROUTE_CHANNELS`, in deterministic execution order).** `hierarchy_descend` (the shortlist-and-descend
+port), `flat_index` (the indexed #36-flat / injected candidate path), `lexical_fts` (the derived FTS/exact query
+set), `working_memory` (NAMED as a routing TARGET but NEVER hydrated at i37 -- the region stays reserved/empty;
+the #40<->#42 wiring is a separate i38 unit; recorded `removed` with reason `working_memory_reserved_not_hydrated`
+and surfaced under `routing_plan.named_targets`).
+
+**EMISSION + routing REALIZATION only -- ZERO behavior change (the truthfulness contract).** `op_compile` runs the
+existing hierarchy plan + pool/selpol/budget path EXACTLY as 0.7.0, then computes the router plan from the REAL
+outcomes: `availability = {lexical_fts: bool(norm.query_set), flat_index: <injected/#36-flat batches present
+BEFORE the plan's own batch append>, hierarchy_descend: hierarchy_plan is not None, working_memory: False}` plus a
+`hierarchy_reason` (`selected` | `class_not_descend` | `namespace_unscoped` | `channel_unavailable`). The router
+therefore DESCRIBES (now versioned + instrumented) the SAME channel set the compile executed -- the trace is
+truthful by construction, never a prediction, and no channel decision is changed by turning `route` on.
+
+**The stage-trace (`run_query_router` -> `evaluation_hooks.routing_stage_trace`) -- a DIAGNOSTIC ARRAY of s9
+records.** Three records, one per staged step, each `{retrieval_plan_id, stage_id, parent_stage_id, policy_id,
+policy_version, candidates_in, removed[]:{channel_id|record_id, reason_codes[]}, candidates_out, tie_break_key}`:
+(1) `classification` (parent None; policy = the versioned `classifier_policy` id/version) -- labels the decision
+(query_class + temporal_intent + bases in `tie_break_key`); removes no channel (candidates_in == candidates_out).
+(2) `routing` (parent `classification`; policy = the routing policy) -- from the channel universe REMOVE the
+channels this class/intent/scope does not route to, each with channel-only `reason_codes` (`class_not_descend`,
+`namespace_unscoped`, `channel_unavailable`, `no_lexical_query`, `no_flat_candidates`,
+`working_memory_reserved_not_hydrated`). (3) `channel_selection` (parent `routing`; policy = the routing policy) --
+ORDER the survivors by the fixed integer channel priority (`tie_break_key = "order=<a>><b>..."`). INTEGERS ONLY (no
+wall-clock, no float); a single deterministic `retrieval_plan_id = "route_" + sha256(pinned routing inputs)[:24]`;
+byte-identical on re-run. `candidates_in - |removed| == candidates_out` holds for every record.
+
+**Namespace closure (i33, SAFETY-CRITICAL) -- a diagnostic must never become a namespace side-channel.**
+`_sanitize_route_trace` runs the trace through the ONE canonical `ns_permitted` (via `_scope_ok`) FAIL-CLOSED: the
+router transforms CHANNELS (channel_id only), so no record identity is present, but any `removed` entry naming a
+record whose namespace fails the closure is dropped to a COUNT (`sanitized_removed_count`; no ids/paths/namespaces
+reach the packet), and every kept entry is reduced to the safe fields (`channel_id`, in-scope `record_id`,
+`reason_codes`). This future-proofs the skill/procedure eligibility stages R-1 also binds. The trace is ALSO swept
+by the defense-in-depth `assert_packet_namespace_closure` (`_collect_packet_scope_refs` now walks
+`routing_stage_trace[*].removed[]`). Under a mixed nsa/nsb corpus scoped to nsa the trace carries ZERO nsb metadata.
+
+**Identity (s6).** When routed, `identity.routing_policy = {id, version}` + `identity.routing_plan_digest =
+sha256({retrieval_plan_id, selected_channels, named_targets, stage_trace})` enter the hashed packet body, so
+`packet_id` COVERS the routing policy: hold it -> identical id; vary the id OR version -> the id changes. GATED: a
+flat compile adds neither field, so its `packet_id` stays 0.7.0-identical. The router also records ONE audit
+warning `query_router_engaged:<id>:<version>` (like i35's `hierarchy_port_bound`).
+
+**D-0077 fold assertions (per s9).** stage-trace PRESENCE on every routed compile + DETERMINISM (double-run
+byte-identity) + namespace closure (no cross-ns leak under a mixed-ns corpus) + a flat compile BYTE-IDENTICAL to
+0.7.0 + `packet_id` covers the routing policy id/version. The i37 P0-1 suite (#43) additionally drives this new
+diagnostic array through its metadata/diagnostic injection fixtures (attack family 4).
+
+**Gate (`tests/test_i37_router_stage_trace.py`, 35/35 over a REAL #36 tree via the public path).** (a) trace
+present + well-formed per s9 on every routed compile (keys, int counts, parent chain, `candidates_in-|removed|==
+candidates_out`, channel-only `removed[]`); all three reachable channels realized; `working_memory` named but not
+hydrated; identity coverage. (b) double-run byte-identity of the trace + whole packet + `packet_id`. (c) mixed-ns
+closure sanitization (no nsb/SECRET leak; the sanitizer drops an out-of-scope record entry to a count; an in-scope
+record_id is kept but stripped of path/namespace). (d) a flat/non-routed compile is BYTE-IDENTICAL to 0.7.0 --
+route-off == route-absent, route-off carries ZERO routing fields, the routed body MINUS the router additions ==
+the flat body, and (with a pinned 0.7.0 baseline worker via `LOR_BASELINE_070`) the flat 0.8.0 body == the frozen
+0.7.0 body EXCEPT the three version stamps. (e) `packet_id` covers routing_policy id+version (hold => identical;
+vary id OR version => changes; restore => the original id). Regression: the shipped suite 322/322 + the i35
+public-port gate 32/32 + the i34 injected-port fold smoke 38/38, all green.
+
+**i37 non-goals (unchanged).** NO change to #36/#37 (imported READ-ONLY); NO #40<->#42 working_memory hydration
+(the region stays reserved/empty -- i38); NO behavior change to the flat/legacy/i35 path (byte-identical); NO new
+retrieval channel implementation beyond naming + selecting the ones #40 already reaches; NO P0-1 adversarial
+injection SUITE / action-capable release (`non_execution:true` UNCHANGED); NO real embeddings/vector; NO 9B/
+models.json; NO UI; NO core-doc edits (`docs:[]` -- the orchestrator mirrors).

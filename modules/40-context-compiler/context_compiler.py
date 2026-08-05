@@ -1,11 +1,38 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-context_compiler.py -- Life Orchestrator Module 40 (skill `context.compile` 0.6.0)
+context_compiler.py -- Life Orchestrator Module 40 (skill `context.compile` 0.8.0)
 
 The Collective Agent's context-packet compiler (directive Priority 4 / section 8). DETERMINISTIC,
 CPU-only, NO model, NO network. Turns a task descriptor into a versioned, token-budgeted, SAFE,
 self-describing `lifeorch.context_packet/0.2` artifact the coordinator hands a disposable model.
+
+0.8 (i37 the multi-channel query ROUTER, BORN INSTRUMENTED -- R-1, D-0101/D-0103) realizes the last
+un-routed retrieval seam: the i32 `query_class` stub + DESCEND_QUERY_CLASSES are turned into a real,
+DETERMINISTIC, VERSIONED multi-channel ROUTER (CONTEXT_PACKET_CONTRACT s9 amendment). ADDITIVE over
+`context_packet/0.2` -- schema string UNCHANGED; module semver 0.7.0 -> 0.8.0. The router is OPT-IN
+(`route`): a FLAT / non-routed / legacy compile -- the existing default path (incl. the i35 public
+artifact_search port path) -- stays BYTE-IDENTICAL to 0.7.0 (the router adds NOTHING unless engaged).
+  (R1) From the normalized query + resolved query_class + temporal_intent + effective allowed_namespaces,
+       the router selects which retrieval CHANNELS run and in what order under the versioned
+       `multichannel_route_v1`/1.0.0 policy. Channels: `lexical_fts` (the derived FTS/exact query set),
+       `flat_index` (the indexed #36-flat / injected candidate path), `hierarchy_descend` (the
+       shortlist-and-descend port), and `working_memory` -- NAMED as a routing target but NEVER hydrated
+       at i37 (that region stays reserved/empty; the #40<->#42 wiring is a separate i38 unit). Deterministic,
+       integer-only where scored, byte-identical on re-run. EMISSION + routing REALIZATION only -- ZERO
+       behavior change: the router DESCRIBES (now versioned + instrumented) the SAME channel set the compile
+       executes, so it is purely additive and the frozen flat/legacy path the Tier-1 flip validated against
+       is untouched.
+  (R2) BORN INSTRUMENTED (R-1): every staged candidate-transforming step (classification / routing /
+       channel-selection) emits ONE deterministic integer-only stage-trace record
+       `{retrieval_plan_id, stage_id, parent_stage_id?, policy_id, policy_version, candidates_in,
+       removed[]:{channel_id|record_id, reason_codes[]}, candidates_out, tie_break_key?}` into the compile's
+       evaluation_hooks/diagnostics, as an i33 DIAGNOSTIC ARRAY: namespace-closure-checked via the ONE
+       canonical `ns_permitted`, sanitized FAIL-CLOSED, NO cross-namespace identifying metadata (a diagnostic
+       must never become a namespace side-channel). Integers only (no wall-clock, no float); byte-identical.
+  (R3) packet IDENTITY (s6) += the router `routing_policy` id/version + the routing-plan/stage-trace digest.
+       Same task + corpus snapshot + grants + profile + routing policy => identical packet_id; vary the
+       routing policy -> the packet_id changes. GATED: a flat compile adds NOTHING here (id stays 0.7.0).
 
 0.6 (i34 Tier-1 BOUNDED-FANOUT HIERARCHY -- shortlist-and-descend + SAFE PRUNING + retrieval
 completeness, D-0098) turns the A4/A5-RESERVED hierarchy seam into a real CONSUMER-side retrieval PLAN
@@ -292,8 +319,8 @@ else:
     CLASSIFIER_POLICY_SOURCE = "local_offmachine_replica_pending_37_canonical"
 
 WORKER_NAME = "context_compiler.py"
-WORKER_VERSION = "0.7.0"
-COMPILER_VERSION = "0.7.0"
+WORKER_VERSION = "0.8.0"
+COMPILER_VERSION = "0.8.0"
 PACKET_SCHEMA = "lifeorch.context_packet/0.2"  # UNCHANGED at i33 -- A5/D-0096 amendment is ADDITIVE over 0.2
 EXPANSION_SCHEMA = "lifeorch.context_expansion/0.2"
 
@@ -463,6 +490,18 @@ PLAN_POLICY_ID = "shortlist_descend_v1"
 PLAN_POLICY_VERSION = "1.0.0"
 PRUNE_POLICY_ID = "safe_prune_v1"
 PRUNE_POLICY_VERSION = "1.0.0"
+
+# i37 (R-1, D-0101/D-0103): the multi-channel query ROUTER policy. A DETERMINISTIC, VERSIONED
+# channel-selection over the resolved query_class + temporal_intent + effective namespace closure. The
+# router is ADDITIVE + OPT-IN (`route`): a flat / non-routed / legacy compile stays BYTE-IDENTICAL to
+# 0.7.0 (the router adds NOTHING unless engaged). The routing_policy id/version ENTER packet identity (s6).
+ROUTING_POLICY_ID = "multichannel_route_v1"
+ROUTING_POLICY_VERSION = "1.0.0"
+# The routable channel universe + a DETERMINISTIC execution order (lower = earlier). `working_memory` MAY
+# be NAMED as a routing TARGET but is NEVER hydrated at i37 (that region stays reserved/empty; the
+# #40<->#42 wiring is a separate i38 unit) -- the router NAMES it + records it removed-from-hydration.
+ROUTE_CHANNELS = ("hierarchy_descend", "flat_index", "lexical_fts", "working_memory")
+ROUTE_CHANNEL_ORDER = {c: i for i, c in enumerate(ROUTE_CHANNELS)}
 
 # The channels over which #36 can supply a NO-FALSE-NEGATIVE pruning certificate (A6 / the design
 # red-team). A bounded top-N lexical/entity DESCRIPTOR is NEVER a certificate; only an exact-membership
@@ -1019,6 +1058,139 @@ def _maybe_build_artifact_search_port(args, norm, warnings):
         return None
     warnings.append("hierarchy_port_bound:artifact_search:%s" % os.path.basename(str(src)))
     return port
+
+
+# ================================================================================================
+# i37 (R-1, D-0101/D-0103): the multi-channel query ROUTER -- BORN INSTRUMENTED.
+# ------------------------------------------------------------------------------------------------
+# A DETERMINISTIC, VERSIONED channel-selection policy over the resolved query_class + temporal_intent +
+# effective namespace closure. It selects which retrieval CHANNELS run and in what order, and EMITS a
+# born-instrumented integer-only STAGE-TRACE (CONTEXT_PACKET_CONTRACT s9): one record per
+# classification / routing / channel-selection stage. The router is ADDITIVE + OPT-IN (`route`): a flat /
+# non-routed / legacy compile stays BYTE-IDENTICAL to 0.7.0 (nothing here runs unless `route` is engaged).
+# EMISSION + routing REALIZATION only -- ZERO behavior change: the router DESCRIBES (now versioned +
+# instrumented) the SAME channel set the compile actually executes (availability is threaded in from the
+# real outcomes), so the trace is truthful by construction and the frozen flat path is untouched.
+# ================================================================================================
+
+def _sanitize_route_trace(stage_trace, closure):
+    """R-1 / i33: the router stage-trace is a DIAGNOSTIC ARRAY -- namespace-closure-checked via the ONE
+    canonical `ns_permitted` + sanitized FAIL-CLOSED, carrying NO cross-namespace identifying metadata (a
+    diagnostic must NEVER become a namespace side-channel). The router transforms CHANNELS (channel_id only),
+    so no record identity is present -- this pass is a defense-in-depth backstop that also future-proofs the
+    skill/procedure eligibility stages named by R-1: any `removed` entry naming a record whose namespace
+    FAILS the closure is dropped to a COUNT (no ids/paths/namespaces reach the packet), and every kept entry
+    is reduced to the safe channel-oriented fields (channel_id + reason_codes, plus an IN-SCOPE record_id)."""
+    safe_keys = ("channel_id", "record_id", "reason_codes")
+    out = []
+    for rec in stage_trace:
+        clean = dict(rec)
+        kept, dropped = [], 0
+        for r in (rec.get("removed") or []):
+            rid = r.get("record_id") or r.get("record_version_id")
+            if rid is not None and not _scope_ok(r.get("namespace"), closure):
+                dropped += 1                      # SANITIZED: identifying detail -> a count only
+                continue
+            kept.append({k: r[k] for k in safe_keys if k in r})
+        clean["removed"] = kept
+        if dropped:
+            clean["sanitized_removed_count"] = dropped     # never any ids/paths/namespaces
+        out.append(clean)
+    return out
+
+
+def run_query_router(norm, closure, availability, warnings):
+    """i37 (R-1): the DETERMINISTIC multi-channel query ROUTER. From the normalized query + resolved
+    query_class + temporal_intent + effective namespace closure, select which retrieval channels run + in
+    what order under the VERSIONED `multichannel_route_v1` policy, and emit a BORN-INSTRUMENTED integer-only
+    STAGE-TRACE (s9): one record per classification / routing / channel-selection stage.
+
+    Channels (ROUTE_CHANNELS): `lexical_fts` (the derived FTS/exact query set), `flat_index` (the indexed
+    #36-flat / injected candidate path), `hierarchy_descend` (the shortlist-and-descend port), and
+    `working_memory` (NAMED as a routing TARGET but NEVER hydrated at i37 -- reserved; #42 wiring = i38).
+    `availability` carries the REAL per-channel outcomes (so the trace is truthful, not a prediction) plus a
+    `hierarchy_reason` explaining a non-selected hierarchy channel.
+
+    Returns {routing_policy_id, routing_policy_version, retrieval_plan_id, selected_channels[] (ordered),
+    named_targets[], channel_availability{}, stage_trace[]}. Deterministic + integer-only + byte-identical on
+    re-run (no wall-clock, no float)."""
+    query_class = norm.get("query_class")
+    temporal_intent = norm.get("temporal_intent")
+    effective = list(closure.get("effective") or [])
+    universe = list(ROUTE_CHANNELS)
+
+    # A DETERMINISTIC retrieval_plan_id (NO wall-clock): the content hash of the pinned routing inputs.
+    retrieval_plan_id = "route_" + sha256_of_obj({
+        "routing_policy_id": ROUTING_POLICY_ID, "routing_policy_version": ROUTING_POLICY_VERSION,
+        "query_class": query_class, "temporal_intent": temporal_intent,
+        "allowed_namespaces": effective, "enforced": bool(closure.get("enforced")),
+        "normalized_task": norm.get("normalized_task"),
+        "availability": {c: bool(availability.get(c)) for c in universe},
+    })[:24]
+
+    stage_trace = []
+
+    # ---- Stage 1: CLASSIFICATION -- record the VERSIONED classifier decision (query_class + temporal_intent)
+    #      that governs downstream routing. A labeling stage: it removes no channel (candidates_in==out). ----
+    stage_trace.append({
+        "retrieval_plan_id": retrieval_plan_id,
+        "stage_id": "classification", "parent_stage_id": None,
+        "policy_id": CLASSIFIER_POLICY_ID, "policy_version": CLASSIFIER_POLICY_VERSION,
+        "candidates_in": len(universe), "removed": [], "candidates_out": len(universe),
+        "tie_break_key": ("query_class=%s;query_class_basis=%s;temporal_intent=%s;temporal_intent_basis=%s"
+                          % (query_class, norm.get("query_class_basis"),
+                             temporal_intent, norm.get("temporal_intent_basis"))),
+    })
+
+    # ---- Stage 2: ROUTING -- from the channel universe, REMOVE channels this class/intent/scope does NOT
+    #      route to. Each removal carries channel_id + reason_codes (channel-only; NO record identity). ----
+    removed, selected = [], []
+    for ch in universe:
+        if ch == "working_memory":
+            # NAMED as a routing target but NEVER hydrated at i37 (#42 wiring = i38): reserved/empty.
+            removed.append({"channel_id": ch, "reason_codes": ["working_memory_reserved_not_hydrated"]})
+            continue
+        if availability.get(ch):
+            selected.append(ch)
+            continue
+        if ch == "hierarchy_descend":
+            reason = str(availability.get("hierarchy_reason") or "channel_unavailable")
+            removed.append({"channel_id": ch, "reason_codes": [reason]})
+        elif ch == "lexical_fts":
+            removed.append({"channel_id": ch, "reason_codes": ["no_lexical_query"]})
+        elif ch == "flat_index":
+            removed.append({"channel_id": ch, "reason_codes": ["no_flat_candidates"]})
+        else:
+            removed.append({"channel_id": ch, "reason_codes": ["channel_unavailable"]})
+    removed.sort(key=lambda r: ROUTE_CHANNEL_ORDER.get(r["channel_id"], 999))
+    stage_trace.append({
+        "retrieval_plan_id": retrieval_plan_id,
+        "stage_id": "routing", "parent_stage_id": "classification",
+        "policy_id": ROUTING_POLICY_ID, "policy_version": ROUTING_POLICY_VERSION,
+        "candidates_in": len(universe), "removed": removed, "candidates_out": len(selected),
+        "tie_break_key": "selected=" + ",".join(sorted(selected)),
+    })
+
+    # ---- Stage 3: CHANNEL-SELECTION -- ORDER the surviving channels into the execution plan by the fixed
+    #      integer channel priority (removes nothing; produces the ordered channel plan). ----
+    ordered = sorted(selected, key=lambda c: ROUTE_CHANNEL_ORDER.get(c, 999))
+    stage_trace.append({
+        "retrieval_plan_id": retrieval_plan_id,
+        "stage_id": "channel_selection", "parent_stage_id": "routing",
+        "policy_id": ROUTING_POLICY_ID, "policy_version": ROUTING_POLICY_VERSION,
+        "candidates_in": len(selected), "removed": [], "candidates_out": len(ordered),
+        "tie_break_key": "order=" + ">".join(ordered),
+    })
+
+    return {
+        "routing_policy_id": ROUTING_POLICY_ID,
+        "routing_policy_version": ROUTING_POLICY_VERSION,
+        "retrieval_plan_id": retrieval_plan_id,
+        "selected_channels": ordered,
+        "named_targets": ["working_memory"],   # NAMED but NOT hydrated at i37 (reserved; #42 wiring = i38)
+        "channel_availability": {c: bool(availability.get(c)) for c in universe},
+        "stage_trace": _sanitize_route_trace(stage_trace, closure),
+    }
 
 
 # ------------------------------------------------------------------------------------------------
@@ -1661,6 +1833,12 @@ def _collect_packet_scope_refs(packet_body):
     for stage_key in ("raw_retrieval", "post_filter", "packet"):
         for s in ((eh.get("stages") or {}).get(stage_key) or []):
             _add(s.get("record_version_id"))
+    # i37 (R-1): the router stage-trace is a DIAGNOSTIC ARRAY -- sweep its `removed[]` entries too so the
+    # defense-in-depth closure invariant covers any record identity a (future) eligibility stage names. The
+    # router itself removes CHANNELS (channel_id only), so nothing is added here; this future-proofs it.
+    for rec in (eh.get("routing_stage_trace") or []):
+        for r in (rec.get("removed") or []):
+            _add(r.get("record_id") or r.get("record_version_id"), r.get("namespace"))
     sel = packet_body.get("selection") or {}
     for k in (sel.get("features_by_candidate") or {}):
         _add(k)
@@ -2584,6 +2762,10 @@ def op_compile(args, warnings):
     # #36's real retriever. A cross-namespace navigation/hierarchy object surfaced by the plan ABORTS
     # SANITIZED (V5): only a namespace_violation_count surfaces, identifying detail -> the security log.
     batches = list(batches or [])
+    # i37 (R-1): capture the FLAT / indexed-#36 channel availability BEFORE the shortlist-and-descend plan
+    # appends its own batch, so the router's `flat_index` channel reflects the injected/#36-flat candidate
+    # path (not the hierarchy leaves). Purely observational -- read only when `route` is engaged (below).
+    flat_present = bool(batches)
     # i35 (D-0100): an INJECTED port (the D-0077 fold seam) still wins; otherwise CONSTRUCT the REAL port over
     # #36 when the PUBLIC request selects it (retriever artifact_search + catalog db_path + descend-class +
     # scoped). A flat/non-descend/unscoped/non-artifact_search request -> real_port is None -> a flat compile
@@ -2713,11 +2895,37 @@ def op_compile(args, warnings):
     if control_overflow:
         disposition = "abstain"
 
+    # i37 (R-1, D-0101/D-0103): the multi-channel query ROUTER. OPT-IN (`route`); computed AFTER the
+    # namespace fail-closed gates (a fail-closed compile NEVER emits a trace) and from the REAL channel
+    # outcomes (so the born-instrumented stage-trace is truthful, not a prediction). When `route` is NOT
+    # engaged, route_plan stays None and the packet is BYTE-IDENTICAL to 0.7.0 (assemble adds nothing).
+    route_plan = None
+    if bool(args.get("route") or task.get("route")):
+        hierarchy_ran = hierarchy_plan is not None
+        if hierarchy_ran:
+            hierarchy_reason = "selected"
+        elif norm.get("query_class") not in DESCEND_QUERY_CLASSES:
+            hierarchy_reason = "class_not_descend"
+        elif not (closure.get("enforced") and closure.get("effective")):
+            hierarchy_reason = "namespace_unscoped"
+        else:
+            hierarchy_reason = "channel_unavailable"      # port not bound / no published tree / multi-ns flat-fallback
+        availability = {
+            "lexical_fts": bool(norm.get("query_set")),
+            "flat_index": flat_present,
+            "hierarchy_descend": hierarchy_ran,
+            "working_memory": False,                      # reserved; NEVER hydrated at i37 (#42 wiring = i38)
+            "hierarchy_reason": hierarchy_reason,
+        }
+        route_plan = run_query_router(norm, closure, availability, warnings)
+        warnings.append("query_router_engaged:%s:%s" % (ROUTING_POLICY_ID, ROUTING_POLICY_VERSION))
+
     packet, packet_content_hash = assemble_packet(
         task, norm, config, profile, control_plane, task_input, working_memory, excerpts, refs,
         requirements, coverage, missing, contradictions, disposition, provenance_failed,
         sel, sel_rows, pool, per_query_counts, omission, accounting, transport,
-        retrieval_meta, corpus_version, rendered_input, control_overflow, warnings, hierarchy_plan)
+        retrieval_meta, corpus_version, rendered_input, control_overflow, warnings, hierarchy_plan,
+        route_plan)
 
     # U1' (i33) DEFENSE-IN-DEPTH: after assembly, assert EVERY packet-visible object references ONLY a
     # scope-permitted candidate (no rvid outside the pre-filtered pool; no namespace failing the closure).
@@ -2742,7 +2950,7 @@ def assemble_packet(task, norm, config, profile, control_plane, task_input, work
                     requirements, coverage, missing, contradictions, disposition, provenance_failed,
                     sel, sel_rows, pool, per_query_counts, omission, accounting, transport,
                     retrieval_meta, corpus_version, rendered_input, control_overflow, warnings,
-                    hierarchy_plan=None):
+                    hierarchy_plan=None, route_plan=None):
     excerpt_rvids = set(e["record_version_id"] for e in excerpts)
 
     # ---- evaluation hooks (extended: per-stage + disposition + P0-1 injection probe) ----
@@ -2840,6 +3048,24 @@ def assemble_packet(task, norm, config, profile, control_plane, task_input, work
         },
         "injection_probe": injection_probe,
     }
+
+    # i37 (R-1, D-0101/D-0103): the BORN-INSTRUMENTED router stage-trace is a DIAGNOSTIC ARRAY carried in
+    # evaluation_hooks (extends s7): one integer-only record per classification/routing/channel-selection
+    # stage, namespace-closure-sanitized (channel-only; no cross-ns identifying metadata). ADDITIVE + GATED:
+    # a flat / non-routed compile has route_plan=None -> NOTHING is added here (byte-identical to 0.7.0).
+    if route_plan is not None:
+        evaluation_hooks["routing_stage_trace"] = route_plan["stage_trace"]
+        evaluation_hooks["routing_plan"] = {
+            "routing_policy_id": route_plan["routing_policy_id"],
+            "routing_policy_version": route_plan["routing_policy_version"],
+            "retrieval_plan_id": route_plan["retrieval_plan_id"],
+            "selected_channels": route_plan["selected_channels"],
+            "named_targets": route_plan["named_targets"],
+            "channel_availability": route_plan["channel_availability"],
+            "note": ("EMISSION + routing REALIZATION only (R-1) -- the router DESCRIBES (versioned + "
+                     "instrumented) the SAME channel set the compile executed; `working_memory` is NAMED as "
+                     "a target but NEVER hydrated at i37 (reserved; the #40<->#42 wiring is i38)."),
+        }
 
     selection_block = {
         "policy_id": sel["policy_id"],
@@ -3022,6 +3248,20 @@ def assemble_packet(task, norm, config, profile, control_plane, task_input, work
             # packet_id (V4), atop the i33 classifier/temporal/ns/state_version coverage.
             "retrieval_plan_stage_digest": "sha256:" + sha256_of_obj(trace),
         }
+
+    # i37 (R-1, D-0101/D-0103): packet IDENTITY (s6) += the router `routing_policy` id/version + the
+    # routing-plan/stage-trace digest. Same task + corpus snapshot + grants + profile + routing policy =>
+    # identical packet_id; vary the routing policy -> packet_id changes. GATED: a flat / non-routed compile
+    # has route_plan=None -> NOTHING is added, so its packet_id stays BYTE-IDENTICAL to 0.7.0.
+    if route_plan is not None:
+        packet_body["identity"]["routing_policy"] = {
+            "id": route_plan["routing_policy_id"], "version": route_plan["routing_policy_version"]}
+        packet_body["identity"]["routing_plan_digest"] = "sha256:" + sha256_of_obj({
+            "retrieval_plan_id": route_plan["retrieval_plan_id"],
+            "selected_channels": route_plan["selected_channels"],
+            "named_targets": route_plan["named_targets"],
+            "stage_trace": route_plan["stage_trace"],
+        })
 
     # packet_id is the content hash of the WHOLE body (which already contains every identity field --
     # corpus_version, selection_policy, consumer_profile, grant snapshot, selected rvids, budget, the

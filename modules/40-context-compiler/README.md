@@ -1,4 +1,26 @@
-# Module 40 -- context.compile (Context Compiler) 0.7.0
+# Module 40 -- context.compile (Context Compiler) 0.8.0
+
+> **i37 (R-1, D-0101/D-0103) -- the multi-channel query ROUTER, BORN INSTRUMENTED.** The last un-routed
+> retrieval seam: the i32 `query_class` stub + `DESCEND_QUERY_CLASSES` become a real DETERMINISTIC VERSIONED
+> multi-channel ROUTER (`multichannel_route_v1`/1.0.0). **OPT-IN** via `route`: from the normalized query +
+> resolved `query_class` + `temporal_intent` + effective `allowed_namespaces` the router selects which
+> retrieval CHANNELS run and in what order -- `lexical_fts` (the derived FTS/exact query set), `flat_index`
+> (the indexed #36-flat / injected candidate path), `hierarchy_descend` (the shortlist-and-descend port), and
+> `working_memory` (NAMED as a routing target but **NEVER hydrated** at i37 -- that region stays reserved/empty;
+> the #40<->#42 wiring is a separate i38 unit). **BORN INSTRUMENTED (R-1):** every staged step (classification /
+> routing / channel-selection) emits ONE deterministic integer-only STAGE-TRACE record `{retrieval_plan_id,
+> stage_id, parent_stage_id?, policy_id, policy_version, candidates_in, removed[]:{channel_id|record_id,
+> reason_codes[]}, candidates_out, tie_break_key?}` into `evaluation_hooks.routing_stage_trace` as an i33
+> DIAGNOSTIC ARRAY -- ns-closure-checked via the ONE canonical `ns_permitted`, sanitized FAIL-CLOSED, NO
+> cross-namespace identifying metadata; integers only, byte-identical on re-run. Packet **identity** (s6) +=
+> the `routing_policy` id/version + the routing-plan/stage-trace digest (vary the policy -> `packet_id` changes;
+> hold it -> identical). **EMISSION + routing REALIZATION only -- ZERO behavior change:** the router DESCRIBES
+> (now versioned + instrumented) the SAME channel set the compile executes, so a FLAT / non-routed / legacy
+> compile (incl. the i35 public `artifact_search` path) is **BYTE-IDENTICAL to 0.7.0**. Gate:
+> `tests/test_i37_router_stage_trace.py` (35/35 over a REAL #36 tree: trace present+well-formed per s9, double-run
+> byte-identity, mixed-ns closure sanitization, flat byte-identical to 0.7.0 incl. a pinned-baseline cross-version
+> check, packet_id covers the routing policy) + the i35 public-port gate (32/32) + the i34 fold smoke (38/38) +
+> the shipped suite (322/322). Full interpretation: `SCHEMA_NOTES.md` **s19**.
 
 > **i35 (D-0100) -- CONSUMER WIRING: the REAL hierarchy_port into the PUBLIC `artifact_search` path.**
 > i34 shipped the shortlist-and-descend plan but it ran ONLY via an INJECTED `args['hierarchy_port']`; with the
@@ -19,7 +41,7 @@
 
 The Collective Agent's context-compilation centerpiece (D-0080 directive Priority 4 / section 8),
 conformed to `core-docs/CONTEXT_PACKET_CONTRACT.md` (`context_packet/0.2`; **s4 PINNED, D-0089**; **i32
-amendment, D-0092**; **i33 amendment, D-0096**; **i34 amendment, D-0098**; **i35 real-port wiring, D-0100**). A **deterministic, CPU-only, no-model, no-network** skill
+amendment, D-0092**; **i33 amendment, D-0096**; **i34 amendment, D-0098**; **i35 real-port wiring, D-0100**; **i37 s9 router-stage-trace amendment, D-0101/D-0103**). A **deterministic, CPU-only, no-model, no-network** skill
 that turns a task descriptor into a versioned, token-budgeted, SAFE, self-describing
 `lifeorch.context_packet/0.2` the coordinator hands a disposable model:
 
@@ -231,8 +253,10 @@ cited span reproduces the text (`provenance.reproduced`).
 
 ## Tests
 ```bash
-python tests/context_compiler_tests.py                 # 272 assertions (acceptance a-g + i33 namespace-closure/supersession/navigation/temporal-split/byte-identity)
-pwsh   tests/Invoke-ContextCompilerTests.ps1           # entrypoint end-to-end (mock)
+python tests/context_compiler_tests.py                 # 322 assertions (acceptance a-g + i33 namespace-closure/supersession/navigation/temporal-split/byte-identity + i34 hierarchy)
+python tests/test_i35_public_port.py                   # 32/32 -- the REAL #36 hierarchy-port via the PUBLIC artifact_search path
+python tests/test_i37_router_stage_trace.py            # 35/35 -- i37 (R-1) the multi-channel router + born-instrumented stage-trace, over a REAL #36 tree
+pwsh   tests/Invoke-ContextCompilerTests.ps1           # entrypoint end-to-end (mock; incl. -Route)
 pwsh   tests/Invoke-ContextCompilerTests.ps1 -DbPath <#36 catalog> -RepoRoot <repo>   # -Live
 ```
 

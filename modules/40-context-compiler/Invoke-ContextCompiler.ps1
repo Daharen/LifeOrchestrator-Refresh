@@ -36,6 +36,7 @@ param(
     [string]$DbPath,
     [string]$RepoRoot,
     [int]$K = 20,
+    [switch]$Route,
     [string]$ArtifactSearchEntry,
     [string]$InputsJson,
     [string]$PythonPath,
@@ -48,7 +49,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$SKILL_ID = 'context.compile'; $SKILL_VERSION = '0.7.0'; $CONTRACT = '0.7'
+$SKILL_ID = 'context.compile'; $SKILL_VERSION = '0.8.0'; $CONTRACT = '0.8'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 $startedAt = [DateTime]::UtcNow
@@ -216,6 +217,7 @@ try {
             if ($null -eq $case) { throw [PSCustomObject]@{ code='missing_case'; message='compile+mock needs -CaseFile or -InputsJson with {task, retrieval_batches, ...}'; retryable=$false } }
             $argsObj = @{ op = 'compile' }
             foreach ($pr in $case.PSObject.Properties) { $argsObj[$pr.Name] = $pr.Value }
+            if ($Route) { $argsObj['route'] = $true }   # i37 (R-1): OPT-IN the multi-channel query router
             $r = Invoke-CCWorker $argsObj $python $WorkerPath 'compile'
             $finalMeta = $r.meta
         }
@@ -251,6 +253,7 @@ try {
             # which stay as the recall-safe fallback). A non-descend / unscoped compile ignores it -> flat.
             $compileArgs = @{ op='compile'; task=$taskObj; query_set=$querySet; retrieval_batches=$batches.ToArray(); retrieval_meta=$retrievalMeta; catalog_db_path=(Resolve-Path -LiteralPath $DbPath).Path }
             if (-not [string]::IsNullOrWhiteSpace($RepoRoot)) { $compileArgs['repo_root'] = (Resolve-Path -LiteralPath $RepoRoot).Path }
+            if ($Route) { $compileArgs['route'] = $true }   # i37 (R-1): OPT-IN the multi-channel query router
             $rc = Invoke-CCWorker $compileArgs $python $WorkerPath 'compile'
             $finalMeta = $rc.meta
         }

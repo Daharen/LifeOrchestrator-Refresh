@@ -47,7 +47,7 @@ Write-Host "[mock: compile end-to-end over fixtures/compile_case.json -> context
 $env1 = Run-CC @('-Op','compile','-Retriever','mock','-CaseFile',(Join-Path $Fix 'compile_case.json'))
 Check "envelope status ok/partial" ($env1.status -in @('ok','partial')) "status=$($env1.status)"
 Check "skill_id context.compile" ($env1.skill_id -eq 'context.compile')
-Check "skill_version 0.7.0" ($env1.skill_version -eq '0.7.0') "ver=$($env1.skill_version)"
+Check "skill_version 0.8.0" ($env1.skill_version -eq '0.8.0') "ver=$($env1.skill_version)"
 $packet = $env1.result.result.packet
 Check "packet schema 0.2" ($packet.schema -eq 'lifeorch.context_packet/0.2')
 Check "packet_id present" ($packet.packet_id -like 'cpkt_*')
