@@ -172,8 +172,8 @@ Check 'manifest validates' ([bool]$mv.valid)
 if (-not $mv.valid) { $mv.errors | ForEach-Object { [Console]::Out.WriteLine("      - $_") } }
 $manifest = (Get-Content -LiteralPath $mf -Raw) | ConvertFrom-Json
 Check 'manifest skill_id retrieval.eval' ($manifest.skill_id -eq 'retrieval.eval')
-Check 'manifest version 0.5.0' ($manifest.version -eq '0.5.0')
-Check 'manifest contract_version 0.5' ($manifest.contract_version -eq '0.5')
+Check 'manifest version 0.6.0' ($manifest.version -eq '0.6.0')
+Check 'manifest contract_version 0.6' ($manifest.contract_version -eq '0.6')
 Check 'manifest deterministic' ($manifest.determinism -eq 'deterministic')
 Check 'manifest parallel_safe' ([bool]$manifest.parallel_safe)
 
@@ -186,7 +186,7 @@ if ($null -ne $env1) {
     Check 'baseline: envelope validates against contract' ([bool]$ev.valid)
     if (-not $ev.valid) { $ev.errors | ForEach-Object { [Console]::Out.WriteLine("      - $_") } }
     Check 'baseline: status ok' ($env1.status -eq 'ok')
-    Check 'baseline: skill_version 0.5.0' ($env1.skill_version -eq '0.5.0')
+    Check 'baseline: skill_version 0.6.0' ($env1.skill_version -eq '0.6.0')
     Check 'baseline: retriever_kind lexical_baseline' ($env1.result.retriever_kind -eq 'lexical_baseline')
     Check 'baseline: input_digest pinned' ($env1.result.input_digest -eq $BASELINE_INPUT_DIGEST)
     Check 'baseline: vector_channel_status empty' ($env1.result.vector_channel_status -eq 'empty')
@@ -464,7 +464,7 @@ $env9 = ParseEnv (RunEntry @($benchmark4))
 Check 'eval04: envelope parses' ($null -ne $env9)
 if ($null -ne $env9) {
     Check 'eval04: status ok' ($env9.status -eq 'ok')
-    Check 'eval04: skill_version 0.5.0' ($env9.skill_version -eq '0.5.0')
+    Check 'eval04: skill_version 0.6.0' ($env9.skill_version -eq '0.6.0')
     Check 'eval04: external_command retriever seam works' ($env9.result.retriever_kind -eq 'external_command')
     Check 'eval04: input_digest pinned' ($env9.result.input_digest -eq $B4_INPUT_DIGEST)
     $rep9 = ReadReport $env9 'report.json'
@@ -516,7 +516,7 @@ $env10 = ParseEnv (RunEntry @($benchmark5))
 Check 'eval05: envelope parses' ($null -ne $env10)
 if ($null -ne $env10) {
     Check 'eval05: status ok' ($env10.status -eq 'ok')
-    Check 'eval05: skill_version 0.5.0' ($env10.skill_version -eq '0.5.0')
+    Check 'eval05: skill_version 0.6.0' ($env10.skill_version -eq '0.6.0')
     Check 'eval05: input_digest pinned' ($env10.result.input_digest -eq $B5_INPUT_DIGEST)
     $rep10 = ReadReport $env10 'report.json'
     $rep10Md = ReadReport $env10 'report.md'
@@ -597,6 +597,46 @@ if (Test-Path -LiteralPath $wrapper -PathType Leaf) {
     }
 }
 
+# ================================================================= i34 Tier-1 HIERARCHY eval (D-0098)
+[Console]::Out.WriteLine("-- i34 HIERARCHY-EVAL --")
+$heWorker = Join-Path $moduleRoot 'hierarchy_eval.py'
+$hePyTest = Join-Path $PSScriptRoot 'test_hierarchy_eval.py'
+Check 'hierarchy: worker present' (Test-Path -LiteralPath $heWorker -PathType Leaf)
+if ($null -ne $py) {
+    $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+    & $py -m py_compile $heWorker 2>&1 | Out-Null; $hcCode = $LASTEXITCODE
+    Check 'hierarchy: py_compile hierarchy_eval.py' ($hcCode -eq 0)
+    $hpyOut = & $py $hePyTest 2>&1; $hpyCode = $LASTEXITCODE
+    $ErrorActionPreference = $prev
+    Check 'hierarchy: python gate exit 0' ($hpyCode -eq 0)
+    Check 'hierarchy: python gate reports 0 failed' ([bool]("$hpyOut" -match '0 failed'))
+
+    # invoke the skill through the wrapper -Op hierarchy-eval (the shipped invocation path)
+    $inputs = (@{ op = 'hierarchy-eval'; scales = @(16, 64, 256, 1024, 4096); seed = 0; fanout = 4; beam = 2 } | ConvertTo-Json -Compress)
+    $wargs = @('-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', $entry, '-Op', 'hierarchy-eval', '-InputsJson', $inputs)
+    if (-not [string]::IsNullOrEmpty($PythonPath)) { $wargs += @('-PythonPath', $PythonPath) }
+    $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+    $ho = & $PwshPath @wargs
+    $ErrorActionPreference = $prev
+    $henv = ParseEnv (([string]($ho | Out-String)).Trim())
+    Check 'hierarchy: wrapper -Op envelope parses' ($null -ne $henv)
+    if ($null -ne $henv) {
+        Check 'hierarchy: envelope status ok' ($henv.status -eq 'ok')
+        Check 'hierarchy: skill_version 0.6.0' ($henv.skill_version -eq '0.6.0')
+        Check 'hierarchy: navigation sub-linear' ([bool]$henv.result.sublinear)
+        Check 'hierarchy: navigation not constant' ([bool]$henv.result.not_constant)
+        Check 'hierarchy: fast-beam path recall PARTIAL (25%)' ($henv.result.hierarchy_path_recall_ppm -eq 250000)
+        Check 'hierarchy: guaranteed recall 100%' ($henv.result.guaranteed_path_recall_ppm -eq 1000000)
+        Check 'hierarchy: end-to-end PACKET recall 100% (fallback preserves)' ($henv.result.packet_evidence_recall_ppm -eq 1000000)
+        Check 'hierarchy: stale-window recall 100%' ($henv.result.stale_window_recall_ppm -eq 1000000)
+        Check 'hierarchy: adversarial 5/5' ($henv.result.adversarial_passed -eq 5 -and $henv.result.adversarial_total -eq 5)
+        Check 'hierarchy: Tier-1 gate set 11/11' ($henv.result.tier1_gates_passed -eq 11 -and $henv.result.tier1_gates_total -eq 11)
+        Check 'hierarchy: rehearsal gate OPEN' ($henv.result.rehearsal_gate_status -eq 'OPEN')
+        Check 'hierarchy: Tier-1 NOT accepted on synthetic-only' ($henv.result.tier1_accepted -eq $false)
+        [Console]::Out.WriteLine("CANONICAL-HASH hierarchy-report.digest=$($henv.result.report_digest)")
+    }
+}
+
 [Console]::Out.WriteLine("")
-if ($script:fail -eq 0) { [Console]::Out.WriteLine("ALL PASS (retrieval.eval eval-0.2)"); exit 0 }
+if ($script:fail -eq 0) { [Console]::Out.WriteLine("ALL PASS (retrieval.eval eval-0.2 + i34 hierarchy)"); exit 0 }
 else { [Console]::Out.WriteLine("FAILURES: $script:fail"); exit 1 }

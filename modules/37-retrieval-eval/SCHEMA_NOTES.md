@@ -623,3 +623,63 @@ a mixed-namespace catalog (ns-A + ns-B + a superseded/absent-successor pair + a 
 record), that ZERO ns-B data appears in evidence OR any diagnostic array, the superseded predecessor is excluded
 pool-independently under current_only, a branch drives `conflicted`, and the `packet_id` is deterministic. selpol
 carries NO catalog/packet logic -- it consumes the hit array + descriptor + params only.
+
+---
+
+## i34 Tier-1 HIERARCHY eval (D-0098, plan fo-34-584fd656, HIERARCHY-EVAL-i34) -- 0.5.0 -> 0.6.0
+
+ADDITIVE: `retrieval_eval.py` + `selpol_rrf_v1`/`namespace_policy`/`classifier_policy` are UNCHANGED (the
+shipped benchmark path is byte-identical -- the pinned report shas hold). The hierarchy eval is a SEPARATE
+self-contained worker `hierarchy_eval.py`, invoked via the wrapper `-Op hierarchy-eval` (an isolated branch;
+the benchmark path is untouched) or directly (`python hierarchy_eval.py --request`). Report schema
+`lifeorch.hierarchy_eval_report/0.1` (integer-only ppm; byte-identical on re-run). skill/contract 0.6.0/0.6.
+
+**Governing:** `CONTEXT_PACKET_CONTRACT` i34 s7 (the eval seam) + `MEMORY_CONTRACT` A6 (node layer / generations
+/ safe-pruning) + `MEMORY_ARCHITECTURE` s10 (the Tier-1 gate) + `research/2026-08-04-i34-hierarchy-design-redteam.md`
+(pack b4c90545). We MEASURE #36 (shortlist/descend + node build) + #40 (plan + `retrieval_completeness`)
+READ-ONLY via the external_command/adapter seam; the orchestrator wires the REAL #36/#40 behind these measures
+at the D-0077 fold. This wave ships the DETERMINISTIC SYNTHETIC model + the seam (the `external_command` adapter
+here fails closed with `external_command_deferred` -- it is the fold's step, not this worker's).
+
+**The defect defended (b4c90545 P0):** bounded deterministic navigation is NOT automatically recall-preserving --
+a bounded lossy synopsis (`entity_union`/`lexical_descriptor`/centroid) or a bounded beam can silently exclude the
+sole required branch, yielding a packet that looks answerable having never exposed the evidence. Interpretations:
+
+- **navigation-cost (measure 1).** NODES EXAMINED (shortlist frontier + descend expansions) vs LEAF COUNT across
+  `scales` spanning >=2 orders of magnitude (default 16..4096). For LOCALIZED decisive-term queries, safe-pruning
+  proves absence in sibling branches, so the frontier stays ~`B*depth ~ log_F N`. Asserted: p50 GROWS with N
+  (NOT constant -- the draft's "B*D independent of leaf count" is wrong; depth grows with N), the nodes/leaf ratio
+  STRICTLY DECREASES (sub-linear), and growth is log-shaped. Reported p50 AND p95 (pinned: p50 = 2,3,4,5,6 for
+  N=16,64,256,1024,4096 at fanout 4).
+- **DUAL recall (measure 2).** (i) hierarchy-PATH recall = the fast beam EXPOSED the required leaf; (ii)
+  end-to-end PACKET-EVIDENCE recall = the modeled #40 packet RETAINED the required span OR correctly returned
+  `needs_expansion`/`abstain`. On AMBIGUOUS queries the fast beam is PARTIAL (pinned 250000 ppm), the GUARANTEED
+  (explore-all-non-safe-pruned) path is 100%, and PACKET recall is 100% because the SAFE-PRUNING + FALLBACK
+  contract injects the flat batch when the frontier is NOT exhausted -- a hierarchy MISS is NEVER a false
+  `answerable`. `frontier_exhausted` is True ONLY when a SOUND predicate proved absence for every unexplored
+  branch. Also: shortlist REGRET (guaranteed-minus-fast), fallback FREQUENCY, STALE-WINDOW recall (a stale
+  synopsis ROUTES but never PRUNES -> recall preserved while stale-serving).
+- **SAFE-PRUNING (s13.7 mirror).** `lexical|entity|path|id` -> a SOUND Bloom `presence_filter` ("definitely
+  absent" = a valid prune; "maybe" = keep; NO false negatives); `time_range` -> range exclusion; bounded
+  `descriptor` (entity_union/lexical) -> NEVER prunes (RANKING only); `vector` centroid alone -> CANNOT prune.
+  A STALE synopsis is NEVER eligible to prune. `naive_descend` (beam-exclusion-as-proved-absence) is shipped ONLY
+  to DEMONSTRATE the silent-miss defect the safe model prevents.
+- **adversarial fixtures (measure 3), pinned outcomes:** rare-decisive-term/ambiguous (SAFE falls back +
+  preserves; NAIVE silently misses); cross-namespace contamination (`descend` of an out-of-scope root FAILS
+  CLOSED, 0 nodes examined, 0 leakage; per-namespace homogeneous trees, delta 6); mutation-during-regen ABA
+  (a Boolean stale-clear goes falsely fresh; MONOTONIC `subtree_generation`/`synopsis_generation` + input-digest
+  CAS DETECTS it, delta 4); stale-node-no-false-negative-prune; exact-cheap/global-slow (the global query is the
+  explicit SLOW path, not constant). 5/5 pinned.
+- **Tier-1 gate set (measure 4)** as deterministic checks: STRUCTURAL (byte-identical rebuild digest; fanout
+  bound; one parent; projection==edges) -- consumed from #36; SECURITY (0 cross-ns leakage; unauthorized descend
+  fails closed); MUTATION/FRESHNESS (no lost-update stale-clear; stale never false-negative-prunes); RETRIEVAL
+  (guaranteed/fallback preserves recall; end-to-end packet recall; stale-window recall); COMPLEXITY (sub-linear
+  p50/p95). 11/11 pinned across all 5 dimensions.
+- **rehearsal (measure 5).** The ~200MB real foreign-corpus rehearsal is SCAFFOLDED + FLAGGED `status:OPEN` --
+  synthetic scale is NECESSARY but NOT SUFFICIENT (synthetic generation can accidentally align vocabulary/grouping
+  keys/labels). `tier1_acceptance.accepted = false` on synthetic-only; the rehearsal (wiring the REAL #36/#40 via
+  the external_command adapter) is the pre-FREEZE/pre-ACTIVATION gate the orchestrator / a later wave runs.
+
+**Fold hooks (D-0077):** the orchestrator points the `external_command` adapter at the REAL #36 `shortlist`/`descend`
++ #40 packet and RE-RUNS these measures on real data; the synthetic pins here are the recall-preservation +
+sub-linearity + isolation invariants the real run must also satisfy.

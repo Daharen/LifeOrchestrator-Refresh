@@ -29,6 +29,7 @@
 param(
     [string]$InputFile,
     [string]$InputsJson,
+    [string]$Op,
     [string]$CorpusDir,
     [string]$RetrieverJson,
     [int[]]$KValues,
@@ -43,7 +44,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$SKILL_ID = 'retrieval.eval'; $SKILL_VERSION = '0.5.0'; $CONTRACT = '0.5'
+$SKILL_ID = 'retrieval.eval'; $SKILL_VERSION = '0.6.0'; $CONTRACT = '0.6'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 $bound = $PSBoundParameters
@@ -73,6 +74,63 @@ $warnings = New-Object System.Collections.Generic.List[string]
 # artifact dir
 $invDir = Join-Path $ArtifactRoot $InvocationId
 try { if (-not (Test-Path -LiteralPath $invDir)) { New-Item -ItemType Directory -Path $invDir -Force | Out-Null } } catch { }
+
+# ---- i34 HIERARCHY-EVAL op (D-0098): a SELF-CONTAINED, isolated path. It fires ONLY on -Op hierarchy-eval
+#      (or InputsJson.op == hierarchy-eval); the benchmark path below is UNCHANGED + byte-identical otherwise. ----
+$opRequested = $Op
+if ([string]::IsNullOrWhiteSpace($opRequested) -and -not [string]::IsNullOrWhiteSpace($InputsJson)) {
+    try { $ppo0 = $InputsJson | ConvertFrom-Json; if ($null -ne $ppo0 -and (Has $ppo0 'op')) { $opRequested = [string]$ppo0.op } } catch {}
+}
+if ($opRequested -eq 'hierarchy-eval') {
+    $hstatus = 'ok'; $herr = $null; $hresult = $null; $hInputsDigest = $null
+    try {
+        $ppo = $null
+        if (-not [string]::IsNullOrWhiteSpace($InputsJson)) { $ppo = $InputsJson | ConvertFrom-Json }
+        $hc = New-Object System.Collections.Generic.List[string]
+        if (-not [string]::IsNullOrWhiteSpace($PythonPath)) { $hc.Add($PythonPath) }
+        foreach ($n in @('python3', 'python', 'py')) { try { $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'; $w = & where.exe $n 2>$null; $ErrorActionPreference = $prev; foreach ($l in @([string[]]$w)) { if (-not [string]::IsNullOrWhiteSpace($l)) { $hc.Add($l.Trim()) } } } catch {} }
+        $hc.Add('C:\Users\just_\AppData\Local\Programs\Python\Python312\python.exe')
+        foreach ($n in @('/usr/bin/python3', '/usr/bin/python')) { $hc.Add($n) }
+        $hpy = $null; foreach ($c in ($hc.ToArray() | Select-Object -Unique)) { if (Test-Python $c) { $hpy = $c; break } }
+        if ([string]::IsNullOrWhiteSpace($hpy)) { throw [PSCustomObject]@{ code = 'python_not_found'; message = 'no python 3 found. Set -PythonPath.'; retryable = $false } }
+        $hworker = if (-not [string]::IsNullOrWhiteSpace($WorkerPath)) { $WorkerPath } else { Join-Path $PSScriptRoot 'hierarchy_eval.py' }
+        if (-not (Test-Path -LiteralPath $hworker -PathType Leaf)) { throw [PSCustomObject]@{ code = 'worker_not_found'; message = "hierarchy_eval.py not found at '$hworker'"; retryable = $false } }
+        $hworker = (Resolve-Path -LiteralPath $hworker).Path
+        $hreq = [ordered]@{ op = 'hierarchy-eval'; out_dir = $invDir }
+        if ($null -ne $ppo) { foreach ($k in @('scales', 'seed', 'fanout', 'beam', 'adapter', 'ns_policy_path')) { if (Has $ppo $k) { $hreq[$k] = $ppo.$k } } }
+        $hreqPath = Join-Path $invDir 'request.json'
+        [System.IO.File]::WriteAllText($hreqPath, ($hreq | ConvertTo-Json -Depth 30), $utf8)
+        Write-Diag "op=hierarchy-eval python=$hpy worker=$hworker out=$invDir"
+        $herrFile = Join-Path $invDir 'worker-stderr.txt'
+        $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+        $hout = & $hpy $hworker '--request' $hreqPath 2>$herrFile
+        $hexit = $LASTEXITCODE; $ErrorActionPreference = $prev
+        $hsumPath = Join-Path $invDir 'worker-summary.json'
+        if (-not (Test-Path -LiteralPath $hsumPath -PathType Leaf)) { $t = ''; try { $t = [string](Get-Content -LiteralPath $herrFile -Raw -ErrorAction SilentlyContinue) } catch {}; $t = ($t -replace '\s+', ' ').Trim(); if ($t.Length -gt 400) { $t = $t.Substring(0, 400) }; throw [PSCustomObject]@{ code = 'worker_no_summary'; message = "hierarchy worker produced no summary (exit=$hexit). stderr: $t"; retryable = $false } }
+        $hsum = (Get-Content -LiteralPath $hsumPath -Raw) | ConvertFrom-Json
+        if (-not ([bool]$hsum.ok)) { $we = if (Has $hsum 'error') { $hsum.error } else { $null }; $hstatus = 'error'; $herr = [ordered]@{ code = [string]$(if ($null -ne $we -and (Has $we 'code')) { $we.code } else { 'hierarchy_eval_failed' }); message = [string]$(if ($null -ne $we -and (Has $we 'message')) { $we.message } else { 'worker failed' }); retryable = $false } }
+        else {
+            $hInputsDigest = [string]$hsum.input_digest
+            $hresult = [ordered]@{}
+            foreach ($f in @('op', 'hierarchy_eval_version', 'scales', 'sublinear', 'not_constant', 'hierarchy_path_recall_ppm', 'guaranteed_path_recall_ppm', 'packet_evidence_recall_ppm', 'fallback_frequency_ppm', 'stale_window_recall_ppm', 'adversarial_passed', 'adversarial_total', 'tier1_gates_passed', 'tier1_gates_total', 'rehearsal_gate_status', 'tier1_accepted', 'report_digest')) { if (Has $hsum $f) { $hresult[$f] = $hsum.$f } }
+        }
+    }
+    catch {
+        $ex = $_.TargetObject
+        if ($null -ne $ex -and ($ex.PSObject.Properties.Name -contains 'code')) { $hstatus = 'error'; $herr = [ordered]@{ code = [string]$ex.code; message = [string]$ex.message; retryable = [bool]$ex.retryable } }
+        else { $hstatus = 'error'; $herr = [ordered]@{ code = 'unhandled_exception'; message = "$($_.Exception.Message)"; retryable = $false } }
+        Write-Diag "hierarchy ERROR: $($herr.message)"
+    }
+    $hart = New-Object System.Collections.Generic.List[object]
+    foreach ($n in @('hierarchy_report.json', 'hierarchy_report.md', 'worker-summary.json')) { $fp = Join-Path $invDir $n; if (Test-Path -LiteralPath $fp -PathType Leaf) { $b = [System.IO.File]::ReadAllBytes($fp); $hart.Add([ordered]@{ path = (Resolve-Path -LiteralPath $fp).Path; kind = $(if ($n -like '*.md') { 'markdown' } else { 'json' }); bytes = $b.Length; sha256 = (Get-Sha256Hex $b) }) } }
+    if ([string]::IsNullOrWhiteSpace($hInputsDigest)) { $hInputsDigest = 'sha256:' + (Get-Sha256Hex ($utf8.GetBytes(($InvocationId + '|' + $hstatus)))) }
+    $sw.Stop()
+    $henv = [ordered]@{ schema = $RESULT_SCHEMA; skill_id = $SKILL_ID; skill_version = $SKILL_VERSION; contract_version = $CONTRACT; invocation_id = $InvocationId; status = $hstatus; started_at_utc = $startedAt.ToString('o'); finished_at_utc = ([DateTime]::UtcNow).ToString('o'); duration_ms = [int]$sw.Elapsed.TotalMilliseconds; inputs_digest = $hInputsDigest; result = $hresult; confidence = $null; artifacts = $hart.ToArray(); model_provenance = @(); diagnostics = [ordered]@{ log = 'worker-stderr.txt' }; warnings = @(); error = $herr }
+    $hjson = $henv | ConvertTo-Json -Depth 30
+    try { [System.IO.File]::WriteAllText((Join-Path $invDir 'result.json'), $hjson, $utf8) } catch {}
+    [Console]::Out.WriteLine($hjson)
+    exit 0
+}
 
 try {
     # ---- parse -InputsJson ----

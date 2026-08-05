@@ -152,3 +152,24 @@ edits NO core-doc.
 
 - Acceptance met -> stop; do not build #40, an embedder, a model reranker, or `artifact.search`.
 - docs:[] -> never edit a core-doc; report and let the orchestrator fold.
+
+## i34 Lane B -- HIERARCHY-EVAL (D-0098, plan fo-34-584fd656): SHIPPED 0.5.0 -> 0.6.0
+
+Brief: `core-docs/fanout/FANOUT_AGENT_002.md`. Governing: `CONTEXT_PACKET_CONTRACT` i34 s7 + `MEMORY_CONTRACT`
+A6 + `MEMORY_ARCHITECTURE` s10 + `research/2026-08-04-i34-hierarchy-design-redteam.md`.
+
+**Delivered (ADDITIVE; `retrieval_eval.py` + `lib/*` UNCHANGED -> the shipped benchmark path is byte-identical):**
+`hierarchy_eval.py` (a self-contained deterministic worker: a synthetic bounded-fanout hierarchy model with
+SAFE-PRUNING + generations/CAS + shortlist/descend; the measures; the adversarial fixtures; the Tier-1 gate set;
+the rehearsal scaffold; the external_command fold seam) + `-Op hierarchy-eval` in the wrapper (an isolated branch)
++ `tests/test_hierarchy_eval.py` (26 pinned checks) + hierarchy checks appended to
+`tests/Invoke-RetrievalEvalTests.ps1` + skill/contract 0.6.0/0.6.
+
+**Verification:** navigation-cost sub-linear across >=2 orders of magnitude (p50 2..6, ratio/leaf strictly
+decreasing), DUAL recall (fast-beam 25% / guaranteed 100% / packet 100%), 5/5 adversarial fixtures, 11/11 Tier-1
+gates across 5 dimensions, rehearsal gate OPEN (Tier-1 NOT accepted on synthetic-only), deterministic
+byte-identical, all shipped eval tests regression-green (report shas unchanged).
+
+**Non-goals (this wave):** the #36 node/tree builder + shortlist/descend; the #40 plan / retrieval_completeness
+emission (MEASURED, not built); the working-memory store; the router; real embeddings/vector; the 9B. Measure
+#36/#40 via the external_command adapter; the REAL wiring + the ~200MB rehearsal are the D-0077 fold / a later wave.

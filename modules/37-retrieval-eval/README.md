@@ -172,3 +172,16 @@ touch model modules / models.json. CPU-only, no model, no CUDA, no network -> `p
 ## Requirements
 
 `pwsh >= 7.4` and any `python >= 3.8` (the worker + `selpol_rrf_v1` use only the standard library).
+
+## i34 Tier-1 hierarchy eval (0.6.0, D-0098)
+
+`-Op hierarchy-eval` (or `python hierarchy_eval.py --request`) runs the Tier-1 hierarchy evaluation -- a
+SEPARATE self-contained worker (`hierarchy_eval.py`); the benchmark path + `retrieval_eval.py` are unchanged.
+It MEASURES the bounded-fanout hierarchy #36/#40 build, defending the frontier red-team's concern (pack
+b4c90545) that bounded deterministic navigation is not automatically recall-preserving: navigation-cost
+(sub-linear nodes-examined vs leaf count, p50/p95), DUAL recall (hierarchy-path reached vs end-to-end
+packet-evidence retained -- the safe-pruning + fallback contract preserves packet recall where a naive beam
+silently misses), adversarial scale/mutation fixtures (pinned), the Tier-1 gate set, and the ~200MB real-corpus
+rehearsal SCAFFOLDED + FLAGGED as the OPEN pre-freeze gate. Report: `hierarchy_report.json`
+(`lifeorch.hierarchy_eval_report/0.1`, integer-only, byte-identical on re-run) + `hierarchy_report.md`. The
+`external_command` adapter is the D-0077 fold seam for the real #36/#40. CPU-only, deterministic, no model.
