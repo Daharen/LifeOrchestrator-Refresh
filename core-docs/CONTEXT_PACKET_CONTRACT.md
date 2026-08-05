@@ -346,3 +346,26 @@ retained. 0.2 extends it so #37 can score PER STAGE (raw retrieval / post-filter
   richer skill-card fields + three-valued eligibility + degraded-card fail-closed; P1-7/P1-8/P1-9 (inline
   activation cards, the held-out fresh-9B acceptance suite, the synthetic precomputed-vector fixture); the
   P2 hardening; the shared cross-module fixture; a FULL 0.2 freeze.
+
+## 9. i37 amendment -- R-1 router stage-trace (born instrumented; D-0101/D-0103)
+
+Binds on the i37 multi-channel query ROUTER (#40 0.8.0) + EVERY future staged candidate-transforming filter
+(skill/procedure eligibility stages, any staged filter). Realizes the R-1 requirement (D-0101, the audit-surface
+program). This is a trace-EMISSION requirement -- ZERO behavior change beyond emission; a flat/non-routed compile
+stays BYTE-IDENTICAL to 0.7.0.
+
+- **Per-stage record (deterministic, integer-only).** Every staged step in routing / classification /
+  channel-selection emits one record: `{retrieval_plan_id, stage_id, parent_stage_id?, policy_id, policy_version,
+  candidates_in, removed[]:{record_id|channel_id, reason_codes[]}, candidates_out, tie_break_key?}`. Integers only
+  (no wall-clock, no float); byte-identical on re-run.
+- **Carrier.** The trace lives in the compile's `evaluation_hooks`/diagnostics (extends section 7) as an i33
+  DIAGNOSTIC ARRAY: namespace-closure-checked via the ONE canonical `ns_permitted`, sanitized fail-closed, NO
+  cross-namespace identifying metadata -- a diagnostic must never become a namespace side-channel.
+- **Identity.** The router's `routing_policy_id` + `policy_version` ENTER packet identity (extends section 6):
+  same task + corpus snapshot + grants + profile + routing policy => identical `packet_id`.
+- **D-0077 fold asserts:** stage-trace PRESENCE on every routed compile + DETERMINISM (double-run byte-identity) +
+  namespace closure (no cross-ns leak under a mixed-ns corpus) + a flat compile BYTE-IDENTICAL to 0.7.0. The i37
+  P0-1 suite (#43) additionally drives this new diagnostic array through its metadata/diagnostic injection fixtures
+  (attack family 4) -- a new untrusted carrier proven non-authoritative at birth.
+- **Scope guard.** EMISSION + the router realization only. A `working_memory` CHANNEL may be NAMED in the trace,
+  but #42 hydration stays reserved/empty (the #40<->#42 wiring is a separate i38 unit).
