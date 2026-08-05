@@ -1,20 +1,23 @@
-# artifact.search -- SCHEMA_NOTES (Module 36, skill `artifact.search` 0.4.0, schema_version 4)
+# artifact.search -- SCHEMA_NOTES (Module 36, skill `artifact.search` 0.6.0, schema_version 5)
 
 **Authority.** This file records EVERY schema/interface interpretation for the D-0077 cross-module fold. The
 orchestrator's fold smoke (repo.intel #38 / episode.memory #39 -> `ingest_records` -> retrieval; the i33
 MIXED-NAMESPACE LEAKAGE-PATH fold) depends on it. 0.2 adopts the FROZEN **`core-docs/MEMORY_CONTRACT.md`**
-(D-0083); 0.3 realizes Amendment A4 (D-0092, Tier-0 seam repairs) -- section 11; **0.4 realizes Amendment A5
-(D-0096, i33 Tier-0 NAMESPACE-CLOSURE + SUPERSESSION-HARDENING) -- see section 12.** On any conflict that
-contract + its gates win, and a divergence is reconciled at fold (never silently). Governing:
-MEMORY_CONTRACT s1..s8 + **A4 + A5**; MEMORY_ARCHITECTURE s9/s10;
+(D-0083); 0.3 realizes Amendment A4 (D-0092, Tier-0 seam repairs) -- section 11; 0.4 realizes Amendment A5
+(D-0096, i33 Tier-0 NAMESPACE-CLOSURE + SUPERSESSION-HARDENING) -- section 12; 0.5 realizes Amendment A6
+(D-0098, i34 Tier-1 BOUNDED-FANOUT HIERARCHY) -- section 13; **0.6 (i36) adds the by-`record_version_id`
+`get-record` body-fetch -- the i35 Lane A FOLD RECONCILIATION (D-0100) -- see section 14.** On any conflict
+the contract + its gates win, and a divergence is reconciled at fold (never silently). Governing:
+MEMORY_CONTRACT s1..s8 + **A4 + A5 + A6**; MEMORY_ARCHITECTURE s9/s10;
 `research/2026-08-04-tier0-amendment-redteam.md` (changes 1-4); `research/2026-08-03-memory-architecture-seam-audit.md` s3;
-`research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md`; D-0080/D-0082/D-0083/D-0090/D-0092/**D-0096**; D-0077.
+`research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md`; D-0080/D-0082/D-0083/D-0090/D-0092/**D-0096**/**D-0098**/**D-0100**; D-0077.
 
 Worker: `artifact_search.py` (Python stdlib only: `sqlite3` + FTS5, `struct`). Entrypoint:
-`Invoke-ArtifactSearch.ps1` (pwsh-file). CPU-only, no model, no network. `worker_version=0.4.0`,
-`schema_version=4`. This EXTENDS the shipped 0.3 (schema_version 3), which EXTENDED 0.2 (2) and 0.1 (1);
-all shipped ops stay regression-green (the full 0.3 suite is 100% green + the A5 gate tests -- 179/179
-off-machine). A5 is ADDITIVE + backward-compatible: a v0.1.1/A4-conformant producer/consumer stays valid.
+`Invoke-ArtifactSearch.ps1` (pwsh-file). CPU-only, no model, no network. `worker_version=0.6.0`,
+`schema_version=5`. This EXTENDS the shipped 0.5 (schema_version 5), which EXTENDED 0.4 (4), 0.3 (3), 0.2 (2)
+and 0.1 (1); all shipped ops stay regression-green. **0.6 (get-record) is ADDITIVE + READ-ONLY + NO migration
+(schema_version STAYS 5)** -- existing paths byte-identical (`catalog_digest` + `shipped_tables_schema_sha`
+unchanged); a v0.1.1/A4/A5/A6-conformant producer/consumer stays valid.
 
 ---
 
@@ -607,3 +610,112 @@ the **SAFE-PRUNING invariant is load-bearing** (13.7). The packet/selection + na
   NEVER prunes; exact/range/membership prune only a provably-empty branch). Off-machine gate:
   `tests/test_hierarchy_a6.py` (cloud python, 56 checks) + `tests/Invoke-ArtifactSearchTests.ps1` A6 section
   (real-worker via the entrypoint, 36 checks); full suite 210/210.
+
+## 14. i36 (D-0100 fold reconciliation) the by-`record_version_id` `get-record` body-fetch -- EVERY interpretation (REQUIRED for the future #40 fold)
+
+0.6 adds the clean, ADDITIVE, **READ-ONLY** `get-record` op. **NO migration** -- `SCHEMA_VERSION` STAYS `"5"`,
+`WORKER_VERSION 0.6.0` (wrapper `SKILL_VERSION 0.6.0` / `CONTRACT 0.6`). Origin: i35 Lane A recorded that #40's
+context-compile leaf HYDRATION reads #36's Catalog `records` table DIRECTLY because #36 shipped NO by-rvid
+body-fetch op (D-0100). `get-record` is that op, so a future i37 #40 change can stop reaching into #36's
+internals. **#40 ADOPTS it in i37 -- this wave only SHIPS the op** (no in-wave consumer; the orchestrator's fold
+smoke over a real catalog + this module's gate suffice).
+
+### 14.1 The rvid id space (what get-record resolves)
+A `record_version_id` handed to get-record is EITHER:
+- a **typed-record** `record_version_id` (the `records` table primary key -- e.g. `sym.x@1`, `dv1`), OR
+- a **source_chunk** `chunk_occurrence_id` (`occ_...`), which IS the `record_version_id` column of the
+  `v_records_source_chunk` view (`c.chunk_occurrence_id AS record_version_id`).
+
+This is the SAME id space `search` hits (`hit.record_version_id`) and `descend` leaf_members
+(`{record_version_id, candidate_role:evidence}`) already refer to, so the #40 flow is exactly
+`descend(node) -> leaf_members[].record_version_id -> get-record(those rvids, effective_allowed)`. Resolution
+order is `records` FIRST, then the source_chunk view (a typed rvid wins a collision; occurrence ids are
+`occ_`-prefixed so a real collision is not reachable).
+
+### 14.2 Output shape (`op: get-record`, READ-ONLY)
+```
+{ requested, found_count,
+  records: [ { record_version_id, record_id, record_kind, namespace, found:true,
+               effective_current, supersession_conflicted, superseded_by[],
+               envelope: <the FULL s1 ENVELOPE -- byte-identical to list-records:
+                          `_source_chunk_envelope(row)` for a chunk / `_record_envelope(row, eff)` for a
+                          typed record (edges scope-redacted with `out_of_scope_edges_dropped` when scoped)>,
+               evidence: <the HYDRATION body -- the shipped search hit-base derivation
+                          (`_chunk_hit_base` / `_record_hit_base`) PLUS the full `text`:
+                          text, content_hash, chunk_content_hash?, record_content_hash, source_content_hash?,
+                          excerpt_hash?, span{start,end}, span_label, section_path, heading, chunk_type,
+                          status, currentness, authority_level, namespace, source, source_path, abs_path,
+                          source_version_id, provenance_mode, provenance{}, embedding_space_id> } ],  // sorted by record_version_id
+  unresolved_count,                 // rvid resolved to NO catalog record -- count-only, NO metadata
+  namespace_enforced, namespace_allowed[],
+  namespace_violation_count,        // A5/U1' foreign/out-of-scope -- count-only (detail -> privileged security_log)
+  working_denied_count,             // A5/U3' not conjunctively task_id+namespace scoped -- count-only
+  current_only, current_excluded_count,   // A5/U4' current_only exclusions -- count-only
+  schema_version, db }
+```
+- **`envelope` REUSES the shipped `list-records` derivation; `evidence` REUSES the shipped `search` hit-base
+  derivation -- NO second provenance path** (acceptance a). The retrieval-stage lineage
+  (`retrieval_stage_id`/`parent_stage_id`/`retrieval_plan_id`) is STRIPPED from `evidence`: a by-rvid fetch is a
+  direct fetch, not a staged retrieval. The top-level `record_version_id`/`record_kind`/`namespace` are a quick
+  index for #40; `envelope` is the s1 metadata; `evidence` is the hydration body.
+
+### 14.3 Provenance holds (acceptance b)
+- **source_chunk:** `evidence.content_hash` = the document-version sha256 (the SOURCE identity);
+  `evidence.chunk_content_hash` = `record_content_hash` = `excerpt_hash` = `sha256(canonical chunk text)`; the
+  `span{start,end}` reproduces the source bytes. get-record's chunk evidence (`text` / `chunk_content_hash` /
+  `span`) is BYTE-IDENTICAL to the `export-chunk-texts` entry for the same chunk (the shipped byte-reproducing
+  path) -- the gate asserts this equality.
+- **typed record:** `evidence.content_hash` = `record_content_hash` = `sha256(text)` (as `ingest_records`
+  computed it); a record with a real source span carries `provenance_mode=direct_span` + the span, else the
+  provenance-mode-conditional shape (`derived_record`/`aggregate`/`tombstone`, U2').
+
+### 14.4 A5 closure (acceptance c) -- identical DECISIONS to `search`
+- **(U1') namespace CLOSURE.** `effective_allowed` is the CALLER-SUPPLIED CLOSED set (`_eff_from_args`:
+  `effective_allowed_namespaces` / `filters.namespace` / a top-level `namespace`; **None = unscoped back-compat**,
+  an **explicit EMPTY set = zero results** fail-closed). The canonical `ns_permitted` is enforced on EVERY
+  returned record. A foreign/out-of-scope rvid FAILS CLOSED **count-only** -- the caller sees only
+  `namespace_violation_count`; the identifying detail (`{candidate_kind, id, namespace}`) goes to the PRIVILEGED
+  `security_log` (event `namespace_violation`), NEVER to the caller. Defense-in-depth: a record that reaches
+  `records[]` outside the effective set is a fail-closed **`namespace_leak` ABORT** (detail to the security_log;
+  the caller-visible error carries NO cross-namespace identity) -- the SAME assertion `search` makes.
+- **(U3') working-kind.** A `record_kind=working` record is returned ONLY under **CONJUNCTIVE** access -- an
+  in-scope namespace authorization (`effective_allowed` present AND `ns_permitted`) **AND** an exact `task_id`
+  match (top-level `task_id`, or `filters.task_id`/`filters.working_task_id`). Absent EITHER -> count-only
+  `working_denied_count` (event `working_kind_denied` to the security_log). Mirrors `_record_passes` -- "excluded
+  by default" is too weak.
+- **unresolved.** An rvid that resolves to no catalog record increments `unresolved_count` only (no id list, no
+  metadata). The caller already holds its own requested rvids and diffs them against `records[].record_version_id`
+  -- so an id list would be redundant AND a mild existence oracle; only the COUNT surfaces.
+
+### 14.5 Version semantics (acceptance d)
+- A by-rvid fetch is **VERSION-EXACT by nature** -- it returns the exact rvid as stored. The catalog-computed
+  supersession flags are surfaced (never a silent pick): `effective_current` (`status==current` AND no reachable
+  live in-scope successor), `superseded_by` (the immediate live successors), `supersession_conflicted`
+  (`>=2` live successors). These reuse `_supersession_info` / `_effective_current` (U4', catalog/graph-computed,
+  pool-independent).
+- **`current_only`** (top-level `current_only`, or `filters.mode=current_only` / `filters.current_only` /
+  `filters.exclude_stale`) EXCLUDES a record whose in-scope LIVE successor exists (as `current_excluded_count`),
+  EVEN WHEN that successor is not in the requested rvid batch. DEFAULT is exact-fetch.
+
+### 14.6 Determinism + read-only (acceptance d/e)
+- **Deterministic + envelope-only:** `records[]` is sorted by `record_version_id` (input-permutation-independent);
+  requested rvids are de-duplicated (first occurrence); NO timestamps in the result -> byte-identical on re-run.
+- **READ-ONLY:** NO corpus writes, NO new table, NO migration. The ONLY side effect is the PRIVILEGED
+  `security_log` (a DB table EXCLUDED from `catalog_digest` + an append-only file) on a violation -- the SAME
+  behavior `search` has; it never changes `catalog_digest` / `corpus_version` / `shipped_tables_schema_sha`, so
+  existing paths stay byte-identical and the double-run RESULT is byte-identical.
+- **Input (wrapper -> worker):** `-TargetId` (single `target_id`), or via `-InputsJson` `rvids[]` /
+  `record_version_ids[]` / a single `record_version_id`; `effective_allowed_namespaces[]`; `task_id`;
+  `current_only`. The wrapper + worker BOTH fail closed with `missing_rvid` when none is supplied. get-record is a
+  db-op (requires an existing db; NOT a create-op).
+
+### 14.7 GATE (D-0077; this module owns the get-record gate)
+Off-machine: `tests/test_get_record_i36.py` (cloud python, **38 checks**) -- envelope+evidence for both an rvid
+kind; the `descend -> get-record` hydration FOLD flow; provenance (chunk_content_hash==sha256(text) &
+== export-chunk-texts; typed content_hash==sha256(text)); A5 closure (foreign count-only + NO metadata leak;
+unknown -> unresolved; working conjunctive matrix; empty-set fail-closed; unscoped back-compat); version-exact +
+`current_only` (predecessor excluded, live successor kept, batch); read-only (catalog_digest + shipped-sha
+unchanged) + determinism (byte-identical re-run + permutation-independent order) + integrity green; the
+`missing_rvid` guard. Live: `tests/Invoke-ArtifactSearchTests.ps1` get-record section (real-worker via the
+entrypoint) + the 0.6.0/0.6 version assertions. Shipped A6 regression stays green
+(`tests/test_hierarchy_a6.py` 56/56).

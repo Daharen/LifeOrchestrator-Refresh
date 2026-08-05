@@ -98,8 +98,8 @@ Check 'manifest is schema-valid' ([bool]$mv.valid) (($mv.errors) -join '; ')
 $man = (Get-Content -LiteralPath $mf -Raw) | ConvertFrom-Json
 Check 'manifest determinism=deterministic' ($man.determinism -eq 'deterministic')
 Check 'manifest skill_id=artifact.search' ($man.skill_id -eq 'artifact.search')
-Check 'manifest version=0.5.0' ($man.version -eq '0.5.0')
-Check 'manifest contract_version=0.5' ($man.contract_version -eq '0.5')
+Check 'manifest version=0.6.0' ($man.version -eq '0.6.0')
+Check 'manifest contract_version=0.6' ($man.contract_version -eq '0.6')
 Check 'manifest batch=false & streaming=false' (($man.batch -eq $false) -and ($man.streaming -eq $false))
 
 # ---------- 2) ingest the bundled fixture repo ----------
@@ -797,6 +797,46 @@ Check 'A6: migrate 4->5 integrity ok' ([bool]$mg5.integrity.ok)
 $mg5b = Payload (Run-AS @{ op='migrate'; db=$v4db })
 Check 'A6: 4->5 migration idempotent (re-open is a no-op)' ((-not [bool]$mg5b.migrated) -and [string]$mg5b.schema_version -eq '5')
 Check 'A6: shipped search regression-green on the 4->5 migrated db' ([int](Payload (Run-AS @{ op='search'; query='frobnicator'; mode='fts'; db=$v4db })).count -ge 1)
+
+# ---------- i36 (D-0100 fold): the ADDITIVE READ-ONLY by-rvid get-record body-fetch op ----------
+# $hdb has projA source_chunks + a projB typed 'decision' record (b1@1). get-record returns the full s1
+# envelope + the evidence hydration body #40 needs, A5-closed. Uses the SAME id space descend leaf_members use.
+$digBeforeGr = [string](Payload (Run-AS @{ op='catalog'; db=$hdb })).digest
+$grLr = Payload (Run-AS @{ op='list-records'; db=$hdb; filters=@{ namespace='projA'; record_kind='source_chunk' }; limit=1 })
+$scRvid = [string](@($grLr.records)[0].record_version_id)
+# (a) a source_chunk rvid -> envelope + evidence with text/span/hashes
+$grc = Payload (Run-AS @{ op='get-record'; db=$hdb; target_id=$scRvid; effective_allowed_namespaces=@('projA') })
+$grcRec = @($grc.records)[0]
+Check 'i36 get-record: source_chunk rvid found (envelope + evidence)' ([int]$grc.found_count -eq 1 -and $grcRec.record_kind -eq 'source_chunk' -and (Has $grcRec 'envelope') -and (Has $grcRec 'evidence'))
+Check 'i36 get-record: evidence carries text + span + chunk_content_hash + content_hash (hydration body)' (-not [string]::IsNullOrEmpty([string]$grcRec.evidence.text) -and (Has $grcRec.evidence 'span') -and -not [string]::IsNullOrEmpty([string]$grcRec.evidence.chunk_content_hash) -and -not [string]::IsNullOrEmpty([string]$grcRec.evidence.content_hash))
+Check 'i36 get-record: evidence is a DIRECT fetch (no retrieval-stage lineage)' (-not (Has $grcRec.evidence 'retrieval_stage_id'))
+# (b) provenance holds: evidence matches export-chunk-texts for the same chunk
+$grExAll = @((Payload (Run-AS @{ op='export-chunk-texts'; db=$hdb })).chunks)
+$grExMatch = @($grExAll | Where-Object { [string]$_.chunk_id -eq [string]$grcRec.evidence.chunk_id })[0]
+Check 'i36 get-record: provenance holds (evidence text+hash+span == export-chunk-texts)' ($null -ne $grExMatch -and [string]$grExMatch.text -eq [string]$grcRec.evidence.text -and [string]$grExMatch.chunk_content_hash -eq [string]$grcRec.evidence.chunk_content_hash)
+# (a) a typed record rvid (projB decision) scoped to projB
+$grB = Payload (Run-AS @{ op='get-record'; db=$hdb; target_id='b1@1'; effective_allowed_namespaces=@('projB') })
+Check 'i36 get-record: typed record (projB) found scoped to projB' ([int]$grB.found_count -eq 1 -and [string](@($grB.records)[0].evidence.text).Length -ge 1)
+# (c) namespace closure: the projB record is FOREIGN to a projA-scoped caller -> count-only, no leak
+$grF = Payload (Run-AS @{ op='get-record'; db=$hdb; target_id='b1@1'; effective_allowed_namespaces=@('projA') })
+$grFJson = ($grF | ConvertTo-Json -Depth 20 -Compress)
+Check 'i36 get-record: foreign rvid FAILS CLOSED (count-only, no record)' ([int]$grF.found_count -eq 0 -and [int]$grF.namespace_violation_count -eq 1 -and @($grF.records).Count -eq 0)
+Check 'i36 get-record: foreign rvid leaks NO identifying metadata (no projB text/ns)' (($grFJson -notmatch 'projb') -and ($grFJson -notmatch 'zeta'))
+# (c) unknown rvid -> unresolved count-only
+$grU = Payload (Run-AS @{ op='get-record'; db=$hdb; rvids=@('occ_deadbeefdeadbeefdeadbeef'); effective_allowed_namespaces=@('projA') })
+Check 'i36 get-record: unknown rvid -> unresolved_count only' ([int]$grU.found_count -eq 0 -and [int]$grU.unresolved_count -eq 1 -and [int]$grU.namespace_violation_count -eq 0)
+# (c) mixed-scope batch: an in-scope chunk + a FOREIGN record -> partial found + count-only violation
+$grMix = Payload (Run-AS @{ op='get-record'; db=$hdb; rvids=@($scRvid, 'b1@1'); effective_allowed_namespaces=@('projA') })
+Check 'i36 get-record: mixed batch -> in-scope hydrated, foreign count-only' ([int]$grMix.found_count -eq 1 -and [int]$grMix.namespace_violation_count -eq 1 -and [string](@($grMix.records)[0].record_version_id) -eq $scRvid)
+# (d) determinism: identical re-run -> identical records[] order
+$grD1 = Payload (Run-AS @{ op='get-record'; db=$hdb; target_id=$scRvid; effective_allowed_namespaces=@('projA') })
+$grD2 = Payload (Run-AS @{ op='get-record'; db=$hdb; target_id=$scRvid; effective_allowed_namespaces=@('projA') })
+Check 'i36 get-record: deterministic (byte-identical re-run)' (($grD1 | ConvertTo-Json -Depth 40 -Compress) -eq ($grD2 | ConvertTo-Json -Depth 40 -Compress))
+# (e) read-only: catalog_digest unchanged by all the get-record activity
+Check 'i36 get-record: READ-ONLY (catalog_digest unchanged; schema stays 5)' ([string](Payload (Run-AS @{ op='catalog'; db=$hdb })).digest -eq $digBeforeGr -and [string]$grc.schema_version -eq '5')
+# (f) missing rvid -> clean fail-closed error
+$grMiss = (Run-AS @{ op='get-record'; db=$hdb; effective_allowed_namespaces=@('projA') }).env
+Check 'i36 get-record: missing rvid -> clean error (missing_rvid)' ($null -ne $grMiss -and [string]$grMiss.status -eq 'error' -and [string]$grMiss.error.code -eq 'missing_rvid')
 
 # ---------- cleanup ----------
 try { Remove-Item -LiteralPath $tmpRoot -Recurse -Force -ErrorAction SilentlyContinue } catch { }

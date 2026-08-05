@@ -1,3 +1,55 @@
+# Work Order: Artifact Search (`artifact.search`) -- 0.5.0 -> 0.6.0 (i36, D-0100 fold reconciliation: the by-rvid get-record body-fetch)
+
+**Contract version targeted:** 0.6 (SKILL_CONTRACT) + **MEMORY_CONTRACT Amendment A5 (D-0096, namespace-closure /
+U1'-U4') + A6 (D-0098, nav-vs-evidence)** -- ADDITIVE, READ-ONLY, NO migration (`schema_version` STAYS 5) |
+**Author:** FANOUT_AGENT_002 (i36, plan fo-36-1a676e4b, worker GET-RECORD-BY-RVID-i36) / 2026-08-05 |
+**Prior revisions:** 0.1.0 (i25, MVP) -> 0.2.0 (i27, record envelope + ingest_records) -> 0.3.0 (i32, A4 Tier-0
+envelope seams) -> 0.4.0 (i33, A5 namespace-closure + supersession-hardening) -> 0.5.0 (i34, A6 Tier-1
+bounded-fanout hierarchy) |
+**Roadmap entry:** `MODULE_ROADMAP.md#artifact.search` (arch position 23); governed by `MEMORY_CONTRACT.md`
+A5 (U1' end-to-end namespace closure; U3' working-kind conjunctive access; U4' catalog-computed
+`effective_current`) + A6 (nav vs evidence). Origin: the i35 Lane A FOLD RECONCILIATION (D-0100).
+
+### i36 problem being solved (D-0100 fold reconciliation: the clean by-rvid get-record) -- DONE
+i35 Lane A recorded that #40's context-compile leaf HYDRATION reads #36's Catalog `records` table DIRECTLY,
+because #36 shipped NO by-`record_version_id` body-fetch op (its read ops are `search` / `list-records` /
+`export-chunk-texts` / the A6 `shortlist`/`descend`; `descend` returns leaf_members as bare rvids + candidate_role,
+NOT a hydrated body). 0.6 adds the clean, ADDITIVE, READ-ONLY `get-record` op so a future i37 #40 change can stop
+reaching into #36's internals. **DONE:**
+- **`get-record`**: rvid(s) -- a single `-TargetId` (`target_id`/`record_version_id`) OR an `rvids[]` /
+  `record_version_ids[]` array via `-InputsJson` -- plus the CALLER-SUPPLIED CLOSED `effective_allowed_namespaces`
+  (via `effective_allowed_namespaces` / `filters.namespace` / a top-level `namespace`; absent = unscoped
+  back-compat, an explicit EMPTY set = zero results) + `task_id` (working-kind) + `current_only`. Per rvid it
+  returns the FULL s1 ENVELOPE (the shipped `_source_chunk_envelope` / `_record_envelope`) PLUS an evidence
+  hydration body (the shipped `_chunk_hit_base` / `_record_hit_base` provenance derivation + the full `text`),
+  **REUSING the shipped provenance derivation (no second path)**.
+- An rvid is EITHER a typed-record `record_version_id` (the `records` table) OR a source_chunk
+  `chunk_occurrence_id` (the `v_records_source_chunk` view) -- the SAME id space `search` hits + `descend`
+  leaf_members use, so the #40 flow is `descend -> leaf_members[].record_version_id -> get-record(...)`.
+- **Provenance holds:** `content_hash` == the source sha256 (a source_chunk's document-version hash; a typed
+  record's `sha256(text)`); the returned span reproduces the source bytes -- the guarantee `search` /
+  `export-chunk-texts` already give (get-record's chunk evidence is byte-identical to `export-chunk-texts`).
+- **A5-closed (identical DECISIONS to `search`):** (U1') `ns_permitted` on EVERY returned record -- a
+  foreign/out-of-scope rvid FAILS CLOSED count-only (`namespace_violation_count`; identifying detail ONLY to the
+  privileged security_log) and a record reaching `records[]` outside scope is a `namespace_leak` ABORT; (U3') a
+  `working` record is returned ONLY under CONJUNCTIVE access (an in-scope namespace authorization AND an exact
+  `task_id`) else count-only `working_denied_count`; (U4') VERSION-EXACT by default (with the catalog-computed
+  `effective_current` / `superseded_by` / `supersession_conflicted` flags surfaced), and an optional
+  `current_only` that excludes a predecessor whose in-scope LIVE successor exists (`current_excluded_count`,
+  pool-independent).
+- **Deterministic + envelope-only** (`records[]` sorted by `record_version_id`, input-permutation-independent; NO
+  timestamps in the result; unresolved rvids surface count-only as `unresolved_count`); **NO corpus writes, NO new
+  table, NO migration** (`schema_version` STAYS 5; `catalog_digest` + `shipped_tables_schema_sha` unchanged;
+  existing paths byte-identical). skill.json / args_spec / output schema updated, 0.5.0 -> 0.6.0.
+Every interpretation: `SCHEMA_NOTES.md` **section 14**. Result: **38/38** the python i36 gate
+(`tests/test_get_record_i36.py`) + **56/56** the shipped python A6 regression (`tests/test_hierarchy_a6.py`)
+off-machine; the pwsh `Invoke-ArtifactSearchTests.ps1` adds the i36 get-record section + the 0.6.0/0.6 version
+assertions (the live executor gate). NON-GOALS (deferred): #40 ADOPTING get-record (i37 -- this wave only SHIPS
+the op); the #37 rehearsal (Lane A); Widget 05 (Lane C); the query ROUTER; any write/migration/new table; real
+embeddings; UI.
+
+--- the i34 (A6) work order follows, for reference ---
+
 # Work Order: Artifact Search (`artifact.search`) -- 0.4.0 -> 0.5.0 (i34, MEMORY_CONTRACT A6 Tier-1 bounded-fanout hierarchy)
 
 **Contract version targeted:** 0.5 (SKILL_CONTRACT) + **MEMORY_CONTRACT Amendment A6 (D-0098, i34 Tier-1

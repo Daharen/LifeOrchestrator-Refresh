@@ -81,7 +81,7 @@ import sys, os, json, time, hashlib, math, re, sqlite3, fnmatch, struct, traceba
 
 SCHEMA_VERSION = "5"                 # 1->2 (D-0083); 2->3 (A4/D-0092); 3->4 (A5/D-0096); 4->5 (A6/D-0098); forward-migrated in place
 PRIOR_SCHEMA_VERSIONS = ("1", "2", "3", "4")
-WORKER_VERSION = "0.5.0"
+WORKER_VERSION = "0.6.0"
 
 # ---- A6 (D-0098, i34) Tier-1 bounded-fanout HIERARCHY build parameters (deterministic; NO model) ----
 # The BUILDER is deterministic code (the skeleton is never the model). MAX_FANOUT bounds a node's children;
@@ -2387,6 +2387,151 @@ class Catalog:
                 break
         return {"count": len(out), "chunks": out}
 
+    # ---------------------------------------------------- A5-closed by-rvid get-record (D-0100 fold) ----
+    # i36 (FANOUT_AGENT_002): the clean, ADDITIVE, READ-ONLY by-record_version_id body-fetch op that closes
+    # the i35 Lane A FOLD RECONCILIATION (D-0100) -- #40's leaf hydration reads #36's `records` table
+    # directly today because #36 had NO by-rvid get-record. get-record returns, per rvid, the FULL s1
+    # ENVELOPE (the shipped `_source_chunk_envelope` / `_record_envelope`) PLUS an evidence body sufficient
+    # for #40 leaf HYDRATION (the shipped `_chunk_hit_base` / `_record_hit_base` provenance derivation + the
+    # full `text`) -- REUSING the shipped derivations (no second provenance path). READ-ONLY, deterministic,
+    # CPU-only, NO model, NO migration (schema_version stays 5). An rvid is EITHER a typed-record
+    # record_version_id (the `records` table) OR a source_chunk chunk_occurrence_id (the
+    # v_records_source_chunk view) -- the SAME id space `search` hits + `descend` leaf_members refer to.
+    def _record_get(self, row, effective_allowed):
+        """Compose the shipped s1 envelope (`_record_envelope`) + evidence hydration body
+        (`_record_hit_base` + full `text`) for one TYPED-record row. The retrieval-stage lineage is
+        stripped -- a by-rvid fetch is NOT a staged retrieval. A5/U4' catalog-computed currentness flags
+        are surfaced (never a silent pick), identical to `search`."""
+        rvid = row["record_version_id"]
+        kind = row["record_kind"]
+        ns = row["namespace"]
+        envelope = self._record_envelope(row, effective_allowed)
+        evidence = self._record_hit_base(rvid)
+        for kdrop in ("retrieval_stage_id", "parent_stage_id", "retrieval_plan_id"):
+            evidence.pop(kdrop, None)
+        evidence["text"] = row["text"] or ""
+        si = self._supersession_info(rvid, ns, effective_allowed) if kind != "source_chunk" else \
+            {"has_live_successor": False, "conflicted": False, "live_successors": []}
+        eff_current = (row["status"] == STATUS_CURRENT) and (not si["has_live_successor"])
+        return {
+            "record_version_id": rvid, "record_id": row["record_id"], "record_kind": kind,
+            "namespace": ns, "found": True,
+            "effective_current": bool(eff_current),
+            "supersession_conflicted": bool(si["conflicted"]),
+            "superseded_by": list(si["live_successors"]),
+            "envelope": envelope, "evidence": evidence,
+        }
+
+    def _source_chunk_get(self, crow, effective_allowed):
+        """Compose the shipped source_chunk envelope (`_source_chunk_envelope`) + evidence hydration body
+        (`_chunk_hit_base` + full `text`) for one v_records_source_chunk row (rvid == chunk_occurrence_id).
+        content_hash is the source/document-version sha256 and the span reproduces the source bytes -- the
+        SAME guarantee `search` / `export-chunk-texts` give (provenance holds)."""
+        rvid = crow["record_version_id"]
+        ns = crow["namespace"]
+        envelope = self._source_chunk_envelope(crow)
+        evidence = self._chunk_hit_base(crow["chunk_id"])
+        if evidence is not None:
+            for kdrop in ("retrieval_stage_id", "parent_stage_id", "retrieval_plan_id"):
+                evidence.pop(kdrop, None)
+            evidence["text"] = crow["text"] or ""
+        return {
+            "record_version_id": rvid, "record_id": crow["record_id"], "record_kind": "source_chunk",
+            "namespace": ns, "found": True,
+            "effective_current": (crow["status"] == STATUS_CURRENT),
+            "supersession_conflicted": False, "superseded_by": [],
+            "envelope": envelope, "evidence": evidence,
+        }
+
+    def get_record(self, rvids, effective_allowed, current_only=False, task_id=None):
+        """A5-closed, READ-ONLY by-record_version_id fetch (D-0100 fold reconciliation for #40 leaf
+        hydration). Per rvid returns the full s1 ENVELOPE + the evidence body sufficient for hydration,
+        reusing the shipped provenance derivation. Enforcement (identical DECISIONS to `search`):
+          * A5/U1' namespace CLOSURE -- the canonical `ns_permitted` on EVERY returned record; a
+            foreign/out-of-scope rvid FAILS CLOSED count-only (identifying detail ONLY to the privileged
+            security_log, NEVER to the caller -- only `namespace_violation_count` surfaces); a record that
+            reaches `records[]` outside the effective set is a fail-closed 'namespace_leak' ABORT.
+          * A5/U3' working-kind -- a `working` record is returned ONLY under CONJUNCTIVE access (an
+            in-scope namespace authorization AND an exact `task_id` match); otherwise count-only
+            `working_denied_count` (default reject, mirroring `_record_passes`).
+          * A5/U4' version semantics -- VERSION-EXACT by default (the rvid exactly as stored); when
+            `current_only` is set, a record whose in-scope LIVE successor exists is excluded (catalog-
+            computed `effective_current`, pool-independent) as `current_excluded_count`.
+        Deterministic + envelope-only (records[] sorted by record_version_id; NO timestamps in the result);
+        NO corpus writes, NO new table, NO migration (schema_version stays 5). `effective_allowed` is the
+        CALLER-SUPPLIED CLOSED set (None = unscoped back-compat; an explicit EMPTY set = zero results)."""
+        found = []
+        ns_violations = []          # A5/U1' sanitized -> the privileged security_log; count-only to caller
+        working_denied = 0          # A5/U3' conjunctive-scope denial (count-only)
+        current_excluded = 0        # A5/U4' current_only excluded a superseded predecessor (count-only)
+        unresolved = 0              # rvid resolved to no catalog record (count-only; no metadata)
+        seen = set()
+        for raw in (rvids or []):
+            if raw is None:
+                continue
+            rvid = str(raw)
+            if rvid in seen:
+                continue            # dedup -> a stable requested-count + a deterministic single result per rvid
+            seen.add(rvid)
+            rec = self.conn.execute("SELECT * FROM records WHERE record_version_id=?", (rvid,)).fetchone()
+            if rec is not None:
+                kind = rec["record_kind"]
+                ns = rec["namespace"]
+                # A5/U1' namespace closure -- fail closed, count-only, detail to the security log.
+                if effective_allowed is not None and not ns_permitted(ns, effective_allowed):
+                    self._ns_reject(ns_violations, kind, rvid, ns); continue
+                # A5/U3' working-kind -- CONJUNCTIVE task_id AND in-scope namespace (mirrors _record_passes).
+                if kind == WORKING_KIND:
+                    if effective_allowed is None or task_id is None or (rec["task_id"] or "") != str(task_id):
+                        working_denied += 1
+                        self._security_log("working_kind_denied",
+                                           {"record_version_id": rvid, "namespace": ns, "task_id": rec["task_id"]})
+                        continue
+                # A5/U4' version semantics -- exact by default; current_only excludes a superseded predecessor.
+                if current_only and not self._effective_current(rvid, kind, rec["status"], ns, effective_allowed):
+                    current_excluded += 1; continue
+                found.append(self._record_get(rec, effective_allowed))
+                continue
+            # not a typed record -> try the source_chunk occurrence view (rvid == chunk_occurrence_id).
+            crow = self.conn.execute("SELECT * FROM v_records_source_chunk WHERE record_version_id=?", (rvid,)).fetchone()
+            if crow is not None:
+                ns = crow["namespace"]      # the slugged source_id
+                if effective_allowed is not None and not ns_permitted(ns, effective_allowed):
+                    self._ns_reject(ns_violations, "source_chunk", rvid, ns); continue
+                if current_only and not self._effective_current(rvid, "source_chunk", crow["status"], ns, effective_allowed):
+                    current_excluded += 1; continue
+                found.append(self._source_chunk_get(crow, effective_allowed))
+                continue
+            unresolved += 1
+        # A5/U1'(d): only the sanitized COUNT surfaces; the privileged security log holds the detail.
+        for v in ns_violations:
+            self._security_log("namespace_violation", v)
+        # A5/U1' all-object closure (defense in depth): a returned record outside scope ABORTS fail-closed
+        # (the leaked record's ids/namespace go to the privileged log, not the caller-visible error) -- the
+        # SAME assertion `search` makes, so it can only fire on a real invariant break.
+        if effective_allowed is not None:
+            for f in found:
+                if not ns_permitted(f["namespace"], effective_allowed):
+                    self._security_log("namespace_leak", {
+                        "record_version_id": f.get("record_version_id"), "record_kind": f.get("record_kind"),
+                        "namespace": f.get("namespace"), "effective_allowed": sorted(effective_allowed)})
+                    raise ASError("namespace_leak",
+                                  "get-record produced a record outside the requested namespace scope "
+                                  "(fail-closed abort; detail in the privileged security log)")
+        found.sort(key=lambda f: f["record_version_id"])   # canonical order, input-permutation-independent
+        return {
+            "requested": len(seen),
+            "found_count": len(found),
+            "records": found,
+            "unresolved_count": unresolved,                       # count-only, NO identifying metadata
+            "namespace_enforced": (effective_allowed is not None),
+            "namespace_allowed": (sorted(effective_allowed) if effective_allowed is not None else None),
+            "namespace_violation_count": len(ns_violations),      # A5/U1' sanitized (count ONLY)
+            "working_denied_count": working_denied,               # A5/U3' sanitized (count ONLY)
+            "current_only": bool(current_only),
+            "current_excluded_count": current_excluded,           # A5/U4' current_only exclusions (count ONLY)
+        }
+
     def store_embeddings(self, chunk_ids, vectors, provider_id, dim, normalized,
                          model_id, model_version, model_sha256, engine_build, esp=None, target_kind="chunk"):
         if len(chunk_ids) != len(vectors):
@@ -3643,6 +3788,38 @@ def run(args):
             out["result"] = res
             art("chunk_texts.json", res, "json")
 
+        elif op == "get-record" or op == "get_record":
+            # i36 (D-0100 fold): the clean, ADDITIVE, READ-ONLY by-rvid body-fetch #40 leaf hydration needs.
+            # rvid(s): a single -TargetId (target_id / record_version_id) OR an rvids[] (record_version_ids[])
+            # array via InputsJson. effective_allowed = the CALLER-SUPPLIED CLOSED set (via
+            # effective_allowed_namespaces / filters.namespace / namespace; absent = unscoped back-compat).
+            rvids = args.get("rvids")
+            if rvids is None:
+                rvids = args.get("record_version_ids")
+            if rvids is None:
+                single = args.get("target_id")
+                if single is None:
+                    single = args.get("record_version_id")
+                rvids = [single] if single is not None else []
+            if not isinstance(rvids, list):
+                rvids = [rvids]
+            if not rvids:
+                raise ASError("missing_rvid",
+                              "get-record needs a record_version_id (-TargetId) or an rvids[] array")
+            f = args.get("filters") or {}
+            tid = args.get("task_id")
+            if tid is None:
+                tid = f.get("task_id") or f.get("working_task_id")
+            current_only = bool(args.get("current_only", False)) \
+                or (str(f.get("mode") or "").lower() == "current_only") \
+                or bool(f.get("current_only", False)) or bool(f.get("exclude_stale", False))
+            res = cat.get_record(rvids=rvids, effective_allowed=_eff_from_args(args),
+                                 current_only=current_only, task_id=tid)
+            res["db"] = os.path.abspath(db_path)
+            res["schema_version"] = cat.schema_version()
+            out["result"] = res
+            art("get_record.json", res, "json")
+
         elif op == "store-embeddings":
             res = cat.store_embeddings(
                 chunk_ids=args.get("chunk_ids") or [],
@@ -3723,7 +3900,7 @@ def run(args):
             out["result"] = res
 
         else:
-            raise ASError("invalid_op", "unknown op %r (ingest|ingest-records|list-records|migrate|search|embed|integrity|catalog|export-chunk-texts|store-embeddings|get-vector|build-hierarchy|shortlist|descend|hierarchy|refresh-hierarchy|hierarchy-mark-changed|hierarchy-regen|prune-verdict)" % op)
+            raise ASError("invalid_op", "unknown op %r (ingest|ingest-records|list-records|migrate|search|embed|integrity|catalog|export-chunk-texts|get-record|store-embeddings|get-vector|build-hierarchy|shortlist|descend|hierarchy|refresh-hierarchy|hierarchy-mark-changed|hierarchy-regen|prune-verdict)" % op)
     finally:
         cat.close()
     return out

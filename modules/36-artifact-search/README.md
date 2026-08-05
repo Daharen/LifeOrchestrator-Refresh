@@ -1,4 +1,4 @@
-# Module 36 -- artifact.search (0.5.0)
+# Module 36 -- artifact.search (0.6.0)
 
 **Deterministic SQLite catalog + typed-record memory substrate + hybrid LEXICAL (FTS5) search + a
 bounded-fanout navigation HIERARCHY.** The Collective Agent's authoritative catalog (D-0080 Wave 1/2, arch
@@ -56,6 +56,27 @@ exact set / exact range); a bounded descriptor, a centroid, and a STALE synopsis
 EXCLUDED from `catalog_digest` (the corpus fingerprint stays stable; zero nodes == flat retrieval byte-for-byte);
 the hierarchy has its own `tree_digest`. Full record: `SCHEMA_NOTES.md` section 13.
 
+**0.6 (i36, FANOUT_AGENT_002) adds the clean by-`record_version_id` `get-record` body-fetch op -- the i35 Lane A
+FOLD RECONCILIATION (D-0100; ADDITIVE, READ-ONLY, NO migration, `schema_version` STAYS 5).** #40's leaf
+HYDRATION read #36's `records` table directly because #36 had NO by-rvid op; `get-record` is the clean seam so a
+future i37 #40 change can stop reaching into #36's internals. It takes rvid(s) (`-TargetId`, or an `rvids[]` /
+`record_version_ids[]` array via `-InputsJson`) + the CALLER-SUPPLIED CLOSED `effective_allowed_namespaces`, and
+returns per rvid the FULL s1 ENVELOPE (the shipped `_source_chunk_envelope` / `_record_envelope`) PLUS an
+evidence hydration body (the shipped `_chunk_hit_base` / `_record_hit_base` provenance derivation + the full
+`text`), **reusing the shipped provenance derivation -- no second path** (provenance holds: `content_hash` == the
+source sha256; the span reproduces the source bytes). An rvid is EITHER a typed-record `record_version_id` (the
+`records` table) OR a source_chunk `chunk_occurrence_id` (the `v_records_source_chunk` view) -- the SAME id space
+`search` hits + `descend` leaf_members use. A5-CLOSED (identical DECISIONS to `search`): (U1') `ns_permitted` on
+EVERY returned record; a foreign/out-of-scope rvid FAILS CLOSED count-only (`namespace_violation_count`;
+identifying detail ONLY to the privileged security log) and a record reaching `records[]` outside scope is a
+`namespace_leak` ABORT; (U3') a `working` record is returned ONLY under CONJUNCTIVE access (an in-scope namespace
+authorization AND an exact `task_id`) else count-only `working_denied_count`; (U4') VERSION-EXACT by default (the
+supersession flags `effective_current`/`superseded_by`/`supersession_conflicted` surfaced), with an optional
+`current_only` that excludes a predecessor whose in-scope LIVE successor exists (`current_excluded_count`,
+pool-independent). Deterministic + envelope-only (`records[]` sorted by `record_version_id`; unresolved rvids
+surface count-only as `unresolved_count`); absent set = unscoped back-compat, an explicit EMPTY set = zero
+results. **#40 ADOPTS it in i37** (this wave only SHIPS the op). Full record: `SCHEMA_NOTES.md` section 14.
+
 Contract: `SKILL_CONTRACT.md` + `MEMORY_CONTRACT.md` (D-0083 + A4/D-0092 + A5/D-0096 + A6/D-0098). Schema + every
 interpretation: `SCHEMA_NOTES.md` (authoritative for the fold). Work order: `WORK_ORDER.md`.
 
@@ -72,6 +93,7 @@ interpretation: `SCHEMA_NOTES.md` (authoritative for the fold). Work order: `WOR
 | `integrity` | PRAGMA integrity_check + catalog invariants (extended: occurrence ids, vectors, records, staleness, serving) |
 | `catalog` | `catalog_digest` + counts |
 | `export-chunk-texts` / `store-embeddings` / `get-vector` | fold drop-in: export ordered chunk texts -> real adapter -> store float32 BLOB vectors by id -> round-trip |
+| `get-record` | **i36/D-0100 (READ-ONLY, ADDITIVE):** by-`record_version_id` body-fetch for #40 leaf hydration -- rvid(s) + `effective_allowed_namespaces` -> per rvid the full s1 ENVELOPE + the evidence hydration body (text + provenance), reusing the shipped provenance derivation. A5-closed (`ns_permitted` per record -> foreign count-only; `working` needs CONJUNCTIVE `task_id`+namespace; version-exact default + optional `current_only`). An rvid is a typed-record `record_version_id` OR a source_chunk `chunk_occurrence_id`. NO writes / NO migration |
 | `build-hierarchy` | A6: DETERMINISTIC balanced (re)build of the bounded-fanout tree (one per namespace, kind `source_module`); `max_fanout` default 16; atomic tree-version publication; `all_valid`/`topology_state`/`tree_digest` per namespace |
 | `shortlist` | A6/H6: rank the AUTHORIZED hierarchy roots (the navigation frontier) by structural-synopsis match; `effective_allowed_namespaces` enforced on every node; navigation candidates only (never evidence) |
 | `descend` | A6/H6: expand ONE frontier node into its direct children + leaf members; `ns_permitted` per hop; a foreign/out-of-scope `node_id` FAILS CLOSED count-only (no metadata) |
@@ -94,6 +116,11 @@ pwsh -NoProfile -File .\Invoke-ArtifactSearch.ps1 -InputsJson '{"op":"list-recor
 
 # migrate a shipped-0.1 db in place
 pwsh -NoProfile -File .\Invoke-ArtifactSearch.ps1 -Op migrate -DbPath .\runtime\catalog\as.db
+
+# i36 (D-0100): by-rvid get-record -- fetch a record's full envelope + evidence body for hydration
+pwsh -NoProfile -File .\Invoke-ArtifactSearch.ps1 -Op get-record -TargetId "sym.x@1" -DbPath .\runtime\catalog\as.db -InputsJson '{"effective_allowed_namespaces":["core-docs"]}'
+# a batch of leaf rvids from a descend (the #40 hydration path), optionally current-only:
+pwsh -NoProfile -File .\Invoke-ArtifactSearch.ps1 -InputsJson '{"op":"get-record","db":"...","rvids":["occ_...","sym.x@1"],"effective_allowed_namespaces":["core-docs"],"current_only":true}'
 ```
 
 Also callable through the Module 1 wrapper. Every invocation emits one `lifeorch.skill.result/0.1` envelope on
@@ -129,22 +156,27 @@ per-hop + all-object scope-check + sanitized `namespace_violation_count` + cross
 supersession rejection at ingest + per-hop walk block), GATE TEST 2 (U4' POOL-INDEPENDENT `current_only` +
 branch-conflict flag + supersession integrity), GATE TEST 3 (U3' CONJUNCTIVE working access), U2'
 provenance_mode/candidate_role/stage-lineage, and the schema_version 3->4 in-place migration from a FROZEN
-shipped-0.3 worker `fixtures/artifact_search_v3.py` (shipped tables byte-identical, catalog_digest unchanged).
-The same harness is the cloud off-machine gate and the live Windows/executor gate. **179/179 off-machine.**
+shipped-0.3 worker `fixtures/artifact_search_v3.py` (shipped tables byte-identical, catalog_digest unchanged);
+the **A6 gates** (bounded-fanout build, balanced depth, safe-pruning, three-axis staleness + ABA, 4->5
+migration; `tests/test_hierarchy_a6.py` off-machine = 56/56); and the **i36 get-record gate** (D-0100 fold:
+envelope+evidence hydration, provenance holds, A5 namespace closure + working conjunctive scope, version-exact +
+`current_only`, read-only/no-migration, determinism; `tests/test_get_record_i36.py` off-machine = 38/38). The
+same pwsh harness is the cloud off-machine gate and the live Windows/executor gate.
 
 ## Layout
 
 ```
 Invoke-ArtifactSearch.ps1     entrypoint (pwsh-file)
-artifact_search.py            worker (SQLite + FTS5, stdlib only; schema v4)
-skill.json                    manifest (0.4.0, contract v0.4)
-SCHEMA_NOTES.md               schema + s1..s8 + A4 (section 11) + A5 (section 12) interpretations (fold-authoritative)
+artifact_search.py            worker (SQLite + FTS5, stdlib only; schema v5)
+skill.json                    manifest (0.6.0, contract v0.6)
+SCHEMA_NOTES.md               schema + s1..s8 + A4 (s11) + A5 (s12) + A6 (s13) + i36 get-record (s14) interpretations (fold-authoritative)
 WORK_ORDER.md                 work order
 fixtures/repo/                bundled fixture corpus (markdown + text)
-fixtures/artifact_search_v1.py  FROZEN shipped-0.1 worker (seeds a v1 db for the 1->2->3->4 migration test; do NOT edit)
-fixtures/artifact_search_v2.py  FROZEN shipped-0.2 worker (seeds a v2 db for the 2->3->4 migration test; do NOT edit)
+fixtures/artifact_search_v1.py  FROZEN shipped-0.1 worker (seeds a v1 db for the 1->2->..->5 migration test; do NOT edit)
+fixtures/artifact_search_v2.py  FROZEN shipped-0.2 worker (seeds a v2 db for the 2->..->5 migration test; do NOT edit)
 fixtures/artifact_search_v3.py  FROZEN shipped-0.3 worker (seeds a v3 db for the A5 3->4 migration GATE; do NOT edit)
-tests/                        Invoke-ArtifactSearchTests.ps1
+fixtures/artifact_search_v4.py  FROZEN shipped-0.4 worker (seeds a v4 db for the A6 4->5 migration GATE; do NOT edit)
+tests/                        Invoke-ArtifactSearchTests.ps1 (pwsh gate); test_hierarchy_a6.py (A6 off-machine); test_get_record_i36.py (i36 get-record off-machine)
 examples/                     example-invocation.md, example-result.json
 runtime/                      gitignored: catalog/*.db, artifacts/<id>/
 ```

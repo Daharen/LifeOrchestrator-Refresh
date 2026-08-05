@@ -67,7 +67,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$SKILL_ID = 'artifact.search'; $SKILL_VERSION = '0.5.0'; $CONTRACT = '0.5'
+$SKILL_ID = 'artifact.search'; $SKILL_VERSION = '0.6.0'; $CONTRACT = '0.6'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 $startedAt = [DateTime]::UtcNow
@@ -132,7 +132,7 @@ $status = 'ok'; $errorObj = $null; $result = $null; $inputsDigest = $null
 $confidence = $null; $modelProvenance = @(); $artifacts = @()
 $warnings = New-Object System.Collections.Generic.List[string]
 $invDir = Join-Path $ArtifactRoot $InvocationId
-$VALID_OPS = @('ingest','ingest-records','list-records','migrate','search','embed','integrity','catalog','export-chunk-texts','store-embeddings','get-vector','build-hierarchy','build-tree','hierarchy-build','shortlist','descend','hierarchy','hierarchy-status','refresh-hierarchy','hierarchy-mark-changed','hierarchy-regen','prune-verdict')
+$VALID_OPS = @('ingest','ingest-records','list-records','migrate','search','embed','integrity','catalog','export-chunk-texts','get-record','get_record','store-embeddings','get-vector','build-hierarchy','build-tree','hierarchy-build','shortlist','descend','hierarchy','hierarchy-status','refresh-hierarchy','hierarchy-mark-changed','hierarchy-regen','prune-verdict')
 # ops that CREATE-or-open a db (no pre-existing db required); every other db-op requires the db to exist
 $CREATE_OPS = @('ingest','ingest-records','migrate','build-hierarchy','build-tree','hierarchy-build')
 
@@ -196,6 +196,15 @@ try {
     }
     if ($Op -eq 'search' -and [string]::IsNullOrWhiteSpace([string]$wargs['query'])) {
         throw [PSCustomObject]@{ code='missing_query'; message='op=search needs -Query'; retryable=$false }
+    }
+    if ($Op -eq 'get-record' -or $Op -eq 'get_record') {
+        # i36 (D-0100): the by-rvid body-fetch needs a record_version_id -- a single -TargetId, or an
+        # rvids[] / record_version_ids[] / a single record_version_id via -InputsJson.
+        $hasTid = ($wargs.Contains('target_id') -and -not [string]::IsNullOrWhiteSpace([string]$wargs['target_id']))
+        $hasRvids = (($wargs.Contains('rvids') -and $null -ne $wargs['rvids']) -or ($wargs.Contains('record_version_ids') -and $null -ne $wargs['record_version_ids']) -or ($wargs.Contains('record_version_id') -and -not [string]::IsNullOrWhiteSpace([string]$wargs['record_version_id'])))
+        if (-not $hasTid -and -not $hasRvids) {
+            throw [PSCustomObject]@{ code='missing_rvid'; message='op=get-record needs a record_version_id (-TargetId) or an rvids[] array (via -InputsJson)'; retryable=$false }
+        }
     }
 
     New-Item -ItemType Directory -Path $invDir -Force | Out-Null
