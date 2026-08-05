@@ -84,3 +84,7 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 - `SELECTION-POLICY-i30-SHIP-STATE.md` | the i30 retrieval.eval #37 0.3.0 selpol_rrf_v1 ship-state | preserved from the stale Project mirror at the i34 cleanup | 2026-08-04 | D-0088
 - `SKILL-SUMMARY-i30-SHIP-STATE.md` | the i30 skill.card #41 0.2.0 (A3 skill->summary) ship-state | preserved from the stale Project mirror at the i34 cleanup | 2026-08-04 | D-0088
 - `2026-08-04-FANOUT_ORCHESTRATOR_HANDOFF-i33.md` | snapshot of the handoff at the i33-in-flight state (before the D-0097 close rewrite; from git 33a8158^) | backfilled the missing DOC_PROTOCOL s5 snapshot at the i34 cleanup | 2026-08-04 | D-0097
+- `2026-08-05-FANOUT_ORCHESTRATOR_HANDOFF.md` | snapshot of the handoff at the i34-in-flight state (before the D-0099 close rewrite, 63->28 KB) | DOC_PROTOCOL s5 handoff snapshot at the i34 close | 2026-08-05 | D-0099
+- `i34-FANOUT_AGENT_001.md` | the used i34 Lane A brief (HIERARCHY-BUILDER-i34; #36 artifact.search 0.5.0) | DOC_PROTOCOL s6 used-brief archive at the i34 close | 2026-08-05 | D-0099
+- `i34-FANOUT_AGENT_002.md` | the used i34 Lane B brief (HIERARCHY-EVAL-i34; #37 retrieval.eval eval 0.6.0) | DOC_PROTOCOL s6 used-brief archive at the i34 close | 2026-08-05 | D-0099
+- `i34-FANOUT_AGENT_003.md` | the used i34 Lane C brief (SHORTLIST-DESCEND-i34; #40 context.compile 0.6.0) | DOC_PROTOCOL s6 used-brief archive at the i34 close | 2026-08-05 | D-0099
