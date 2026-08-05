@@ -1,0 +1,3 @@
+# The widget's private scratch: the "new since last visit" marker + any transient render state.
+# The map is READ-ONLY over the repo; this dir is the ONLY thing it writes, and it is never shipped.
+runtime/

@@ -1,0 +1,4 @@
+{ "schema":"lifeorch.verification.result/0.1", "packet_id":"vp-fixture-001",
+  "title":"Fixture verification packet", "verified_by":"nicholas",
+  "verified_at_utc":"2026-08-06T15:00:00.0000000Z",
+  "summary":{"total":3,"pass":2,"fail":0,"partial":1,"skipped":0}, "items":[] }

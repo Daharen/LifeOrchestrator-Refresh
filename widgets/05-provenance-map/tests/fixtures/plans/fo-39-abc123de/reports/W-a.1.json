@@ -1,0 +1,2 @@
+{ "schema":"lifeorch.fanout.report/0.1", "plan_id":"fo-39-abc123de", "worker_id":"W-a",
+  "state":"done", "summary":"a done", "reported_at_utc":"2026-08-05T13:00:00.0000000Z" }

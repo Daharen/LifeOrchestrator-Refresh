@@ -1,0 +1,11 @@
+<<RS>>a1a1a1a<<US>>2026-08-06<<US>>i40 (fo-40-7e57ca5e): model.gateway 0.6.0->0.7.0 -- warm path (D-0110)
+modules/07-model-gateway/Invoke-ModelGateway.ps1
+modules/07-model-gateway/skill.json
+<<RS>>b2b2b2b<<US>>2026-08-06<<US>>i40 (fo-40-7e57ca5e): widgets/04 Fan-out Wave Dashboard layout tweak
+widgets/04-fanout-wave-dashboard/Show-WaveDashboard.ps1
+<<RS>>d4d4d4d<<US>>2026-08-06<<US>>Docs (D-0110): roadmap Widget 05 row + CURRENT_STATE note
+core-docs/MODULE_ROADMAP.md
+core-docs/CURRENT_STATE.md
+<<RS>>c3c3c3c<<US>>2026-08-05<<US>>i39 (fo-39-abc123de): fs.observer read-only listings (D-0100)
+modules/02-fs-observer/Invoke-FsObserver.ps1
+modules/02-fs-observer/skill.json

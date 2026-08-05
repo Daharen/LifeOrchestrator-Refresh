@@ -1,0 +1,4 @@
+{ "schema":"lifeorch.fanout.plan/0.1", "plan_id":"fo-40-7e57ca5e", "iteration":40,
+  "title":"Tier-1 acceptance wave (fixture)", "report_back":"on_all", "max_parallel":3,
+  "created_at_utc":"2026-08-06T12:00:00.0000000Z",
+  "workers":[{"id":"W-gpu"},{"id":"W-cpu"}], "dispatch_now":["W-gpu","W-cpu"], "queued":[] }
