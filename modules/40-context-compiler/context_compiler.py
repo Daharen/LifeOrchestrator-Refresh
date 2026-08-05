@@ -292,8 +292,8 @@ else:
     CLASSIFIER_POLICY_SOURCE = "local_offmachine_replica_pending_37_canonical"
 
 WORKER_NAME = "context_compiler.py"
-WORKER_VERSION = "0.6.0"
-COMPILER_VERSION = "0.6.0"
+WORKER_VERSION = "0.7.0"
+COMPILER_VERSION = "0.7.0"
 PACKET_SCHEMA = "lifeorch.context_packet/0.2"  # UNCHANGED at i33 -- A5/D-0096 amendment is ADDITIVE over 0.2
 EXPANSION_SCHEMA = "lifeorch.context_expansion/0.2"
 
@@ -680,6 +680,346 @@ def run_hierarchy_plan(port, task, norm, config, warnings):
                             "topology_state": topology_state},
             "hierarchy_version": hierarchy_version, "corpus_snapshot": corpus_snapshot,
             "reject_policy": reject}
+
+# ================================================================================================
+# i35 (D-0100): the REAL hierarchy_port. #40 CONSTRUCTS a port over #36 artifact.search's SHIPPED
+# authorization-bound frontier ops (MEMORY_CONTRACT A6 H6: shortlist / descend / prune_verdict) + its
+# catalog, so the PUBLIC `-Retriever artifact_search` + DESCEND-class + SCOPED compile runs
+# `run_hierarchy_plan` for REAL (no injected `args['hierarchy_port']`). #36 is imported READ-ONLY by a
+# RESOLVED PORTABLE path (the i31/i32/i33 pattern) and is NEVER modified. #40 is the CONSUMER only.
+#
+# What this bridges (documented FOLD-RECONCILIATION seams; the adapter maps #36 output -> #40's port
+# shape WITHOUT editing #36 or run_hierarchy_plan):
+#   SEAM 1 (leaf HYDRATION): #36 `descend` returns bare leaf refs {record_version_id, candidate_role}.
+#     The port HYDRATES each into a full retriever-0.2 evidence hit -- source_chunk leaves via the SHIPPED
+#     `export_chunk_texts` (real source span + source-version hash + excerpt hash + text); typed-record
+#     leaves via the imported Catalog `records` table (NO shipped op returns a typed record's body BY
+#     record_version_id -- `list_records` omits the body -- so the by-ref body read is the reconciliation
+#     seam; a future #36 SHOULD add a `get-record`/`fetch-by-rvid` op). The port ACCUMULATES the exact
+#     authoritative source bytes per source_path so `resolve_excerpt` reproduces the excerpt DETERMINISTICALLY
+#     off-machine + live (content_hash == the reproduced span sha256).
+#   SEAM 2 (PRUNE-CERTIFICATE composition): #36 exposes `prune_verdict(node,channel,KEY) -> 'keep'|'prune'`
+#     (a per-TERM string, not a certificate object). The port maps #40's SOUND channel name -> #36's channel,
+#     tokenizes the query with #36's OWN tokenizer (so keys match the stored Bloom exactly), and SOUNDLY
+#     composes the no-false-negative certificate: excludes=True iff EVERY query term is DEFINITELY ABSENT
+#     (Bloom 'prune' for all) -- a lexical/entity relevance needs >=1 term present, so all-absent PROVES the
+#     subtree cannot match. A STALE synopsis (#36 returns 'keep') or any maybe-present term -> keep. Only the
+#     lexical/entity channels are certifiable from a plain text query; every other channel -> None (keep).
+#   SEAM 3/4/5: #36 `_node_public` lacks prune_channels / selpol ranking fields / a `synopsis_fresh` flag ->
+#     the port synthesizes them; #36 has no single `policy_info` op -> the port assembles it from
+#     `hierarchy_status` + the catalog corpus_version; #36 shortlist/descend return {nodes|children+
+#     leaf_members} dicts -> the port unwraps to the flat lists run_hierarchy_plan expects.
+# A cross-namespace hop can never happen with #36 enforcing per-hop closure; run_hierarchy_plan STILL
+# scope-checks every navigation-visible object (V5 defense-in-depth) and op_compile aborts SANITIZED.
+# ================================================================================================
+
+# #40 SOUND channel name (SOUND_PRUNE_CHANNELS) -> #36 prune_verdict channel name. Only lexical/entity are
+# derivable from a plain text query at i35 (a bounded top-N descriptor is NEVER certifiable; the multi-channel
+# router that would supply exact id/path/kind/time/authority keys is i36). #36 returns 'keep' for a stale node
+# and for the bounded 'descriptor'/'vector' channels, so the sound composition can only ever tighten, never
+# widen, what may be pruned.
+_A6_CHANNEL_MAP = {"lexical_membership": "lexical", "entity_membership": "entity"}
+
+
+def _load_artifact_search():
+    """Import #36 `artifact_search` by a RESOLVED PORTABLE path (env override LIFEORCH_ARTIFACT_SEARCH_PATH,
+    else the sibling `modules/36-artifact-search/artifact_search.py`). Returns (module, resolved_path) or
+    (None, None) so the caller FLAT-FALLS-BACK when #36 is unavailable -- a missing producer NEVER crashes a
+    compile, it degrades to flat-top-k (back-compat). Imported LAZILY (only when a request needs the real
+    port), so a flat compile adds NO #36 dependency. READ-ONLY -- #36 is never modified."""
+    path = os.environ.get("LIFEORCH_ARTIFACT_SEARCH_PATH")
+    if not path:
+        here = os.path.dirname(os.path.abspath(__file__))
+        cand = os.path.normpath(os.path.join(here, os.pardir, "36-artifact-search", "artifact_search.py"))
+        if os.path.isfile(cand):
+            path = cand
+    if path and os.path.isfile(path):
+        try:
+            d = os.path.dirname(path)
+            if d not in sys.path:
+                sys.path.insert(0, d)
+            spec = importlib.util.spec_from_file_location("lifeorch_artifact_search", path)
+            m = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(m)
+            return m, path
+        except Exception:  # noqa: BLE001 -- an unimportable producer -> flat fallback (never a crash)
+            return None, None
+    return None, None
+
+
+class ArtifactSearchHierarchyPort(object):
+    """The REAL i35 hierarchy_port: implements EXACTLY the 4-method protocol `run_hierarchy_plan` expects
+    (`policy_info`, `shortlist`, `descend`, `prune_certificate`) over #36's shipped A6 H6 ops + catalog.
+    DETERMINISTIC, CPU-only, no model, no network. ONE `Catalog(db_path)` read connection per compile; ONE
+    pinned hierarchy_version + corpus_snapshot for the whole traversal (via `policy_info`). READ-ONLY."""
+
+    def __init__(self, a_module, db_path, ns):
+        self._A = a_module
+        self._db = db_path
+        self.ns = ns
+        self._cat = a_module.Catalog(db_path)   # persistent READ connection for hydration + policy
+        self._chunk_index = None                # lazily built {chunk_occurrence_id -> chunk} (SEAM 1)
+        self._src_spans = {}                    # source_path -> [(start, end, bytes)] for reproduction
+        self.emitted_node_rvids = set()
+        self.emitted_leaf_rvids = set()
+
+    def close(self):
+        try:
+            self._cat.close()
+        except Exception:  # noqa: BLE001
+            pass
+
+    # ---- policy_info(): #36 has NO single policy_info op -> assemble from hierarchy_status + catalog (SEAM 4)
+    def _current_hierarchy_row(self):
+        st = self._cat.hierarchy_status(namespace=self.ns)
+        for h in st.get("hierarchies") or []:
+            return h                            # scoped to this ns -> at most one current hierarchy
+        return None
+
+    def has_current_hierarchy(self):
+        h = self._current_hierarchy_row()
+        return bool(h and h.get("root_node_id"))
+
+    def policy_info(self):
+        h = self._current_hierarchy_row() or {}
+        return {
+            "hierarchy_id": h.get("hierarchy_id"),
+            "hierarchy_kind": h.get("hierarchy_kind"),
+            "tree_version": h.get("tree_version"),
+            "builder_policy_id": h.get("builder_policy_id"),
+            "builder_policy_version": h.get("builder_policy_version"),
+            "corpus_snapshot": self._cat._get_corpus_version(),
+            # #36 does not version its prune-verdict op -> the port STAMPS the predicate id/version (auditable).
+            "prune_predicate_id": "a6_channel_prune_v1",
+            "prune_predicate_version": "1.0.0",
+            "topology_state": h.get("topology_state", "valid"),
+        }
+
+    # ---- query helpers (the port receives #40's query dict {query_set, query_class, normalized_task}) ----
+    @staticmethod
+    def _query_text(query):
+        qs = (query or {}).get("query_set") or []
+        parts = []
+        for q in qs:
+            if isinstance(q, dict):
+                parts.append(str(q.get("query") or q.get("text") or ""))
+            else:
+                parts.append(str(q))
+        joined = " ".join(p for p in parts if p).strip()
+        return joined or str((query or {}).get("normalized_task") or "").strip()
+
+    def _query_keys(self, query):
+        # tokenise with #36's OWN tokenizer so keys match the stored Bloom presence_filter EXACTLY (SEAM 2).
+        return sorted(set(self._A._a6_terms(self._query_text(query))))
+
+    # ---- node mapping: add prune_channels + selpol ranking fields + synopsis_fresh (SEAM 3) ----
+    def _map_node(self, n, rank):
+        rvid = n.get("record_version_id") or n.get("node_id")
+        self.emitted_node_rvids.add(rvid)
+        stale = (n.get("synopsis_freshness") == "stale") or (n.get("status") == NAVIGATIONAL_STALE)
+        # advertise ONLY the SOUND channels the port can actually certify from a text query (lexical always;
+        # entity when the node carries an entity_union). A bounded lexical_descriptor is NEVER advertised.
+        prune_channels = ["lexical_membership"]
+        if n.get("entity_union"):
+            prune_channels.append("entity_membership")
+        cv = self._cat._get_corpus_version()
+        ch = "nh_" + str(rvid)
+        return {
+            "record_id": n.get("node_id"), "record_version_id": rvid, "record_kind": "node",
+            "candidate_role": "navigation", "node_id": n.get("node_id"), "level": n.get("level"),
+            "is_root": bool(n.get("is_root")), "namespace": n.get("namespace"),
+            "source": n.get("namespace"), "source_version_id": "ver_" + str(rvid),
+            "content_hash": ch, "chunk_content_hash": ch, "provenance_mode": "derived_record",
+            "status": (NAVIGATIONAL_STALE if stale else "current"),
+            "currentness": (NAVIGATIONAL_STALE if stale else "current"),
+            "synopsis_fresh": (not stale),
+            "authority_level": "derived", "prune_channels": prune_channels,
+            "lexical_rank": rank, "lexical_score": 1.0 - (rank - 1) * 0.01,
+            "vector_rank": None, "fused_rank": rank, "fused_score": 1.0 - (rank - 1) * 0.01,
+            "index_snapshot": cv, "corpus_version": cv, "tie_break_key": str(rvid),
+            "snippet": "node " + str(rvid), "rank": rank, "span": None, "span_label": None,
+        }
+
+    # ---- leaf hydration (SEAM 1): a bare {record_version_id} -> a full retriever-0.2 evidence hit ----
+    def _ensure_chunk_index(self):
+        if self._chunk_index is not None:
+            return
+        self._chunk_index = {}
+        try:
+            res = self._cat.export_chunk_texts({}, None)   # SHIPPED op: real source spans + hashes + text
+            for c in res.get("chunks") or []:
+                occ = c.get("chunk_occurrence_id")
+                if occ:
+                    self._chunk_index[occ] = c
+        except Exception:  # noqa: BLE001 -- no chunks table / empty -> typed-record path only
+            self._chunk_index = {}
+
+    def _accumulate_source(self, source_path, start, end, body_bytes):
+        if not source_path:
+            return
+        self._src_spans.setdefault(source_path, []).append((int(start), int(end), body_bytes))
+
+    def _hydrate_leaf(self, leaf_id, rank):
+        cv = self._cat._get_corpus_version()
+        # 1) source_chunk leaf (leaf_id == chunk_occurrence_id): SHIPPED export_chunk_texts -> real span/hashes.
+        self._ensure_chunk_index()
+        c = self._chunk_index.get(leaf_id)
+        if c is not None:
+            text = c.get("text") or ""
+            b = text.encode("utf-8")
+            sp = c.get("rel_path") or ""
+            span = c.get("span") or {"start": 0, "end": len(b)}
+            start, end = int(span.get("start") or 0), int(span.get("end") if span.get("end") is not None else len(b))
+            self._accumulate_source(sp, start, end, b)
+            excerpt_h = c.get("chunk_content_hash") or sha256_hex(b)
+            self.emitted_leaf_rvids.add(leaf_id)
+            return {
+                "record_id": leaf_id, "record_version_id": leaf_id, "record_kind": "source_chunk",
+                "candidate_role": "evidence", "chunk_id": c.get("chunk_id") or ("chk_" + str(leaf_id)),
+                "source_path": sp, "abs_path": None, "provenance_mode": "direct_span",
+                "content_hash": c.get("content_hash"), "source_content_hash": c.get("content_hash"),
+                "chunk_content_hash": excerpt_h, "excerpt_hash": excerpt_h,
+                "span": {"start": start, "end": end}, "span_label": "bytes:%d-%d" % (start, end),
+                "status": "current", "currentness": "current", "authority_level": "source_material",
+                "namespace": self.ns, "source": self.ns, "source_version_id": None,
+                "lexical_rank": rank, "lexical_score": 1.0 - (rank - 1) * 0.01,
+                "vector_rank": None, "fused_rank": rank, "fused_score": 1.0 - (rank - 1) * 0.01,
+                "index_snapshot": cv, "corpus_version": cv, "tie_break_key": str(leaf_id),
+                "snippet": text, "rank": rank,
+            }
+        # 2) typed-record leaf (leaf_id == record_version_id): the documented seam (no shipped by-rvid body op).
+        row = self._cat.conn.execute(
+            "SELECT record_version_id,record_id,record_kind,namespace,content_hash,text,source_path,"
+            "authority_level,status FROM records WHERE record_version_id=?", (leaf_id,)).fetchone()
+        if row is None:
+            return None                                     # a member with no record (should not happen)
+        text = row["text"] or ""
+        b = text.encode("utf-8")
+        sp = row["source_path"] or ("record:" + str(row["record_version_id"]))
+        excerpt_h = sha256_hex(b)
+        self._accumulate_source(sp, 0, len(b), b)
+        self.emitted_leaf_rvids.add(row["record_version_id"])
+        return {
+            "record_id": row["record_id"], "record_version_id": row["record_version_id"],
+            "record_kind": row["record_kind"], "candidate_role": "evidence",
+            "chunk_id": "chk_" + row["record_version_id"], "source_path": sp, "abs_path": None,
+            "provenance_mode": "direct_span",
+            "content_hash": (row["content_hash"] or excerpt_h),
+            "source_content_hash": (row["content_hash"] or excerpt_h),
+            "chunk_content_hash": excerpt_h, "excerpt_hash": excerpt_h,
+            "span": {"start": 0, "end": len(b)}, "span_label": "bytes:0-%d" % len(b),
+            "status": (row["status"] or "current"), "currentness": (row["status"] or "current"),
+            "authority_level": (row["authority_level"] or "derived"), "namespace": row["namespace"],
+            "source": row["namespace"], "source_version_id": "ver_" + row["record_version_id"],
+            "lexical_rank": rank, "lexical_score": 1.0 - (rank - 1) * 0.01,
+            "vector_rank": None, "fused_rank": rank, "fused_score": 1.0 - (rank - 1) * 0.01,
+            "index_snapshot": cv, "corpus_version": cv, "tie_break_key": row["record_version_id"],
+            "snippet": text, "rank": rank,
+        }
+
+    def collected_source_texts(self):
+        """The exact authoritative source bytes for every hydrated leaf, as {source_path: text}, so
+        `resolve_excerpt` reproduces each cited span DETERMINISTICALLY (raw_span_sha256 == excerpt_hash)
+        off-machine AND live -- independent of whether the original file is reachable. For a source file with
+        multiple chunk spans the buffer places each chunk's bytes at its offsets (chunks ARE the file's spans);
+        gaps (never cited) are spaces."""
+        out = {}
+        for sp, spans in self._src_spans.items():
+            maxend = max((e for (_s, e, _b) in spans), default=0)
+            buf = bytearray(b" " * maxend)
+            for (s, e, b) in spans:
+                buf[s:e] = b
+            try:
+                out[sp] = buf.decode("utf-8")
+            except UnicodeDecodeError:
+                out[sp] = buf.decode("utf-8", "replace")
+        return out
+
+    # ---- shortlist(): #36 returns {..., "nodes":[...]} -> unwrap to a LIST of node hits (SEAM 5) ----
+    def shortlist(self, query, effective_allowed_namespaces, hierarchy_version, corpus_snapshot, k):
+        res = self._cat.shortlist(self._query_text(query), list(effective_allowed_namespaces or []),
+                                  hierarchy_version, corpus_snapshot, int(k))
+        return [self._map_node(n, i + 1) for i, n in enumerate(res.get("nodes") or [])]
+
+    # ---- descend(): #36 returns {children:[node_public], leaf_members:[{rvid,role}]} -> merge child nodes +
+    #      HYDRATED leaves into one list. Fail-closed (unauthorized) -> [] (NO identifying metadata). (SEAM 1/5)
+    def descend(self, node_id, retrieval_plan_id, effective_allowed_namespaces, hierarchy_version,
+                corpus_snapshot):
+        res = self._cat.descend(node_id, retrieval_plan_id, list(effective_allowed_namespaces or []),
+                                hierarchy_version, corpus_snapshot)
+        if not res.get("authorized"):
+            return []
+        hits = [self._map_node(c, i + 1) for i, c in enumerate(res.get("children") or [])]
+        rank0 = len(hits)
+        for j, m in enumerate(res.get("leaf_members") or []):
+            lh = self._hydrate_leaf(m.get("record_version_id"), rank0 + j + 1)
+            if lh is not None:
+                hits.append(lh)
+        return hits
+
+    # ---- prune_certificate() (SEAM 2): map channel -> #36 channel; compose a no-false-negative certificate ----
+    def prune_certificate(self, node_id, channel, query, effective_allowed_namespaces,
+                          hierarchy_version, corpus_snapshot):
+        ch36 = _A6_CHANNEL_MAP.get(channel)
+        if ch36 is None:
+            return None                                     # not certifiable from a plain text query -> keep
+        keys = self._query_keys(query)
+        if not keys:
+            return None
+        # SOUND no-false-negative composition: a lexical/entity relevance requires >=1 query term present, so
+        # the subtree CANNOT satisfy the query iff EVERY term is DEFINITELY ABSENT. #36 returns 'keep' for a
+        # stale node OR any maybe-present term (Bloom), so `excludes` can only ever be conservative.
+        excludes = True
+        for kk in keys:
+            if self._cat.prune_verdict(node_id, ch36, kk) != "prune":
+                excludes = False
+                break
+        return {"no_false_negative": True, "excludes": bool(excludes),
+                "channel": channel, "corpus_snapshot": corpus_snapshot}
+
+
+def _maybe_build_artifact_search_port(args, norm, warnings):
+    """PUBLIC-PATH wiring (acceptance b): construct the REAL port ONLY when the request selects retriever
+    `artifact_search` AND supplies a catalog db_path AND the resolved query_class is a DESCEND class AND the
+    compile is SCOPED (enforced, non-empty effective namespace closure) AND #36 is importable AND a current
+    published hierarchy exists for a SINGLE effective namespace. Otherwise None -> a flat compile,
+    BYTE-IDENTICAL to 0.6 (the plan is purely additive + gated). Multi-namespace hierarchy fusion (separate
+    roots) is i36; at i35 a multi-namespace scope FLAT-falls-back (no recall loss -- flat retrieval stands)."""
+    if norm.get("query_class") not in DESCEND_QUERY_CLASSES:
+        return None
+    closure = norm.get("namespace_closure") or {}
+    effective = closure.get("effective")
+    if not closure.get("enforced") or not effective:
+        return None
+    effective = list(effective)
+    meta = args.get("retrieval_meta") or {}
+    # accept the entrypoint's 'artifact.search' / 'artifact.search'-versioned name AND the bare 'artifact_search'
+    # (normalize '.'/'-' -> '_' so the public `-Retriever artifact_search` flag matches however it is stamped).
+    retriever = str(meta.get("retriever") or args.get("retriever") or "").lower().replace(".", "_").replace("-", "_")
+    if not retriever.startswith("artifact_search"):
+        return None
+    db_path = args.get("catalog_db_path") or meta.get("catalog_db_path") or args.get("db")
+    if not db_path or not os.path.isfile(str(db_path)):
+        return None
+    if len(effective) != 1:
+        warnings.append("hierarchy_multi_namespace_flat_fallback")   # single-tree only at i35 (H5 fusion = i36)
+        return None
+    mod, src = _load_artifact_search()
+    if mod is None:
+        warnings.append("artifact_search_unavailable_flat_fallback")
+        return None
+    try:
+        port = ArtifactSearchHierarchyPort(mod, str(db_path), effective[0])
+    except Exception:  # noqa: BLE001 -- a catalog that will not open -> flat fallback (never a crash)
+        warnings.append("artifact_search_port_init_failed_flat_fallback")
+        return None
+    if not port.has_current_hierarchy():
+        port.close()
+        warnings.append("hierarchy_absent_flat_fallback")            # no published tree for this ns -> flat
+        return None
+    warnings.append("hierarchy_port_bound:artifact_search:%s" % os.path.basename(str(src)))
+    return port
+
 
 # ------------------------------------------------------------------------------------------------
 # U5 (i32): the query-classification STAGE -- a DETERMINISTIC task_type->class stub. The multi-channel
@@ -2244,7 +2584,24 @@ def op_compile(args, warnings):
     # #36's real retriever. A cross-namespace navigation/hierarchy object surfaced by the plan ABORTS
     # SANITIZED (V5): only a namespace_violation_count surfaces, identifying detail -> the security log.
     batches = list(batches or [])
-    hierarchy_plan = run_hierarchy_plan(args.get("hierarchy_port"), task, norm, config, warnings)
+    # i35 (D-0100): an INJECTED port (the D-0077 fold seam) still wins; otherwise CONSTRUCT the REAL port over
+    # #36 when the PUBLIC request selects it (retriever artifact_search + catalog db_path + descend-class +
+    # scoped). A flat/non-descend/unscoped/non-artifact_search request -> real_port is None -> a flat compile
+    # BYTE-IDENTICAL to 0.6. The real port hydrates leaf evidence during descend; after the plan runs we
+    # collect its authoritative source bytes (for provenance reproduction) and CLOSE it.
+    injected_port = args.get("hierarchy_port")
+    real_port = None if injected_port is not None else _maybe_build_artifact_search_port(args, norm, warnings)
+    active_port = injected_port if injected_port is not None else real_port
+    port_source_texts = None
+    try:
+        hierarchy_plan = run_hierarchy_plan(active_port, task, norm, config, warnings)
+    finally:
+        if real_port is not None:
+            try:
+                port_source_texts = real_port.collected_source_texts()
+            except Exception:  # noqa: BLE001
+                port_source_texts = None
+            real_port.close()
     if hierarchy_plan is not None:
         rp = hierarchy_plan["reject_policy"]
         if rp.violation_count > 0:
@@ -2304,6 +2661,13 @@ def op_compile(args, warnings):
     sel_rows = sel["ranked"]   # hit COPIES with additive selection fields; retrieval_rank PRESERVED
 
     source_texts = args.get("source_texts")
+    # i35: merge the real port's HYDRATED leaf bytes so `resolve_excerpt` reproduces each hierarchy-descended
+    # excerpt deterministically (SEAM 1). A caller-supplied source_texts wins on any shared path; the port
+    # fills the rest. None on a flat compile / injected-port path -> source_texts UNCHANGED (byte-identical).
+    if port_source_texts:
+        merged = dict(port_source_texts)
+        merged.update(source_texts or {})
+        source_texts = merged
     repo_root = args.get("repo_root")
 
     excerpts, omission, accounting = select_into_budget(

@@ -1,8 +1,25 @@
-# Module 40 -- context.compile (Context Compiler) 0.6.0
+# Module 40 -- context.compile (Context Compiler) 0.7.0
+
+> **i35 (D-0100) -- CONSUMER WIRING: the REAL hierarchy_port into the PUBLIC `artifact_search` path.**
+> i34 shipped the shortlist-and-descend plan but it ran ONLY via an INJECTED `args['hierarchy_port']`; with the
+> real retriever the public compile was FLAT-only. i35 makes #40 CONSTRUCT a real `ArtifactSearchHierarchyPort`
+> over #36 artifact.search's SHIPPED authorization-bound ops (`MEMORY_CONTRACT` A6 H6) so a
+> `-Retriever artifact_search` + DESCEND-class (global_synthesis|precedent_search) + SCOPED compile runs
+> `run_hierarchy_plan` for REAL (supply `catalog_db_path`; an injected port still wins). #36 is IMPORTED
+> READ-ONLY (resolved-portable, never modified). Two seams the adapter bridges without editing #36: **SEAM 1**
+> hydrates #36's bare `descend` leaf refs into full evidence (source_chunk leaves via the SHIPPED
+> `export_chunk_texts`; typed-record bodies via the Catalog `records` table by `record_version_id` -- the
+> recorded reconciliation seam, as no shipped op returns a typed body by ref) with the port supplying the exact
+> source bytes so provenance reproduces deterministically; **SEAM 2** composes the no-false-negative prune
+> certificate from #36's per-term `prune_verdict` (excludes only when EVERY query term is provably absent; a
+> bounded descriptor / stale synopsis never prunes). A flat/non-descend/unscoped/non-artifact_search compile is
+> BYTE-IDENTICAL to 0.6. Gate: `tests/test_i35_public_port.py` (32/32 over a REAL #36 tree via the public path) +
+> the i34 injected-port fold smoke (38/38) + the shipped suite (322/322). Multi-namespace hierarchy fusion + the
+> multi-channel query router are i36. Full interpretation: `SCHEMA_NOTES.md` **s18**.
 
 The Collective Agent's context-compilation centerpiece (D-0080 directive Priority 4 / section 8),
 conformed to `core-docs/CONTEXT_PACKET_CONTRACT.md` (`context_packet/0.2`; **s4 PINNED, D-0089**; **i32
-amendment, D-0092**; **i33 amendment, D-0096**; **i34 amendment, D-0098**). A **deterministic, CPU-only, no-model, no-network** skill
+amendment, D-0092**; **i33 amendment, D-0096**; **i34 amendment, D-0098**; **i35 real-port wiring, D-0100**). A **deterministic, CPU-only, no-model, no-network** skill
 that turns a task descriptor into a versioned, token-budgeted, SAFE, self-describing
 `lifeorch.context_packet/0.2` the coordinator hands a disposable model:
 

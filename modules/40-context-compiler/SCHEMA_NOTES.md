@@ -1,4 +1,4 @@
-# context.compile -- SCHEMA_NOTES (Module 40, skill `context.compile` 0.6.0, i34 Tier-1 BOUNDED-FANOUT HIERARCHY)
+# context.compile -- SCHEMA_NOTES (Module 40, skill `context.compile` 0.7.0, i35 REAL hierarchy_port -> PUBLIC artifact_search path; i34 Tier-1 BOUNDED-FANOUT HIERARCHY = s17)
 
 **Authority.** This file records EVERY schema/interface interpretation for the D-0077 cross-module fold.
 The orchestrator's fold smoke (this compiler's REAL packets -> retrieval.eval #37 + a fresh 9B, and #40
@@ -681,3 +681,113 @@ NO eval measures/fixtures (#37); NO working-memory STORE; NO multi-channel query
 stays); NO model-prose synopsis; NO change to #36/#37 (imported READ-ONLY -- if the ops cannot serve the plan,
 STOP + report a fold reconciliation); NO P0-1 adversarial injection SUITE / action-capable release; NO real
 embeddings/vector; NO 9B/models.json; NO UI; NO core-doc edits (`docs:[]` -- the orchestrator mirrors).
+
+---
+
+## s18 -- i35 CONSUMER WIRING: the REAL hierarchy_port into the PUBLIC artifact_search path (D-0100)
+
+**Delta (ADDITIVE over `context_packet/0.2`; schema string UNCHANGED; module semver `0.6.0 -> 0.7.0`;
+`contract_version 0.5 -> 0.7`).** i34 shipped `run_hierarchy_plan` but it ran ONLY when a live port was INJECTED
+via `args['hierarchy_port']` (the D-0077 fold adapter); with the real `artifact_search` retriever the public
+compile was FLAT-only. i35 makes #40 CONSTRUCT a real port over #36's SHIPPED ops so the PUBLIC
+`-Retriever artifact_search` + DESCEND-class + SCOPED compile runs the shortlist-and-descend plan for real. #40
+is the CONSUMER; #36 is IMPORTED READ-ONLY and NEVER modified. Every i35 field/behavior is GATED on the port
+actually constructing -> a zero-node/flat/non-descend/unscoped/non-artifact_search/multi-namespace compile is
+BYTE-IDENTICAL to 0.6 (proven: `test_i35_public_port.test_f_flat_gated_additive` -- byte-identical with vs
+without `catalog_db_path`, everything else equal; the 322-suite + 38/38 i34 smoke stay green).
+
+**(a) the real port + resolved-portable import.** `_load_artifact_search()` imports #36 `artifact_search` by a
+RESOLVED PORTABLE path (env `LIFEORCH_ARTIFACT_SEARCH_PATH`, else the sibling
+`modules/36-artifact-search/artifact_search.py`; the i31/i32/i33 pattern), LAZILY (only when a request needs the
+port -> a flat compile adds NO #36 dependency; a missing/unimportable #36 -> a `warnings` note +
+flat-fallback, never a crash). `ArtifactSearchHierarchyPort` opens `A.Catalog(db_path)` (ONE read connection per
+compile) and implements EXACTLY the 4 methods `run_hierarchy_plan` calls: `policy_info()` / `shortlist()` /
+`descend()` / `prune_certificate()`. `policy_info()` pins ONE `tree_version` + `corpus_snapshot` for the whole
+compile (assembled from #36 `hierarchy_status` + the catalog corpus_version -- #36 has NO single `policy_info` op,
+SEAM 4); `builder_policy_id/version` come from #36's `hierarchies` row; `prune_predicate_id/version` are STAMPED
+by the port (`a6_channel_prune_v1`/`1.0.0` -- #36 does not version its `prune_verdict` op). The resolved import
+leg is recorded in `warnings` (`hierarchy_port_bound:artifact_search:<basename>`).
+
+**(b) PUBLIC-path plan selection.** `_maybe_build_artifact_search_port(args, norm, warnings)` constructs the port
+ONLY when ALL hold: no injected `args['hierarchy_port']` (an injected port WINS -- the fold seam is kept);
+`norm['query_class'] in DESCEND_QUERY_CLASSES` (global_synthesis|precedent_search); the namespace closure is
+`enforced` with a NON-EMPTY `effective` set; the effective set has EXACTLY ONE namespace (multi-namespace hierarchy
+FUSION is i36 -> a `hierarchy_multi_namespace_flat_fallback` warning + flat, NO recall loss); the retriever
+(normalizing `.`/`-` -> `_`) starts with `artifact_search` (matches the entrypoint's `artifact.search` stamp AND a
+bare `artifact_search`); `catalog_db_path` (or `retrieval_meta.catalog_db_path` / `db`) is a real file; #36 is
+importable; and a CURRENT PUBLISHED hierarchy exists for that namespace (`has_current_hierarchy()`). Else -> None ->
+flat. The entrypoint `Invoke-ContextCompiler.ps1 -Retriever artifact_search` now passes
+`catalog_db_path=$DbPath` so the production path activates. The flat search hits (the shipped #36 `search` seam)
+STAY in the batches as the recall-safe fallback; the plan's leaf/node hits are APPENDED, then the EXISTING
+scope-check -> selpol -> navigation-routing path handles everything uniformly.
+
+**(c) SEAM 1 -- leaf HYDRATION + provenance.** #36 `descend` returns BARE leaf refs
+`{record_version_id, candidate_role:'evidence'}` (`leaf_members[]`) with NO body/namespace/span/hash. The port's
+`descend()` merges mapped child NODES + HYDRATED leaves into the flat list `run_hierarchy_plan` expects.
+`_hydrate_leaf(leaf_id, rank)`: (1) a **source_chunk** leaf (`leaf_id == chunk_occurrence_id`) is hydrated via the
+SHIPPED `export_chunk_texts` (built once into `{chunk_occurrence_id -> chunk}`) -> real `source_path=rel_path`,
+real `span{start,end}`, `source_content_hash=chunk.content_hash` (the SOURCE-version bytes), `excerpt_hash=
+chunk.chunk_content_hash`, `text`; (2) a **typed-record** leaf (`leaf_id == record_version_id`) is hydrated by a
+`records`-table read via the imported Catalog connection (`SELECT record_version_id,record_id,record_kind,
+namespace,content_hash,text,source_path,authority_level,status FROM records WHERE record_version_id=?`) ->
+`provenance_mode=direct_span`, `span={0,len(text_bytes)}`, `excerpt_hash=sha256(text_bytes)`,
+`source_content_hash=records.content_hash`. **RECONCILIATION SEAM (recorded, not a STOP):** #36 exposes NO SHIPPED
+op that returns a TYPED record's BODY by `record_version_id` -- `list_records` OMITS the body (`_record_envelope`
+carries no `text`), `search` needs a query match + returns only a snippet, `export_chunk_texts` covers only
+source_chunks. So the typed-record body read goes through the imported Catalog's `records` table (a READ-ONLY
+import usage; the exact-same approach the i34 fold smoke used + the orchestrator folded 38/38). #36 CAN serve the
+evidence (chunks via a shipped op, typed records via its catalog), so this is a documented seam, NOT a
+STOP+fold-reconciliation blocker; a future #36 revision SHOULD add a `get-record`/`fetch-by-rvid` op to fully
+decouple. The port ACCUMULATES the exact authoritative source bytes per `source_path`
+(`collected_source_texts()` -- a per-path byte buffer placing each span's bytes at its offsets; chunks ARE the
+file's spans, so overlaps are consistent and gaps [never cited] are spaces); `op_compile` MERGES this into
+`source_texts` (a caller-supplied `source_texts` WINS on a shared path; the port fills the rest) BEFORE
+`select_into_budget`, so `resolve_excerpt` reproduces every descended excerpt DETERMINISTICALLY off-machine AND
+live: `span_sha256 == excerpt_hash`, `provenance.reproduced == True`, `provenance_mode == direct_span`. Every
+hydrated leaf carries its `namespace` for the closure scope-check; a foreign/out-of-scope `node_id` `descend`
+fails closed -> `[]` (NO identifying metadata). Proven: `test_a_b_c_e_public_typed` (required leaf reached +
+reproduced + reconstructs to the ingested body) + `test_c_source_chunk_reconstruction` (a file-crawled
+source_chunk excerpt reproduces against the real ingested file via the shipped op).
+
+**(d) SEAM 2 -- PRUNE-CERTIFICATE composition.** #36 exposes `prune_verdict(node_id_or_row, channel, key) ->
+'keep'|'prune'` (a per-TERM string, not a certificate object; channels lexical/entity via a no-false-negative
+Bloom `presence_filter`, kind/authority/time via exact ranges/sets, `descriptor`/`vector` ALWAYS `keep`, a STALE
+node ALWAYS `keep`). `run_hierarchy_plan` instead calls `port.prune_certificate(node_id, channel, query,
+effective_allowed_namespaces, hierarchy_version, corpus_snapshot) -> {no_false_negative, excludes, channel,
+corpus_snapshot}|None` for each SOUND channel the node ADVERTISES. The port bridges the vocabulary
+(`_A6_CHANNEL_MAP = {lexical_membership->lexical, entity_membership->entity}`; only these are derivable from a
+plain text query at i35 -- exact id/path/kind/time/authority keys need the i36 multi-channel router, so any other
+channel -> `None` = keep), tokenizes the query with #36's OWN tokenizer (`A._a6_terms`, so keys match the stored
+Bloom EXACTLY), and SOUNDLY composes: `excludes = True` IFF EVERY query term is DEFINITELY ABSENT
+(`prune_verdict == 'prune'` for all). This is no-false-negative: a lexical/entity relevance requires >=1 term
+present, so all-terms-absent PROVES the subtree cannot match; ANY maybe-present term OR a STALE node (#36 returns
+`keep`) -> `excludes=False` -> the branch is RETAINED/EXPANDED. `_map_node` advertises ONLY sound channels
+(`lexical_membership`, `+entity_membership` when the node has an `entity_union`); a bounded `lexical_descriptor` is
+NEVER advertised or used as a certificate. Result: prune reasons are `certified_absent:<channel>`;
+`retrieval_completeness.prune_policy_id=safe_prune_v1`. Proven: `test_d_safe_pruning` (a rare decisive term prunes
+sibling branches via a sound cert while the required branch keeps + recall is preserved; a present-everywhere term
+prunes 0 branches; #36 `descriptor` channel returns `keep`) + `test_d_stale_never_prunes` (`#36`
+`hierarchy-mark-changed` -> a stale sibling is RETAINED not pruned, `stale_navigation_encountered=True`, never a
+silent miss).
+
+**(e) V2-V5 through the REAL port.** nodes (`candidate_role=navigation`) NEVER enter `evidence[]` (they route via
+`navigation_refs` + the stage trace only); a cross-namespace navigation/hierarchy object surfaced by the plan
+ABORTS SANITIZED (`namespace_closure_violation`, `compile_status=failed_closed`, count-only -- #36 enforces per-hop
+closure so this is defense-in-depth, proven via the i34 injected leak backstop); `retrieval_completeness` reflects
+a REAL unresolved/pruned frontier (a hierarchy MISS is not proved ABSENCE); `packet_id` deterministically covers
+the hierarchy identity (`identity.hierarchy` = hierarchy_id + pinned tree_version + builder/prune/plan policy +
+stage digest). Proven: `test_e_foreign_descend_and_closure` + `test_a_determinism` +
+`test_a_b_c_e_public_typed`.
+
+**Gate test (OWNED).** `tests/test_i35_public_port.py` -- OFF-MACHINE (imports the REAL #36 Catalog + ops + the
+REAL #37 lib) drives cc.run compile via the PUBLIC path (retriever=artifact_search + catalog_db_path, NO injected
+port) over a REAL #36 tree built by #36 `ingest-records`/`ingest`/`build-hierarchy`. 32/32 covers acceptance
+(a)-(f). It is a SEPARATE cross-module file (the pure-#40 322-suite stays #36-free). `-Live` on the executor runs
+the same file.
+
+**i35 non-goals (unchanged).** NO change to #36/#37 (imported READ-ONLY); NO #36 node-layer/tree-builder/ops; NO
+#37 eval measures / the ~200MB rehearsal; NO #40<->#42 working_memory wiring (the region stays reserved/empty);
+NO multi-channel query ROUTER (the query_class stub + DESCEND_QUERY_CLASSES stand) + NO multi-namespace hierarchy
+FUSION (single effective namespace only -> multi-ns flat-falls-back); NO P0-1 adversarial injection SUITE /
+action-capable release (`non_execution:true` UNCHANGED); NO real embeddings/vector; NO 9B/models.json; NO UI; NO
+core-doc edits (`docs:[]` -- the orchestrator mirrors).

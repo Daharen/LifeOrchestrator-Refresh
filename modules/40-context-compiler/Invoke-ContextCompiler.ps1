@@ -48,7 +48,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$SKILL_ID = 'context.compile'; $SKILL_VERSION = '0.6.0'; $CONTRACT = '0.5'
+$SKILL_ID = 'context.compile'; $SKILL_VERSION = '0.7.0'; $CONTRACT = '0.7'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 $startedAt = [DateTime]::UtcNow
@@ -245,8 +245,11 @@ try {
                 $batches.Add([ordered]@{ query_index = [int](Prop $q 'query_index' $i); query = [string](Prop $q 'query'); hits = $hits })
             }
             $retrievalMeta = [ordered]@{ retriever='artifact.search'; retriever_version='0.2.0'; corpus_version=$corpusVersion; index_snapshot=$corpusVersion; embedding_space_id=$null; fusion_algo=$fusionAlgo; fusion_version=$fusionVersion }
-            # phase 3: compile over the gathered real hits (direct assignment; no lossy JSON round-trip)
-            $compileArgs = @{ op='compile'; task=$taskObj; query_set=$querySet; retrieval_batches=$batches.ToArray(); retrieval_meta=$retrievalMeta }
+            # phase 3: compile over the gathered real hits (direct assignment; no lossy JSON round-trip).
+            # i35 (D-0100): ALSO pass the catalog db_path so #40 CONSTRUCTS the real ArtifactSearchHierarchyPort
+            # for a DESCEND-class + scoped compile (shortlist-and-descend runs on top of the flat search hits,
+            # which stay as the recall-safe fallback). A non-descend / unscoped compile ignores it -> flat.
+            $compileArgs = @{ op='compile'; task=$taskObj; query_set=$querySet; retrieval_batches=$batches.ToArray(); retrieval_meta=$retrievalMeta; catalog_db_path=(Resolve-Path -LiteralPath $DbPath).Path }
             if (-not [string]::IsNullOrWhiteSpace($RepoRoot)) { $compileArgs['repo_root'] = (Resolve-Path -LiteralPath $RepoRoot).Path }
             $rc = Invoke-CCWorker $compileArgs $python $WorkerPath 'compile'
             $finalMeta = $rc.meta

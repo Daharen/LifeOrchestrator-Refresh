@@ -1,10 +1,34 @@
-# Work Order: Context Compiler (`context.compile`) 0.6.0 -- i34 Tier-1 BOUNDED-FANOUT HIERARCHY
+# Work Order: Context Compiler (`context.compile`) 0.7.0 -- i35 CONSUMER WIRING (REAL hierarchy_port into the PUBLIC artifact_search path)
 
 **Contract targeted:** `CONTEXT_PACKET_CONTRACT.md` `context_packet/0.2` with **s4 PINNED (D-0089)** + the
 **i32 amendment (D-0092)** + the **i33 amendment (D-0096)** + the **i34 amendment (D-0098)** +
-`MEMORY_CONTRACT.md` A2/A3/A4/A5/**A6** + `MEMORY_ARCHITECTURE.md` s5/s6/s9 · **Author:** SHORTLIST-DESCEND-i34
-(2026-08-04) · **Roadmap entry:** `MODULE_ROADMAP.md#40-context-compiler` · **Wave:** i34 (plan
-`fo-34-584fd656`) · **Supersedes:** the i33 0.5.0 build (CONTEXT-COMPILER-CLOSURE-i33, plan `fo-33-d7b55e46`).
+`MEMORY_CONTRACT.md` A2/A3/A4/A5/**A6** + `MEMORY_ARCHITECTURE.md` s5/s6/s9 · **Author:** HIERARCHY-PORT-i35
+(2026-08-05) · **Roadmap entry:** `MODULE_ROADMAP.md#40-context-compiler` · **Wave:** i35 (plan
+`fo-35-0a5bf334`) · **Supersedes:** the i34 0.6.0 build (SHORTLIST-DESCEND-i34, plan `fo-34-584fd656`).
+
+### i35 delta (D-0100) -- WIRE the REAL hierarchy_port into #40's PUBLIC `-Retriever artifact_search` path, ADDITIVE over context_packet/0.2 (schema string UNCHANGED; semver 0.6.0 -> 0.7.0; contract_version 0.5 -> 0.7)
+i34's `run_hierarchy_plan` ran ONLY via an INJECTED `args['hierarchy_port']` (the D-0077 fold adapter); with the
+real `artifact_search` retriever the public compile was FLAT-only. i35 makes #40 CONSTRUCT a real
+`ArtifactSearchHierarchyPort` over #36 artifact.search's SHIPPED authorization-bound ops (`MEMORY_CONTRACT` A6 H6:
+`shortlist`/`descend`/`prune_verdict` + catalog) so the PUBLIC `-Retriever artifact_search` + DESCEND-class +
+SCOPED compile runs the shortlist-and-descend plan for REAL. #36 is IMPORTED READ-ONLY by a resolved-portable path
+and NEVER modified; an injected port still WINS (fold seam kept). Every i35 field is GATED on the port
+constructing -> a flat/non-descend/unscoped/non-artifact_search/multi-namespace compile is BYTE-IDENTICAL to 0.6.
+Full interpretation: `SCHEMA_NOTES.md` **s18**. **(a)** the real port + resolved-portable `_load_artifact_search`
+(lazy; missing #36 -> flat-fallback, never a crash) + one pinned `tree_version`/`corpus_snapshot` per compile via
+`policy_info` (assembled from #36 `hierarchy_status`). **(b)** `_maybe_build_artifact_search_port` gates on
+retriever=artifact_search + `catalog_db_path` + descend query_class + a single enforced/non-empty effective
+namespace + a current published hierarchy; the entrypoint now passes `catalog_db_path`; the flat search hits stay
+as the recall-safe fallback. **(SEAM 1)** leaf HYDRATION -- #36 `descend` bare refs -> full evidence (source_chunk
+via the SHIPPED `export_chunk_texts`; typed-record body via the Catalog `records` table by `record_version_id` --
+the recorded reconciliation seam, no shipped by-ref body op); the port supplies the exact source bytes so
+`resolve_excerpt` reproduces every excerpt deterministically (span sha256 == excerpt_hash). **(SEAM 2)**
+PRUNE-CERTIFICATE composition from #36's per-term `prune_verdict` -- excludes ONLY when EVERY query term is provably
+absent (no-false-negative, #36's own tokenizer); a bounded descriptor / stale synopsis NEVER prunes. **(V2-V5)**
+kept green through the real port. **Gate:** `tests/test_i35_public_port.py` 32/32 (public-path constructed port
+over a real #36 tree) + the i34 injected-port fold smoke 38/38 + the shipped suite 322/322. **Non-goals:** no #36/#37
+change (READ-ONLY); no #40<->#42 working_memory wiring; no multi-channel router; no multi-namespace fusion; no
+P0-1 suite / action-capable release; no model/vector/UI; no core-doc edits (`docs:[]`).
 
 ### i34 delta (D-0098) -- Tier-1 hierarchy shortlist-and-descend + SAFE PRUNING + retrieval completeness, ADDITIVE over context_packet/0.2 (schema string UNCHANGED; semver 0.5.0 -> 0.6.0)
 CONSUMER-side PLAN over #36's authorization-bound `shortlist`/`descend` ops (`MEMORY_CONTRACT` A6 H6); #36 (Lane A)
