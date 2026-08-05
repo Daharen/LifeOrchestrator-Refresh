@@ -16,10 +16,10 @@ reconstruct intent without those chats. Do not slim section 2 below its ability 
 24 KB, REPLACE-don't-append per `DOC_PROTOCOL.md`; history to git + archive like every governing doc.
 
 **Cadence header (orchestrator maintains by replacement -- the PROCESS_MANDATE countdown pattern):**
-- `last_reviewed: i35` (this authoring)
+- `last_reviewed: i36` (Widget 05 = tier A1 shipped, `3ad71d3`)
 - `review_due: i39` (= last_reviewed + 4; hard ceiling +5)
-- `current_tier: A0 (pending adoption)`
-- `next_increment: R-1 into the router brief; then Widget 05 (A1) in the next spare coding lane`
+- `current_tier: A1 (Widget 05 Provenance Map SHIPPED i36; human live-GUI confirm OPEN)`
+- `next_increment: R-1 into the i37 router brief (born instrumented); Widget 06 Compile Trace Console (A1) in a spare coding lane once i37 fold/rehearsal artifacts exist`
 
 ## 0. Purpose + the decoupling this buys
 
