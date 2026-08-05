@@ -88,3 +88,6 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 - `i34-FANOUT_AGENT_001.md` | the used i34 Lane A brief (HIERARCHY-BUILDER-i34; #36 artifact.search 0.5.0) | DOC_PROTOCOL s6 used-brief archive at the i34 close | 2026-08-05 | D-0099
 - `i34-FANOUT_AGENT_002.md` | the used i34 Lane B brief (HIERARCHY-EVAL-i34; #37 retrieval.eval eval 0.6.0) | DOC_PROTOCOL s6 used-brief archive at the i34 close | 2026-08-05 | D-0099
 - `i34-FANOUT_AGENT_003.md` | the used i34 Lane C brief (SHORTLIST-DESCEND-i34; #40 context.compile 0.6.0) | DOC_PROTOCOL s6 used-brief archive at the i34 close | 2026-08-05 | D-0099
+
+- 2026-08-05 -- `archive/handoffs/2026-08-05-FANOUT_ORCHESTRATOR_HANDOFF-i35-close.md` -- the pre-i35-close handoff snapshot (D-0100).
+- 2026-08-05 -- `archive/fanout-agents/i35-HIERARCHY-PORT.md` + `i35-REHEARSAL-HARNESS.md` -- the i35 filled worker briefs (plan fo-35-0a5bf334).
