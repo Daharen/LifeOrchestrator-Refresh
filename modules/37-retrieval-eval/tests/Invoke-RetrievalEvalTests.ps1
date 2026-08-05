@@ -172,8 +172,8 @@ Check 'manifest validates' ([bool]$mv.valid)
 if (-not $mv.valid) { $mv.errors | ForEach-Object { [Console]::Out.WriteLine("      - $_") } }
 $manifest = (Get-Content -LiteralPath $mf -Raw) | ConvertFrom-Json
 Check 'manifest skill_id retrieval.eval' ($manifest.skill_id -eq 'retrieval.eval')
-Check 'manifest version 0.6.0' ($manifest.version -eq '0.6.0')
-Check 'manifest contract_version 0.6' ($manifest.contract_version -eq '0.6')
+Check 'manifest version 0.7.0' ($manifest.version -eq '0.7.0')
+Check 'manifest contract_version 0.7' ($manifest.contract_version -eq '0.7')
 Check 'manifest deterministic' ($manifest.determinism -eq 'deterministic')
 Check 'manifest parallel_safe' ([bool]$manifest.parallel_safe)
 
@@ -186,7 +186,7 @@ if ($null -ne $env1) {
     Check 'baseline: envelope validates against contract' ([bool]$ev.valid)
     if (-not $ev.valid) { $ev.errors | ForEach-Object { [Console]::Out.WriteLine("      - $_") } }
     Check 'baseline: status ok' ($env1.status -eq 'ok')
-    Check 'baseline: skill_version 0.6.0' ($env1.skill_version -eq '0.6.0')
+    Check 'baseline: skill_version 0.7.0' ($env1.skill_version -eq '0.7.0')
     Check 'baseline: retriever_kind lexical_baseline' ($env1.result.retriever_kind -eq 'lexical_baseline')
     Check 'baseline: input_digest pinned' ($env1.result.input_digest -eq $BASELINE_INPUT_DIGEST)
     Check 'baseline: vector_channel_status empty' ($env1.result.vector_channel_status -eq 'empty')
@@ -464,7 +464,7 @@ $env9 = ParseEnv (RunEntry @($benchmark4))
 Check 'eval04: envelope parses' ($null -ne $env9)
 if ($null -ne $env9) {
     Check 'eval04: status ok' ($env9.status -eq 'ok')
-    Check 'eval04: skill_version 0.6.0' ($env9.skill_version -eq '0.6.0')
+    Check 'eval04: skill_version 0.7.0' ($env9.skill_version -eq '0.7.0')
     Check 'eval04: external_command retriever seam works' ($env9.result.retriever_kind -eq 'external_command')
     Check 'eval04: input_digest pinned' ($env9.result.input_digest -eq $B4_INPUT_DIGEST)
     $rep9 = ReadReport $env9 'report.json'
@@ -516,7 +516,7 @@ $env10 = ParseEnv (RunEntry @($benchmark5))
 Check 'eval05: envelope parses' ($null -ne $env10)
 if ($null -ne $env10) {
     Check 'eval05: status ok' ($env10.status -eq 'ok')
-    Check 'eval05: skill_version 0.6.0' ($env10.skill_version -eq '0.6.0')
+    Check 'eval05: skill_version 0.7.0' ($env10.skill_version -eq '0.7.0')
     Check 'eval05: input_digest pinned' ($env10.result.input_digest -eq $B5_INPUT_DIGEST)
     $rep10 = ReadReport $env10 'report.json'
     $rep10Md = ReadReport $env10 'report.md'
@@ -622,7 +622,7 @@ if ($null -ne $py) {
     Check 'hierarchy: wrapper -Op envelope parses' ($null -ne $henv)
     if ($null -ne $henv) {
         Check 'hierarchy: envelope status ok' ($henv.status -eq 'ok')
-        Check 'hierarchy: skill_version 0.6.0' ($henv.skill_version -eq '0.6.0')
+        Check 'hierarchy: skill_version 0.7.0' ($henv.skill_version -eq '0.7.0')
         Check 'hierarchy: navigation sub-linear' ([bool]$henv.result.sublinear)
         Check 'hierarchy: navigation not constant' ([bool]$henv.result.not_constant)
         Check 'hierarchy: fast-beam path recall PARTIAL (25%)' ($henv.result.hierarchy_path_recall_ppm -eq 250000)
@@ -637,6 +637,54 @@ if ($null -ne $py) {
     }
 }
 
+# ================================================================= i35 Tier-1 ACCEPTANCE-GATE REHEARSAL (fo-35-0a5bf334)
+[Console]::Out.WriteLine("-- i35 REHEARSAL --")
+$reWorker = Join-Path $moduleRoot 'rehearsal_eval.py'
+$rePyTest = Join-Path $PSScriptRoot 'test_rehearsal_eval.py'
+Check 'rehearsal: worker present' (Test-Path -LiteralPath $reWorker -PathType Leaf)
+Check 'rehearsal: sample corpus manifest present' (Test-Path -LiteralPath (Join-Path $moduleRoot 'tests/fixtures/rehearsal-corpus/MANIFEST.json') -PathType Leaf)
+Check 'rehearsal: benchmark fixture present' (Test-Path -LiteralPath (Join-Path $moduleRoot 'tests/fixtures/rehearsal-benchmark.json') -PathType Leaf)
+Check 'rehearsal: full-corpus recipe present' (Test-Path -LiteralPath (Join-Path $moduleRoot 'FULL_CORPUS_RECIPE.md') -PathType Leaf)
+if ($null -ne $py) {
+    $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+    & $py -m py_compile $reWorker 2>&1 | Out-Null; $rcCode = $LASTEXITCODE
+    & $py -m py_compile $rePyTest 2>&1 | Out-Null; $rtCode = $LASTEXITCODE
+    $ErrorActionPreference = $prev
+    Check 'rehearsal: py_compile rehearsal_eval.py' ($rcCode -eq 0)
+    Check 'rehearsal: py_compile test_rehearsal_eval.py' ($rtCode -eq 0)
+
+    # the off-machine deterministic gate: drives the REAL #36/#40 cores over the committed real foreign corpus,
+    # pins the s10 criteria + tier1_accepted + byte-identity (its own double-run). Heavy (~real ingest); allow time.
+    $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+    $rpyOut = & $py $rePyTest 2>&1; $rpyCode = $LASTEXITCODE
+    $ErrorActionPreference = $prev
+    if ($rpyCode -ne 0) { ("$rpyOut" -split "`r?`n" | Select-Object -Last 12) | ForEach-Object { [Console]::Out.WriteLine("      $_") } }
+    Check 'rehearsal: python gate exit 0' ($rpyCode -eq 0)
+    Check 'rehearsal: python gate reports 0 failed' ([bool]("$rpyOut" -match '0 failed'))
+
+    # invoke the skill through the wrapper -Op rehearsal (the shipped invocation path; real #36/#40 over the sample)
+    $inputs = (@{ op = 'rehearsal' } | ConvertTo-Json -Compress)
+    $wargs = @('-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', $entry, '-Op', 'rehearsal', '-InputsJson', $inputs)
+    if (-not [string]::IsNullOrEmpty($PythonPath)) { $wargs += @('-PythonPath', $PythonPath) }
+    $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+    $ro = & $PwshPath @wargs
+    $ErrorActionPreference = $prev
+    $renv = ParseEnv (([string]($ro | Out-String)).Trim())
+    Check 'rehearsal: wrapper -Op envelope parses' ($null -ne $renv)
+    if ($null -ne $renv) {
+        Check 'rehearsal: envelope status ok' ($renv.status -eq 'ok')
+        Check 'rehearsal: skill_version 0.7.0' ($renv.skill_version -eq '0.7.0')
+        Check 'rehearsal: adapter kind real_cli' ($renv.result.adapter_kind -eq 'real_cli')
+        Check 'rehearsal: 9/9 s10 criteria passed' ($renv.result.tier1_criteria_passed -eq 9 -and $renv.result.tier1_criteria_total -eq 9)
+        Check 'rehearsal: navigation sub-linear' ([bool]$renv.result.navigation_sublinear)
+        Check 'rehearsal: bounded context cost' ([bool]$renv.result.bounded_context_cost)
+        Check 'rehearsal: scale packet-evidence recall 100%' ($renv.result.scale_packet_evidence_recall_ppm -eq 1000000)
+        Check 'rehearsal: no fold reconciliation open' (@($renv.result.fold_reconciliation).Count -eq 0)
+        Check 'rehearsal: tier1_accepted TRUE on the sample+CLI' ($renv.result.tier1_accepted -eq $true)
+        [Console]::Out.WriteLine("CANONICAL-HASH rehearsal-report.digest=$($renv.result.report_digest)")
+    }
+}
+
 [Console]::Out.WriteLine("")
-if ($script:fail -eq 0) { [Console]::Out.WriteLine("ALL PASS (retrieval.eval eval-0.2 + i34 hierarchy)"); exit 0 }
+if ($script:fail -eq 0) { [Console]::Out.WriteLine("ALL PASS (retrieval.eval eval-0.2 + i34 hierarchy + i35 rehearsal)"); exit 0 }
 else { [Console]::Out.WriteLine("FAILURES: $script:fail"); exit 1 }

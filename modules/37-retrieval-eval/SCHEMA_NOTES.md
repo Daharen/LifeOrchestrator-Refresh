@@ -683,3 +683,95 @@ sole required branch, yielding a packet that looks answerable having never expos
 **Fold hooks (D-0077):** the orchestrator points the `external_command` adapter at the REAL #36 `shortlist`/`descend`
 + #40 packet and RE-RUNS these measures on real data; the synthetic pins here are the recall-preservation +
 sub-linearity + isolation invariants the real run must also satisfy.
+
+## 16. i35 (plan fo-35-0a5bf334, D-0090/D-0098/D-0077) -- the RUNNABLE Tier-1 ACCEPTANCE-GATE REHEARSAL (0.6.0 -> 0.7.0)
+
+Turns the i34 rehearsal SCAFFOLD (flagged OPEN, `tier1_accepted=false` on synthetic) into a RUNNABLE harness that
+INGESTS a REAL FOREIGN corpus into a #36 hierarchy, runs a MANUALLY-LABELED query set, and MEASURES the
+`MEMORY_ARCHITECTURE` s10 Tier-1 criteria against #36/#40 driven READ-ONLY through the external_command adapter --
+emitting a computed `tier1_accepted`. Governing: `MEMORY_ARCHITECTURE` s10 + `MEMORY_BENCHMARK` + `CONTEXT_PACKET_CONTRACT`
+i34 s7 + `MEMORY_CONTRACT` A6/s7. skill/contract 0.7.0/0.7; report schema `lifeorch.rehearsal_eval_report/0.1`.
+
+**ADDITIVE (regression-proven).** New files ONLY: `rehearsal_eval.py` (op `rehearsal`), `tests/test_rehearsal_eval.py`,
+`tests/fixtures/rehearsal-benchmark.json`, `tests/fixtures/rehearsal-temporal-records.json`,
+`tests/fixtures/rehearsal-corpus/**` (the committed real sample + MANIFEST), `FULL_CORPUS_RECIPE.md`. **`hierarchy_eval.py`,
+`retrieval_eval.py`, and `lib/*` are BYTE-IDENTICAL** -- `rehearsal_eval.py` IMPORTS `hierarchy_eval` for the canonical
+helpers (`canon_bytes`/`sha256_hex`/`digest`/`ppm`/`percentile`) and never edits it. `test_hierarchy_eval.py` (26/26) +
+`test_selpol.py` stay green; the wrapper gains an ISOLATED `-Op rehearsal` branch (mirrors `-Op hierarchy-eval`),
+the benchmark + hierarchy-eval paths unchanged.
+
+**(I1) The adapter seam (READ-ONLY).** `rehearsal_eval.Adapter` drives the REAL #36/#40 cores as subprocesses via an
+argv template `["{PYTHON}","{M36|M40}","{REQUEST_FILE}"]` (the retrieval_eval.py `external_command` convention). Each
+core reads a request JSON file (positional argv) and writes its envelope to `request.meta_path` (#36 -> `{ok,result}`;
+#40 -> `{ok,result:{packet,...}}`). Default argv resolves the real cores relative to this module
+(`../36-artifact-search/artifact_search.py`, `../40-context-compiler/context_compiler.py`) with `sys.executable`; the
+ORCHESTRATOR overrides `adapter.{python,m36_path,m40_path,m36_argv,m40_argv}` to point at Lane A's WIRED #40 CLI at the
+fold. Because #36/#40 are pure-stdlib+sqlite, this seam runs OFF-MACHINE (cloud python) with the REAL cores -- the
+sample gate is the real skill, not a mock.
+
+**(I2) #40 CLI is FLAT-only today -> navigation measured via #36.** Confirmed at runtime: the #40 subprocess CLI emits
+NO `retrieval_completeness` / `identity.hierarchy` (its shortlist-and-descend plan needs an in-process live
+`hierarchy_port`, which Lane A wires into the `-Retriever artifact_search` CLI). So NAVIGATION COST (s10 (e)) is measured
+via #36's OWN shipped `shortlist`/`descend` ops (present in 0.5.0), NOT via #40. This is recorded, not silently ignored:
+`cli_capabilities.m40_emits_retrieval_completeness=false`. It is NOT a `fold_reconciliation` (navigation has a real,
+sufficient source in #36); when Lane A's WIRED CLI later emits `retrieval_completeness`, the harness can ALSO consume
+`navigation_nodes_examined`/`fallback_used`/`frontier_exhausted` from the packet (a named additive follow-on). If a
+criterion's ONLY source is genuinely absent, the harness appends to `fold_reconciliation[]` and the `no_fold_reconciliation`
+criterion FAILS -> `tier1_accepted=false` (never a silent pass).
+
+**(I3) The s10 criteria, each a deterministic threshold on real CLIs.** (a) BOUNDED context cost: the #40 packet
+`token_budget.used <= budget` AND `excerpt_count <= max_excerpts` at EVERY scale, and `used` does not grow with leaf
+count (measured across the scale sweep). (b) CONTAMINATION: a namespace-scoped #36 search + the #40 packet excerpts
+contain ZERO foreign-namespace evidence (`contamination_hits==0`; #36's `namespace_enforced` + sanitized
+`namespace_violation_count` corroborate). (c) CURRENT-vs-HISTORICAL: a controlled supersession pair (below) --
+`current_only` returns the current record + EXCLUDES the superseded one (pool-independent `effective_current`, A5),
+`any_valid_version` RETRIEVES the superseded one. (d) RECONSTRUCTS-to-source: for every returned/retained source_chunk,
+the whole file's EOL-normalized sha256 == hit `content_hash` AND the byte-span slice sha256 == hit `excerpt_hash`
+(validated against the committed corpus files; 15/15 valid on the sample). (e) NAVIGATION sub-linear: nodes_examined
+(#36 shortlist frontier + descend expansions) / leaf_count STRICTLY DECREASES across the scale sweep (p50 + p95
+reported), leaves span `max/min >= 100`. Plus DUAL recall (I5).
+
+**(I4) The corpus (real + foreign + license-clean + deterministic).** The committed SAMPLE is a slice of `click==8.1.7`
+(BSD-3-Clause, PyPI sdist sha256 `ca9853ad...`), byte-normalized (BOM-stripped, CRLF/CR->LF) so `content_hash` is
+stable CRLF-vs-LF. Two file namespaces exercise contamination: `clickcode` (src/click/*.py) + `clickdocs` (docs/*.rst).
+A THIRD namespace `clicklog` carries a CONTROLLED supersession pair (typed `claim` records via #36 `ingest-records`:
+`tmo_v1` status `superseded` -> `tmo_v2` status `current`) for the temporal criterion -- the ONE place content is
+authored (the mechanism test), documented as such; every other query runs on unshaped real click bytes.
+`MANIFEST.json` pins per-file sha256 + a `manifest_digest`. The FULL ~200MB run is `FULL_CORPUS_RECIPE.md`: a
+HASH-VERIFIED pinned-sdist fetch (6 permissive packages hashed; a large tier + CPython listed) organized into
+namespaces, reached either by the harness's deterministic scale replication or by distinct large packages -- the fetch
+is a documented network step, NOT claimed deterministic.
+
+**(I5) Scale + navigation + dual-recall interpretation.** SCALE is reached by ingesting the real code namespace
+replicated `reps` times (real bytes; each replica's first file carries a unique localized token `ZZLOCAL_<r>` so a
+localized query stays localized), as ONE namespace, then #36 `build-hierarchy`. NAVIGATION is a BOUNDED GLOBAL
+descriptor-beam over #36 `shortlist`->`descend`: the global frontier is capped at `beam` per level (ranked by the
+RANKING-ONLY node synopsis `lexical_descriptor`+`entity_union`), so `nodes_examined ~ beam * depth ~ beam * log_F(N)`
+(measured p50 2,3,4-ish; ratio/leaf strictly decreasing). GUARANTEED / exhaustive recall == the target is found by an
+exhaustive FLAT #36 search (the fallback baseline) -- so it is measured WITHOUT a descend-all subprocess explosion.
+PACKET-EVIDENCE recall == the #40 flat compile (from the injected #36 search hits = the fallback/evidence path) RETAINS
+the required source/record (`identity.selected_record_version_ids` / `evaluation_hooks.retrieved[].included`). This makes
+the i34 red-team DUAL-RECALL gap appear on REAL data: a bounded lossy descriptor OMITS a rare decisive term the leaf
+has (df=1 not in the top-64 descriptor), so the FAST beam MISSES (`hierarchy_path_recall` ~176470 ppm on the sample
+sweep) while GUARANTEED == PACKET == 1000000 (the exhaustive-flat fallback preserves it) -- `shortlist_regret` +
+`fallback_frequency` quantify the gap. The criteria gate on packet/guaranteed==full + sub-linearity, NOT on the fast
+beam (which is EXPECTED lossy -- the whole point).
+
+**(I6) `tier1_accepted` is harness-COMPUTED, not a project claim.** `tier1_accepted = (all 9 criteria pass)` over the
+corpus+CLI the harness was pointed at; the report states `scope: NOT a project-level claim` +
+`project_flip_owner: orchestrator`. On the committed sample: 9/9, `tier1_accepted=true`. **Two digests:** the full
+`report_digest` is byte-identical on a re-run of the SAME machine, but ACROSS machines it legitimately tracks WHICH
+#36/#40 BUILD was measured (CLI-agnostic by design -- e.g. the device #40 already reports `context.compile 0.7.0`,
+Lane A's in-flight build, while a cloud snapshot may be `0.6.0`; the harness FAITHFULLY records the measured CLI
+version). The `structural_digest` = the report MINUS the measured-CLI identity (`cli_capabilities.m36_worker` +
+`m40_worker`) -- it pins corpus + metrics + criteria + `tier1_accepted` independent of the #36/#40 build, and IS
+cross-env stable (`sha256:9675c82a...`; verified identical cloud CPython 3.11 == the Windows executor python). The
+tests pin `structural_digest` (cross-env) + assert per-machine `report.json` re-run byte-identity; worker
+python/sqlite version strings are sanitized out entirely. The orchestrator runs the full ~200MB gate vs Lane A's
+WIRED #40 CLI at the D-0077 fold and owns the project-level flip.
+
+**(I7) The D-0077 fold items (for the orchestrator):** the ingest+build+measure flow over real #36/#40; the s10 criteria
++ thresholds; the committed corpus sample + MANIFEST + `FULL_CORPUS_RECIPE.md`; the labeled query fixtures with pinned
+outcomes; the flat-only #40-CLI interpretation (nav via #36; the packet `retrieval_completeness` follow-on when Lane A
+wires it); that `tier1_accepted` is computed, not claimed. When the fold points the adapter at Lane A's WIRED CLI, the
+same harness re-runs UNCHANGED -- only `adapter`/`corpus_root`/`benchmark`/`scales` differ.

@@ -1,0 +1,73 @@
+{
+  "corpus_id": "click-8.1.7-slice",
+  "file_count": 11,
+  "files": [
+    {
+      "bytes": 1475,
+      "path": "LICENSE.rst",
+      "sha256": "9a8ad106a394e853bfe21f42f4e72d592819a22805d991b5f3275029292b658d"
+    },
+    {
+      "bytes": 18719,
+      "path": "clickcode/decorators.py",
+      "sha256": "f9995b198815fa823c8ebfe81f8469b8bd4f152fb94267ae100b0b0c0620c6dc"
+    },
+    {
+      "bytes": 9273,
+      "path": "clickcode/exceptions.py",
+      "sha256": "7f244e3bee3b1d61438eddaaba9a3b037277d9596933ea2f2677e8c2ef762b7b"
+    },
+    {
+      "bytes": 9706,
+      "path": "clickcode/formatting.py",
+      "sha256": "16b7f4fb95b7dfe968c98fe2f6aaf05d1f3e4939d6de6e60bf2c4b554772c729"
+    },
+    {
+      "bytes": 28324,
+      "path": "clickcode/termui.py",
+      "sha256": "1fb43c16998f7a5849da8bce85f09186332d0a93728c55ebc8030b64e0eab1d7"
+    },
+    {
+      "bytes": 36391,
+      "path": "clickcode/types.py",
+      "sha256": "4d9bf3de12af073b5ff87a5ad9e9ce98fe1ece748f2f38a38e28396ffd173311"
+    },
+    {
+      "bytes": 8398,
+      "path": "clickdocs/arguments.rst",
+      "sha256": "c33578cff3d3ea4bebfa4881e7d12ed82d8002f0c101034fdc085b5b56b34455"
+    },
+    {
+      "bytes": 2924,
+      "path": "clickdocs/exceptions.rst",
+      "sha256": "17006a40e15d5469736ee8b59b4e86cfaeea898dc92cfb15edc4eae0cae791f8"
+    },
+    {
+      "bytes": 26719,
+      "path": "clickdocs/options.rst",
+      "sha256": "6ef07a7fd827f7918533855a78d4d83ea0c46e25f9487e25bc55c2071ef91747"
+    },
+    {
+      "bytes": 1651,
+      "path": "clickdocs/prompts.rst",
+      "sha256": "42ba4c4cf64bfab402d6bb58a88c7e681ef88bb1341e3fdda8db2ae3b4eeab5f"
+    },
+    {
+      "bytes": 8595,
+      "path": "clickdocs/quickstart.rst",
+      "sha256": "3116c2969366017ddc20a8f623fba1bdefaa95b301b09218cb2a8b3d2288bb91"
+    }
+  ],
+  "manifest_digest": "sha256:d63af8c438103ebcb34738cda3cab83b6ecaf132e8ea96dfca65448bc0170b3b",
+  "note": "A SMALL representative REAL foreign corpus slice. Files are byte-normalized (BOM stripped, CRLF/CR->LF) so content_hash is stable across a CRLF (Windows) vs LF (cloud) checkout. Provenance: upstream paths are src/click/<f>.py (namespace clickcode) and docs/<f>.rst (namespace clickdocs).",
+  "total_bytes": 152175,
+  "upstream": {
+    "license": "BSD-3-Clause",
+    "project": "click",
+    "sdist_filename": "click-8.1.7.tar.gz",
+    "sdist_sha256": "ca9853ad459e787e2192211578cc907e7594e294c7ccc834310722b41b9ca6de",
+    "sdist_url": "https://files.pythonhosted.org/packages/source/c/click/click-8.1.7.tar.gz",
+    "source": "PyPI sdist",
+    "version": "8.1.7"
+  }
+}

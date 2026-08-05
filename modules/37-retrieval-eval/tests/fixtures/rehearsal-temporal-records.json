@@ -1,0 +1,30 @@
+{
+  "note": "Controlled supersession pair (typed claims) for the current-vs-historical criterion. Ingested via #36 ingest-records into namespace clicklog. tmo_v1 is superseded by the current tmo_v2; #36 computes effective_current from the catalog (pool-independent, A5), so current_only EXCLUDES tmo_v1 while any/historical intent RETRIEVES it. The distinctive token HISTFACT localizes the pair.",
+  "ingest_run": {
+    "producer": "rehearsal.fixture",
+    "producer_version": "0.1.0",
+    "namespace": "clicklog"
+  },
+  "records": [
+    {
+      "record_id": "clicklog_timeout",
+      "record_version_id": "tmo_v1",
+      "record_kind": "claim",
+      "namespace": "clicklog",
+      "status": "superseded",
+      "authority_level": "curated",
+      "text": "HISTFACT the default request timeout was 30 seconds in the legacy release before the reliability change",
+      "superseded_by": "tmo_v2"
+    },
+    {
+      "record_id": "clicklog_timeout",
+      "record_version_id": "tmo_v2",
+      "record_kind": "claim",
+      "namespace": "clicklog",
+      "status": "current",
+      "authority_level": "curated",
+      "text": "HISTFACT the default request timeout is 60 seconds in the current release after the reliability change",
+      "supersedes": "tmo_v1"
+    }
+  ]
+}

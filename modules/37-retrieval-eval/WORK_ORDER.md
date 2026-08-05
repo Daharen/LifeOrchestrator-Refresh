@@ -1,3 +1,45 @@
+# Work Order: retrieval.eval -- 0.6.0 -> 0.7.0 (i35 REHEARSAL-HARNESS, the Tier-1 acceptance gate)
+
+**Contract version targeted:** 0.7 · **Author:** FANOUT_AGENT_002 (REHEARSAL-HARNESS-i35) / 2026-08-05 ·
+**Roadmap:** i35 CONSUMER WIRING lane B (plan `fo-35-0a5bf334`; D-0090/D-0098/D-0077; governing
+`MEMORY_ARCHITECTURE` s10 + `MEMORY_BENCHMARK` + `CONTEXT_PACKET_CONTRACT` i34 s7 + `MEMORY_CONTRACT` A6/s7).
+Predecessor: 0.6.0 (HIERARCHY-EVAL-i34).
+
+### Problem being solved (i35)
+
+i34 SCAFFOLDED + FLAGGED the ~200MB real-corpus rehearsal as the OPEN pre-freeze/pre-activation gate and reported
+`tier1_accepted=false` on synthetic-only (synthetic scale is necessary, NOT sufficient). This revision turns that
+scaffold into a RUNNABLE Tier-1 acceptance-gate harness: INGEST a REAL FOREIGN corpus slice into a #36 hierarchy,
+run a MANUALLY-LABELED query set, MEASURE the s10 criteria against #36/#40 driven READ-ONLY via the external_command
+adapter seam, and emit a computed `tier1_accepted` -- so the orchestrator can run the full gate vs Lane A's WIRED
+#40 CLI at fold and own the project-level flip.
+
+### Scope (in) -- touch ONLY `modules/37-retrieval-eval` (ADDITIVE)
+
+- **NEW `rehearsal_eval.py`** (op `rehearsal`): the adapter seam (real #36/#40 as subprocess), corpus ingest +
+  build-hierarchy, the labeled-query correctness pass, the scale sweep (bounded cost + sub-linear navigation),
+  the s10 criteria + a computed `tier1_accepted`, canonical `rehearsal_report.json`
+  (`lifeorch.rehearsal_eval_report/0.1`) + `.md` + `worker-summary.json`. IMPORTS `hierarchy_eval` helpers (that
+  file stays byte-identical).
+- **NEW committed real foreign corpus SAMPLE** `tests/fixtures/rehearsal-corpus/**` (BSD `click 8.1.7` slice +
+  `LICENSE.rst` + `MANIFEST.json` [per-file sha256 + digest]); **NEW `tests/fixtures/rehearsal-benchmark.json`**
+  (manually-labeled queries, all 5 kinds, pinned outcomes); **NEW `tests/fixtures/rehearsal-temporal-records.json`**
+  (a controlled supersession pair for the temporal criterion); **NEW `FULL_CORPUS_RECIPE.md`** (hash-verified
+  ~200MB fetch/prep recipe).
+- **NEW `tests/test_rehearsal_eval.py`** (off-machine deterministic gate, 34 checks) + a `-Op rehearsal` branch in
+  the wrapper (isolated; the benchmark + hierarchy-eval paths unchanged) + rehearsal checks appended to
+  `tests/Invoke-RetrievalEvalTests.ps1`.
+- **Version:** `skill.json` 0.7.0 / contract 0.7; `SCHEMA_NOTES.md` s16 (every i35 interpretation, for the fold),
+  this WORK_ORDER, README.
+
+### Acceptance -- the s10 criteria (a)-(e) + dual recall each a deterministic threshold; `tier1_accepted` computed
+over the pointed corpus+CLI (NOT a project claim); a `fold_reconciliation` flag REFUSES acceptance on an absent
+#36/#40 field. `hierarchy_eval.py` + `retrieval_eval.py` + `lib/*` BYTE-IDENTICAL (regression); the deterministic
+sample path byte-identical on re-run (pinned `report_digest`). Off-machine FIRST (real portable #36/#40 cores),
+then `-Live` on the executor.
+
+---
+
 # Work Order: retrieval.eval -- 0.4.0 -> 0.5.0 (selpol_rrf_v1 1.2.0 + eval-0.5, i33 NAMESPACE-CLOSURE)
 
 **Contract version targeted:** 0.5 · **Author:** FANOUT_AGENT_002 (RETRIEVAL-EVAL-PREDICATE-i33) / 2026-08-04 ·

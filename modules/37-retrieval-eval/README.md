@@ -185,3 +185,33 @@ silently misses), adversarial scale/mutation fixtures (pinned), the Tier-1 gate 
 rehearsal SCAFFOLDED + FLAGGED as the OPEN pre-freeze gate. Report: `hierarchy_report.json`
 (`lifeorch.hierarchy_eval_report/0.1`, integer-only, byte-identical on re-run) + `hierarchy_report.md`. The
 `external_command` adapter is the D-0077 fold seam for the real #36/#40. CPU-only, deterministic, no model.
+
+## i35 Tier-1 acceptance-gate REHEARSAL (0.7.0, plan fo-35-0a5bf334)
+
+`-Op rehearsal` (or `python rehearsal_eval.py --request`) runs the RUNNABLE Tier-1 acceptance-gate rehearsal --
+a SEPARATE self-contained worker (`rehearsal_eval.py`); the benchmark + hierarchy-eval paths are unchanged +
+byte-identical. It turns the i34 rehearsal SCAFFOLD into a harness that INGESTS a REAL FOREIGN corpus into a #36
+hierarchy (via #36's shipped `ingest`/`ingest-records`/`build-hierarchy`), runs a MANUALLY-LABELED query set, and
+MEASURES the `MEMORY_ARCHITECTURE` s10 Tier-1 criteria against #36/#40 driven READ-ONLY through the
+external_command adapter seam:
+
+- **(a) bounded context cost** across >= 2 orders of magnitude of leaf count (the #40 packet stays within budget);
+- **(b) cross-namespace contamination** below threshold (a scoped query leaks ZERO foreign-namespace evidence);
+- **(c) current-vs-historical** correctness (`current_only` excludes the superseded record; historical retrieves it);
+- **(d) every excerpt reconstructs to source** (content_hash == file sha256; the byte span reproduces the bytes);
+- **(e) navigation cost sub-linear** in leaf count (p50/p95; via #36 `shortlist`/`descend` since the #40 CLI is
+  FLAT-only today) + DUAL recall (fast beam vs exhaustive-flat/guaranteed vs packet-evidence), shortlist regret,
+  fallback frequency.
+
+CLI-AGNOSTIC: it measures WHATEVER #36/#40 CLIs it is pointed at (default: the real cores relative to this module;
+the orchestrator overrides `adapter` argv to Lane A's WIRED #40 CLI at the fold). The committed SAMPLE is a
+BSD-licensed `click 8.1.7` slice (`tests/fixtures/rehearsal-corpus/` + MANIFEST); the ~200MB full run is a
+hash-verified recipe (`FULL_CORPUS_RECIPE.md`). It emits `rehearsal_report.json`
+(`lifeorch.rehearsal_eval_report/0.1`, integer-only, byte-identical on the deterministic sample path) +
+`rehearsal_report.md` + a single computed `tier1_accepted` -- it does NOT claim project-level Tier-1 acceptance
+(the orchestrator runs the full gate at fold and owns the flip); an absent #36/#40 field a criterion needs -> a
+`fold_reconciliation` flag + REFUSED `tier1_accepted` (never a silent pass).
+
+```powershell
+pwsh -NoProfile -File .\Invoke-RetrievalEval.ps1 -Op rehearsal   # the committed click-8.1.7 sample + real #36/#40
+```

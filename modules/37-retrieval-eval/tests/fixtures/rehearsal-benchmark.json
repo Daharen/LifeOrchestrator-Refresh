@@ -1,0 +1,114 @@
+{
+  "schema": "lifeorch.rehearsal_benchmark/0.1",
+  "benchmark_id": "rehearsal-click-8.1.7-slice",
+  "corpus": {
+    "corpus_dir": "rehearsal-corpus",
+    "manifest": "rehearsal-corpus/MANIFEST.json",
+    "namespaces": [
+      {"namespace": "clickcode", "dir": "rehearsal-corpus/clickcode", "kind": "source_files"},
+      {"namespace": "clickdocs", "dir": "rehearsal-corpus/clickdocs", "kind": "source_files"}
+    ],
+    "temporal_records": "rehearsal-temporal-records.json"
+  },
+  "label_provenance": {
+    "reviewer": "REHEARSAL-HARNESS-i35",
+    "method": "Labels authored by reading the committed real foreign corpus (click 8.1.7 slice). Anchor terms verified by grep over the slice: 'progressbar'/'secho' occur only in clickcode/termui.py; 'HelpFormatter' only in clickcode/formatting.py; 'MissingParameter' only in clickcode/exceptions.py; 'prompt'/'UsageError' are cross-cutting and occur in BOTH namespaces (the contamination probes). required_sources are chunk-bearing files the harness resolves to concrete leaves via a scoped #36 search; a file-level hit is credited only when a chunk from that file is retained.",
+    "corpus_not_shaped_for_schemas": true
+  },
+  "queries": [
+    {
+      "query_id": "q1-cross-cutting-code",
+      "kind": "cross_cutting",
+      "query": "prompt confirmation hidden input",
+      "namespace": "clickcode",
+      "query_class": "global_synthesis",
+      "temporal_intent": "any_valid_version",
+      "required_sources": ["termui.py"],
+      "forbidden_namespaces": ["clickdocs", "clicklog"],
+      "expected_disposition": "answerable",
+      "rationale": "'prompt' is cross-cutting and also present in clickdocs; scoped to clickcode it must retain clickcode evidence (termui.py prompt/confirm/hidden-input helpers) and leak ZERO clickdocs chunks."
+    },
+    {
+      "query_id": "q2-rare-decisive-code",
+      "kind": "rare_decisive_term",
+      "query": "progressbar",
+      "namespace": "clickcode",
+      "query_class": "local_factual",
+      "temporal_intent": "current_only",
+      "required_sources": ["termui.py"],
+      "forbidden_namespaces": ["clickdocs", "clicklog"],
+      "expected_disposition": "answerable",
+      "rationale": "'progressbar' is a rare decisive term occurring only in clickcode/termui.py."
+    },
+    {
+      "query_id": "q3-exact-reference-code",
+      "kind": "exact_reference",
+      "query": "HelpFormatter",
+      "namespace": "clickcode",
+      "query_class": "exact_reference",
+      "temporal_intent": "version_specific",
+      "required_sources": ["formatting.py"],
+      "forbidden_namespaces": ["clickdocs", "clicklog"],
+      "expected_disposition": "answerable",
+      "rationale": "Exact symbol reference; HelpFormatter is defined only in clickcode/formatting.py."
+    },
+    {
+      "query_id": "q4-current-state-temporal",
+      "kind": "current_vs_historical",
+      "query": "HISTFACT default request timeout seconds",
+      "namespace": "clicklog",
+      "query_class": "current_state",
+      "temporal_intent": "current_only",
+      "required_records": ["tmo_v2"],
+      "excluded_records": ["tmo_v1"],
+      "forbidden_namespaces": ["clickcode", "clickdocs"],
+      "expected_disposition": "answerable",
+      "rationale": "current_only must return the current claim tmo_v2 (60s) and EXCLUDE the superseded tmo_v1 (30s), pool-independently."
+    },
+    {
+      "query_id": "q5-historical-temporal",
+      "kind": "current_vs_historical",
+      "query": "HISTFACT legacy timeout",
+      "namespace": "clicklog",
+      "query_class": "historical_reconstruction",
+      "temporal_intent": "any_valid_version",
+      "required_records": ["tmo_v1"],
+      "forbidden_namespaces": ["clickcode", "clickdocs"],
+      "expected_disposition": "answerable",
+      "rationale": "Historical intent must make the superseded tmo_v1 RETRIEVABLE (the current-vs-historical duality: the version is not deleted, only not current)."
+    },
+    {
+      "query_id": "q6-global-synthesis-code",
+      "kind": "global_synthesis",
+      "query": "UsageError exception",
+      "namespace": "clickcode",
+      "query_class": "global_synthesis",
+      "temporal_intent": "any_valid_version",
+      "required_sources": ["exceptions.py"],
+      "forbidden_namespaces": ["clickdocs", "clicklog"],
+      "expected_disposition": "answerable",
+      "rationale": "A synthesis query drawing on error-reporting evidence across exceptions.py and termui.py; exercises bounded packet cost with multi-source evidence."
+    },
+    {
+      "query_id": "q7-cross-cutting-docs",
+      "kind": "cross_cutting",
+      "query": "confirmation prompt password",
+      "namespace": "clickdocs",
+      "query_class": "global_synthesis",
+      "temporal_intent": "any_valid_version",
+      "required_sources": ["options.rst"],
+      "forbidden_namespaces": ["clickcode", "clicklog"],
+      "expected_disposition": "answerable",
+      "rationale": "The reverse contamination direction: 'prompt'/'confirmation' are cross-cutting (also in clickcode); scoped to clickdocs it must retain docs evidence (options.rst prompting) and leak ZERO clickcode chunks."
+    }
+  ],
+  "thresholds": {
+    "bounded_context_cost": "every scale: packet token_budget.used <= budget AND excerpt_count <= max_excerpts AND used does not grow with leaf count",
+    "cross_namespace_contamination_ppm_max": 0,
+    "current_vs_historical": "every temporal query honored (current_only excludes stale; historical retrieves it)",
+    "provenance_reconstruction_ppm_min": 1000000,
+    "navigation_sublinear": "nodes_examined/leaf_count strictly decreases across >=2 orders of magnitude; p50 not constant; log-shaped",
+    "packet_evidence_recall_ppm_min": 1000000,
+    "hierarchy_path_recall_note": "fast beam may be < 1000000; guaranteed (explore-all) and packet (fallback) must be 1000000"
+  }
+}

@@ -44,7 +44,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$SKILL_ID = 'retrieval.eval'; $SKILL_VERSION = '0.6.0'; $CONTRACT = '0.6'
+$SKILL_ID = 'retrieval.eval'; $SKILL_VERSION = '0.7.0'; $CONTRACT = '0.7'
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 $bound = $PSBoundParameters
@@ -129,6 +129,62 @@ if ($opRequested -eq 'hierarchy-eval') {
     $hjson = $henv | ConvertTo-Json -Depth 30
     try { [System.IO.File]::WriteAllText((Join-Path $invDir 'result.json'), $hjson, $utf8) } catch {}
     [Console]::Out.WriteLine($hjson)
+    exit 0
+}
+
+# ---- i35 REHEARSAL op (plan fo-35-0a5bf334): the Tier-1 ACCEPTANCE-GATE rehearsal harness. A SELF-CONTAINED,
+#      isolated path firing ONLY on -Op rehearsal (or InputsJson.op == rehearsal); the benchmark + hierarchy-eval
+#      paths are UNCHANGED + byte-identical otherwise. Ingests a REAL foreign corpus into a #36 hierarchy, runs the
+#      labeled query set, measures the MEMORY_ARCHITECTURE s10 criteria via the external_command adapter, and emits
+#      a computed tier1_accepted (over the corpus+CLI it is pointed at -- NOT a project-level claim). ----
+if ($opRequested -eq 'rehearsal') {
+    $rstatus = 'ok'; $rerr = $null; $rresult = $null; $rInputsDigest = $null
+    try {
+        $ppo = $null
+        if (-not [string]::IsNullOrWhiteSpace($InputsJson)) { $ppo = $InputsJson | ConvertFrom-Json }
+        $rc = New-Object System.Collections.Generic.List[string]
+        if (-not [string]::IsNullOrWhiteSpace($PythonPath)) { $rc.Add($PythonPath) }
+        foreach ($n in @('python3', 'python', 'py')) { try { $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'; $w = & where.exe $n 2>$null; $ErrorActionPreference = $prev; foreach ($l in @([string[]]$w)) { if (-not [string]::IsNullOrWhiteSpace($l)) { $rc.Add($l.Trim()) } } } catch {} }
+        $rc.Add('C:\Users\just_\AppData\Local\Programs\Python\Python312\python.exe')
+        foreach ($n in @('/usr/bin/python3', '/usr/bin/python')) { $rc.Add($n) }
+        $rpy = $null; foreach ($c in ($rc.ToArray() | Select-Object -Unique)) { if (Test-Python $c) { $rpy = $c; break } }
+        if ([string]::IsNullOrWhiteSpace($rpy)) { throw [PSCustomObject]@{ code = 'python_not_found'; message = 'no python 3 found. Set -PythonPath.'; retryable = $false } }
+        $rworker = if (-not [string]::IsNullOrWhiteSpace($WorkerPath)) { $WorkerPath } else { Join-Path $PSScriptRoot 'rehearsal_eval.py' }
+        if (-not (Test-Path -LiteralPath $rworker -PathType Leaf)) { throw [PSCustomObject]@{ code = 'worker_not_found'; message = "rehearsal_eval.py not found at '$rworker'"; retryable = $false } }
+        $rworker = (Resolve-Path -LiteralPath $rworker).Path
+        $rreq = [ordered]@{ op = 'rehearsal'; out_dir = $invDir }
+        if ($null -ne $ppo) { foreach ($k in @('benchmark', 'corpus_root', 'fixtures_dir', 'adapter', 'scales', 'fanout', 'config')) { if (Has $ppo $k) { $rreq[$k] = $ppo.$k } } }
+        $rreqPath = Join-Path $invDir 'request.json'
+        [System.IO.File]::WriteAllText($rreqPath, ($rreq | ConvertTo-Json -Depth 30), $utf8)
+        Write-Diag "op=rehearsal python=$rpy worker=$rworker out=$invDir"
+        $rerrFile = Join-Path $invDir 'worker-stderr.txt'
+        $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+        $rout = & $rpy $rworker '--request' $rreqPath 2>$rerrFile
+        $rexit = $LASTEXITCODE; $ErrorActionPreference = $prev
+        $rsumPath = Join-Path $invDir 'worker-summary.json'
+        if (-not (Test-Path -LiteralPath $rsumPath -PathType Leaf)) { $t = ''; try { $t = [string](Get-Content -LiteralPath $rerrFile -Raw -ErrorAction SilentlyContinue) } catch {}; $t = ($t -replace '\s+', ' ').Trim(); if ($t.Length -gt 400) { $t = $t.Substring(0, 400) }; throw [PSCustomObject]@{ code = 'worker_no_summary'; message = "rehearsal worker produced no summary (exit=$rexit). stderr: $t"; retryable = $false } }
+        $rsum = (Get-Content -LiteralPath $rsumPath -Raw) | ConvertFrom-Json
+        if (-not ([bool]$rsum.ok)) { $we = if (Has $rsum 'error') { $rsum.error } else { $null }; $rstatus = 'error'; $rerr = [ordered]@{ code = [string]$(if ($null -ne $we -and (Has $we 'code')) { $we.code } else { 'rehearsal_eval_failed' }); message = [string]$(if ($null -ne $we -and (Has $we 'message')) { $we.message } else { 'worker failed' }); retryable = $false } }
+        else {
+            $rInputsDigest = [string]$rsum.report_digest
+            $rresult = [ordered]@{}
+            foreach ($f in @('op', 'rehearsal_harness_version', 'benchmark_id', 'adapter_kind', 'tier1_criteria_passed', 'tier1_criteria_total', 'tier1_accepted', 'fold_reconciliation', 'navigation_sublinear', 'bounded_context_cost', 'scale_packet_evidence_recall_ppm', 'adapter_calls', 'report_digest')) { if (Has $rsum $f) { $rresult[$f] = $rsum.$f } }
+        }
+    }
+    catch {
+        $ex = $_.TargetObject
+        if ($null -ne $ex -and ($ex.PSObject.Properties.Name -contains 'code')) { $rstatus = 'error'; $rerr = [ordered]@{ code = [string]$ex.code; message = [string]$ex.message; retryable = [bool]$ex.retryable } }
+        else { $rstatus = 'error'; $rerr = [ordered]@{ code = 'unhandled_exception'; message = "$($_.Exception.Message)"; retryable = $false } }
+        Write-Diag "rehearsal ERROR: $($rerr.message)"
+    }
+    $rart = New-Object System.Collections.Generic.List[object]
+    foreach ($n in @('rehearsal_report.json', 'rehearsal_report.md', 'worker-summary.json')) { $fp = Join-Path $invDir $n; if (Test-Path -LiteralPath $fp -PathType Leaf) { $b = [System.IO.File]::ReadAllBytes($fp); $rart.Add([ordered]@{ path = (Resolve-Path -LiteralPath $fp).Path; kind = $(if ($n -like '*.md') { 'markdown' } else { 'json' }); bytes = $b.Length; sha256 = (Get-Sha256Hex $b) }) } }
+    if ([string]::IsNullOrWhiteSpace($rInputsDigest)) { $rInputsDigest = 'sha256:' + (Get-Sha256Hex ($utf8.GetBytes(($InvocationId + '|' + $rstatus)))) }
+    $sw.Stop()
+    $renv = [ordered]@{ schema = $RESULT_SCHEMA; skill_id = $SKILL_ID; skill_version = $SKILL_VERSION; contract_version = $CONTRACT; invocation_id = $InvocationId; status = $rstatus; started_at_utc = $startedAt.ToString('o'); finished_at_utc = ([DateTime]::UtcNow).ToString('o'); duration_ms = [int]$sw.Elapsed.TotalMilliseconds; inputs_digest = $rInputsDigest; result = $rresult; confidence = $null; artifacts = $rart.ToArray(); model_provenance = @(); diagnostics = [ordered]@{ log = 'worker-stderr.txt' }; warnings = @(); error = $rerr }
+    $rjson = $renv | ConvertTo-Json -Depth 30
+    try { [System.IO.File]::WriteAllText((Join-Path $invDir 'result.json'), $rjson, $utf8) } catch {}
+    [Console]::Out.WriteLine($rjson)
     exit 0
 }
 
