@@ -153,7 +153,7 @@ if ($opRequested -eq 'rehearsal') {
         if (-not (Test-Path -LiteralPath $rworker -PathType Leaf)) { throw [PSCustomObject]@{ code = 'worker_not_found'; message = "rehearsal_eval.py not found at '$rworker'"; retryable = $false } }
         $rworker = (Resolve-Path -LiteralPath $rworker).Path
         $rreq = [ordered]@{ op = 'rehearsal'; out_dir = $invDir }
-        if ($null -ne $ppo) { foreach ($k in @('benchmark', 'corpus_root', 'fixtures_dir', 'adapter', 'scales', 'fanout', 'config')) { if (Has $ppo $k) { $rreq[$k] = $ppo.$k } } }
+        if ($null -ne $ppo) { foreach ($k in @('benchmark', 'corpus_root', 'fixtures_dir', 'adapter', 'scales', 'fanout', 'config', 'wired_descend')) { if (Has $ppo $k) { $rreq[$k] = $ppo.$k } } }
         $rreqPath = Join-Path $invDir 'request.json'
         [System.IO.File]::WriteAllText($rreqPath, ($rreq | ConvertTo-Json -Depth 30), $utf8)
         Write-Diag "op=rehearsal python=$rpy worker=$rworker out=$invDir"
@@ -168,7 +168,7 @@ if ($opRequested -eq 'rehearsal') {
         else {
             $rInputsDigest = [string]$rsum.report_digest
             $rresult = [ordered]@{}
-            foreach ($f in @('op', 'rehearsal_harness_version', 'benchmark_id', 'adapter_kind', 'tier1_criteria_passed', 'tier1_criteria_total', 'tier1_accepted', 'fold_reconciliation', 'navigation_sublinear', 'bounded_context_cost', 'scale_packet_evidence_recall_ppm', 'adapter_calls', 'report_digest')) { if (Has $rsum $f) { $rresult[$f] = $rsum.$f } }
+            foreach ($f in @('op', 'rehearsal_harness_version', 'benchmark_id', 'adapter_kind', 'tier1_criteria_passed', 'tier1_criteria_total', 'tier1_accepted', 'fold_reconciliation', 'navigation_sublinear', 'bounded_context_cost', 'scale_packet_evidence_recall_ppm', 'adapter_calls', 'report_digest', 'measurement_mode', 'wired_tier1_accepted', 'wired_tier1_criteria_passed', 'wired_tier1_criteria_total', 'wired_fold_reconciliation')) { if (Has $rsum $f) { $rresult[$f] = $rsum.$f } }
         }
     }
     catch {

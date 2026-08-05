@@ -1,3 +1,37 @@
+# Work Order: retrieval.eval -- 0.7.0 -> 0.8.0 (i36 WIRED-DESCEND drive, the Tier-1 flip harness half)
+
+**Contract version targeted:** 0.7 (schema UNCHANGED) · **Author:** FANOUT_AGENT_001 (REHEARSAL-WIRE-DESCEND-i36) / 2026-08-05 ·
+**Roadmap:** i36 Tier-1 ACCEPTANCE wave lane A (plan `fo-36-1a676e4b`; D-0100; governing `MEMORY_ARCHITECTURE` s10 +
+`CONTEXT_PACKET_CONTRACT` i34 s7 + `MEMORY_CONTRACT` A6). Predecessor: 0.7.0 (REHEARSAL-HARNESS-i35).
+
+### Problem being solved (i36)
+
+i35 shipped the RUNNABLE rehearsal but it measured NAVIGATION via #36's own `shortlist`/`descend` and compiled #40
+packets FLAT (the #40 CLI was flat-only before i35 Lane A). i35 Lane A (#40 0.7.0, `aa2f0fb`) WIRED the real
+`ArtifactSearchHierarchyPort` into #40's PUBLIC `-Retriever artifact_search` path. This revision makes the harness
+DRIVE that WIRED descend path end-to-end so the ORCHESTRATOR can run the full ~200MB gate against #40 0.7.0 at fold
+and flip project-level `tier1_accepted`.
+
+### Scope (in) -- touch ONLY `modules/37-retrieval-eval` (ADDITIVE + OPT-IN); #40 is READ-ONLY via the adapter
+
+- A WIRED-DESCEND drive path (`compile_packet_wired` + the wired labeled/scale/stale measurements) gated behind
+  `req.wired_descend`; construct #40 descend-triggering requests (keys from #40 SCHEMA_NOTES s18, never guessed);
+  invoke via the overridable adapter `m40_argv`; MEASURE s10 against the WIRED packets incl. sub-linear nav from
+  #40's OWN plan trace + dual recall / regret / fallback-frequency / stale-window.
+- The `#36-direct-nav + #40-flat` path RETAINED as a LABELED baseline (descend-vs-flat deltas). The non-wired path
+  stays BYTE-IDENTICAL to 0.7.0 (skeleton digest pinned).
+- **Version:** `skill.json` 0.7.0 -> 0.8.0 / contract 0.7 (unchanged); `SCHEMA_NOTES.md` s17 (every i36
+  interpretation, for the fold); `FULL_CORPUS_RECIPE.md` s5a/s6 (the WIRED invocation + `m40_argv` override).
+
+### Acceptance (i36) -- see `SCHEMA_NOTES.md` s17 + `test_rehearsal_eval` (55/55; the `test_wired` 11-criterion gate)
+
+(a) a WIRED-descend drive path triggering #40 0.7.0's port via the adapter; (b) s10 measured against WIRED packets
+incl. sub-linear nav from #40's own trace + dual recall/regret/fallback/stale-window; (c) the flat baseline retained
++ labeled; (d) FULL_CORPUS_RECIPE updated; (e) `tier1_accepted` harness-computed, NOT a project claim; (f) shipped
+0.7.0 eval/hierarchy/rehearsal tests GREEN, the non-wired path byte-identical, eval/skill 0.7.0 -> 0.8.0.
+
+---
+
 # Work Order: retrieval.eval -- 0.6.0 -> 0.7.0 (i35 REHEARSAL-HARNESS, the Tier-1 acceptance gate)
 
 **Contract version targeted:** 0.7 · **Author:** FANOUT_AGENT_002 (REHEARSAL-HARNESS-i35) / 2026-08-05 ·

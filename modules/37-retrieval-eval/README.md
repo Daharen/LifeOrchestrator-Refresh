@@ -215,3 +215,36 @@ hash-verified recipe (`FULL_CORPUS_RECIPE.md`). It emits `rehearsal_report.json`
 ```powershell
 pwsh -NoProfile -File .\Invoke-RetrievalEval.ps1 -Op rehearsal   # the committed click-8.1.7 sample + real #36/#40
 ```
+
+## i36 WIRED-DESCEND drive (0.8.0, plan fo-36-1a676e4b, D-0100)
+
+`-Op rehearsal` with **`wired_descend:true`** (top-level or under `config`) makes the harness DRIVE #40 0.7.0's
+SHIPPED public `-Retriever artifact_search` shortlist-and-descend port (the real `ArtifactSearchHierarchyPort`,
+`aa2f0fb`) end-to-end and MEASURE the s10 criteria against the **WIRED packets** -- the missing half of the Tier-1
+flip. i35 measured navigation via #36's own shortlist/descend and compiled #40 FLAT; i36 constructs SCOPED
+DESCEND-class `artifact_search` compile requests (retriever=`artifact_search` + `catalog_db_path` over the built
+#36 catalog + a `global_synthesis`/`precedent_search` class + a single-namespace grant + the pinned
+`corpus_version`) so #40 0.7.0 runs the real shortlist-and-descend PLAN, then measures:
+
+- **navigation SUB-LINEAR from #40's OWN plan trace** -- `packet.retrieval_completeness.navigation_nodes_examined`
+  (+ the `retrieval_plan.stages[]` lineage), NOT the #36-direct counts; the `nodes/leaf` ratio strictly decreases
+  and nav grows strictly slower than leaves across >= 2 orders of magnitude (a bounded plan may keep nav ~constant,
+  which is still sub-linear);
+- **DUAL recall from the WIRED packets** -- hierarchy-PATH reach (the bounded descend fast-beam -- PARTIAL, the
+  honest red-team gap) AND end-to-end PACKET-EVIDENCE recall (the exhaustive #36-flat fallback preserves it --
+  FULL); shortlist REGRET; fallback FREQUENCY; plus STALE-WINDOW recall (`#36 hierarchy-mark-changed` -> a stale
+  synopsis never prunes -> recall preserved, never a silent miss);
+- **(a)-(d)** bounded cost / 0 contamination / current-vs-historical / reconstruct-to-source, against the WIRED
+  packets.
+
+The `#36-direct-nav + #40-flat` path is RETAINED as a LABELED baseline (the report shows descend-vs-flat deltas in
+`wired_descend.descend_vs_flat`). **A request WITHOUT `wired_descend` is BYTE-IDENTICAL to 0.7.0** (regression-proven
+-- the flat measured-metrics skeleton digest is pinned). In wired mode the report adds a `wired_descend` block (its
+own 11-criterion s10 tier1) and flips the AUTHORITATIVE `tier1_accepted` to the WIRED result; it stays
+HARNESS-COMPUTED (the orchestrator runs the full ~200MB gate vs the frozen #40 0.7.0 at fold + owns the project
+flip). The orchestrator points the adapter `m40_argv` at the frozen #40 0.7.0 CLI (`FULL_CORPUS_RECIPE.md` s5a/s6;
+the exact request template + #40 keys are in `SCHEMA_NOTES.md` s17).
+
+```powershell
+pwsh -NoProfile -File .\Invoke-RetrievalEval.ps1 -Op rehearsal -InputsJson '{"op":"rehearsal","wired_descend":true}'
+```

@@ -775,3 +775,83 @@ WIRED #40 CLI at the D-0077 fold and owns the project-level flip.
 outcomes; the flat-only #40-CLI interpretation (nav via #36; the packet `retrieval_completeness` follow-on when Lane A
 wires it); that `tier1_accepted` is computed, not claimed. When the fold points the adapter at Lane A's WIRED CLI, the
 same harness re-runs UNCHANGED -- only `adapter`/`corpus_root`/`benchmark`/`scales` differ.
+
+## 17. i36 (plan fo-36-1a676e4b, D-0100) -- the WIRED-DESCEND drive path: point the harness at #40 0.7.0's real port (0.7.0 -> 0.8.0)
+
+**Scope + role.** i35 (s16) shipped the RUNNABLE rehearsal but MEASURED navigation via #36's OWN shortlist/descend
+and compiled #40 packets FLAT (the #40 CLI was flat-only before i35 Lane A). i36 makes the harness DRIVE #40 0.7.0's
+SHIPPED public `-Retriever artifact_search` shortlist-and-descend port (the REAL `ArtifactSearchHierarchyPort`,
+`aa2f0fb`/D-0100) end-to-end and MEASURE the MEMORY_ARCHITECTURE s10 criteria against the WIRED packets. #40 is
+DRIVEN READ-ONLY via the external_command adapter (`m40_argv`); #40/#36 are NEVER modified. This is the harness half
+of the Tier-1 flip -- the ORCHESTRATOR runs the FULL ~200MB gate against the FROZEN #40 0.7.0 at fold and owns the
+project `tier1_accepted` flip. Module semver `0.7.0 -> 0.8.0`; report schema `lifeorch.rehearsal_eval_report/0.1`
+UNCHANGED (ADDITIVE).
+
+**GATING (byte-identity, acceptance f).** The whole wired path is OPT-IN behind `req.wired_descend` (or
+`config.wired_descend`). A request WITHOUT it produces a report whose measured-metrics SKELETON (the report MINUS
+`generator_version` + the two digests + `adapter_calls` + `cli_capabilities`) is BYTE-IDENTICAL to 0.7.0
+(`FLAT_METRICS_SKELETON_DIGEST = sha256:b6947a21aa90e307be0b9bf3b1db85d5c4ad2e60ee8b98867fb5332d470c3fff`,
+pinned in `test_rehearsal_eval`). `generator_version` legitimately advances `0.7.0 -> 0.8.0`, so the FLAT
+`structural_digest` moves `9675c82a... -> da34250e...` (ONLY the version stamp changed; re-pinned). No wired key
+(`wired_descend`, `measurement_mode`) appears on a non-wired report; `probe_capabilities` (the flat probe) is
+untouched, so `m40_emits_retrieval_completeness` stays False on the flat path.
+
+**(W1) The WIRED-descend #40 request the harness constructs (keys READ from #40 SCHEMA_NOTES s18 -- NEVER guessed).**
+`compile_packet_wired()` builds an `op:compile` request that TRIGGERS `_maybe_build_artifact_search_port`: `task`
+carries `namespace`, a DESCEND `query_class` (`global_synthesis`|`precedent_search` = #40 `DESCEND_QUERY_CLASSES`),
+`control_plane.permission_grants=[{namespaces:[ns]}]` (a SCOPED, SINGLE-namespace effective closure -- multi-ns
+FLAT-falls-back at i35/i36), and `config.{hier_shortlist_k,hier_beam_b,hier_depth_d}` (the bounded frontier);
+top-level `retrieval_meta.retriever="artifact_search"` + `retrieval_meta.corpus_version=<cv>` (pinned snapshot) +
+`catalog_db_path=<the built #36 catalog>`. The port constructs ONLY when ALL of: retriever normalizes to
+`artifact_search`, a real `catalog_db_path`, a DESCEND class, an ENFORCED non-empty SINGLE-ns closure, #36
+importable, and a CURRENT published hierarchy (`has_current_hierarchy()`). PRODUCTION variant additionally injects
+`retrieval_batches=[{query_index:0,hits:<#36 flat search hits>}]` (the recall-safe fallback the entrypoint passes);
+PURE-descend variant omits it (isolating the fast-beam reach).
+
+**(W2) The s10 measures against the WIRED packets (NOT #36-direct + #40-flat).**
+- NAVIGATION cost SUB-LINEAR from #40's OWN plan: `packet.retrieval_completeness.navigation_nodes_examined`
+  (the distinct nodes the plan touched, O(B*D), bounded) + the stage trace `retrieval_completeness.retrieval_plan.
+  stages[]` ({stage:shortlist|descend, level, examined, kept/pruned/descended, ...}). The scale sweep replicates the
+  real code namespace >=2 orders of magnitude; sub-linear = `nodes/leaf` ratio strictly DECREASING AND nav growth
+  `nav_growth_ppm < leaf_growth_ppm` (a bounded plan may keep nav ~constant, which is STILL sub-linear -- so we do
+  NOT require nav to GROW, unlike the flat #36-direct measure). p50/p95.
+- DUAL recall from the WIRED packets: hierarchy-PATH reach = the PURE-descend packet's evidence retains the required
+  record/source (the bounded fast-beam -- PARTIAL, the honest red-team gap, ~5.9% on the sample); guaranteed =
+  exhaustive-flat #36 reach (FULL); PACKET-EVIDENCE recall = the PRODUCTION packet (descend + the #36-flat fallback)
+  retains it (FULL). shortlist REGRET = guaranteed but not PATH; fallback FREQUENCY = PATH missed but PACKET kept.
+  Recall is credited by RECORD IDENTITY (rvid) / source-file, NOT excerpt substring (an excerpt is a WINDOW of its
+  chunk, so a text-substring check under-credits a correctly-retained record whose cited span omits the marker).
+- Contamination (b): 0 foreign-namespace evidence OR navigation_refs on a scoped compile. Provenance (d): every WIRED
+  source_chunk excerpt `provenance.reproduced && provenance.valid` (SEAM-1 hydration reproduces `direct_span`).
+  Current-vs-historical (c): the WIRED packet honors `current_only` (measured on the temporal labeled queries, which
+  route flat at i36 -- the router that routes temporal through descend is i37). Bounded cost (a): every WIRED packet
+  within `token_budget`/`max_excerpts` + the scale sweep's top-scale used <= the base budget. STALE-WINDOW recall:
+  `#36 hierarchy-mark-changed` a real leaf -> `retrieval_completeness.stale_navigation_encountered=True`, pruned NOT
+  increased (a stale synopsis never prunes), recall preserved via the fallback (never a silent miss).
+
+**(W3) The descend-vs-flat baseline (RETAINED + LABELED).** The i35 flat measurement (#36-direct nav + #40-flat) is
+kept as the report's top-level `labeled_queries`/`scale_sweep`/`tier1_criteria` (unchanged, byte-identical); the wired
+block adds `wired_descend.descend_vs_flat` (wired nav/leaf ppm per scale + wired PATH/guaranteed/packet/regret/fallback
+ppm) so the report shows the descend-vs-flat deltas. Not the acceptance number -- comparison.
+
+**(W4) tier1_accepted (wired).** `wired_descend.tier1_criteria` is an 11-criterion s10 set measured against the WIRED
+packets (wired_descend_path_ran + a..e + dual packet/guaranteed recall + disposition + stale_window + no_fold);
+`wired_descend.tier1_acceptance.accepted` = all pass. In wired mode the harness OVERRIDES the top-level
+`tier1_acceptance` + the summary `tier1_accepted`/`measurement_mode`/`wired_tier1_*` to the WIRED result. It stays
+HARNESS-COMPUTED over the corpus+CLI it is pointed at (NOT a project claim). A `probe_wired_capability` proves #40
+0.7.0 IS drivable into descend (port constructs + emits `retrieval_completeness` incl. `navigation_nodes_examined` +
+the stage trace); if not, a `fold_reconciliation` opens and `tier1_accepted` is REFUSED.
+
+**(W5) The FULL invocation + the `m40_argv` override.** `Invoke-RetrievalEval.ps1 -Op rehearsal -InputsJson
+'{op:rehearsal, wired_descend:true, corpus_root:..., benchmark:..., scales:[1,36,3600],
+adapter:{m40_argv:[<pwsh>,-NoProfile,-File,.../Invoke-ContextCompiler.ps1,-InputsJson,{REQUEST_FILE}]}}'` (or the
+python core `["{PYTHON}","{M40}","{REQUEST_FILE}"]`). `Invoke-RetrievalEval.ps1` forwards `wired_descend` + surfaces
+`measurement_mode`/`wired_tier1_*` in the result envelope. Full recipe: `FULL_CORPUS_RECIPE.md` s5a/s6.
+
+**(W6) The D-0077 fold items (i36, for the orchestrator).** Run the harness with `wired_descend:true` + the `m40_argv`
+override pointed at the FROZEN #40 0.7.0 CLI over the ~200MB corpus; assert `wired_descend.tier1_criteria_passed ==
+11`, `fold_reconciliation == []`, nav sub-linear from #40's `navigation_nodes_examined`, dual recall (PATH PARTIAL,
+guaranteed == packet == 1000000 ppm), stale-window recall preserved, 0 contamination, provenance 1000000 ppm; then
+(and only then) flip project `tier1_accepted`. The non-wired path stays byte-identical (skeleton `b6947a21`). Sample
+pins (cloud, cross-env stable): FLAT `structural_digest sha256:da34250e...`, WIRED `structural_digest
+sha256:1a3a8d5c...`; off-machine `test_rehearsal_eval` 55/55.

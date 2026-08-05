@@ -1,4 +1,4 @@
-# Full-corpus rehearsal recipe (the orchestrator's ~200MB Tier-1 acceptance gate) -- i35, plan fo-35-0a5bf334
+# Full-corpus rehearsal recipe (the orchestrator's ~200MB Tier-1 acceptance gate) -- i35/i36, plans fo-35-0a5bf334 / fo-36-1a676e4b
 
 The committed SAMPLE (`tests/fixtures/rehearsal-corpus/`, the click 8.1.7 slice) is what this worker BUILDS +
 VALIDATES the harness on -- small, fast, deterministic. The FULL ~200MB run is the ORCHESTRATOR's fold gate: it
@@ -70,9 +70,10 @@ unique localized decisive token so localized queries stay localized). To reach a
 leaf sweep from the ~5.5MB pinned set, drive:
 ```
 Invoke-RetrievalEval.ps1 -Op rehearsal -InputsJson '{
-  "corpus_root": "C:/.../full-corpus",
-  "benchmark":   "C:/.../full-benchmark.json",
-  "scales":      [1, 40, 1600] }'
+  "corpus_root":   "C:/.../full-corpus",
+  "benchmark":     "C:/.../full-benchmark.json",
+  "scales":        [1, 40, 1600],
+  "wired_descend": true }'
 ```
 `scales=[1,40,1600]` over ~5.5MB -> ~1600x -> ~8.8GB of ingested replicas at the top scale (well past ~200MB;
 lower the top factor to land near 200MB: ~200MB/5.5MB ~= 36x, so `[1, 36, 3600]` still spans >=2 orders while the
@@ -97,11 +98,49 @@ current-vs-historical / exact-reference / global-synthesis) with PINNED expected
 supersession `temporal_records` pair for the current-vs-historical criterion. The sample benchmark
 (`tests/fixtures/rehearsal-benchmark.json`) is the template.
 
+## 5a. i36 WIRED-DESCEND drive (the Tier-1 flip mechanism)
+
+`wired_descend:true` (top-level or under `config`) makes the harness DRIVE #40 0.7.0's SHIPPED public
+`-Retriever artifact_search` shortlist-and-descend port (aa2f0fb / D-0100) end-to-end and MEASURE s10 against the
+WIRED packets -- navigation cost from #40's OWN plan trace, not the #36-direct baseline. A request WITHOUT
+`wired_descend` is BYTE-IDENTICAL to 0.7.0 (regression-proven; the flat #36-direct-nav + #40-flat path is retained
+as a LABELED baseline for the descend-vs-flat delta).
+
+**The WIRED-descend #40 request the harness constructs (keys from #40 SCHEMA_NOTES s18; NEVER guessed).** For each
+labeled query (own descend class) + each scale localized query (coerced to `global_synthesis`) the harness builds:
+```
+{ "op": "compile",
+  "task": { "original_goal": <q>, "request_text": <q>, "namespace": <ns>, "task_type": "research",
+            "query_class": "global_synthesis"|"precedent_search",          # a #40 DESCEND class
+            "control_plane": { "permission_grants": [ { "namespaces": [<ns>] } ] },   # SCOPED, single ns
+            "config": { "hier_shortlist_k": 4, "hier_beam_b": 4, "hier_depth_d": 6, "token_budget": 2000 } },
+  "retrieval_meta": { "retriever": "artifact_search", "corpus_version": <cv> },       # pinned snapshot
+  "catalog_db_path": <the built #36 catalog db>,                                       # over the built tree
+  "retrieval_batches": [ { "query_index": 0, "hits": <#36 flat search hits> } ] }      # recall-safe fallback
+```
+The port constructs ONLY when ALL hold (`_maybe_build_artifact_search_port`): retriever normalizes to
+`artifact_search`, a real `catalog_db_path`, a DESCEND `query_class`, an ENFORCED non-empty SINGLE-namespace
+closure, #36 importable, and a CURRENT published hierarchy for that namespace. The harness reads the WIRED nav
+cost from `packet.retrieval_completeness.navigation_nodes_examined` and the stage trace from
+`packet.retrieval_completeness.retrieval_plan.stages[]`.
+
+**The `m40_argv` adapter override** (how the ORCHESTRATOR points the harness at the FROZEN #40 0.7.0 CLI at fold):
+```
+"adapter": { "m40_argv": ["<pwsh>", "-NoProfile", "-File",
+                          "C:/.../modules/40-context-compiler/Invoke-ContextCompiler.ps1",
+                          "-InputsJson", "{REQUEST_FILE}"] }        # or the python core: ["{PYTHON}","{M40}","{REQUEST_FILE}"]
+```
+The adapter substitutes `{PYTHON}`/`{M36}`/`{M40}`/`{REQUEST_FILE}` and reads each core's envelope from
+`request.meta_path`. Default `m40_argv` resolves the python core sibling to the module -- the orchestrator overrides
+it to Lane A's WIRED #40 CLI. The non-wired flat path is UNCHANGED regardless of the override.
+
 ## 6. Run + the flip
 
 The harness emits `rehearsal_report.json` + a computed `tier1_accepted` over the corpus+CLI it is pointed at. It
-does NOT claim project-level Tier-1 acceptance. The ORCHESTRATOR runs this against Lane A's WIRED #40 CLI
-(`-Retriever artifact_search` with the real hierarchy_port) at the D-0077 fold; only if the full gate passes on
-the ~200MB real corpus does the orchestrator flip project-level `tier1_accepted`. If the #40 CLI it is pointed at
-lacks a field a criterion needs, the harness records a `fold_reconciliation` flag and REFUSES `tier1_accepted`
-(never a silent pass).
+does NOT claim project-level Tier-1 acceptance. In WIRED mode the report adds a `wired_descend` block (its own
+11-criterion s10 tier1 measured against the WIRED packets + the descend-vs-flat deltas) and flips the AUTHORITATIVE
+`tier1_acceptance`/summary `tier1_accepted` to the WIRED result. The ORCHESTRATOR runs this with
+`wired_descend:true` (and the `m40_argv` override) against the FROZEN #40 0.7.0 CLI at the D-0077 fold; only if the
+full ~200MB gate passes does the orchestrator flip project-level `tier1_accepted`. If the #40 CLI it is pointed at
+cannot be driven into descend (or lacks a field a criterion needs), the harness records a `fold_reconciliation`
+flag and REFUSES `tier1_accepted` (never a silent pass).
