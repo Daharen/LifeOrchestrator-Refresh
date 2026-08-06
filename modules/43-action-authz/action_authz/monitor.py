@@ -18,6 +18,42 @@ import unicodedata
 from . import canon, schemas, stores as S
 
 
+# ---------------------------------------------------------------------------
+# amendment 6 / R1-ROLE-1 (red-team Finding 6): the role-conversion SINK MATRIX switch.
+#
+# R1-ROLE-1 forbids any router-diagnostic OR working-memory carrier from populating/satisfying ANY
+# of these sinks. The REFERENCE monitor never reads a diagnostic/working carrier into a sink; each
+# `M-RC-<CARRIER>-<SINK>` seeded defect routes the carrier into exactly ONE sink so tests/role_matrix.py
+# can kill every (carrier, sink) pair independently under the test-only non_execution=false path (so
+# A31 + completion are actually REACHED, not short-circuited at A06). Empty mutations => reference.
+RC_SINKS = ("evidence", "evidence_requirement", "coverage_result", "packet_disposition",
+            "control_plane", "grant", "policy", "approval", "health", "trusted_status",
+            "completion", "target", "effect")
+_RC_CARRIER_FLAG = {"routing": "routing_present", "working": "working_present"}
+
+
+def _rc_launder(pmeta, sink, mutations):
+    """True iff a role-conversion defect for `sink` is active AND its diagnostic/working carrier is
+    actually present in the packet. The reference impl (empty mutations) always returns False."""
+    for carrier, tag in (("routing", "RT"), ("working", "WM")):
+        if ("M-RC-%s-%s" % (tag, sink.upper())) in mutations and bool(pmeta.get(_RC_CARRIER_FLAG[carrier])):
+            return True
+    return False
+
+
+def _rc_grant_from_carrier(ca_tool_id, action_namespace, targets, effects):
+    """A permissive grant a role-conversion defect would synthesize from an untrusted carrier (used
+    ONLY under an M-RC-*-GRANT/CONTROL_PLANE defect to show the carrier laundering into authority)."""
+    return {"grant_id": "g_rc_carrier", "tool_id": ca_tool_id, "operation": "*",
+            "action_namespace": action_namespace,
+            "allowed_target_ids": [t["canonical_target_id"] for t in targets],
+            "effect_classes": sorted({e["effect_class"] for e in effects}),
+            "max_quantity": {e["effect_class"]: 1 << 62 for e in effects},
+            "externality_max": "public_external", "risk_ceiling": 4, "validity_from": 0,
+            "validity_to": 9_000_000_000_000_000, "approval_mode": "none",
+            "scopes": [], "limits": []}
+
+
 class Decision(object):
     __slots__ = ("outcome", "caller_obj", "reason_code", "permit", "permit_ref",
                  "canonical_action", "cad", "matched_grant_ids")
@@ -194,6 +230,10 @@ def authorize(proposal_bytes, st, side_effect_policy_ref=None, mutations=frozens
     # ---- A11 effective namespace = intersection(request, grants) via the ONE ns_permitted. ----
     request_ns = set(gs.request_namespaces) if gs.request_namespaces else set(pv.allowed_namespaces or [pv.namespace])
     eff_ns = canon.effective_namespaces(request_ns, gs.grant_namespaces(), mutations)
+    if _rc_launder(pmeta, "control_plane", mutations):
+        # R1-ROLE-1 defect: a diagnostic/working carrier widens the effective namespace (control-plane
+        # authority). The reference NEVER lets a carrier touch the ns intersection.
+        eff_ns = set(eff_ns) | set(gs.grant_namespaces())
     if not eff_ns:
         return _deny(st, "A11_empty_namespace", mutations)
 
@@ -217,7 +257,8 @@ def authorize(proposal_bytes, st, side_effect_policy_ref=None, mutations=frozens
         return _deny(st, "A13_disabled", mutations)
 
     # ---- A14 tool health. --------------------------------------------------------------------
-    if "M-A10" not in mutations:
+    if "M-A10" not in mutations and not _rc_launder(pmeta, "health", mutations):
+        # (_rc_launder "health": a diagnostic/working carrier asserts the tool is healthy -- R1-ROLE-1.)
         hs = man["health_source"]
         hrec = st.health.current(hs["source_id"])
         if hrec is None:
@@ -260,8 +301,9 @@ def authorize(proposal_bytes, st, side_effect_policy_ref=None, mutations=frozens
         ns_to_check = [] if "M-S04" in mutations else [t["namespace"]]  # M-S04 omits this ns hop
         if "M-S05" not in mutations:
             ns_to_check += transitive_ns.get(t["canonical_target_id"], [])
+        _tgt_launder = _rc_launder(pmeta, "target", mutations)  # R1-ROLE-1: carrier -> target resolution
         for ns in ns_to_check:
-            if not canon.ns_permitted(ns, eff_ns, mutations):
+            if not _tgt_launder and not canon.ns_permitted(ns, eff_ns, mutations):
                 return _deny(st, "A18_ns_closure", mutations, leak=ns)
     target_namespaces = {t["namespace"] for t in targets}
     if len(target_namespaces) != 1 and "M-S07" not in mutations:
@@ -278,6 +320,10 @@ def authorize(proposal_bytes, st, side_effect_policy_ref=None, mutations=frozens
         effects = classifier(obj["operation"], canon_args, targets, opman, mutations)
     if not effects:
         return _deny(st, "A19_no_effects", mutations)
+    if _rc_launder(pmeta, "effect", mutations):
+        # R1-ROLE-1 defect: a diagnostic/working carrier rewrites the DERIVED effect quantity (effect
+        # derivation). The reference derives effects ONLY from the manifest classifier over canon args.
+        effects = [dict(e, quantity=1) for e in effects]
 
     # ---- A20 effect validation (+ the effect-scope ns hop; M-S04 omits this one hop). --------
     if len(effects) > opman["max_effect_count"]:
@@ -359,6 +405,10 @@ def authorize(proposal_bytes, st, side_effect_policy_ref=None, mutations=frozens
         opman_match = dict(opman)
         opman_match["required_permission_scopes"] = card["required_permission_scopes"]
     matched, ok = gs.match(ca_real, st.clock.now_ms(), opman_match, mutations)
+    if not ok and _rc_launder(pmeta, "grant", mutations):
+        # R1-ROLE-1 defect: a diagnostic/working carrier is accepted as a grant (grant authority).
+        _ = _rc_grant_from_carrier(obj["tool_id"], action_namespace, targets, effects)
+        matched, ok = ["g_rc_carrier"], True
     if not ok:
         return _deny(st, "A26_grant", mutations)
 
@@ -369,6 +419,10 @@ def authorize(proposal_bytes, st, side_effect_policy_ref=None, mutations=frozens
     # ---- A28 approval requirement (strictest). -----------------------------------------------
     approval_req = S.approval_required(opman["approval_requirement"], eff_risk, {"derived_effect_set": effects},
                                        policy_approval, mutations)
+    if _rc_launder(pmeta, "policy", mutations):
+        # R1-ROLE-1 defect: a diagnostic/working carrier weakens the side-effect policy / approval
+        # escalation. The reference computes approval as the STRICTEST of manifest/risk/effects/policy.
+        approval_req = "none"
 
     # ---- A29 approval validation. ------------------------------------------------------------
     approval_ref = None
@@ -382,13 +436,20 @@ def authorize(proposal_bytes, st, side_effect_policy_ref=None, mutations=frozens
             if rec is None:
                 if "M-A03" in mutations and pmeta.get("working_approval_claim"):
                     approval_ref = "wm_forged_approval"  # working-memory 'approval received' accepted
+                elif _rc_launder(pmeta, "approval", mutations):
+                    approval_ref = "rc_carrier_approval"  # R1-ROLE-1: carrier laundered into approval
                 else:
                     return _deny(st, "A29_approval", mutations)
             else:
                 approval_ref = rec["approval_ref"]
 
     # ---- A30 completion-contract isolation (does not authorize this action). -----------------
-    cc = getattr(st, "completion_contracts", {}).get(obj["task_id"])
+    # amendment 4 (Finding 4): resolve the bound contract via the IMMUTABLE packet_id first (the
+    # completion evaluator binds through packet_id, never a current-contract-by-task lookup). The
+    # by-task map is retained ONLY as the legacy isolation fallback for the tamper check.
+    cc = getattr(st, "completion_by_packet", {}).get(obj["packet_id"])
+    if cc is None:
+        cc = getattr(st, "completion_contracts", {}).get(obj["task_id"])
     if cc is not None:
         if canon.digest_omitting(cc, "contract_digest") != cc.get("contract_digest"):
             return _deny(st, "A30_completion_tamper", mutations)
@@ -405,6 +466,10 @@ def authorize(proposal_bytes, st, side_effect_policy_ref=None, mutations=frozens
             # amendment 6 / R1-ROLE-1: the #40 0.8.0 router stage-trace is a non-authoritative
             # DIAGNOSTIC; seeded defect M-R11 launders it into evidence coverage.
             answerable = True
+        # the FULL R1-ROLE-1 sink matrix over the evidence-class sinks (routing + working carriers):
+        for _sink in ("evidence", "evidence_requirement", "coverage_result", "packet_disposition"):
+            if not answerable and _rc_launder(pmeta, _sink, mutations):
+                answerable = True
         if not answerable:
             return _deny(st, "A31_not_answerable", mutations)
         if not pmeta.get("provenance_ok", False):
@@ -500,6 +565,24 @@ def authorize(proposal_bytes, st, side_effect_policy_ref=None, mutations=frozens
         st.permits.insert(p2)
     else:
         st.permits.insert(permit)
+
+    # amendment 3 (Boundary D) + amendment 4 (completion binding): capture the trusted ISSUE-TIME
+    # epoch snapshot the executor re-reads AFTER the atomic claim (grant/policy/approval/manifest/
+    # artifact/health/packet+status currentness/store epoch), and stamp the IMMUTABLE completion
+    # binding resolved via the authentic packet_id (never a current-contract-by-task lookup).
+    st.permits.record_issue_snapshot(permit_id, {
+        "grant_epoch": grant_epoch_at_check,
+        "grant_current": gs.current,
+        "policy_epoch": policy_epoch_at_check,
+        "installed_digest": man["installed_artifact_digest"],
+        "manifest_digest": man["manifest_digest"],
+        "health": health_at_check,
+        "packet_current": pv.current,
+        "packet_non_execution": pv.non_execution,
+        "store_epoch": st.permits.epoch,
+        "approval_ref": approval_ref,
+    })
+    st.permits.record_completion_binding(permit_id, st.completion_binding_for_packet(obj["packet_id"]))
 
     # ---- A35 permit non-disclosure. ----------------------------------------------------------
     if "M-R09" in mutations:

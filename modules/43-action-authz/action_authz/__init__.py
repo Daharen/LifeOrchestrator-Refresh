@@ -10,6 +10,6 @@ amendments (s6) + its pinned normative source research/2026-08-05-i36-action-aut
 STANDARD-LIBRARY ONLY; deterministic; integer-only JSON; byte-identical on re-run.
 """
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 
 from . import canon, schemas, stores, monitor, boundary  # noqa: E402,F401

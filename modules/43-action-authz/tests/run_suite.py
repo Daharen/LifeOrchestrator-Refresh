@@ -22,7 +22,8 @@ if _MODDIR not in sys.path:
     sys.path.insert(0, _MODDIR)
 
 from action_authz import canon, VERSION  # noqa: E402
-from tests import harness, fixtures_suite, properties, mutations, integration, fuzzer, oracle_matrix  # noqa: E402
+from tests import (harness, fixtures_suite, properties, mutations, integration, fuzzer,  # noqa: E402
+                   oracle_matrix, role_matrix, completion_binding, p01gate, views_golden, report)
 
 # The mandatory seeded mutations (s8.6 + amendment 6 M-R11): A01-A10, S01-S10, R01-R11, E01-E36 = 67.
 MANDATORY_MUTATIONS = (["M-A%02d" % i for i in range(1, 11)]
@@ -52,16 +53,25 @@ def run_once():
     fuzz = fuzzer.run(checks["fuzzer"])
     checks["oracle"] = harness.Check("oracle")
     oracle = oracle_matrix.run(checks["oracle"])
+    checks["role"] = harness.Check("role")
+    role = role_matrix.run(checks["role"])
+    checks["completion"] = harness.Check("completion")
+    completion = completion_binding.run(checks["completion"])
+    checks["views"] = harness.Check("views")
+    views = views_golden.run(checks["views"])
+    checks["p01gate"] = harness.Check("p01gate")
+    p01 = p01gate.run(checks["p01gate"])
     checks["integration"] = harness.Check("integration")
     integ = integration.run(checks["integration"])
     signature = {
         "fixtures_hashes": {k: hashes[k] for k in sorted(hashes)},
         "sections": {name: {"pass": sorted(c.passed), "fail": sorted(n for n, _ in c.failed)}
                      for name, c in checks.items()},
-        "mutation_matrix": matrix, "integration": integ,
-        "fuzzer": fuzz, "oracle_rows": len(oracle),
+        "mutation_matrix": matrix, "integration": integ, "fuzzer": fuzz,
+        "oracle_rows": len(oracle), "oracle_digest": canon.digest_of(oracle),
+        "role_matrix": role, "p01gate": p01["byte_equivalent"], "views": views["view_digests"],
     }
-    return checks, hashes, matrix, integ, fuzz, oracle, signature
+    return checks, hashes, matrix, integ, fuzz, oracle, role, completion, p01, views, signature
 
 
 def _criterion(state, note):
@@ -69,8 +79,8 @@ def _criterion(state, note):
 
 
 def main():
-    checks1, hashes1, matrix1, integ1, fuzz1, oracle1, sig1 = run_once()
-    _, _, _, _, _, _, sig2 = run_once()
+    checks1, hashes1, matrix1, integ1, fuzz1, oracle1, role1, completion1, p011, views1, sig1 = run_once()
+    _, _, _, _, _, _, _, _, _, _, sig2 = run_once()
     sig1_hash = canon.digest_of(sig1)
     sig2_hash = canon.digest_of(sig2)
     identical = (sig1_hash == sig2_hash)
@@ -108,19 +118,47 @@ def main():
         "pass" if checks1["properties"].n_fail == 0 else "fail", "U-EFFECT holds (properties)")
     crit["7_constant_caller_bytes"] = _criterion("pass" if total_fail == 0 else "fail",
                                                 "cross-namespace failures return constant caller bytes (F6b)")
+    # ---- the i39 gating additions (red-team Findings 1-7) -------------------------------------
+    oracle_not_run = [r["obligation_id"] for r in oracle1 if r.get("status") == "not_run"]
+    oracle_failed = [r["obligation_id"] for r in oracle1 if r.get("status") == "fail"]
+    oracle_complete = (not oracle_not_run) and (not oracle_failed) and checks1["oracle"].n_fail == 0
+    role_killed = sum(1 for r in role1 if r["status"] == "killed")
+    role_all = (checks1["role"].n_fail == 0 and role_killed == len(role1) and len(role1) > 0)
+    completion_ok = checks1["completion"].n_fail == 0
+    views_ok = checks1["views"].n_fail == 0
+    p01_ok = checks1["p01gate"].n_fail == 0 and bool(p011["byte_equivalent"])
+    v090_ok = bool(integ1.get("v090_test_only_permit") and integ1.get("v090_adversarial_identical"))
+
     crit["8_one_canonical_implementation"] = _criterion(
-        "pass", "ONE canon.py (parse/serialize/ns/digest/match/verify); byte-equivalent to p01gate cross-check")
+        "pass" if p01_ok else "fail",
+        "ONE canon.py cross-validated BYTE-EQUIVALENT to the INDEPENDENT blind p01gate over %d vectors "
+        "(shipped in the bundle)" % p011["corpus_vectors"])
     crit["9_real_module_chain"] = _criterion(
-        "pass" if (integ1["real_denied"] == integ1["real_total"] and integ1["real_total"] >= 1) else "fail",
-        "authentic #40 0.7.0 chain %d/%d -> A06 DENY; 0.8.0 router carrier proven inert (F3b/M-R11); "
-        "authentic-0.8.0 routed capture recommended at fold" % (integ1["real_denied"], integ1["real_total"]))
+        "pass" if (integ1["real_denied"] == integ1["real_total"] and integ1["real_total"] >= 1 and v090_ok) else "fail",
+        "authentic #40 0.7.0+0.9.0 chain %d/%d -> A06 DENY; the 0.9.0 routed+wm test-only variant REACHES "
+        "A09/A11/A30/A31; adversarial cad-identical" % (integ1["real_denied"], integ1["real_total"]))
     crit["10_model_probes_regression_only"] = _criterion("not_applicable",
                                                          "actual-model probes are regression-only and were not run")
+    crit["11_obligation_oracle_complete"] = _criterion(
+        "pass" if oracle_complete else ("incomplete" if oracle_not_run else "fail"),
+        "%d obligation rows (A01-A36 + Boundary A/B/C/D + U-properties + mutations); not_run=%s failed=%s"
+        % (len(oracle1), oracle_not_run, oracle_failed))
+    crit["12_role_sink_matrix"] = _criterion(
+        "pass" if role_all else "fail",
+        "R1-ROLE-1 sink matrix %d/%d (carrier x sink) killed under non_execution=false" % (role_killed, len(role1)))
+    crit["13_completion_packet_binding"] = _criterion(
+        "pass" if completion_ok else "fail",
+        "completion binds via the immutable packet_id + per-leaf minimum-scope; every substitution -> indeterminate")
+    crit["14_v090_authentic_chain_in_suite"] = _criterion(
+        "pass" if v090_ok else "fail",
+        "the #40 0.9.0 routed+wm authentic chain is OWNED + RUN inside the suite gate (both modes)")
 
     mandatory = ["1_all_ten_families_x2runs", "2_fixed_seed_fuzzer", "3_every_mandatory_mutation_killed",
                  "4_denied_no_permit_no_diff", "5_no_raw_model_path_to_executor",
                  "6_state_diff_one_consumed_permit", "7_constant_caller_bytes",
-                 "8_one_canonical_implementation", "9_real_module_chain"]
+                 "8_one_canonical_implementation", "9_real_module_chain",
+                 "11_obligation_oracle_complete", "12_role_sink_matrix",
+                 "13_completion_packet_binding", "14_v090_authentic_chain_in_suite"]
     states = [crit[k]["state"] for k in mandatory]
     build_status = "build_complete"
     if "fail" in states:
@@ -134,7 +172,7 @@ def main():
     activation_status = "prohibited"   # non_execution:true holds; Blockers remain
 
     print("=" * 82)
-    print("module #43 action.authz -- P0-1 deny-by-default reference monitor + injection SUITE (FULL GATE, i38)")
+    print("module #43 action.authz -- P0-1 deny-by-default reference monitor + injection SUITE (FULL GATE, i39)")
     print("action_authz VERSION %s | DESIGN-ONLY (non_execution:true holds; nothing action-capable)" % VERSION)
     print("=" * 82)
     print("  RESULT TAXONOMY (amendment 1):")
@@ -142,7 +180,8 @@ def main():
     print("     p0_1_gate_status  = %s" % p0_1_gate_status)
     print("     activation_status = %s" % activation_status)
     print("-" * 82)
-    for name in ("fixtures", "properties", "mutations", "fuzzer", "oracle", "integration"):
+    for name in ("fixtures", "properties", "mutations", "fuzzer", "oracle", "role", "completion",
+                 "views", "p01gate", "integration"):
         c = checks1[name]
         print("  %-12s %3d/%-3d passed" % (name, c.n_pass, c.n_pass + c.n_fail))
         for n, d in c.failed:
@@ -155,12 +194,23 @@ def main():
     print("  FIXTURE FAMILIES ....... covered: %s (all 10)%s"
           % (sorted(fam_covered), "" if not fam_missing else "  MISSING: %s" % fam_missing))
     print("  FIXED-SEED FUZZER ...... %d iterations, %d violations" % (fuzz1["iterations"], fuzz1["violations"]))
-    print("  ORACLE MATRIX .......... %d rows (independent observable per obligation)" % len(oracle1))
+    print("  OBLIGATION ORACLE ...... %d rows, all executed pass|fail|not_run (not_run=%d): A01-A36 + "
+          "Boundary A/B/C/D + U-properties + mutations" % (len(oracle1), len(oracle_not_run)))
+    print("  R1-ROLE-1 SINK MATRIX .. %d/%d (carrier x sink) killed under non_execution=false"
+          % (role_killed, len(role1)))
+    print("  COMPLETION BINDING ..... packet_id-bound + per-leaf min-scope; %d/%d substitution checks pass"
+          % (checks1["completion"].n_pass, checks1["completion"].n_pass + checks1["completion"].n_fail))
+    print("  BYTE-EXACT VIEWS ....... %d/%d golden vectors pass; the 5 test-view specs pinned by digest"
+          % (checks1["views"].n_pass, checks1["views"].n_pass + checks1["views"].n_fail))
+    print("  INDEPENDENT p01gate .... byte-equivalent=%s over %d vectors (Blocker-8 differential, shipped)"
+          % (p011["byte_equivalent"], p011["corpus_vectors"]))
     print("  REAL #40 CHAIN ......... %d/%d authentic packets -> DETERMINISTIC DENIAL at A06 (non_execution=true)"
           % (integ1["real_denied"], integ1["real_total"]))
     for r in integ1["results"]:
         print("       %s (%s, %s) -> %s [%s]" % (r["packet"], r["packet_id"][:20],
                                                  r["compiler_version"], r["outcome"], r["reason"]))
+    print("  0.9.0 TEST-ONLY CHAIN .. permit reaches A09/A11/A30/A31=%s ; adversarial cad-identical=%s"
+          % (integ1.get("v090_test_only_permit"), integ1.get("v090_adversarial_identical")))
     print("  POSITIVE PERMIT PATH ... %s (test-only non_execution=false mock authority packet)"
           % ("OK" if integ1["positive_permit"] else "FAILED"))
     print("  DOUBLE-RUN BYTE IDENTITY %s (%s)" % ("OK" if identical else "MISMATCH", sig1_hash[:16]))
@@ -175,7 +225,30 @@ def main():
 
     consistent = (total_fail == 0 and identical and not missing and
                   integ1["real_denied"] == integ1["real_total"] and integ1["real_total"] >= 1 and
-                  integ1["positive_permit"] and fuzz1["ok"])
+                  integ1["positive_permit"] and fuzz1["ok"] and oracle_complete and role_all and
+                  completion_ok and p01_ok and v090_ok and views_ok)
+
+    # ---- independently-auditable evidence bundle (red-team Finding 7) ------------------------
+    payload = {
+        "taxonomy": {"build_status": build_status, "p0_1_gate_status": p0_1_gate_status,
+                     "activation_status": activation_status},
+        "criteria": crit,
+        "double_run": {"identical": identical, "signature_sha256": sig1_hash},
+        "totals": {"pass": total_pass, "fail": total_fail},
+        "sections": {name: {"pass": c.n_pass, "fail": c.n_fail} for name, c in sorted(checks1.items())},
+        "mutation_kill": {"killed": len(MANDATORY_MUTATIONS) - len(missing),
+                          "total": len(MANDATORY_MUTATIONS), "missing": missing},
+        "families_covered": sorted(fam_covered),
+        "fuzzer": fuzz1, "integration_summary": {k: integ1[k] for k in sorted(integ1) if k != "results"},
+        "integration_results": integ1["results"], "role_matrix": role1, "role_killed": role_killed,
+        "completion_binding": completion1, "p01gate": p011, "views": views1,
+        "oracle": {"rows": len(oracle1), "not_run": oracle_not_run, "failed": oracle_failed},
+        "activation_staged": ACTIVATION_STAGED, "consistent": consistent,
+    }
+    manifest = report.write_bundle(payload, oracle1)
+    print("  EVIDENCE BUNDLE ........ tests/report/ (%d files; bundle_digest %s)"
+          % (len(manifest["files"]), manifest["bundle_digest"][:16]))
+    print("=" * 82)
     print("SUITE: %s | p0_1_gate_status = %s" % ("PASS" if consistent else "FAIL", p0_1_gate_status))
     return 0 if consistent else 1
 

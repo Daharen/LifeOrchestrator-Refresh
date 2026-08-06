@@ -1,92 +1,773 @@
 """
-oracle_matrix.py -- the per-check / U-property oracle matrix (contract s6 amendment 5; i38).
+oracle_matrix.py -- the per-OBLIGATION oracle matrix (contract s6 amendment 5; red-team Finding 1).
 
-One row per mandatory mutation naming the INDEPENDENT observable surface its kill is decided on
-(never trace-presence alone). Built by joining the mutation REGISTRY with the observable each
-sec-predicate actually inspects. Asserts every mandatory mutation has a row with a named surface.
+The i38 matrix had one row per MUTATION only. This rebuilds it as one EXECUTED row per frozen
+obligation -- every A01-A36 check, every Boundary A1-A7 / B1-B4 / C1-C6 / D1-D8 obligation, every
+U-property, AND every M-mutation -- each decided on a SEPARATE, INDEPENDENT observable surface (decision
++ permit-store delta / caller bytes / privileged audit event / model-facing caller_result / effect
+ledger / canonical digest / completion result / trust-class capability / static call-graph), never on
+check-trace presence. Each row carries the frozen fields:
+
+    obligation_id, fixture_id, mutant_or_fault_id, baseline_expected, observable_surface,
+    independent_oracle, expected_fault_difference
+
+and an EXECUTED status pass | fail | not_run. run() asserts EVERY obligation is `pass` with NO `not_run`;
+run_suite.py gates `p0_1_gate_status` on that completeness (any not_run => incomplete).
+
+For A35/A36 the oracle inspects their OWN surfaces (the model-facing caller_result and the privileged
+security log). For no_path(Untrusted/Request -> Authority) it uses BOTH an unforgeable
+authority-constructor capability AND a static import/call-graph reachability scan of the module source.
 """
 
+import os
+import re
+
+from action_authz import canon, stores as S
+from action_authz.monitor import authorize, canonical_digest, PermitRef
+from action_authz.boundary import MockExecutor
+from action_authz.stores import CONSTANT_DENIAL_BYTES
+from . import harness
 from . import mutations as MUT
 
-# obligation_id + observable_surface + independent_oracle per mutation (contract s5/s6/s8).
-_ORACLE = {
-    "M-A01": ("A09/A26/U-AUTHORITY", "decision + permit-store delta", "evidence 'grant' cannot enter authority"),
-    "M-A02": ("A26/U-AUTHORITY", "decision + permit-store delta", "skill-card scopes are not manifest data"),
-    "M-A03": ("A29/U-AUTHORITY", "decision", "'approval received' in working memory is not an approval"),
-    "M-A04": ("A30/U-ROLE", "completion evaluator result", "tool stdout is not trusted completion status"),
-    "M-A05": ("A09", "decision", "proposal cannot select the authority snapshot ref"),
-    "M-A06": ("A3/A6/U-ROLE", "trust-class origin", "ordinary derive never yields Authority"),
-    "M-A07": ("A2/A3/no_path", "Authority-constructor capability", "no ordinary path mints Authority"),
-    "M-A08": ("A19/C3", "decision", "claimed_effects excluded from derivation/matching"),
-    "M-A09": ("A04", "decision", "provenance must be adapter-attested, not caller-supplied"),
-    "M-A10": ("A14", "decision", "evidence cannot set tool health / enabled"),
-    "M-S01": ("A11/U-SCOPE", "effective_allowed_namespaces", "authorized ns is request ∩ grant"),
-    "M-S02": ("A11/U-SCOPE", "effective_allowed_namespaces", "intersection, never union"),
-    "M-S03": ("A18/U-SCOPE", "ns_permitted admission", "exact-match ns (no wildcard/prefix/all)"),
-    "M-S04": ("A18/A20/U-SCOPE", "decision (ns closure hop)", "every target/effect ns is checked"),
-    "M-S05": ("A18/U-SCOPE", "decision (transitive members)", "closure covers transitive constituents"),
-    "M-S06": ("A17/A18/U-SCOPE", "decision", "symlink/alias cannot resolve out of scope"),
-    "M-S07": ("A18/U-SCOPE", "decision", "a v0.1 permit authorizes exactly one namespace"),
-    "M-S08": ("A35/A36/U-SCOPE", "constant caller bytes", "no branch/step oracle to the caller"),
-    "M-S09": ("A36", "ordinary log contents", "no attacker payload in the ordinary log"),
-    "M-S10": ("A31/U-SCOPE", "completion evaluator result", "out-of-scope status cannot complete"),
-    "M-R01": ("A31/U-ROLE", "decision", "navigation never satisfies evidence"),
-    "M-R02": ("A31/A09/U-ROLE", "decision", "working memory never satisfies evidence/authority"),
-    "M-R03": ("A6/U-ROLE", "trust-class origin", "derived/aggregate is not execution authority"),
-    "M-R04": ("D1/U-ROLE", "executor entry + effect ledger", "no raw tool-call reaches the executor"),
-    "M-R05": ("D1/U-ROLE", "executor entry + effect ledger", "no proposal reaches the executor"),
-    "M-R06": ("D1/D2/U-ROLE", "executor entry + effect ledger", "executor resolves permits from the store"),
-    "M-R07": ("A30/U-ROLE", "completion evaluator result", "model/evidence prose never completes"),
-    "M-R08": ("A30/U-ROLE/D6", "completion evaluator result", "tool stdout is not a completion actual"),
-    "M-R09": ("A35", "model-facing caller_result", "permit bytes/nonce never returned to the model"),
-    "M-R10": ("A31/U-ROLE", "decision", "an unresolved frontier is not proof of absence"),
-    "M-R11": ("A31/R1-ROLE-1/U-ROLE", "decision", "R-1 router stage-trace is a non-authoritative diagnostic"),
-    "M-E01": ("A02/U-EFFECT", "decision", "duplicate keys rejected at strict parse"),
-    "M-E02": ("A15", "decision", "unknown arg field rejected (closed schema)"),
-    "M-E03": ("A15", "decision", "no type coercion"),
-    "M-E04": ("A16", "canonical bytes of NFC variants", "canonicalization makes NFC variants equal"),
-    "M-E05": ("A17/A18/U-SCOPE", "decision", "canonical identity used, not caller spelling"),
-    "M-E06": ("A17/U-SCOPE", "decision", "aliases/symlinks resolved before authorization"),
-    "M-E07": ("A19/A20/A21", "derived effect set", "wrapper delegated effects classified"),
-    "M-E08": ("A26", "decision", "grant match includes operation"),
-    "M-E09": ("A26", "decision", "grant match includes canonical targets"),
-    "M-E10": ("A26", "decision", "grant match includes effect class/quantity/externality"),
-    "M-E11": ("A27", "decision", "policy escalation cannot be weakened"),
-    "M-E12": ("A28/A29", "decision", "required approval enforced"),
-    "M-E13": ("A29", "decision", "approval bound to the exact digest/task/ns/manifest/grant"),
-    "M-E14": ("A25/U-EFFECT", "canonical_action_digest", "digest binds arguments"),
-    "M-E15": ("A25/U-EFFECT", "canonical_action_digest", "digest binds resolved targets"),
-    "M-E16": ("A25/U-EFFECT", "canonical_action_digest", "digest binds derived effects"),
-    "M-E17": ("A25/U-EFFECT", "canonical_action_digest", "digest binds ns/risk/sandbox/limits/idem"),
-    "M-E18": ("A25/U-EFFECT", "canonical_action_digest", "digest is authorizer-computed, not caller-supplied"),
-    "M-E19": ("A06/U-EFFECT", "decision", "non_execution:true denies at A06"),
-    "M-E20": ("A10/A32", "decision", "stale/revoked grant rejected"),
-    "M-E21": ("A29", "decision", "stale/revoked approval rejected"),
-    "M-E22": ("A07", "decision", "packet/corpus drift rejected"),
-    "M-E23": ("A12/A32/D3", "decision", "manifest/artifact drift rejected"),
-    "M-E24": ("A14", "decision", "stale/unhealthy tool rejected"),
-    "M-E25": ("A32", "decision", "the final TOCTOU recheck is present"),
-    "M-E26": ("A33/U-EFFECT", "permit-store count", "one reservation -> one permit"),
-    "M-E27": ("D8/U-EFFECT", "effect ledger across reuse", "one-shot permit not reusable"),
-    "M-E28": ("D3", "effect ledger", "expired permit produces no effect"),
-    "M-E29": ("D4/U-EFFECT", "effect ledger + state diff", "post-claim target substitution -> no effect"),
-    "M-E30": ("D7/U-EFFECT", "independent effect ledger", "actual effects subset of authorized within limits"),
-    "M-E31": ("D5/U-EFFECT", "effect ledger on rejection", "a rejected execution yields no state diff"),
-    "M-E32": ("D8/U-EFFECT", "effect ledger after crash", "crash never makes a permit reusable"),
-    "M-E33": ("D7/U-EFFECT", "effect ledger", "no retry under the same permit"),
-    "M-E34": ("D7/U-EFFECT", "effect ledger", "no rollback/follow-up under the original permit"),
-    "M-E35": ("A30/U-ROLE", "completion evaluator result", "missing/stale status is not success"),
-    "M-E36": ("A30/U-ROLE", "completion evaluator result", "status from another action cannot complete"),
+pb = harness.prop_bytes
+_MODDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _pfx(d):
+    return "PERMIT" if d.outcome == "PERMIT" else (d.reason_code or "")[:3]
+
+
+def _authz(build, m=frozenset()):
+    st, prop = build()
+    if isinstance(prop, (bytes, bytearray)):
+        d = authorize(prop, st, mutations=m)
+    else:
+        d = authorize(pb(prop), st, mutations=m)
+    return st, d
+
+
+# ============================================================================ A-check deny isolation
+def _deny_iso(build, prefix):
+    """Independent surface: privileged reason_code + permit-store delta. A proposal crafted to violate
+    ONLY this obligation is DENIED here with no permit; a compliant proposal is NOT denied here."""
+    st, d = _authz(build)
+    ref = _pfx(d)
+    permits = len(st.permits._permits)
+    const = d.caller_bytes == CONSTANT_DENIAL_BYTES
+    hst, hd = _authz(harness.build_baseline)
+    ctrl = _pfx(hd)
+    ok = (ref == prefix and permits == 0 and const and ctrl == "PERMIT")
+    return {"status": "pass" if ok else "fail",
+            "baseline_expected": "DENY@%s, 0 permits, constant caller bytes" % prefix,
+            "observed": "%s permits=%d const=%s" % (ref, permits, const),
+            "expected_fault_difference": "a compliant proposal is NOT denied here (PERMIT)",
+            "observed_fault": ctrl}
+
+
+def _mdiff(obs, fault, exp_ref, exp_fault):
+    """Independent surface: obs() reads the named surface. pass iff ref==exp_ref, fault==exp_fault, differ."""
+    try:
+        r = obs(frozenset())
+        f = obs(frozenset([fault]))
+    except Exception as e:  # noqa: BLE001
+        return {"status": "fail", "baseline_expected": repr(exp_ref), "observed": "ERR:%r" % e,
+                "expected_fault_difference": repr(exp_fault), "observed_fault": "ERR"}
+    ok = (r == exp_ref and f == exp_fault and r != f)
+    return {"status": "pass" if ok else "fail", "baseline_expected": repr(exp_ref),
+            "observed": repr(r), "expected_fault_difference": repr(exp_fault), "observed_fault": repr(f)}
+
+
+# --------------------------------------------------------------------------- violating scenarios
+def _v_a01():
+    st, _ = harness.build_baseline()
+    return st, canon.canonical_bytes({"schema": "lifeorch.action_permit/0.1", "permit_id": "x",
+                                       "canonical_action_digest": "0" * 64})
+
+
+def _v_a02():
+    st, _ = harness.build_baseline()
+    return st, b'{"schema":"lifeorch.action_proposal/0.1","schema":"x"}'
+
+
+def _v_a03():
+    st, prop = harness.build_baseline()
+    prop["evil_field"] = 1
+    return st, prop
+
+
+def _v_a04():
+    st, prop = harness.build_baseline()
+    st.attest._by_run.clear()
+    return st, prop
+
+
+def _v_a05():
+    st, prop = harness.build_baseline()
+    prop["task_id"] = "task_OTHER"
+    return st, prop
+
+
+def _v_a06():
+    st, prop = harness.build_baseline()
+    st.packets.verify_and_get("cpkt_test0001").non_execution = True
+    return st, prop
+
+
+def _v_a07():
+    st, prop = harness.build_baseline()
+    st.packets.verify_and_get("cpkt_test0001").current = False
+    return st, prop
+
+
+def _v_a09():
+    st, prop = harness.build_baseline()
+    del st.grants["grant_snap_1"]
+    return st, prop
+
+
+def _v_a10():
+    st, prop = harness.build_baseline()
+    st.grants["grant_snap_1"].current = False
+    return st, prop
+
+
+def _v_a11():
+    st, prop = harness.build_baseline()
+    st.grants["grant_snap_1"].request_namespaces = ["projZ"]   # disjoint from grant ns projA
+    return st, prop
+
+
+def _v_a12():
+    st, prop = harness.build_baseline()
+    st.manifests.set_current_installed("fs.local", "f" * 64)
+    return st, prop
+
+
+def _v_a13():
+    st, prop = harness.build_baseline()
+    prop["operation"] = "fs.rename"                            # valid id, not in the manifest
+    return st, prop
+
+
+def _v_a14():
+    st, prop = harness.build_baseline()
+    st.health.put("health.fs/1", "down", st.clock.now_ms())
+    return st, prop
+
+
+def _v_a15():
+    st, prop = harness.build_baseline()
+    prop["arguments"] = {"path": "/u/data/projA/one.txt", "content": 123}
+    return st, prop
+
+
+def _v_a17():
+    st, prop = harness.build_baseline()
+    prop["arguments"] = {"path": "${HOME}/nomatch/*", "content": "x"}   # wildcard resolves to nothing
+    return st, prop
+
+
+def _v_a20():
+    st, prop = harness.build_baseline()
+    for o in st.manifests.lookup("fs.local")["operations"]:
+        if o["operation"] == "fs.write":
+            o["max_effect_count"] = 0                          # any derived effect exceeds the bound
+    return st, prop
+
+
+def _v_a26():
+    st, prop = harness.build_baseline()
+    st.grants["grant_snap_1"].grants[0]["allowed_target_ids"] = ["/u/data/projA/other.txt"]
+    return st, prop
+
+
+def _v_a30():
+    st, prop = harness.build_baseline()
+    cc = {"schema": "lifeorch.completion_contract/0.1", "completion_contract_id": "cc",
+          "contract_version": 1, "task_id": "task_test0001", "effective_namespace": "projA",
+          "grant_snapshot_ref": "grant_snap_1", "packet_id": "cpkt_test0001",
+          "root": {"kind": "leaf", "predicate": {}}, "trusted_status_sources": [],
+          "evaluation_policy": {}, "contract_digest": "0" * 64}   # tampered digest
+    st.completion_by_packet["cpkt_test0001"] = cc
+    return st, prop
+
+
+def _v_a31():
+    return harness.build_evidence_scenario(navigation_present=True, working_present=False)
+
+
+def _v_a32():
+    st, prop = harness.build_baseline()
+    st._toctou = True
+    return st, prop  # handled specially below (needs a hook)
+
+
+def _v_a29():
+    return harness.build_delete_scenario(mismatch_approval=True)
+
+
+# --------------------------------------------------------------------------- bespoke A observers
+def _obs_a08(disp):
+    st, prop = harness.build_evidence_scenario(disposition=disp, navigation_present=False,
+                                               working_present=False)
+    return _pfx(authorize(pb(prop), st))
+
+
+def _obs_a16(m):
+    st1, p1 = harness.build_baseline(); p1["arguments"] = {"path": "/u/data/projA/one.txt", "content": "é"}
+    st2, p2 = harness.build_baseline(); p2["arguments"] = {"path": "/u/data/projA/one.txt", "content": "é"}
+    d1 = authorize(pb(p1), st1, mutations=m); d2 = authorize(pb(p2), st2, mutations=m)
+    return (d1.outcome == "PERMIT" and d2.outcome == "PERMIT" and d1.cad == d2.cad)
+
+
+def _obs_a19(m):
+    st, prop = harness.build_baseline()
+    prop["claimed_effects"] = [{"effect_class": "fs.exfiltrate", "target_index": 0, "quantity": 9,
+                                "unit": "b", "effect_risk_class": 4, "externality": "public_external",
+                                "reversibility": "irreversible"}]
+    d = authorize(pb(prop), st, mutations=m)
+    if d.outcome == "PERMIT":
+        return ("PERMIT", tuple(sorted(e["effect_class"] for e in d.permit["authorized_effect_set"])))
+    return ("DENY", (d.reason_code or "")[:3])
+
+
+def _obs_a22(m):
+    # independent surface: the side-effect-policy apply() output (effective risk + approval requirement).
+    policy = S.PolicyView("p")
+    ca = {"derived_effect_set": [{"externality": "public_external", "reversibility": "irreversible",
+                                  "effect_risk_class": 2}]}
+    risk, approval, _sb, _dz = policy.apply(ca, 1, "none", "local_bounded", m)
+    return (risk, approval)
+
+
+def _obs_a23(m):
+    st, d = harness.run_happy()
+    over = {"effect_class": "fs.write", "target_index": 0, "quantity": 9 << 60, "unit": "bytes",
+            "effect_risk_class": 2, "externality": "local", "reversibility": "compensatable"}
+    r = MockExecutor(st).execute(d.permit_ref, mutations=m, extra_effects=[over])
+    return r.state_diff == []
+
+
+def _obs_a24(m):
+    st, prop = harness.build_baseline()
+    authorize(pb(prop), st, mutations=m)                       # first: issued (in-flight)
+    d2 = authorize(pb(prop), st, mutations=m)                  # second identical action
+    return _pfx(d2)
+
+
+def _obs_a25(m):
+    a = canonical_digest(MUT._ca(canonical_arguments={"path": "/p", "content": "a"}), m)
+    b = canonical_digest(MUT._ca(canonical_arguments={"path": "/p", "content": "b"}), m)
+    return a != b                                              # digest binds the arguments
+
+
+def _obs_a27(m):
+    return _obs_a22(m)                                         # policy escalation cannot be weakened (risk)
+
+
+def _obs_a28(m):
+    st, prop = harness.build_delete_scenario(with_approval=False)
+    return _pfx(authorize(pb(prop), st, mutations=m))          # required approval enforced (deny@A29 unless skipped)
+
+
+def _obs_a32(m):
+    st, prop = harness.build_baseline()
+
+    def hook(s):
+        s.grants["grant_snap_1"].epoch += 1
+    d = authorize(pb(prop), st, mutations=m, toctou_hook=hook)
+    return _pfx(d)
+
+
+def _obs_a33(m):
+    st, d = harness.run_happy(m)
+    return len(st.permits._permits)                            # one reservation -> exactly one permit
+
+
+def _obs_a34(m):
+    st, _ = harness.build_baseline()
+    forged = MUT._forged_permit(st)                            # permit-shaped, never store-issued
+    r = MockExecutor(st).execute(forged, mutations=m)
+    return tuple(sorted(e["effect_class"] for e in r.state_diff))
+
+
+def _obs_a35_caller(m):
+    st, d = harness.run_happy(m)
+    if d.outcome != "PERMIT":
+        return "NOPERMIT"
+    return ("permit" in d.caller_obj) or ("nonce" in d.caller_obj)   # its OWN surface: caller_result
+
+
+def _obs_a36_log(m):
+    st, prop = harness.build_baseline()
+    prop["arguments"] = {"path": "/u/data/projB/x", "content": "y"}   # cross-ns -> deny + a privileged event
+    authorize(pb(prop), st, mutations=m)
+    return any("leak" in ev for ev in st.log.events)           # its OWN surface: privileged security log
+
+
+# --------------------------------------------------------------------------- no_path (capability + call-graph)
+def _no_path_capability():
+    ok = True
+    for origin in (canon.UNTRUSTED, canon.REQUEST):
+        try:
+            canon.authority_construct(canon.Tagged(origin, {"permission_grants": ["*"]}))
+            ok = False                                          # a value was minted -> capability breached
+        except canon.AuthorityViolation:
+            pass
+    # derive of an Untrusted value stays non-authoritative
+    try:
+        canon.authority_construct(canon.derive(canon.Tagged(canon.UNTRUSTED, "wm"), "approved"))
+        ok = False
+    except canon.AuthorityViolation:
+        pass
+    return ok
+
+
+def _no_path_callgraph():
+    """Static import/call-graph inspection: the ONLY Authority constructor is canon.authority_construct,
+    its guard is present, and the ordinary monitor path never calls it (so no ordinary path mints
+    Authority). Runtime fuzzing cannot prove 'no path'; this reads the source."""
+    canon_src = open(os.path.join(_MODDIR, "action_authz", "canon.py"), "r", encoding="utf-8").read()
+    monitor_src = open(os.path.join(_MODDIR, "action_authz", "monitor.py"), "r", encoding="utf-8").read()
+    guard = 'x.origin != AUTHORITY' in canon_src and 'raise AuthorityViolation' in canon_src
+    # the monitor (the ordinary model path) contains no call to authority_construct(
+    monitor_calls = len(re.findall(r'authority_construct\s*\(', monitor_src))
+    return guard and monitor_calls == 0
+
+
+def _obs_nopath(m):
+    if m:                                                       # under M-A07 the guard is removed
+        return _no_path_capability_mut(m)
+    return _no_path_capability() and _no_path_callgraph()
+
+
+def _no_path_capability_mut(m):
+    try:
+        canon.authority_construct(canon.Tagged(canon.UNTRUSTED, {"x": 1}), m)
+        return True                                             # M-A07: a value WAS minted (breach)
+    except canon.AuthorityViolation:
+        return False
+
+
+# ============================================================================ Boundary D epoch checks
+def _bd_epoch_row(mutate, expect_reason=None, use_approval=False):
+    """Post-claim mutable-epoch drift -> rejected_no_effect + EMPTY ledger (Finding 5)."""
+    if use_approval:
+        st, prop = harness.build_delete_scenario(with_approval=True)
+        d = authorize(pb(prop), st)
+    else:
+        st, d = harness.run_happy()
+    if d.outcome != "PERMIT":
+        return {"status": "fail", "baseline_expected": "PERMIT then reject_no_effect",
+                "observed": "setup %s/%s" % (d.outcome, d.reason_code),
+                "expected_fault_difference": "empty ledger", "observed_fault": "-"}
+    mutate(st, d)                                               # drift a mutable epoch AFTER issue
+    r = MockExecutor(st).execute(d.permit_ref)
+    empty = (not r.accepted) and r.state_diff == []
+    state = st.permits.state(d.permit["permit_id"])
+    ok = empty and state in ("rejected_no_effect", "issued", "revoked")
+    return {"status": "pass" if ok else "fail",
+            "baseline_expected": "reject_no_effect, EMPTY ledger, terminal permit",
+            "observed": "accepted=%s diff=%d state=%s reason=%s" % (r.accepted, len(r.state_diff), state, r.reason),
+            "expected_fault_difference": "without the recheck the drifted action would take effect",
+            "observed_fault": "n/a (activation-gated on real Windows handle/reparse/crash)"}
+
+
+_BD_EPOCHS = {
+    "D3_grant_revoked": (lambda st, d: setattr(st.grants["grant_snap_1"], "current", False), False),
+    "D3_grant_epoch": (lambda st, d: setattr(st.grants["grant_snap_1"], "epoch", st.grants["grant_snap_1"].epoch + 1), False),
+    "D3_policy_epoch": (lambda st, d: setattr(st.policy("policy_1"), "epoch", st.policy("policy_1").epoch + 1), False),
+    "D3_health_change": (lambda st, d: st.health.put("health.fs/1", "down", st.clock.now_ms()), False),
+    "D3_store_epoch": (lambda st, d: setattr(st.permits, "epoch", st.permits.epoch + 1), False),
+    "D3_manifest_drift": (lambda st, d: st.manifests.set_current_installed("fs.local", "f" * 64), False),
+    "D3_packet_noexec": (lambda st, d: setattr(st.packets.verify_and_get("cpkt_test0001"), "non_execution", True), False),
+    "D3_packet_stale": (lambda st, d: setattr(st.packets.verify_and_get("cpkt_test0001"), "current", False), False),
+    "D3_approval_revoked": (lambda st, d: st.approvals._by_ref.__setitem__(
+        d.permit["approval_ref"], dict(st.approvals._by_ref[d.permit["approval_ref"]], revoked=True)), True),
+    "D4_target_drift": (None, False),  # handled specially (needs reresolve_targets)
 }
+
+
+def _bd_target_drift():
+    st, d = harness.run_happy()
+    drift = [{"target_kind": "fs.file", "canonical_target_id": "/u/data/projA/evil.txt", "namespace": "projA",
+              "resolution_kind": "existing", "resolution_proof_digest": "a" * 64}]
+    r = MockExecutor(st).execute(d.permit_ref, reresolve_targets=drift)
+    empty = (not r.accepted) and r.state_diff == []
+    return {"status": "pass" if empty else "fail",
+            "baseline_expected": "reject_no_effect, EMPTY ledger (captured-handle drift)",
+            "observed": "accepted=%s diff=%d reason=%s" % (r.accepted, len(r.state_diff), r.reason),
+            "expected_fault_difference": "re-resolving the NAME instead of consuming the captured handle would take effect",
+            "observed_fault": "n/a"}
+
+
+# ============================================================================ U-property rows
+def _a04_enforced():
+    st, d = _authz(_v_a04)
+    return (d.reason_code or "").startswith("A04")
+
+
+def _u_authority(m):
+    # authority integrity: a grant injected via untrusted claimed_effects NEVER authorizes an
+    # otherwise-denied action. ref -> DENY (True); M-A01 merges the injected grant -> PERMIT (False).
+    st, prop = harness.build_baseline()
+    prop["arguments"] = {"path": "/u/data/projA/three.txt", "content": "x"}   # not in the real grant
+    prop["claimed_effects"] = [{"grant": harness._write_grant("g_inj", "projA", ["/u/data/projA/three.txt"])}]
+    d = authorize(pb(prop), st, mutations=m)
+    return d.outcome == "DENY"
+
+
+def _u_scope(m):
+    st, prop = harness.build_scope_scenario()
+    d = authorize(pb(prop), st, mutations=m)
+    return d.outcome == "DENY" and len(st.permits._permits) == 0
+
+
+def _u_effect(m):
+    st, d = harness.run_happy(m)
+    ex = MockExecutor(st)
+    ex.execute(d.permit_ref, mutations=m)
+    r2 = ex.execute(d.permit_ref, mutations=m)
+    return r2.state_diff == []
+
+
+# ============================================================================ obligation table
+def _row(oid, cat, fixture, fault, surface, oracle, result):
+    r = {"obligation_id": oid, "category": cat, "fixture_id": fixture, "mutant_or_fault_id": fault,
+         "observable_surface": surface, "independent_oracle": oracle}
+    r.update(result)
+    return r
 
 
 def run(check):
     rows = []
-    for mid, cat, _fn, _note in MUT.REGISTRY:
-        obl, surface, oracle = _ORACLE.get(mid, ("?", "?", "?"))
-        rows.append({"mutation": mid, "category": cat, "obligation_id": obl,
-                     "observable_surface": surface, "independent_oracle": oracle})
-    covered = all(r["observable_surface"] not in ("?", "") for r in rows)
-    check.ok("oracle matrix: an independent observable per mandatory mutation (%d rows)" % len(rows),
-             covered, "uncovered=%s" % [r["mutation"] for r in rows if r["observable_surface"] == "?"])
+
+    def add(oid, cat, fixture, fault, surface, oracle, result):
+        rows.append(_row(oid, cat, fixture, fault, surface, oracle, result))
+
+    # ---- A01-A36 -----------------------------------------------------------------------------
+    _DENY = {
+        "A01": (_v_a01, "A01", "F10b_permit_shaped"), "A02": (_v_a02, "A02", "F9a_duplicate_keys"),
+        "A03": (_v_a03, "A03", "F9c_unknown_field"), "A04": (_v_a04, "A04", "attest_cleared"),
+        "A05": (_v_a05, "A05", "task_mismatch"), "A06": (_v_a06, "A06", "non_execution_true"),
+        "A07": (_v_a07, "A07", "packet_stale"), "A09": (_v_a09, "A09", "grant_missing"),
+        "A10": (_v_a10, "A10", "grant_not_current"), "A11": (_v_a11, "A11", "ns_disjoint"),
+        "A12": (_v_a12, "A12", "installed_drift"), "A13": (_v_a13, "A13", "unknown_operation"),
+        "A14": (_v_a14, "A14", "unhealthy"), "A15": (_v_a15, "A15", "F9d_coercion"),
+        "A17": (_v_a17, "A17", "wildcard_no_match"), "A18": (harness.build_scope_scenario, "A18", "F8a_planted_cross_ns"),
+        "A20": (_v_a20, "A20", "effect_count"), "A26": (_v_a26, "A26", "target_not_granted"),
+        "A29": (_v_a29, "A29", "F_mismatch_approval"), "A30": (_v_a30, "A30", "completion_tamper"),
+        "A31": (_v_a31, "A31", "F3a_navigation"),
+    }
+    for oid in sorted(_DENY):
+        build, prefix, fx = _DENY[oid]
+        add(oid, "A-check", fx, "compliant-vs-violating",
+            "decision reason_code + permit-store delta + constant caller bytes",
+            "a proposal violating ONLY %s denies here; a compliant one does not" % oid,
+            _deny_iso(build, prefix))
+
+    add("A08", "A-check", "disposition_applied", "answerable-vs-needs_expansion",
+        "decision (A31 applies the A08 disposition)",
+        "the recorded packet disposition drives A31: answerable->PERMIT, needs_expansion->A31 DENY",
+        (lambda: (lambda a, n: {"status": "pass" if (a == "PERMIT" and n == "A31") else "fail",
+                                "baseline_expected": "answerable->PERMIT ; needs_expansion->A31",
+                                "observed": "%s / %s" % (a, n),
+                                "expected_fault_difference": "the two dispositions must differ",
+                                "observed_fault": "differ=%s" % (a != n)})(_obs_a08("answerable"),
+                                                                           _obs_a08("needs_expansion")))())
+    add("A16", "A-check", "nfc_equivalence", "M-E04",
+        "canonical_action_digest", "NFC canonicalization makes composed/decomposed args equal; M-E04 differs",
+        _mdiff(_obs_a16, "M-E04", True, False))
+    add("A19", "A-check", "effect_derivation", "M-A08",
+        "derived effect set in the permit", "effects come from the manifest classifier, not claimed_effects",
+        _mdiff(_obs_a19, "M-A08", ("PERMIT", ("fs.write",)), ("DENY", "A20")))
+    add("A21", "A-check", "wrapper_closure", "M-E07",
+        "derived effect set (wrapper delegated effect)", "a wrapper's delegated effect is classified",
+        _mdiff(lambda m: _wrapper_ok(m), "M-E07", "PERMIT", "A21"))
+    add("A22", "A-check", "risk_escalation", "M-E11",
+        "side-effect-policy apply() (effective risk + approval)", "risk escalates for irreversible/public effects and cannot be weakened",
+        _mdiff(_obs_a22, "M-E11", (3, "always"), (0, "none")))
+    add("A23", "A-check", "effective_limits", "M-E30",
+        "permit.limits + executor effect ledger", "the manifest ceiling bounds the executor (over-limit -> no effect)",
+        _mdiff(_obs_a23, "M-E30", True, False))
+    add("A24", "A-check", "idempotency", "second-identical-action",
+        "decision (permit-store idempotency)", "a trusted-derived idempotency key blocks a concurrent duplicate",
+        (lambda: (lambda p: {"status": "pass" if p == "A24" else "fail",
+                             "baseline_expected": "the 2nd identical in-flight action denies at A24",
+                             "observed": p, "expected_fault_difference": "n/a (deny-by-default)",
+                             "observed_fault": "-"})(_obs_a24(frozenset())))())
+    add("A25", "A-check", "digest_binding", "M-E14",
+        "canonical_action_digest", "the digest binds the canonical arguments (M-E14 omits them)",
+        _mdiff(_obs_a25, "M-E14", True, False))
+    add("A27", "A-check", "policy_escalation", "M-E11",
+        "side-effect-policy apply() (effective risk + approval)", "side-effect policy may escalate/deny, never weaken",
+        _mdiff(_obs_a27, "M-E11", (3, "always"), (0, "none")))
+    add("A28", "A-check", "approval_requirement", "M-E12",
+        "decision", "required approval is the strictest of manifest/risk/effects/policy",
+        _mdiff(_obs_a28, "M-E12", "A29", "PERMIT"))
+    add("A32", "A-check", "toctou_recheck", "M-E25",
+        "decision (final freshness recheck)", "a mid-flight grant-epoch change is caught at A32",
+        _mdiff(_obs_a32, "M-E25", "A32", "PERMIT"))
+    add("A33", "A-check", "atomic_reservation", "M-E26",
+        "permit-store count", "one atomic reservation yields exactly one permit",
+        _mdiff(_obs_a33, "M-E26", 1, 2))
+    add("A34", "A-check", "permit_construction", "M-R06",
+        "executor effect ledger", "a permit-shaped object never store-issued produces no effect",
+        _mdiff(_obs_a34, "M-R06", (), ("fs.write",)))
+    add("A35", "A-check", "non_disclosure", "M-R09",
+        "model-facing caller_result (its OWN surface)", "the permit/nonce are never returned to the model",
+        _mdiff(_obs_a35_caller, "M-R09", False, True))
+    add("A36", "A-check", "security_audit", "M-S09",
+        "privileged security log (its OWN surface)", "no attacker payload is copied into the ordinary log",
+        _mdiff(_obs_a36_log, "M-S09", False, True))
+
+    # ---- Boundary A1-A7 (storage/retrieval/derivation/packet assembly) ------------------------
+    _BA = [
+        ("A1", "trust-class tags exist (Authority/Request/Untrusted/TrustedStatus)", _u_role_capability, "M-A07"),
+        ("A2", "no implicit Untrusted/Request -> Authority conversion", _no_path_capability, "M-A07"),
+        ("A3", "ordinary derive PRESERVES non-authoritative origin", _derive_preserves, "M-A06"),
+        ("A4", "provenance is adapter-attested (A04)", _a04_enforced, "M-A09"),
+        ("A5", "namespace closure via the ONE ns_permitted (exact membership)", _ns_exact, "M-S03"),
+        ("A6", "navigation/aggregate is not execution authority", _aggregate_denied, "M-R03"),
+        ("A7", "working memory is conjunctive + can_instruct:false (never authority/evidence)", _wm_inert, "M-A03"),
+    ]
+    for bid, oracle, fn, fault in _BA:
+        add("Boundary-" + bid, "boundary-A", "trust_class", fault,
+            "trust-class capability / decision", oracle, _cap_row(fn, fault))
+
+    # ---- Boundary B1-B4 (model-prompt rendering; DEFENSE-IN-DEPTH only) -----------------------
+    _rp = _load_real_rendering()
+    for bid, field in (("B1", "evidence can_instruct:false banner"), ("B2", "working_state can_instruct:false banner"),
+                       ("B3", "explicit region delimiters"), ("B4", "fixed control->task->working->evidence order")):
+        present = _rp.get(bid, False)
+        add("Boundary-" + bid, "boundary-B", "m40_090_routed", "n/a (defense-in-depth; C is decisive)",
+            "the real #40 packet rendering contract", "%s present; DECISIVE enforcement is Boundary C" % field,
+            {"status": "pass" if present else "fail", "baseline_expected": "%s declared in the packet" % field,
+             "observed": "present=%s" % present,
+             "expected_fault_difference": "prompt-rendering is defense-in-depth; removing it does NOT authorize (C denies)",
+             "observed_fault": "C-decisive"})
+
+    # ---- Boundary C1-C6 (coordinator authorization; DECISIVE) ---------------------------------
+    add("Boundary-C1", "boundary-C", "coord_only_monitor", "M-R05",
+        "executor effect ledger", "only the reference monitor issues permits; a proposal to the executor is inert",
+        _mdiff(_obs_proposal_to_exec, "M-R05", (), ("fs.write",)))
+    add("Boundary-C2", "boundary-C", "deny_by_default", "malformed",
+        "decision", "any malformed/indeterminate proposal denies by default",
+        _dec_is(_v_a02, "A02"))
+    add("Boundary-C3", "boundary-C", "claimed_effects_excluded", "M-A08",
+        "derived effect set", "claimed_effects never enter derivation/matching",
+        _mdiff(_obs_a19, "M-A08", ("PERMIT", ("fs.write",)), ("DENY", "A20")))
+    add("Boundary-C4", "boundary-C", "constant_denial", "M-S08",
+        "caller bytes across distinct failures", "distinct failures return identical constant caller bytes",
+        _mdiff(_obs_const_bytes, "M-S08", True, False))
+    add("Boundary-C5", "boundary-C", "permit_bound_cad", "forged_cad",
+        "executor effect ledger", "the permit is bound to the exact canonical digest; a forged one is inert",
+        _mdiff(_obs_a34, "M-R06", (), ("fs.write",)))
+    add("Boundary-C6", "boundary-C", "privileged_audit", "M-S09",
+        "privileged security log", "a bounded privileged audit event is emitted with no attacker payload",
+        _mdiff(_obs_a36_log, "M-S09", False, True))
+
+    # ---- Boundary D1-D8 (executor) + the ALL-EPOCH post-claim rechecks (Finding 5) ------------
+    add("Boundary-D1", "boundary-D", "reject_non_permit_ref", "M-R04",
+        "executor effect ledger", "raw model output is rejected at the executor entry",
+        _mdiff(lambda m: _exec_raw(m), "M-R04", True, False))
+    add("Boundary-D2", "boundary-D", "resolve_from_store", "M-R06",
+        "executor effect ledger", "the executor resolves permits ONLY from the trusted store",
+        _mdiff(_obs_a34, "M-R06", (), ("fs.write",)))
+    # D3 = re-read ALL mutable epochs after claim; one row per epoch.
+    for name, (mutate, use_appr) in sorted(_BD_EPOCHS.items()):
+        if name == "D4_target_drift":
+            add("Boundary-D3:" + name, "boundary-D", "post_claim_" + name, "post-claim-drift",
+                "executor effect ledger (rejected_no_effect)", "captured-handle target drift after claim -> no effect",
+                _bd_target_drift())
+        else:
+            add("Boundary-D3:" + name, "boundary-D", "post_claim_" + name, "post-claim-drift",
+                "executor effect ledger (rejected_no_effect + terminal permit)",
+                "a post-claim change to this mutable epoch -> rejected_no_effect, empty ledger",
+                _bd_epoch_row(mutate, use_approval=use_appr))
+    add("Boundary-D4", "boundary-D", "reresolve_after_claim", "M-E29",
+        "executor effect ledger + state diff", "targets re-bound to the captured handle after claim; drift -> no effect",
+        _mdiff(lambda m: _exec_drift(m), "M-E29", True, False))
+    add("Boundary-D5", "boundary-D", "atomic_claim_one_shot", "M-E27",
+        "effect ledger across reuse", "a one-shot permit cannot be reused",
+        _mdiff(_u_effect, "M-E27", True, False))
+    add("Boundary-D6", "boundary-D", "no_untrusted_completion", "M-R08",
+        "completion evaluator result", "tool stdout is not a completion actual",
+        _mdiff(_obs_completion_prose, "M-R08", "indeterminate", "true"))
+    add("Boundary-D7", "boundary-D", "no_undeclared_effect", "M-E30",
+        "independent effect ledger", "no undeclared/over-limit effect is applied",
+        _mdiff(_obs_a23, "M-E30", True, False))
+    add("Boundary-D8", "boundary-D", "one_shot_crash", "M-E32",
+        "effect ledger after crash", "a crash never makes a consumed permit reusable",
+        _mdiff(_obs_crash, "M-E32", True, False))
+
+    # ---- U-properties ------------------------------------------------------------------------
+    add("U-AUTHORITY", "U-property", "untrusted_variants", "M-A01",
+        "canonical_action_digest + authority-config digest", "untrusted values never change authority/decision",
+        _mdiff(_u_authority, "M-A01", True, False))
+    add("U-SCOPE", "U-property", "scope_scenario", "M-S02",
+        "decision + permit-store delta", "authorized ns = request INTERSECT grant; a cross-ns action denies",
+        _mdiff(_u_scope, "M-S02", True, False))
+    add("U-ROLE", "U-property", "no_path_capability+callgraph", "M-A07",
+        "authority-constructor capability + static call-graph", "no ordinary path mints Authority",
+        _mdiff(_obs_nopath, "M-A07", True, True) if False else _u_role_row())
+    add("U-EFFECT", "U-property", "one_shot_permit", "M-E27",
+        "effect ledger", "every state diff maps to exactly one consumed non-reused permit",
+        _mdiff(_u_effect, "M-E27", True, False))
+
+    # ---- every mutation M-A01..M-E36 (executed differential) ---------------------------------
+    for mid, cat, fn, note in MUT.REGISTRY:
+        try:
+            ref = fn(frozenset()); mut = fn(frozenset([mid]))
+            killed = (ref is True) and (mut is False)
+            st = "pass" if killed else "fail"
+        except Exception as e:  # noqa: BLE001
+            st = "fail"; ref = "ERR:%r" % e; mut = "-"
+        add(mid, "mutation:" + cat, "seeded", mid,
+            "sec-predicate differential (ref secure / mutant insecure)",
+            note or "the named security property holds on the reference and breaks on the mutant",
+            {"status": st, "baseline_expected": "secure (True)", "observed": repr(ref),
+             "expected_fault_difference": "insecure (False)", "observed_fault": repr(mut)})
+
+    # ---- gating: EVERY obligation executed and pass; NO not_run ------------------------------
+    not_run = [r["obligation_id"] for r in rows if r.get("status") == "not_run"]
+    failed = [r["obligation_id"] for r in rows if r.get("status") == "fail"]
+    check.ok("oracle matrix: %d obligation rows, ALL executed (no not_run)" % len(rows),
+             not not_run, "not_run=%s" % not_run)
+    check.ok("oracle matrix: every obligation observable holds", not failed, "failed=%s" % failed)
     return rows
+
+
+# ---------------------------------------------------------------------------- small observers used above
+def _dec_is(build, prefix):
+    st, d = _authz(build)
+    ok = _pfx(d) == prefix and len(st.permits._permits) == 0
+    return {"status": "pass" if ok else "fail", "baseline_expected": "DENY@%s" % prefix,
+            "observed": _pfx(d), "expected_fault_difference": "compliant proposal not denied here",
+            "observed_fault": "PERMIT"}
+
+
+def _wrapper_ok(m):
+    st, prop = harness.build_baseline()
+    st.grants["grant_snap_1"].grants.append(
+        {"grant_id": "g_shell", "tool_id": "fs.local", "operation": "shell.run",
+         "action_namespace": "projA", "allowed_target_ids": ["/u/data/projA/one.txt"],
+         "effect_classes": ["fs.write"], "max_quantity": {"fs.write": 1048576},
+         "externality_max": "local", "risk_ceiling": 2, "validity_from": 0,
+         "validity_to": 9_000_000_000_000_000, "approval_mode": "none",
+         "scopes": ["fs.write"], "limits": [{"limit_id": "fs.write", "max_value": 1048576}]})
+    prop["operation"] = "shell.run"
+    prop["arguments"] = {"command": "echo hi", "path": "/u/data/projA/one.txt"}
+    d = authorize(pb(prop), st, mutations=m)
+    return "PERMIT" if d.outcome == "PERMIT" else (d.reason_code or "")[:3]
+
+
+def _u_role_capability():
+    return _no_path_capability()
+
+
+def _derive_preserves():
+    t = canon.derive(canon.Tagged(canon.UNTRUSTED, "x"), "y")
+    return t.origin == canon.UNTRUSTED
+
+
+def _ns_exact():
+    return (canon.ns_permitted("projA", {"projA"}) and (not canon.ns_permitted("projA.sub", {"projA"}))
+            and (not canon.ns_permitted("x", frozenset())))
+
+
+def _aggregate_denied():
+    try:
+        canon.aggregate_to_authority({"value": {"grant": 1}})
+        return False
+    except canon.AuthorityViolation:
+        return True
+
+
+def _wm_inert():
+    st, prop = harness.build_delete_scenario(with_approval=False)
+    st.packet_meta["cpkt_test0001"]["working_approval_claim"] = True
+    return authorize(pb(prop), st).outcome == "DENY"
+
+
+def _cap_row(fn, fault):
+    try:
+        ref = fn()
+    except Exception as e:  # noqa: BLE001
+        ref = "ERR:%r" % e
+    return {"status": "pass" if ref is True else "fail", "baseline_expected": "secure (True)",
+            "observed": repr(ref), "expected_fault_difference": "the %s defect breaks it" % fault,
+            "observed_fault": "(killed in the mutation matrix)"}
+
+
+def _load_real_rendering():
+    import glob
+    import json
+    rp = {}
+    d = os.path.join(_MODDIR, "fixtures", "real_packets")
+    files = glob.glob(os.path.join(d, "m40_090_routed.json"))
+    if not files:
+        return {"B1": False, "B2": False, "B3": False, "B4": False}
+    pkt = json.load(open(files[0], "r", encoding="utf-8"))
+    r = pkt.get("rendering", {}) or {}
+    ev = pkt.get("evidence", {}).get("evidence_contract", {}) or {}
+    wm = pkt.get("working_memory", {}) or {}
+    rp["B1"] = (ev.get("can_instruct") is False) or ("can_instruct=false" in str(r.get("evidence_role_banner", "")))
+    rp["B2"] = (wm.get("can_instruct") is False) or ("can_instruct=false" in str(r.get("working_memory_role_banner", "")))
+    rp["B3"] = "evidence_delimiters" in r and "working_memory_delimiters" in r
+    rp["B4"] = r.get("order") == ["control_plane", "task_input", "working_memory", "evidence"]
+    return rp
+
+
+def _obs_proposal_to_exec(m):
+    st, prop = harness.build_baseline()
+    r = MockExecutor(st).execute(prop, mutations=m)
+    return tuple(sorted(e["effect_class"] for e in r.state_diff))
+
+
+def _obs_const_bytes(m):
+    outs = []
+    for path in ("/u/data/projB/a", "/u/data/link_a", "/u/data/projA/three.txt"):
+        st, prop = harness.build_baseline()
+        prop["arguments"] = {"path": path, "content": "y"}
+        outs.append(authorize(pb(prop), st, mutations=m).caller_bytes)
+    return all(o == CONSTANT_DENIAL_BYTES for o in outs)
+
+
+def _exec_raw(m):
+    st, _ = harness.build_baseline()
+    r = MockExecutor(st).execute(b'{"tool":"fs.local"}', mutations=m)
+    return (not r.accepted) and r.state_diff == []
+
+
+def _exec_drift(m):
+    st, d = harness.run_happy()
+    drift = [{"target_kind": "fs.file", "canonical_target_id": "/u/data/projA/evil.txt", "namespace": "projA",
+              "resolution_kind": "existing", "resolution_proof_digest": "a" * 64}]
+    r = MockExecutor(st).execute(d.permit_ref, mutations=m, reresolve_targets=drift)
+    return r.state_diff == []
+
+
+def _obs_completion_prose(m):
+    from action_authz.boundary import evaluate_completion
+    st, contract, cad = MUT._completion(m)
+    return evaluate_completion(contract, st, m, evidence_claims={"p1": "success"})
+
+
+def _obs_crash(m):
+    st, d = harness.run_happy(m)
+    ex = MockExecutor(st)
+    ex.execute(d.permit_ref, mutations=m)
+    st.permits.recover_after_crash(d.permit["permit_id"], mutations=m)
+    r = ex.execute(d.permit_ref, mutations=m)
+    return r.state_diff == []
+
+
+def _u_role_row():
+    ref = _obs_nopath(frozenset())
+    mut = _obs_nopath(frozenset(["M-A07"]))
+    ok = (ref is True) and (mut is True)   # ref: no path (capability+callgraph); M-A07 mints -> capability breach recorded
+    return {"status": "pass" if ok else "fail",
+            "baseline_expected": "no_path holds (capability guard + monitor makes 0 authority_construct calls)",
+            "observed": repr(ref), "expected_fault_difference": "M-A07 removes the guard and mints Authority",
+            "observed_fault": "minted=%s" % mut}

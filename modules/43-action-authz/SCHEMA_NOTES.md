@@ -91,10 +91,11 @@ exactly one consumed digest-matching non-reused permit; no valid permit -> empty
 ## i38 FULL GATE -- the 7 frozen red-team amendments (contract s6, worker P01-GATE-FULL-i38)
 
 This module was extended from the i37 MVP to the full P0-1 gate. `action_authz` VERSION `0.2.0`.
-`p0_1_gate_status = pass` (204/204 suite, 67/67 mandatory mutations killed, all 10 families, fixed-seed
-fuzzer, double-run byte-identity, real #40 chain). `non_execution:true` holds; `activation_status =
-prohibited`. Cross-validated byte-equivalent to an independent second implementation (`p01gate`) over the
-canonical parse/serialize/digest/ns surface (Blocker-8 differential check).
+The i38 build reported `p0_1_gate_status = pass`, but the couriered frontier AS-BUILT re-review
+(`research/2026-08-06-i38-p01gate-asbuilt-redteam.md`, D-0107) returned **FAIL -- over-claimed** and the
+gate was walked back to `incomplete`. The 7 as-built findings are CLOSED in i39 (VERSION `0.3.0`); see
+"## i39 FULL GATE (HONEST PASS)" below. `build_status = build_complete` and `activation_status =
+prohibited` were UNCHANGED throughout and deny-by-default held.
 
 1. **Result taxonomy (amendment 1).** `tests/run_suite.py` emits `build_status` / `p0_1_gate_status`
    (not_run|incomplete|pass|fail) / `activation_status` and lists every s8.7 criterion as
@@ -126,3 +127,133 @@ canonical parse/serialize/digest/ns surface (Blocker-8 differential check).
 fuzzer, M-R11, and the complete kill matrix. **Real chain:** the 4 authentic #40 0.7.0 outputs deny at A06;
 capturing an authentic 0.8.0 routed packet is recommended at fold (the 0.8.0 flat compile is byte-identical to
 0.7.0; the 0.8.0 router carrier is proven inert here via F3b/M-R11).
+
+---
+
+## i39 FULL GATE (HONEST PASS) -- the 7 as-built red-team findings CLOSED (worker P01-GATE-COMPLETE-i39)
+
+`action_authz` VERSION **`0.3.0`** extends 0.2.0 to a TRUE `p0_1_gate_status = pass`. Suite 308/308 on TWO
+byte-identical runs; `build_status = build_complete`, `activation_status = prohibited`; `non_execution:true`
+holds; nothing is action-capable. Governing spec: `research/2026-08-06-i38-p01gate-asbuilt-redteam.md`
+(the 7 findings, each mapped below). No frozen MEMORY_CONTRACT / CONTEXT_PACKET_CONTRACT field is reopened;
+every change is additive at the action layer.
+
+**Finding 1 -- obligation oracle matrix (`tests/oracle_matrix.py`).** Rebuilt from one-row-per-mutation to
+one EXECUTED row per OBLIGATION: every A01-A36, Boundary A1-A7 / B1-B4 / C1-C6 / D1-D8, U-AUTHORITY/SCOPE/
+ROLE/EFFECT, AND every M-mutation -- 141 rows total. Each row carries `{obligation_id, fixture_id,
+mutant_or_fault_id, baseline_expected, observable_surface, independent_oracle, expected_fault_difference}`
+and a status `pass|fail|not_run`, decided on a SEPARATE independent surface (decision + permit-store delta /
+caller bytes / privileged audit event / model-facing caller_result / effect ledger / canonical digest /
+completion result / trust-class capability / static call-graph) -- never check-trace presence. A35/A36 are
+decided on their OWN surfaces (the model-facing caller_result and the privileged security log). `no_path`
+(Untrusted/Request -> Authority) uses BOTH an unforgeable authority-constructor capability AND a static
+import/call-graph scan proving the ordinary monitor path makes zero `authority_construct(` calls. `run_suite.py`
+GATES `p0_1_gate_status` on completeness: ANY `not_run` (or `fail`) => `incomplete` (criterion
+`11_obligation_oracle_complete`).
+
+**Finding 2 -- real #40 0.9.0 authentic chain in the suite (`tests/integration.py`).** Captured authentic
+#40 **0.9.0** ROUTED + working-memory-hydrated packets (`fixtures/real_packets/m40_090_{routed,routed_adv,
+flat}.json`; provenance in that dir's PROVENANCE.md) produced by the REAL committed #40 0.9.0 over the real
+#36 tree + #42 store. The suite OWNS + RUNS both modes: (1) AUTHENTIC `non_execution=true` -> A06 DENY,
+constant caller bytes, no permit, no diff; (2) an explicit TEST-ONLY `non_execution=false` variant that
+PRESERVES the real routing trace / hydrated working_memory / working_state_version / evidence / packet
+identity and REACHES A09/A11/A30/A31 + completion (PERMIT bound to the real packet_id, executed through
+Boundary D, completion evaluated via packet_id). Adversarial `routed_adv` (authority-shaped working memory,
+cross-ns stage-trace, injected control-plane) with valid boundaries yields a BYTE-IDENTICAL decision +
+canonical digest. Criterion `14_v090_authentic_chain_in_suite`.
+
+**Finding 3 -- byte-exact test-facing views (this doc + `tests/views_golden.py`).** The five CLOSED test-view
+schemas are specified byte-exactly below and pinned by canonical digest; `views_golden.py` runs
+MANUALLY-DERIVED golden vectors through the ACTUAL matchers so the contract is independently DECIDABLE
+(37 vectors). SCHEMA_NOTES.md is the CANONICAL definition (contract s7); the implementing source is
+`action_authz/stores.py` (GrantSnapshot.match / PolicyView.apply / ApprovalStore / StatusStore) +
+`action_authz/boundary.py` (MIN_COMPLETION_SCOPE).
+
+- `lifeorch.grant_view/0.1-test` (digest `c956a0ffea3ff7f6411adb6f43e54193bc103e9185b287b670a0311630bfe486`).
+  Closed fields + types: `grant_id:id`, `tool_id:nsid`, `operation:nsid|"*"`, `action_namespace:nsid`,
+  `allowed_target_ids:array<id>`, `effect_classes:array<nsid>`, `max_quantity:map<nsid,uint63>`,
+  `externality_max:enum{local,private_external,public_external}`, `risk_ceiling:uint{0..4}`,
+  `validity_from:uint63`, `validity_to:uint63`, `approval_mode:enum{none,policy_dependent,always}`,
+  `scopes:array<nsid>`, `limits:array<{limit_id:nsid,max_value:uint63}>`. Canonical serialization = canon.py
+  (code-point-sorted keys, integer-only, one trailing LF). MATCHING ALGORITHM (ordered, per grant in the
+  snapshot, revoked grants EXCLUDED): (1) `tool_id ==`; (2) `operation ==` (no `"*"` wildcard on the ordinary
+  path); (3) `action_namespace ==` the canonical action's single namespace; (4) validity window
+  `validity_from <= now < validity_to`; (5) target closure: `resolved_target_set` canonical ids SUBSET of
+  `allowed_target_ids`; (6) effect closure: every derived effect's class in `effect_classes` AND
+  `quantity <= max_quantity[class]` (limit intersection = MIN) AND `externality_rank <= externality_max` AND
+  `effect_risk_class <= risk_ceiling`. A grant that fails ANY dimension does not match (CONJUNCTION within a
+  grant). Grants are ALTERNATIVES across the set (union of covered `scopes`). CLOSED matcher result:
+  `(sorted_unique matched_grant_ids, ok)`; `ok = matched != [] AND required_permission_scopes SUBSET of the
+  union of matched scopes`. Empty grant array, no covering grant, or an uncovered required scope => `ok=False`
+  (deny). Malformed/unknown/ambiguous grants never widen: absent => deny.
+- `lifeorch.policy_view/0.1-test` (digest `7244a9de66d790d5aeb5e9d3806fc7d451ccafd47f8573b5d04a656b69cc9f00`).
+  `policy_ref:id`, `epoch:uint63`, `current:bool`. apply(): any `public_external` OR `irreversible` derived
+  effect => `effective_risk >= 3` AND `approval_requirement = always`; otherwise the base risk/approval are
+  preserved. Policy may ESCALATE or DENY, NEVER weaken: `effective_risk >= base_risk` and
+  `approval_rank(effective) >= approval_rank(base)`.
+- `lifeorch.approval_view/0.1-test` (digest `c09474ef17d93957b3ae5e0fe99e188c8e463baa605768da287c4f26fccf5ce8`).
+  `approval_ref:id`, `canonical_action_digest:sha256`, `task_id:id`, `namespace:nsid`,
+  `manifest_version:uint63`, `manifest_digest:sha256`, `grant_snapshot_ref:id`, `state:enum{approved,...}`,
+  `revoked:bool`, `expiry_unix_ms:uint63`. A29 accepts an approval ONLY on EXACT equality of
+  `canonical_action_digest` + `task_id` + `namespace` + `manifest_version` + `manifest_digest` +
+  `grant_snapshot_ref`, with `state == approved`, `revoked == false`, and `now < expiry_unix_ms`. Any
+  mismatch/revoked/expired => not found => deny.
+- `lifeorch.status_view/0.1-test` (digest `247c0ba8e8f8956c5b8112ea29496e00e5f86476cfbc0b511cc402ccf3b9240b`).
+  `predicate_kind:enum{executor_status,human_approval,test_suite,artifact_hash,object_state,postcondition}`,
+  `source_id:nsid`, `source_version:uint63`, `subject:map<str,scalar>`, `namespace:nsid`, `at_ms:uint63`,
+  `superseded:bool`, `revoked:bool`. A status satisfies a completion leaf ONLY if `predicate_kind`,
+  `source_id`, and `source_version` match, every present `subject` key equals, `now - at_ms <= max_age_ms`,
+  NOT `superseded` and NOT `revoked`, and `namespace` is inside the contract's effective namespace (the ONE
+  canonical `ns_permitted`). Otherwise indeterminate.
+- `lifeorch.validator_view/0.1-test` (digest `fe277edda1c368b85d26a787ec562a1715e07640ad58c68acabd50f168e5bd6c`).
+  The per-leaf-kind MINIMUM completion scope: `executor_status:{permit}`, `state_diff:{permit}`,
+  `artifact_hash:{action,object,permit}`, `test_suite:{action,object}`, `object_state:{object}`,
+  `human_approval:{approval}`, `postcondition:{action,permit}`. Resolution = contract via the immutable
+  `packet_id`; each leaf's subject is DERIVED FROM THE PERMIT (task/cad/permit_id/object/approval per scope),
+  never from the contract's own text; a leaf whose declared `completion_scope` is weaker than its minimum, or
+  whose derived binding is unavailable, => indeterminate.
+
+**Finding 4 -- completion binds via the immutable packet_id (`action_authz/boundary.py`,
+`evaluate_completion_via_permit`).** The completion evaluator resolves the contract ONLY through the permit's
+immutable `packet_id` (`Stores.completion_contract_for_packet`), verifies the contract's self-digest +
+`packet_id` + `task_id` + the IMMUTABLE binding stamped into the permit at A34
+(`Stores.completion_binding_for_packet`), and enforces the per-leaf minimum scope above. There is NO
+current-contract-by-task lookup on the reference path (M-E36 is the by-task substitution defect). Every
+substitution -- cross-action, cross-permit, wrong object, old-contract-vs-new-packet, tampered content,
+omitted binding, wrong validator version, superseded status -- resolves to `indeterminate`
+(`tests/completion_binding.py`, 11 vectors). Criterion `13_completion_packet_binding`.
+
+**Finding 5 -- Boundary D re-reads ALL mutable epochs (`action_authz/boundary.py`,
+`MockExecutor._run_permit`).** After the atomic claim the executor re-reads grant (epoch/current/revocation),
+side-effect policy (epoch/current), approval (revocation/expiry), manifest + installed artifact, tool health,
+permit-store epoch, and packet/status currentness, all against the ISSUE-TIME snapshot captured at A34
+(`PermitStore.record_issue_snapshot`); targets are re-bound to the UNFORGEABLE captured
+`resolution_proof_digest` handle (the name is never re-resolved). Any post-claim drift =>
+`rejected_no_effect`: a TERMINAL permit + an EMPTY independent effect ledger. `oracle_matrix.py` runs a
+post-claim mutation PER epoch (Boundary-D3 rows). Real Windows stable-handle / reparse / crash race-freedom
+remains ACTIVATION-gating (recorded; the abstract epoch model is what the logical gate owns).
+
+**Finding 6 -- R1-ROLE-1 sink matrix (`tests/role_matrix.py`, monitor `_rc_launder` hooks).** M-R11 is
+generalized to a parameterized matrix over EVERY sink -- evidence / evidence_requirement / coverage_result /
+packet_disposition / control_plane / grant / policy / approval / health / TrustedStatus / completion / target
+/ effect -- for BOTH carriers (the router stage-trace AND the hydrated working memory): 26 (carrier x sink)
+kills, each run under the TEST-ONLY `non_execution=false` path so A31 + completion are REACHED. The reference
+monitor never reads a diagnostic/working carrier into any sink; each `M-RC-<CARRIER>-<SINK>` defect routes it
+into exactly one sink and is killed. Criterion `12_role_sink_matrix`.
+
+**Finding 7 -- independently-auditable evidence bundle (`tests/report.py`, `tests/p01gate.py`).** `run_suite`
+emits `tests/report/` : `report.json` (taxonomy + every criterion + both-run signature + section counts +
+mutation/role matrices + integration + fuzzer + completion + p01gate), `oracle_matrix.json` (all 141 rows),
+`fixture_manifest.json` (per-fixture canonical sha256 + family map + the real-packet hashes/provenance),
+`mutation_defs.json` (the registry + the mutations.py source digest), `source_digests.json` (sha256 of every
+module + test source; the tree digest), and `MANIFEST.json` (index + bundle digest). The bundle is
+DETERMINISTIC (byte-identical on re-run). `p01gate.py` is a REAL, blind, independent second implementation of
+the canonical surface (a hand-rolled serializer/parser/digest/ns predicate sharing no code with canon.py);
+its differential harness proves BYTE-EQUIVALENCE to canon over the corpus (criterion
+`8_one_canonical_implementation` is now backed by a shipped impl, not an assertion).
+
+**Result taxonomy (unchanged discipline).** `build_status = build_complete | p0_1_gate_status = pass |
+activation_status = prohibited`. The pass is a DESIGN gate: `non_execution:true` holds and Blockers 3/4/6/7 +
+the activation portions of 5/9 remain ACTIVATION-gating. An honest INCOMPLETE still beats a false PASS -- any
+`not_run` obligation, unkilled mutation, unrun family/fuzzer, absent 0.9.0 chain, failed role-sink kill,
+completion-substitution leak, view-golden drift, or p01gate divergence forces `incomplete`, never `pass`.

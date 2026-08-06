@@ -99,22 +99,47 @@ class PacketStore(object):
         return self._by_id.get(packet_id)
 
     @staticmethod
-    def view_from_real_m40_packet(pkt):
-        """Adapt a REAL #40 context_packet/0.2 JSON object into a trusted PacketView (integration)."""
+    def view_from_real_m40_packet(pkt, non_execution=None):
+        """Adapt a REAL #40 context_packet/0.2 JSON object into a trusted PacketView (integration).
+
+        `non_execution` defaults to the packet's own field; integration.py passes an explicit
+        `False` ONLY for the authorized TEST-ONLY variant (s8.7 crit 1) that lets execution proceed
+        past A06 into A09/A11/A30/A31 -- it NEVER mutates the committed fixture bytes."""
         if pkt.get("schema") != "lifeorch.context_packet/0.2":
             raise ValueError("not a context_packet/0.2")
         ident = pkt.get("identity", {})
         ti = pkt.get("task_input", {})
+        ne = bool(pkt.get("non_execution")) if non_execution is None else bool(non_execution)
         return PacketView(
             packet_id=pkt["packet_id"],
             task_id=ident.get("task_id"),
-            non_execution=bool(pkt.get("non_execution")),
+            non_execution=ne,
             namespace=ti.get("namespace"),
             allowed_namespaces=ti.get("allowed_namespaces", []),
             corpus_version=ident.get("corpus_version"),
             grant_snapshot_ref=ident.get("control_plane_grant_snapshot_ref"),
             current=True,
         )
+
+    @staticmethod
+    def meta_from_real_m40_packet(pkt):
+        """Derive the trusted A08/A31 packet_meta (disposition) from a REAL #40 packet's disposition
+        region, plus the presence flags for the 0.8.0 router stage-trace + the 0.9.0 hydrated
+        working_memory region. These flags are DIAGNOSTIC-ONLY; the reference monitor never lets them
+        satisfy evidence/coverage (R1-ROLE-1)."""
+        disp = pkt.get("disposition", {}) or {}
+        answerable = (disp.get("packet_disposition") == "answerable")
+        eh = pkt.get("evaluation_hooks", {}) or {}
+        wm = pkt.get("working_memory", {}) or {}
+        return {
+            "disposition": "answerable" if answerable else "needs_expansion",
+            "provenance_ok": not bool(disp.get("provenance_failed")),
+            "contradiction": bool(disp.get("contradictions")),
+            "retrieval_complete": answerable,
+            # DIAGNOSTIC carriers actually present in the real 0.9.0 packet (never authority):
+            "routing_present": isinstance(eh.get("routing_stage_trace"), list) and bool(eh.get("routing_stage_trace")),
+            "working_present": bool(wm.get("present")),
+        }
 
 
 # ===========================================================================
@@ -543,10 +568,13 @@ class StatusStore(object):
                     break
             if not ok and "M-E36" not in mutations:
                 continue  # M-E36: status from another task/action/permit/object satisfies completion
-            # freshness
+            # freshness + supersession/revocation (a superseded or revoked status is not current;
+            # Finding 4 substitution: superseded/revoked status cannot satisfy completion).
             if "M-E35" not in mutations:
                 if now_ms - r.get("at_ms", 0) > max_age_ms:
                     continue  # stale
+                if r.get("superseded") or r.get("revoked"):
+                    continue
             # namespace closure (s4.5.6)
             if "M-S10" not in mutations:
                 if not canon.ns_permitted(r.get("namespace"), {effective_namespace}, mutations):
@@ -566,6 +594,13 @@ class PermitStore(object):
         self._reservations = {}    # permit_id -> reservation
         self._idem = {}            # idempotency_key -> permit_id (in-flight/completed)
         self._reserved_digests = set()
+        # amendment 3 (Boundary D, red-team Finding 5): the trusted ISSUE-TIME epoch snapshot the
+        # executor re-reads ALL of after the atomic claim (grant/policy/approval/manifest+artifact/
+        # health/packet+status currentness/store-epoch). Keyed by permit_id; recorded at A34.
+        self._issue_snapshot = {}  # permit_id -> {grant_epoch, policy_epoch, installed_digest, ...}
+        # amendment 4 (red-team Finding 4): the IMMUTABLE completion binding stamped at issue time
+        # from the authentic packet_id -> {completion_contract_id, contract_version, contract_digest}.
+        self._completion_binding = {}  # permit_id -> binding | None
 
     def idempotency_conflict(self, idempotency_key):
         pid = self._idem.get(idempotency_key)
@@ -594,6 +629,19 @@ class PermitStore(object):
         self._state[permit["permit_id"]] = "issued"
         self._effect_started[permit["permit_id"]] = False
         return permit
+
+    def record_issue_snapshot(self, permit_id, snapshot):
+        """Capture the trusted epoch snapshot the executor re-reads after claim (Boundary D)."""
+        self._issue_snapshot[permit_id] = dict(snapshot)
+
+    def issue_snapshot(self, permit_id):
+        return self._issue_snapshot.get(permit_id)
+
+    def record_completion_binding(self, permit_id, binding):
+        self._completion_binding[permit_id] = (dict(binding) if binding is not None else None)
+
+    def completion_binding(self, permit_id):
+        return self._completion_binding.get(permit_id)
 
     def get(self, permit_id):
         return self._permits.get(permit_id)
@@ -656,9 +704,35 @@ class Stores(object):
         self.log = SecurityLog()
         self.resolve_ctx = ResolveCtx()
         self.side_effect_policy_ref = None  # the current policy ref for the task authority
+        # amendment 4 (red-team Finding 4): completion contracts bound to a packet by its IMMUTABLE
+        # packet_id (the control-plane store). The completion evaluator resolves ONLY from here via
+        # the permit's packet_id -- NEVER a current-contract-by-task lookup. `completion_contracts`
+        # (by task_id) is retained ONLY for the A30 isolation tamper-check + legacy leaf tests.
+        self.completion_by_packet = {}
 
     def grant(self, ref):
         return self.grants.get(ref)
 
     def policy(self, ref):
         return self.policies.get(ref)
+
+    def completion_contract_for_packet(self, packet_id, mutations=frozenset()):
+        """Resolve the completion contract via the authentic immutable packet_id (Finding 4).
+        Seeded defect M-E36 substitutes a current-contract-BY-TASK lookup (the substitution hole)."""
+        cc = self.completion_by_packet.get(packet_id)
+        if cc is not None:
+            return cc
+        if "M-E36" in mutations:
+            pv = self.packets.verify_and_get(packet_id)
+            if pv is not None:
+                return self.completion_contracts.get(pv.task_id)
+        return None
+
+    def completion_binding_for_packet(self, packet_id):
+        """The {id, version, digest} stamped into a permit at issue time (immutable binding)."""
+        cc = self.completion_by_packet.get(packet_id)
+        if cc is None:
+            return None
+        return {"completion_contract_id": cc.get("completion_contract_id"),
+                "contract_version": cc.get("contract_version"),
+                "contract_digest": cc.get("contract_digest")}

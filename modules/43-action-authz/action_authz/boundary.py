@@ -149,7 +149,47 @@ class MockExecutor(object):
             st.permits.reject_no_effect(permit_id)
             return _reject(st, "D3_manifest_drift", mutations)
 
+        # ---- amendment 3 (red-team Finding 5): re-read ALL mutable epochs AFTER the claim. --------
+        # Not just manifest/artifact -- also grant (epoch/current/revocation), side-effect policy
+        # (epoch/current), approval (revocation/expiry), tool health, permit-store epoch, and
+        # packet/status currentness. Any post-claim drift -> rejected_no_effect: a TERMINAL permit +
+        # an EMPTY independent effect ledger. This is the ABSTRACT epoch model the logical gate owns;
+        # real Windows stable-handle/reparse/crash race-freedom stays ACTIVATION-gating (recorded).
+        snap = st.permits.issue_snapshot(permit_id)
+        if snap is not None:
+            gsx = st.grant(permit.get("grant_snapshot_ref"))
+            if (gsx is None or gsx.epoch != snap.get("grant_epoch") or (not gsx.current)
+                    or (set(gsx.revoked) & set(permit.get("matched_grant_ids", [])))):
+                st.permits.reject_no_effect(permit_id)
+                return _reject(st, "D3_grant_epoch", mutations)
+            polx = st.policy(permit.get("side_effect_policy_ref"))
+            if polx is None or polx.epoch != snap.get("policy_epoch") or (not polx.current):
+                st.permits.reject_no_effect(permit_id)
+                return _reject(st, "D3_policy_epoch", mutations)
+            if permit.get("approval_ref") is not None:
+                appr = st.approvals._by_ref.get(permit["approval_ref"])
+                if (appr is None or appr.get("revoked") or appr.get("state") != "approved"
+                        or st.clock.now_ms() >= appr.get("expiry_unix_ms", 1 << 62)):
+                    st.permits.reject_no_effect(permit_id)
+                    return _reject(st, "D3_approval_epoch", mutations)
+            hnow = st.health.current(man["health_source"]["source_id"])
+            if snap.get("health") is not None and hnow != snap.get("health"):
+                st.permits.reject_no_effect(permit_id)
+                return _reject(st, "D3_health_epoch", mutations)
+            if st.permits.epoch != snap.get("store_epoch"):
+                st.permits.reject_no_effect(permit_id)
+                return _reject(st, "D3_store_epoch2", mutations)
+            pvx = st.packets.verify_and_get(permit.get("packet_id"))
+            if (pvx is None or (not pvx.current)
+                    or pvx.non_execution != snap.get("packet_non_execution")):
+                st.permits.reject_no_effect(permit_id)
+                return _reject(st, "D3_packet_epoch", mutations)
+
         # ---- steps 4-6: re-resolve dynamic targets AFTER claim; bind + verify SAME identity. ----
+        # The permit's resolved_target_set entries each carry an unforgeable `resolution_proof_digest`
+        # captured at resolution -- the executor CONSUMES that captured stable handle and NEVER
+        # re-resolves the caller name. `reresolve_targets` models what a fresh resolution would yield;
+        # any divergence from the captured handle -> rejected_no_effect (TOCTOU substitution).
         bound_targets = permit["resolved_target_set"]
         if reresolve_targets is not None and "M-E29" not in mutations:
             if canon.canonical_bytes(reresolve_targets) != canon.canonical_bytes(permit["resolved_target_set"]):
@@ -254,4 +294,144 @@ def evaluate_completion(contract, st, mutations=frozenset(), evidence_claims=Non
     if "M-R07" in mutations and evidence_claims.get("task") == "complete":
         return "true"                                      # model/evidence prose satisfies completion
     v = _eval_expr(contract["root"], st, mutations, contract["effective_namespace"], evidence_claims)
+    return {True: "true", False: "false", None: "indeterminate"}[v]
+
+
+# ---------------------------------------------------------------------------
+# amendment 4 (red-team Finding 4): completion is bound through the authentic IMMUTABLE `packet_id`,
+# NOT a current-contract-by-task lookup, and every leaf is scoped to the EXACT permit.
+#
+# The per-leaf-kind MINIMUM binding scope (frozen, byte-exact in SCHEMA_NOTES). A leaf whose declared
+# `completion_scope` is weaker than its kind's minimum makes the whole contract indeterminate --
+# closing the "executor_status bound to task" hole. `permit` implies the exact canonical action.
+MIN_COMPLETION_SCOPE = {
+    "executor_status": frozenset(("permit",)),
+    "state_diff":      frozenset(("permit",)),
+    "artifact_hash":   frozenset(("object", "action", "permit")),
+    "test_suite":      frozenset(("action", "object")),
+    "object_state":    frozenset(("object",)),
+    "human_approval":  frozenset(("approval",)),
+    "postcondition":   frozenset(("action", "permit")),
+}
+
+
+def _rc_completion_launder(mutations, evidence_claims, sink):
+    """R1-ROLE-1 completion sinks: a diagnostic/working carrier laundered into TrustedStatus /
+    completion. The carrier's presence is signalled by evidence_claims["__carrier_<c>__"]; the
+    reference (no M-RC-* id) never honours it."""
+    for carrier, tag in (("routing", "RT"), ("working", "WM")):
+        if ("M-RC-%s-%s" % (tag, sink.upper())) in mutations and evidence_claims.get("__carrier_%s__" % carrier):
+            return True
+    return False
+
+
+def _permit_subject(permit, scope, leaf):
+    """The subject a completion leaf must bind, DERIVED FROM THE PERMIT (not the contract), so status
+    from another action/permit/object cannot satisfy it. Returns None if the scope's binding is
+    unavailable on this permit (e.g. an approval leaf on a permit with no approval_ref)."""
+    if scope == "task":
+        return {"task_id": permit["task_id"]}
+    if scope == "action":
+        return {"task_id": permit["task_id"], "canonical_action_digest": permit["canonical_action_digest"]}
+    if scope == "permit":
+        return {"task_id": permit["task_id"], "canonical_action_digest": permit["canonical_action_digest"],
+                "permit_id": permit["permit_id"]}
+    if scope == "object":
+        oid = (leaf.get("predicate", {}).get("subject_binding", {}) or {}).get("object_id")
+        tids = {t["canonical_target_id"] for t in permit.get("resolved_target_set", [])}
+        if oid is None or oid not in tids:      # the object must be one THIS permit actually authorized
+            return None
+        return {"object_id": oid}
+    if scope == "approval":
+        ar = permit.get("approval_ref")
+        return None if ar is None else {"approval_ref": ar}
+    return None
+
+
+def _leaf_value_bound(leaf, st, mutations, ns, evidence_claims, permit):
+    pk = leaf["predicate"]
+    kind = pk["predicate_kind"]
+    scope = leaf.get("completion_scope")
+    allowed = MIN_COMPLETION_SCOPE.get(kind)
+    if "M-E36" not in mutations:
+        if allowed is None or scope not in allowed:
+            return None                                     # scope weaker than the per-kind minimum
+        subject = _permit_subject(permit, scope, leaf)
+        if subject is None:
+            return None                                     # required binding absent on this permit
+    else:
+        # seeded defect: ignore completion_scope AND bind by the CONTRACT's own (attacker-influenced)
+        # subject_binding by TASK -- the substitution hole the amendment closes.
+        subject = dict(pk.get("subject_binding", {}))
+    rec = st.status.find(kind, pk["source_id"], pk["source_version"], subject, st.clock.now_ms(),
+                         pk["max_age_ms"], ns, mutations)
+    if rec is None:
+        if "M-E35" in mutations:
+            return True
+        if "M-R08" in mutations and evidence_claims.get(pk["predicate_id"]) == "success":
+            return True
+        if "M-A04" in mutations and evidence_claims.get(pk["predicate_id"]) == "success":
+            return True
+        if _rc_completion_launder(mutations, evidence_claims, "trusted_status"):
+            return True                                     # carrier laundered into TrustedStatus
+        return None
+    return _matches_expected(kind, rec, pk.get("expected", {}))
+
+
+def _eval_expr_bound(node, st, mutations, ns, evidence_claims, permit):
+    kind = node["kind"]
+    if kind == "leaf":
+        return _leaf_value_bound(node, st, mutations, ns, evidence_claims, permit)
+    vals = [_eval_expr_bound(c, st, mutations, ns, evidence_claims, permit) for c in node["children"]]
+    if kind == "all":
+        if any(v is False for v in vals):
+            return False
+        if all(v is True for v in vals):
+            return True
+        return None
+    if kind == "any":
+        if any(v is True for v in vals):
+            return True
+        if all(v is False for v in vals):
+            return False
+        return None
+    if kind == "at_least":
+        k = node["threshold"]
+        t = sum(1 for v in vals if v is True)
+        ind = sum(1 for v in vals if v is None)
+        if t >= k:
+            return True
+        if t + ind < k:
+            return False
+        return None
+    return None
+
+
+def evaluate_completion_via_permit(st, permit, mutations=frozenset(), evidence_claims=None):
+    """Evaluate completion for a PERMIT by resolving the completion contract through the authentic
+    IMMUTABLE packet_id (never a current-contract-by-task lookup) and scoping every leaf to the exact
+    permit. Returns 'true' | 'false' | 'indeterminate' ('indeterminate' is incomplete). Any
+    substitution (cross-action/permit/object, old-contract-vs-new-packet, tampered/omitted binding,
+    wrong validator version, superseded status) resolves to indeterminate."""
+    evidence_claims = evidence_claims or {}
+    if "M-R07" in mutations and evidence_claims.get("task") == "complete":
+        return "true"                                       # model/evidence prose satisfies completion
+    if _rc_completion_launder(mutations, evidence_claims, "completion"):
+        return "true"                                       # carrier laundered into completion
+    cc = st.completion_contract_for_packet(permit["packet_id"], mutations)
+    if cc is None:
+        return "indeterminate"
+    if canon.digest_omitting(cc, "contract_digest") != cc.get("contract_digest"):
+        return "indeterminate"                              # tampered / mismatching content
+    if "M-E36" not in mutations:
+        if cc.get("packet_id") is not None and cc.get("packet_id") != permit["packet_id"]:
+            return "indeterminate"                          # old-contract-vs-new-packet
+        if cc.get("task_id") != permit.get("task_id"):
+            return "indeterminate"
+        b = st.permits.completion_binding(permit["permit_id"])
+        if b is not None and (b.get("completion_contract_id") != cc.get("completion_contract_id")
+                              or b.get("contract_version") != cc.get("contract_version")
+                              or b.get("contract_digest") != cc.get("contract_digest")):
+            return "indeterminate"                          # not the contract bound at issue time
+    v = _eval_expr_bound(cc["root"], st, mutations, cc["effective_namespace"], evidence_claims, permit)
     return {True: "true", False: "false", None: "indeterminate"}[v]
