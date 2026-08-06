@@ -95,6 +95,20 @@ HIERARCHY_KIND_SOURCE_MODULE = "source_module"       # i34 builds ONE hierarchy 
 # bounded structural-synopsis sizes (a bounded descriptor is a RANKING feature, NEVER a pruning oracle -- A6).
 ENTITY_UNION_TOPN = 32
 LEXICAL_DESCRIPTOR_TOPN = 64
+# i39 (0.7.0) FAST-BEAM RECALL LEVER -- deterministic INTEGER, POSITIVE-ONLY, RANKING-ONLY weights for scoring a
+# navigation node's bounded structural synopsis against the query terms (used by `shortlist` roots + `descend`
+# children so the FROZEN #40 frontier slice keeps the branch that leads to the required leaf). These may
+# PRIORITIZE a branch but NEVER exclude one -- a 0 score still keeps the node in the child list; the ONLY
+# exclusion path stays the no-false-negative `prune_verdict` (UNCHANGED). Ordering: a query term present in the
+# bounded lexical_descriptor dominates (it survived the top-N -> frequent enough to be decisive); an entity
+# match is next; a term merely MAYBE-present in the no-false-negative presence_filter (Bloom) is the weakest
+# positive (it still ranks a branch that definitely-contains a RARE decisive term above siblings that
+# definitely lack it -- until the Bloom saturates over a shared vocabulary at upper levels, the honest limit).
+NAV_DESC_HIT = 1000000       # a query term found in the bounded lexical_descriptor (strongest positive)
+NAV_DF_CAP = 1000            # df magnitude cap added on a descriptor hit (refines ranking AMONG descriptor hits)
+NAV_ENTITY_HIT = 100000      # a query term matching the bounded entity_union
+NAV_KIND_HIT = 10            # a query term matching a kind_histogram (record-kind) key
+NAV_BLOOM_HIT = 1            # a query term MAYBE-present in the no-false-negative presence_filter (weak; rare-term)
 # the sufficient-statistics vector aggregate: f64 accumulation, then canonical quantization BEFORE hashing
 # (topology-independent + byte-reproducible). ABSENT while no subtree leaf has a vector.
 VEC_AGG_QUANT_DECIMALS = 6
@@ -3167,12 +3181,67 @@ class Catalog:
                 score += 0.5
         return score
 
+    @staticmethod
+    def _nav_match_key(row, terms):
+        """i39 FAST-BEAM RECALL LEVER: a DETERMINISTIC, INTEGER-ONLY, POSITIVE-ONLY, RANKING-ONLY score of a
+        navigation node's bounded structural synopsis against the query `terms`, computed straight off the node
+        ROW (so it can read the no-false-negative `presence_filter_hex`, which `_node_public` does not expose).
+        It may PRIORITIZE a branch but NEVER excludes one: a 0 score keeps the node in the child list, the
+        frontier bound is #40-owned, and a no-false-negative PRUNE stays the ONLY exclusion path (`prune_verdict`
+        UNCHANGED). Signals, all bounded descriptors the node already carries (A6/H1): a term in the bounded
+        lexical_descriptor (df) is the strongest positive; else a term MAYBE-present in the presence_filter
+        (Bloom) is a weak positive that still lifts a branch definitely-containing a RARE decisive term above
+        siblings that definitely lack it; an entity_union match; a kind_histogram (record-kind) match. A STALE
+        synopsis is NOT specially zeroed here -- its (still-present) descriptors keep the correct branch
+        reachable (the safe-pruning rule forbids a stale synopsis from EXCLUDING, not from positively ranking;
+        recall is preserved), while #40 independently flags stale_navigation + never claims proved absence."""
+        if not terms:
+            return 0
+        lex = json.loads(row["lexical_descriptor_json"] or "{}")
+        ents = set(str(e[0]).lower() for e in json.loads(row["entity_union_json"] or "[]"))
+        kinds = json.loads(row["kind_histogram_json"] or "{}")
+        pf = row["presence_filter_hex"]
+        score = 0
+        for t in terms:
+            if t in lex:
+                score += NAV_DESC_HIT + min(int(lex[t]), NAV_DF_CAP)
+            elif pf and _bloom_contains(pf, t):
+                score += NAV_BLOOM_HIT
+            if t in ents:
+                score += NAV_ENTITY_HIT
+            if t in kinds:
+                score += NAV_KIND_HIT
+        return score
+
+    def _leaf_match_key(self, rvid, terms):
+        """i39 FAST-BEAM RECALL LEVER (leaf half): the lexical overlap of a leaf's text with the query `terms`
+        (count of distinct query terms present), for ordering a descended node's leaf members so the decisive
+        leaf survives #40's position-seeded packet budget. Deterministic INTEGER, RANKING-ONLY (never excludes a
+        member). A leaf is EITHER a source_chunk (chunk_occurrence_id) OR a typed record (record_version_id) --
+        the SAME id space descend leaf_members refer to; a leaf with no resolvable text scores 0."""
+        if not terms:
+            return 0
+        r = self.conn.execute("SELECT text FROM chunks WHERE chunk_occurrence_id=? LIMIT 1", (rvid,)).fetchone()
+        if r is None:
+            r = self.conn.execute("SELECT text FROM records WHERE record_version_id=? LIMIT 1", (rvid,)).fetchone()
+        if r is None or r["text"] is None:
+            return 0
+        toks = set(_a6_terms(r["text"]))
+        return sum(1 for t in terms if t in toks)
+
     def shortlist(self, query, effective_allowed, hierarchy_version, corpus_snapshot, k):
         """H6: rank the AUTHORIZED hierarchy ROOTS (the initial navigation frontier) by structural-synopsis
         match -- a FRONTIER-EXPANSION op, not a flat scan of every node. Every returned node is scope-checked
         with the canonical ns_permitted; separate roots for a multi-namespace scope (NEVER a merged root)."""
         if not query or not str(query).strip():
             raise ASError("empty_query", "shortlist query is empty")
+        # i39 FAST-BEAM RECALL LEVER: CACHE this compile's ranking terms so `descend` -- whose FROZEN #40 0.9.0
+        # caller passes NO query -- can rank a node's children by structural-synopsis match against THIS query.
+        # There is ONE Catalog per compile (the #40 port holds a single read connection across its shortlist +
+        # descend calls; the #36 CLI opens a FRESH Catalog per op -> no cross-query bleed), and
+        # run_hierarchy_plan ALWAYS shortlists (stage 0) before any descend, so this is the correct query for
+        # every descend of the compile. Output of shortlist is UNCHANGED (this only records state).
+        self._nav_query_terms = tuple(sorted(set(_a6_terms(query))))
         k = int(k) if k else 10
         corpus_version = self._get_corpus_version()
         if effective_allowed is None:
@@ -3241,8 +3310,14 @@ class Catalog:
             return _closed("stale_or_unpublished_version")
         if hierarchy_version and str(hierarchy_version) != h["tree_version"]:
             return _closed("pinned_version_unavailable")
-        # children (child_of_node: src=child, dst=this node) -- each scope-checked (per-hop closure).
-        children = []
+        # children (child_of_node: src=child, dst=this node) -- each scope-checked (per-hop closure). i39
+        # FAST-BEAM RECALL LEVER: RANK the scope-clean child NODES by structural-synopsis match against the
+        # cached query so the FROZEN #40 frontier slice (`next_frontier[:beam_b]`) keeps the branch that leads
+        # to the required leaf. RANKING ONLY -- an ADDITIVE integer `match_score` + a REORDER; never a prune,
+        # never a namespace change; the field SHAPES are unchanged. Absent a cached query (a direct #36 descend
+        # with no prior shortlist -- e.g. the CLI or a unit test), the src_ref order + no-match_score projection
+        # are PRESERVED BYTE-IDENTICAL.
+        crows = []
         for e in self.conn.execute(
                 "SELECT src_ref FROM record_edges WHERE edge_kind='child_of_node' AND dst_ref=? ORDER BY src_ref", (node_id,)):
             crow = self.conn.execute("SELECT * FROM nodes WHERE node_id=? AND tree_version=? LIMIT 1",
@@ -3251,13 +3326,33 @@ class Catalog:
                 continue
             if effective_allowed is not None and not ns_permitted(crow["namespace"], effective_allowed):
                 continue                       # per-hop closure -- silently omitted (never disclosed)
-            children.append(self._node_public(crow))
+            crows.append(crow)
+        nav_terms = getattr(self, "_nav_query_terms", None)
+        if nav_terms:
+            scored = [(self._nav_match_key(cr, nav_terms), cr) for cr in crows]
+            scored.sort(key=lambda sc: (-sc[0], sc[1]["node_id"]))   # match desc, node_id asc (deterministic)
+            children = []
+            for msc, cr in scored:
+                pub = self._node_public(cr)
+                pub["match_score"] = msc       # ADDITIVE integer ranking score (the reorder within-beam is the lever)
+                children.append(pub)
+        else:
+            children = [self._node_public(cr) for cr in crows]
         # leaf members (member_of_node: src=leaf, dst=this node) -- returned as navigation refs (candidate_role
-        # evidence) for the compiler to fetch via search; namespace of the leaf is checked against scope.
-        leaf_members = []
-        for e in self.conn.execute(
-                "SELECT src_ref FROM record_edges WHERE edge_kind='member_of_node' AND dst_ref=? ORDER BY src_ref", (node_id,)):
-            leaf_members.append({"record_version_id": e["src_ref"], "candidate_role": "evidence"})
+        # evidence) for the compiler to fetch via search; namespace of the leaf is checked against scope. i39
+        # FAST-BEAM RECALL LEVER (2nd half): RANK the leaf members by lexical overlap with the cached query. This
+        # is load-bearing because #40's frozen port HYDRATES each leaf with a lexical_score DERIVED FROM ITS
+        # POSITION in this list (rank -> 1.0-(rank-1)*0.01), which then seeds selpol + the packet budget -- so a
+        # required leaf buried in src_ref order is dropped by the budget even after descend REACHES it. Ordering
+        # by query overlap lifts the decisive leaf into the packet. RANKING ONLY (reorder; shape unchanged; every
+        # member still returned -> never a prune/exclusion; scope already enforced at the node). Absent a cached
+        # query the src_ref order is PRESERVED BYTE-IDENTICAL.
+        leaf_ids = [e["src_ref"] for e in self.conn.execute(
+                "SELECT src_ref FROM record_edges WHERE edge_kind='member_of_node' AND dst_ref=? ORDER BY src_ref", (node_id,))]
+        if nav_terms:
+            leaf_ids = [lid for _s, lid in sorted(
+                ((-self._leaf_match_key(lid, nav_terms), lid) for lid in leaf_ids), key=lambda x: (x[0], x[1]))]
+        leaf_members = [{"record_version_id": lid, "candidate_role": "evidence"} for lid in leaf_ids]
         return {"ok": True, "authorized": True, "node_id": node_id, "namespace": row["namespace"],
                 "tree_version": row["tree_version"], "level": row["level"],
                 "retrieval_stage_id": "stage:descend:%d" % (int(row["level"])),

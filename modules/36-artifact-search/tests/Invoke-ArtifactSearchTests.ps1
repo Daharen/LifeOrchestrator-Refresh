@@ -98,8 +98,8 @@ Check 'manifest is schema-valid' ([bool]$mv.valid) (($mv.errors) -join '; ')
 $man = (Get-Content -LiteralPath $mf -Raw) | ConvertFrom-Json
 Check 'manifest determinism=deterministic' ($man.determinism -eq 'deterministic')
 Check 'manifest skill_id=artifact.search' ($man.skill_id -eq 'artifact.search')
-Check 'manifest version=0.6.0' ($man.version -eq '0.6.0')
-Check 'manifest contract_version=0.6' ($man.contract_version -eq '0.6')
+Check 'manifest version=0.7.0' ($man.version -eq '0.7.0')
+Check 'manifest contract_version=0.7' ($man.contract_version -eq '0.7')
 Check 'manifest batch=false & streaming=false' (($man.batch -eq $false) -and ($man.streaming -eq $false))
 
 # ---------- 2) ingest the bundled fixture repo ----------

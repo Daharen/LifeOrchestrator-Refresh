@@ -719,3 +719,76 @@ unchanged) + determinism (byte-identical re-run + permutation-independent order)
 `missing_rvid` guard. Live: `tests/Invoke-ArtifactSearchTests.ps1` get-record section (real-worker via the
 entrypoint) + the 0.6.0/0.6 version assertions. Shipped A6 regression stays green
 (`tests/test_hierarchy_a6.py` 56/56).
+
+## 15. i39 (0.7.0, D-0107 follow-on) the FAST-BEAM RECALL LEVER -- EVERY interpretation (RANKING ONLY)
+
+**Context.** i36's Tier-1 acceptance (`research/2026-08-05-i36-tier1-acceptance-rehearsal.md`) flipped
+`tier1_accepted=True` but recorded an honest follow-on: the WIRED shortlist-and-descend FAST-BEAM is
+bounded-beam LOSSY (`hierarchy_path_recall` well below guaranteed) -- end-to-end recall was 100% ONLY via the
+exhaustive #36-flat fallback (the SAFE-PRUNING design). #40's `run_hierarchy_plan` (FROZEN 0.9.0) takes
+`frontier = roots[:beam_b]` and `next_frontier[:beam_b]` -- it SLICES #36's shortlist/descend output WITHOUT
+re-ranking, so fast-path recall is governed by **#36's** ranking. This wave strengthens that ranking so the
+fast-beam itself contributes recall and the flat fallback fires less. QUALITY lever, not a correctness change;
+`non_execution:true` holds; schema_version STAYS 5; NO migration; `catalog_digest` + every `tree_digest`
+UNCHANGED (no build/ingest touched).
+
+**The two seams (why a QUERY has to reach a query-less op).** (1) #40's port passes NO query to `descend`
+(its protocol is `descend(node_id, retrieval_plan_id, effective_allowed, hierarchy_version, corpus_snapshot)`),
+yet the recall lever needs to rank a node's children AGAINST the query. Resolution: `shortlist` CACHES this
+compile's ranking terms on the Catalog instance (`self._nav_query_terms = tuple(sorted(set(_a6_terms(query))))`)
+and `descend` reads them via `getattr`. This is SOUND because the #40 port holds ONE `Catalog` per compile
+across its single `shortlist` (stage 0) -> many `descend` calls, and `run_hierarchy_plan` ALWAYS shortlists
+before descending; the #36 CLI opens a FRESH Catalog per op, so a direct `descend` (CLI / unit test) has NO
+cached query and is BYTE-IDENTICAL to 0.6.0 (verified: no `match_score` on children, src_ref order). shortlist's
+OWN output is UNCHANGED (the cache is pure state; roots are still ranked by the existing float
+`_synopsis_match_score` -- irrelevant to recall here since the rehearsal scopes to ONE namespace => ONE root).
+(2) #40's port HYDRATES each leaf's `lexical_score` FROM ITS POSITION in `descend`'s `leaf_members`
+(`_hydrate_leaf`: `lexical_score = 1.0 - (rank-1)*0.01`), which seeds selpol + the packet budget -- so a
+decisive leaf buried in src_ref order was DROPPED BY THE BUDGET even after descend REACHED it. Resolution:
+`descend` RANKS `leaf_members` by lexical overlap with the cached query too.
+
+**The ranking (deterministic, integer-only, POSITIVE-only, RANKING-only).** `_nav_match_key(node_row, terms)`
+scores a child node's bounded structural synopsis (A6/H1): a query term in the bounded `lexical_descriptor`
+scores `NAV_DESC_HIT(1e6)+min(df,NAV_DF_CAP)` (strongest -- it survived the top-N so it is frequent enough to
+be decisive); ELSE a term MAYBE-present in the no-false-negative `presence_filter` (Bloom) scores
+`NAV_BLOOM_HIT(1)` (weak positive -- still lifts a branch that DEFINITELY contains a RARE decisive term above
+siblings that DEFINITELY lack it); an `entity_union` match adds `NAV_ENTITY_HIT(1e5)`; a `kind_histogram`
+(record-kind) match adds `NAV_KIND_HIT(10)`. Children sort `(-score, node_id)` and carry an ADDITIVE integer
+`match_score`. `_leaf_match_key(rvid, terms)` = count of distinct query terms in the leaf's text (chunk OR typed
+record -- the same id space `descend` refs); leaf_members sort `(-overlap, rvid)`.
+
+**HARD INVARIANTS held (the load-bearing ones).** RANKING ONLY -- a positive score may PRIORITIZE a branch but
+NEVER EXCLUDES one (a 0 score keeps the node in the child list; the frontier bound is #40-owned; a beam-dropped
+branch is `unresolved`, NOT proved absent). The SAFE-PRUNING no-false-negative predicates (`prune_verdict` /
+the SOUND channels) are UNTOUCHED -- a bounded descriptor still NEVER prunes, a Bloom is used here ONLY as a
+POSITIVE signal (its no-false-negative property means the correct branch always scores >= a non-containing
+sibling), a STALE synopsis still never supplies a prune proof (and, for ranking, its still-present descriptors
+keep the correct branch REACHABLE -- recall-preserving). Namespace CLOSURE unchanged (`ns_permitted` at every
+hop; the per-hop scope filter runs BEFORE ranking; cross-ns candidates excluded before ranking). Port response
+SHAPES byte-stable (only ORDER changes + the additive integer `match_score`; no field removed/retyped). Nav cost
+bounded O(beam_b*depth_d) (the per-node member/child enumeration was already there; `beam_b` is #40-owned + out
+of scope). DOUBLE-RUN byte-identical on every canonical-bytes path (verified: wired report + direct descend).
+
+**Measured (cloud repro of #37's committed rehearsal harness -- byte-faithful: baseline WIRED structural_digest
+== the pinned `WIRED_STRUCTURAL_DIGEST`).** Labeled descend-class (q1/q6/q7 global_synthesis) fast-path reach
+**1/3 -> 3/3** (all now reach the required leaf via the beam). Rare-term SCALE `hierarchy_path_recall_ppm`
+**58823 -> 117647** (~2x; scales [1,10,100], fanout 8). Guaranteed + packet-evidence recall stay **1,000,000 ppm**
+(recall NEVER drops); all **11/11** WIRED s10 criteria PASS (bounded cost / 0 contamination / current-vs-
+historical / provenance 1e6 / sub-linear nav from #40's plan trace / disposition / stale-window preserved / no
+fold reconciliation). REGRESSION: #40 i35 public-port **32/32**, i34 smoke **38/38**, #40 i37 router **34/34**,
+#36 `test_hierarchy_a6.py` **56/56** (the flat compile is byte-identical -- additive/gated); the #37 rehearsal
+FLAT metrics are byte-identical (PINNED_STRUCTURAL_DIGEST + FLAT_METRICS_SKELETON_DIGEST both match). The ONLY
+downstream break: #37's committed `tests/test_rehearsal_eval.py::test_wired()` fails EXACTLY ONE assertion --
+the pinned `WIRED_STRUCTURAL_DIGEST` (the wired metric IMPROVED by design; its partial-recall assertions
+[`hierarchy_path_recall < guaranteed`, `regret>0`, `fallback>0`] STILL hold) -- a one-line re-pin that is an
+orchestrator/#37 follow-on (this unit is EXCLUSIVE to #36 + treats #37/#40 read-only).
+
+**Honest residual (a first-class NEGATIVE result for rare-term SCALE queries).** The remaining scale gap is
+UPPER-LEVEL BLOOM SATURATION: the 2048-bit `presence_filter` is the OR of a subtree's tokens, and over the
+rehearsal's SHARED replica vocabulary an upper node's Bloom is fully saturated -> a rare marker "hits" EVERY
+child (false positives) -> no discrimination above the leaf-parent level, where the beam decision was already
+made. No bounded synopsis can preserve per-term locality for ALL rare terms at upper levels (the
+bounded-descriptor lossiness the i34 red-team named). #36 ranking lifts recall where a signal EXISTS (multi-term
+labeled queries via `lexical_descriptor`; the leaf-parent Bloom; the position-seeded budget) but cannot
+manufacture an upper-level signal that the bounded structural synopsis does not carry -- so the residual lever
+is #40-owned BEAM WIDTH (`beam_b`), a #40 follow-on, not this unit.

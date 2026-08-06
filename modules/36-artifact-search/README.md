@@ -1,4 +1,4 @@
-# Module 36 -- artifact.search (0.6.0)
+# Module 36 -- artifact.search (0.7.0)
 
 **Deterministic SQLite catalog + typed-record memory substrate + hybrid LEXICAL (FTS5) search + a
 bounded-fanout navigation HIERARCHY.** The Collective Agent's authoritative catalog (D-0080 Wave 1/2, arch
@@ -76,6 +76,30 @@ supersession flags `effective_current`/`superseded_by`/`supersession_conflicted`
 pool-independent). Deterministic + envelope-only (`records[]` sorted by `record_version_id`; unresolved rvids
 surface count-only as `unresolved_count`); absent set = unscoped back-compat, an explicit EMPTY set = zero
 results. **#40 ADOPTS it in i37** (this wave only SHIPS the op). Full record: `SCHEMA_NOTES.md` section 14.
+
+**0.7 (i39, FANOUT_AGENT_002, D-0107 follow-on) the FAST-BEAM RECALL LEVER -- ADDITIVE, RANKING-ONLY, NO
+migration (`schema_version` STAYS 5; `catalog_digest` + every `tree_digest` UNCHANGED).** i36 accepted Tier-1 but
+recorded that the WIRED shortlist-and-descend fast-beam was bounded-beam LOSSY -- recall was carried by the
+exhaustive #36-flat fallback (the SAFE-PRUNING design). #40's FROZEN `run_hierarchy_plan` SLICES #36's ranked
+output (`frontier[:beam_b]`) WITHOUT re-ranking, so fast-path recall is governed by #36's ranking. 0.7
+strengthens it: `shortlist` CACHES the compile's query terms (the #40 port holds ONE Catalog across its single
+shortlist -> many descend calls; the CLI opens a fresh Catalog per op, so a descend with no prior shortlist is
+BYTE-IDENTICAL to 0.6.0), and `descend` then RANKS its child NODES by a deterministic, integer, POSITIVE-only
+structural-synopsis match against those terms (bounded `lexical_descriptor` df dominates; else the no-false-
+negative `presence_filter` Bloom is a weak positive; `entity_union` + `kind_histogram` add) -- emitting an
+ADDITIVE integer `children[].match_score` + the reorder -- AND RANKS the node's `leaf_members` by lexical overlap
+with the query (load-bearing: #40's port hydrates each leaf's `lexical_score` FROM ITS POSITION in
+`leaf_members`, seeding selpol + the packet budget). **RANKING ONLY, NEVER a pruning oracle** -- `prune_verdict`
++ the SOUND channels are UNCHANGED, a bounded descriptor still never prunes, a Bloom is used ONLY as a positive
+signal, a stale synopsis never prunes; a positive score may PRIORITIZE but NEVER EXCLUDES a branch; namespace
+closure unchanged; end-to-end (packet + guaranteed) recall NEVER drops; nav cost stays O(beam_b*depth_d). Port
+SHAPES are byte-stable (only ORDER + the additive integer score), so a flat/non-descend/unscoped #40 compile
+stays byte-identical (i35 gate 32/32 + i34 smoke 38/38 hold). MEASURED (the #37 rehearsal): all labeled
+descend-class fast-path reach **1/3 -> 3/3**, rare-term scale `hierarchy_path_recall` **~2x**, guaranteed + packet
+recall stay 1,000,000 ppm; the WIRED rehearsal digest RISES by design (a one-line `WIRED_STRUCTURAL_DIGEST`
+re-pin is an orchestrator/#37 follow-on). The residual scale gap is upper-level Bloom saturation over a shared
+vocabulary (a bounded-synopsis limit); the remaining lever is #40's beam width. Full record: `SCHEMA_NOTES.md`
+section 15.
 
 Contract: `SKILL_CONTRACT.md` + `MEMORY_CONTRACT.md` (D-0083 + A4/D-0092 + A5/D-0096 + A6/D-0098). Schema + every
 interpretation: `SCHEMA_NOTES.md` (authoritative for the fold). Work order: `WORK_ORDER.md`.
