@@ -16,10 +16,10 @@ reconstruct intent without those chats. Do not slim section 2 below its ability 
 24 KB, REPLACE-don't-append per `DOC_PROTOCOL.md`; history to git + archive like every governing doc.
 
 **Cadence header (orchestrator maintains by replacement -- the PROCESS_MANDATE countdown pattern):**
-- `last_reviewed: i36` (Widget 05 = tier A1 shipped, `3ad71d3`)
-- `review_due: i39` (= last_reviewed + 4; hard ceiling +5)
-- `current_tier: A1 (Widget 05 Provenance Map SHIPPED i36; human live-GUI confirm OPEN)`
-- `next_increment: R-1 into the i37 router brief (born instrumented); Widget 06 Compile Trace Console (A1) in a spare coding lane once i37 fold/rehearsal artifacts exist`
+- `last_reviewed: i38` (Widget 06 Compile Trace Console = tier A1 shipped, `c912854`)
+- `review_due: i42` (= last_reviewed + 4; hard ceiling +5)
+- `current_tier: A1 (Widget 05 Provenance Map i36 + Widget 06 Compile Trace Console i38 SHIPPED; both human live-GUI confirms OPEN)`
+- `next_increment: A2 -- ride-along pause + the tournament pane over router/eligibility traces + the cross-context timeline (prereqs MET: router shipped WITH R-1 i37 + #42 wired into #40 i38); a spare coding lane ~i39-i41`
 
 ## 0. Purpose + the decoupling this buys
 

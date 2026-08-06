@@ -1,60 +1,30 @@
-# FANOUT_AGENT_001 -- i38 wave (plan fo-38-2b1efe73)
+# FANOUT_AGENT_001 -- EMPTY slot
 
 ## Header
 - **Slot:** FANOUT_AGENT_001
-- **Status:** READY
-- **Wave / iteration:** i38 (plan id `fo-38-2b1efe73`)
-- **Lane:** CODING (CPU)
-- **Worker id / label:** `P01-GATE-FULL-i38`
-- **Module/area (exclusive):** `modules/43-action-authz`
-- **GPU:** false
+- **Status:** EMPTY
+- **Wave / iteration:** -- (fill at wave scoping; plan id `fo-<N>-<id>` once planned)
+- **Lane:** -- (convention: 001 GPU / 002 CPU / 003 coding)
+- **Worker id / label:** --
+- **Module/area (exclusive):** --
+- **GPU:** false (set true ONLY if this is the wave single GPU worker)
 - **Docs:** `[]`
 
 ## Mission
-Complete the P0-1 action-authorization gate: build the 7 FROZEN red-team amendments (core-docs/ACTION_AUTHORIZATION_CONTRACT.md s6) + promote the i37-staged full 10-family corpus / fixed-seed fuzzer / COMPLETE M-A01..M-E36 kill matrix, then HONESTLY set the result taxonomy (flip p0_1_gate_status to pass only if every mandatory element holds). Highest-priority, SAFETY-CRITICAL; non_execution:true holds throughout -- nothing becomes action-capable. Governs: ACTION_AUTHORIZATION_CONTRACT.md (s6) + research/2026-08-05-i37-action-authz-freeze-redteam.md + research/2026-08-05-i36-action-authz-freeze-frontier.md.
+_EMPTY -- no unit assigned._ Fill from the candidate menu in `core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md` section 4 (i39: the fast-beam recall follow-on [#36/#40]; bake the 0.9.0 routed+wm authentic chain into #43 integration.py; the Widget 05/06 human live-GUI confirms; PB-3 hot-doc slim [deadline i40]; PB-1 doc-hygiene commit gate). Paste the `plan`-emitted worker prompt (or a tight summary pointing to it + the governing design doc); keep within the 8 KB budget; mirror it.
 
 ## Unit (the full worker prompt)
-Dispatch a fresh Cowork session with the one folder grant (`C:\Users\just_\LifeOrchestrator-Refresh`) and execute the unit below. The EXACT `orchestrate.fanout`-emitted prompt (with the res.lease acquire/release commands) is delivered as a file and lives at `modules/30-orchestrate-fanout/runtime/artifacts/c7243036-624d-4819-b5dd-89bf3c024aa8/workers/worker-P01-GATE-FULL-i38.prompt.md` -- if dispatched by prompt-paste, paste that file; the unit text here is the same mission.
-
-BUILD the FULL P0-1 gate in the EXISTING module modules/43-action-authz: implement the 7 frozen red-team amendments (core-docs/ACTION_AUTHORIZATION_CONTRACT.md section 6) + promote the i37-STAGED items into the suite, then flip the result taxonomy to p0_1_gate_status = pass. EXCLUSIVE to modules/43-action-authz; docs:[]; CPU (no GPU); pure Python STANDARD-LIBRARY ONLY, deterministic, integer-only JSON, byte-identical on re-run. non_execution:true holds throughout -- this authorizes NO execution and enables NO tool; NOTHING becomes action-capable; A06 must still deterministically DENY every authentic packet.
-
-READ FIRST (governing, do not edit): core-docs/ACTION_AUTHORIZATION_CONTRACT.md (esp. s6 the 7 amendments + s1-s5 the frozen schemas/algorithm + s8 acceptance) + its pinned normative source research/2026-08-05-i36-action-authz-freeze-frontier.md (s0-s10) + the i37 red-team research/2026-08-05-i37-action-authz-freeze-redteam.md (the per-Finding REQUIRED CLOSURE detail for each amendment) + research/2026-08-05-i35-p0-1-injection-suite-redteam.md (the 7-layer harness + attack taxonomy) + your OWN modules/43-action-authz (the i37 MVP you EXTEND) + its SCHEMA_NOTES.md. This is exactly the i38 build set the frontier already authorized.
-
-BUILD (the 7 amendments -- each maps to contract s6 item N / red-team Finding N):
-1. RESULT TAXONOMY. Emit machine-readable build_status (incomplete|build_complete) / p0_1_gate_status (not_run|incomplete|pass|fail) / activation_status (prohibited|eligible|activated). build_complete NEVER implies pass; a skipped mandatory family, unrun fuzzer, surviving/unimplemented mandatory mutation, or absent real-chain test => incomplete, never pass. The report lists EVERY criterion as pass|fail|not_run|not_applicable (not_applicable FORBIDDEN for a frozen mandatory criterion). activation_status stays prohibited (non_execution holds).
-2. TEST-FACING VIEWS (Blockers 1/2/5 PARTLY build-gating). Define in-code AND record byte-exactly in SCHEMA_NOTES.md: lifeorch.grant_view/0.1-test + policy_view/0.1-test + a closed ApprovalView + a closed status/validator view. Each must byte-exactly define: field types/canonicalization, validity/revocation, exact tool/operation match, the target-predicate language, namespace via the ONE canonical ns_permitted, effect/externality match, quantitative limit intersection, risk/approval escalation, conjunction vs alternative-grant rules, and the complete matcher output. Gate A26/A27 on grant_view/policy_view; A29/M-E13 on ApprovalView; U-ROLE/M-E35/M-E36 on the status/validator view. Production STORAGE schemas stay ACTIVATION-gating; the orchestrator ratifies+pins your test-views at fold.
-3. EXECUTOR TOCTOU ORDER (Boundary D). Re-implement the mock executor ordering: resolve+verify permit (immutable structure/digest) -> ATOMIC claim -> re-read ALL mutable epochs (grant/approval/policy/manifest/health/permit-revocation) -> re-resolve dynamic targets AFTER claim -> bind execution to stable handles/canonical identities -> verify the SAME bound identity immediately before the first effect -> else rejected_no_effect. EXPAND M-E29: mutate alias/reparse/recipient mapping after resolve, BOTH before AND after claim; expect rejected_no_effect + EMPTY state diff.
-4. COMPLETION BINDING. Add completion_scope (task|action|permit|object) with per-kind MINIMUM scope (executor-status + state-diff leaves are NOT task-only); bind the completion contract via ONE normative mechanism (a permit field OR the authentic immutable packet_id -- pick + document in SCHEMA_NOTES). Add cross-action / cross-permit / cross-object / contract-substitution / omitted-optional-binding / superseded-validator fixtures. Make M-E36 DECIDABLE.
-5. PER-CHECK / U-PROPERTY ORACLE MATRIX. Commit one row per A-check / boundary-obligation / U-property / M-mutation: {obligation_id, fixture_id, baseline_expected, mutant_id, observable_surface, expected_mutant_difference, independent_oracle}. Use SEPARATE independent observables (decision+permit-store delta / caller bytes / privileged channel / privileged audit event / origin ledger / executor-entry ledger / permit-state / canonical digest / independent effect ledger / completion result). no_path properties need an UNFORGEABLE authority-constructor capability + import/call-graph inspection (runtime fuzzing cannot prove "no path"); A35/A36 are killed by inspecting their OWN output surface; trace-presence alone is NOT proof a property held.
-6. R-1 DIAGNOSTIC ROLE ISOLATION (additive; no packet-field change). Encode as machine assertions R1-AUTH-1 (the router stage-trace envelope+payload are non-authoritative diagnostics: participate ONLY in identity, deterministic evaluation, privileged audit, fail-closed ns validation) + R1-ROLE-1 (no router diagnostic field may populate/satisfy control_plane, evidence[]/evidence_requirements/coverage_results, packet_disposition, working_memory, grant/policy/approval/manifest/health, TrustedStatus, completion, target resolution, or effect derivation). Add mutation M-R11 (cast an R-1 diagnostic record / reason-code / candidate-id into evidence coverage / authority / approval / health / completion) and KILL it. (The i37 fold already proved the namespace-crossing case; this closes role-laundering.)
-7. SPLIT BLOCKER 9. Build-gating: define EVERY ordinary authz API surface, assert identical response schema/length, INSTRUMENT a caller-visible DETERMINISTIC step/branch signature, kill M-S08 + M-S09. The suite CLAIMS constant bytes + NO deterministic branch/step oracle (NOT absence of all timing channels). Production ACL/retention/redaction/IPC + physical timing equalization stay ACTIVATION-gating.
-
-PROMOTE THE i37-STAGED ITEMS (required for pass -- the red-team's "load-bearing for an honest MVP gate" list):
-- The FULL 10 mandatory fixture families (>=1 canonical fixture EACH; the DEEPER corpus may stay staged, but NO family may be absent).
-- A bounded FIXED-SEED mutational fuzzer (s8.7 crit 2).
-- The COMPLETE mutation-kill matrix M-A01..M-E36 (+ the new M-E29 variants + M-R11 + M-S08/M-S09): EVERY mandatory mutation killed by >=1 deterministic test. "every mutation we can exercise" is INSUFFICIENT for pass -- any mandatory mutation you cannot exercise keeps the gate INCOMPLETE (do not silently skip; justify or leave incomplete).
-- Preserve Blocker-8 canonical ownership: ONE #43 implementation shared by monitor + mock executor + digest + grant-matcher + permit-verifier; if any second implementation appears, add byte-equivalence fixtures.
-- The REAL #36/#37/#40 (0.8.0) chain proving deterministic denial (A06 denies every authentic packet while non_execution:true); positive permit-path tests use an explicitly TEST-ONLY mock authority packet with non_execution=false (s8.7 crit 1).
-
-STILL STAGED to activation (do NOT attempt; record in README + report): the Windows permit-store authenticity/IPC/ACL/crash-recovery (Blocker 3); per-tool target/effect PROFILES (Blocker 4); the production grant/policy/approval STORAGE schemas (Blockers 1/2 -- your byte-equivalent test-views stand in); production executor/validator status contracts + security-log ownership (Blockers 5/9 activation portions); freshness relaxation (Blocker 6); the non_execution activation transition (Blocker 7).
-
-CONSTRAINTS. Do NOT modify #36/#37/#40 or any core-doc (docs:[]). Do NOT reopen/widen any frozen MEMORY_CONTRACT / CONTEXT_PACKET_CONTRACT field (all amendments are additive action-layer). Do NOT freeze/disposition a Blocker or edit the contract -- you BUILD to s6 and RECORD every test-view byte-exactly in SCHEMA_NOTES.md; the orchestrator ratifies+pins them and flips the freeze at fold. Standard-library only; deterministic; integer-only JSON; a DOUBLE-RUN byte-identity gate on every canonical-bytes path.
-
-GATES.
-- Off-machine FIRST (pure python, cloud gate). Then exec-job.sh devship (module modules/43-action-authz; AST + tests FAIL-CLOSED; named files only). VERIFY the real HEAD via native git (D-0072). Assert 0 UNMANAGED orphans.
-- ACCEPTANCE = a full pass under the s6.1 taxonomy: >=1 canonical fixture from EACH of the 10 families passes on TWO consecutive runs with identical property results + canonical hashes; the fixed-seed fuzzer runs; EVERY mandatory M-A01..M-E36 (+ M-E29 variants + M-R11 + M-S08/M-S09) is killed; the oracle matrix has a row + independent observable per obligation; completion_scope makes M-E36 decidable; R1-ROLE-1 holds + M-R11 killed; the split-Blocker-9 step/branch signature is asserted; every denied proposal -> no permit + no state diff; NO raw-model path reaches the mock executor; cross-namespace failures return CONSTANT caller bytes; the real #36/#37/#40 (0.8.0) chain proves deterministic denial; ONE canonical implementation. ONLY then set p0_1_gate_status = pass. If ANY mandatory element cannot be completed, leave it INCOMPLETE and say so plainly -- an honest incomplete beats a false pass (the entire point of amendment 1).
-
-REPORT (`-Action report ... -State done` + plain summary): the final result taxonomy (build_status / p0_1_gate_status / activation_status), the suite count NN/NN, the COMPLETE mutation-kill matrix (each M-* killed / justified-non-mandatory), the 10-family coverage, the oracle-matrix coverage, the real #40 0.8.0 integration result, the double-run byte-identity proof, and a plain statement of whether the gate is PASS or still INCOMPLETE and why. Negative/partial results are first-class.
+_pending -- filled at wave scoping._
 
 ## Rails (standing rules -- keep in every brief)
 - Read `core-docs/START_HERE.md` + `core-docs/CURRENT_STATE.md` 'Known failures' first; obey `SKILL_CONTRACT.md`.
-- Acquire res.lease(s) in **gpu -> git -> doc** order; release in reverse. No GPU this wave (CPU lane) -- take `git` for the commit only.
-- Do ONE unit; never touch modules/areas outside the header's exclusive claim; `docs:[]` (the orchestrator mirrors core-docs).
-- Gate off-machine FIRST, then ship via `exec-job.sh devship` (sha256 + AST + tests, FAIL-CLOSED, named files only, trailers); VERIFY the real HEAD via native git (D-0072); assert 0 UNMANAGED orphans.
-- Report: `-Action report -PlanId fo-38-2b1efe73 -WorkerId <id> -State done` + a plain measured summary (negative results are first-class, the D-0061 ethos).
+- Acquire res.lease(s) in **gpu -> git -> doc** order; release on exit; a whole-task gpu lease for any resident-model work.
+- Do ONE unit; never touch modules/areas outside the header's exclusive claim; `docs:[]`.
+- Gate off-machine FIRST, then ship via `dev.ship` (sha256 + AST + tests, FAIL-CLOSED, named files only); VERIFY the real HEAD via native git (D-0072); assert 0 UNMANAGED orphans.
+- Report: `-Action report -PlanId <plan> -WorkerId <id> -State done` + a plain measured summary (negative results are first-class, the D-0061 ethos).
 
 ## Verification
-p0_1_gate_status flips to pass ONLY on: >=1 canonical fixture from EACH of the 10 families x2 runs with identical property results + hashes; the fixed-seed fuzzer runs; EVERY mandatory M-A01..M-E36 (+ M-E29 variants + M-R11 + M-S08/M-S09) killed; the per-check oracle matrix complete (independent observable per obligation); completion_scope makes M-E36 decidable; R1-ROLE-1 holds; the real #36/#37/#40 (0.8.0) chain proves deterministic A06 denial; ONE canonical impl; double-run byte-identity. Report the taxonomy (build_status/p0_1_gate_status/activation_status) + suite count NN/NN + the full kill matrix. An honest INCOMPLETE beats a false PASS.
+_pending -- filled at wave scoping._
 
-## Report-back record (ORCHESTRATOR fills from `plans/fo-38-2b1efe73/reports/` before archiving)
-_empty -- filled at fold._
+## Report-back record (ORCHESTRATOR fills from `plans/<id>/reports/` before archiving)
+_empty._

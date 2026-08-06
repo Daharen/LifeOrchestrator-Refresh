@@ -184,9 +184,44 @@ NONE reopens a frozen MEMORY_CONTRACT / CONTEXT_PACKET_CONTRACT field.
 SATISFIED this wave (one canonical impl; real #36/#37/#40 0.7.0 chain); 9 and 12 have build-gating portions. Blockers
 3, 4, 6, 7, 10, 11 remain activation-gating. `non_execution:true` holds throughout; nothing is action-capable.
 
+## 7. i38 ratification -- the P0-1 FULL GATE is BUILT + VERIFIED (D-0106; p0_1_gate_status = pass)
+
+In i38 (plan fo-38-2b1efe73) module #43 action.authz 0.2.0 BUILT all 7 section-6 amendments + promoted the
+i37-staged items; the suite now reports **build_status=build_complete | p0_1_gate_status=pass |
+activation_status=prohibited** (SUITE 204/204; all 10 fixture families; fixed-seed fuzzer 400 iters / 0
+metamorphic violations; 67/67 mandatory mutations killed incl. the NEW M-R11; the 67-row oracle matrix; ONE
+canon.py cross-validated BYTE-EQUIVALENT to an independent blind second implementation; double-run byte-identical
+cloud+device). The ORCHESTRATOR independently re-ran the suite (PASS) + ran the **D-0077 cross-module fold 18/18**
+(`modules/30-orchestrate-fanout/runtime/fold-i38.py`): a REAL #40 0.9.0 ROUTED + WORKING-MEMORY-HYDRATED packet
+(state_version in identity) + an ADVERSARIAL variant (working_memory item authority-shaped: can_instruct=true,
+is_evidence=true, body carrying permission_grants/approval/non_execution=false/issue_permit + a cross-namespace
+router stage-trace + an injected_control_plane block) driven through #43's monitor -> deterministic **A06 DENY,
+constant caller bytes, no permit, no state diff** for every one; a flat compile byte-identical. + i34 regression
+38/38. The new working_memory region + router diagnostics CANNOT launder authority or cross a namespace (A31 /
+R1-ROLE-1 / attack family 4).
+
+- **Test-facing views PINNED (Blockers 1/2/5 build-gating portions RESOLVED).** The byte-exact
+  `lifeorch.grant_view/0.1-test` + `policy_view/0.1-test` + the closed ApprovalView + the closed status/validator
+  view are recorded byte-exactly in `modules/43-action-authz/SCHEMA_NOTES.md` (0.2.0) -- **that doc is the
+  CANONICAL definition** (the reference/pin, as selpol was pinned to #37's canonical); A26/A27 gate on
+  grant_view/policy_view, A29/M-E13 on ApprovalView, U-ROLE/M-E35/M-E36 on the status/validator view. Production
+  STORAGE schemas stay ACTIVATION-gating.
+- **Amendments 3-7 BUILT + killed** as section 6 requires (Boundary-D TOCTOU order + M-E29 post-claim drift;
+  completion_scope + M-E36 decidable; the per-check oracle matrix with an independent observable per obligation;
+  R1-AUTH-1/R1-ROLE-1 + M-R11; split-Blocker-9 constant-bytes + M-S08/M-S09). Detail: #43 SCHEMA_NOTES + the i38 report.
+- **STILL ACTIVATION-gating (unchanged; `non_execution:true` holds; nothing is action-capable).** Blockers
+  3/4/6/7 + the activation portions of 5/9 (the real Windows permit store, per-tool target/effect profiles, the
+  production grant/policy/approval STORAGE schemas, the freshness relaxation policy, the non_execution ACTIVATION
+  transition, production security-log ownership). `p0_1_gate_status=pass` is a DESIGN gate; `activation_status`
+  stays **prohibited** -- activation still needs Blockers 1-14 resolved + the separate Blocker-7 decision.
+- **Open follow-on (self-flagged; non-blocking).** The suite's OWN `integration.py` real-chain uses authentic
+  #40 0.7.0 packets; the 0.9.0 routed+wm authentic chain is covered by the orchestrator D-0077 fold (above), not
+  yet baked into `integration.py` -- recommended in a future #43 touch. A frontier AS-BUILT re-review of this pass
+  was couriered at i38 close (pack `24190087...`, non-blocking; folds in i39 as an amendment if it finds a hole).
+
 ---
 
-**Freeze state:** FROZEN design target (D-0103, i37); design-only; `non_execution:true` holds. Amend only by a new
+**Freeze state (UPDATED i38 -- D-0106):** FROZEN design target (D-0103, i37); the P0-1 gate is now BUILT + VERIFIED (`p0_1_gate_status=pass`; section 7 ratification; activation still prohibited); design-only; `non_execution:true` holds. Amend only by a new
 DECISION_LOG entry that names this doc; the verbatim normative source is
 `research/2026-08-05-i36-action-authz-freeze-frontier.md`. A parallel frontier red-team of this freeze was couriered
 at i37 open (non-blocking); any finding folds as an amendment.
