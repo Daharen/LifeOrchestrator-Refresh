@@ -1,0 +1,3 @@
+# The widget's private scratch: the compile-layer counterfactual re-compile artifacts + diffs. The console is
+# READ-ONLY over the repo; this dir is the ONLY thing it writes, and it is never shipped.
+runtime/

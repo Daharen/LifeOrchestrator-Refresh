@@ -1,0 +1,16 @@
+  [PASS] routed packet is context_packet/0.2
+  [PASS] routed carries non_execution=true
+  [PASS] routed CARRIES the 3-record stage-trace
+  [PASS] flat compile carries NO routing_stage_trace (router additive)
+  [PASS] routed -> DETERMINISTIC DENY at A06
+  [PASS] routed -> constant caller bytes (no oracle)
+  [PASS] routed -> no permit issued (no state diff)
+  [PASS] routed_adv(family-4 injection) -> DETERMINISTIC DENY at A06
+  [PASS] routed_adv(family-4 injection) -> constant caller bytes (no oracle)
+  [PASS] routed_adv(family-4 injection) -> no permit issued (no state diff)
+  [PASS] flat -> DETERMINISTIC DENY at A06
+  [PASS] flat -> constant caller bytes (no oracle)
+  [PASS] flat -> no permit issued (no state diff)
+
+FOLD RESULT: 13/13 checks
+FOLD PASSED
