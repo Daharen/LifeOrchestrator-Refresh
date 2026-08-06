@@ -44,7 +44,18 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$SKILL_ID = 'retrieval.eval'; $SKILL_VERSION = '0.7.0'; $CONTRACT = '0.7'
+$SKILL_ID = 'retrieval.eval'
+# VERSION TRUTH (i40 PB-5 / D-0108): skill.json is the ONE declared version source for this module. The
+# envelope's skill_version + contract_version are READ from the manifest at invocation time -- this wrapper
+# carries NO hardcoded module-version literal, so a manifest bump can never leave the envelope behind (the
+# test harness permanently asserts envelope == manifest, cloud + -Live, and fails loudly on any drift).
+$__mfPath = Join-Path $PSScriptRoot 'skill.json'
+$__mf = (Get-Content -LiteralPath $__mfPath -Raw) | ConvertFrom-Json
+$SKILL_VERSION = [string]$__mf.version; $CONTRACT = [string]$__mf.contract_version
+if ([string]::IsNullOrWhiteSpace($SKILL_VERSION) -or [string]::IsNullOrWhiteSpace($CONTRACT)) {
+    [Console]::Error.WriteLine("[retrieval.eval] FATAL: version/contract_version missing in $__mfPath")
+    exit 1
+}
 $RESULT_SCHEMA = 'lifeorch.skill.result/0.1'
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 $bound = $PSBoundParameters

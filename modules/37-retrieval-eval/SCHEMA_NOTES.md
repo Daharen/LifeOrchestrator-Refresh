@@ -854,4 +854,41 @@ override pointed at the FROZEN #40 0.7.0 CLI over the ~200MB corpus; assert `wir
 guaranteed == packet == 1000000 ppm), stale-window recall preserved, 0 contamination, provenance 1000000 ppm; then
 (and only then) flip project `tier1_accepted`. The non-wired path stays byte-identical (skeleton `b6947a21`). Sample
 pins (cloud, cross-env stable): FLAT `structural_digest sha256:da34250e...`, WIRED `structural_digest
-sha256:1a3a8d5c...`; off-machine `test_rehearsal_eval` 55/55.
+sha256:d0d54aba...` (re-pinned i40, s18 -- the i36 value `sha256:1a3a8d5c...` was legitimately moved by #36 0.7.0's
+fast-beam); off-machine `test_rehearsal_eval` 55/55.
+
+## 18. i40 (PB-5 / D-0108, plan fo-40-d42fd1ac) -- fold-reconciliation + VERSION TRUTH (0.8.0 -> 0.8.1)
+
+Two reconciled defects, deliberately bundled into ONE #37-owner lane (D-0108 deferred both from the i39 fold);
+NO behavior / port / response-shape / contract change.
+
+**(V1) The wired-descend digest RE-PIN.** i39 Lane B (#36 0.6.0 -> 0.7.0 fast-beam, `b72dfce`) LEGITIMATELY moved
+the wired-descend structure the rehearsal harness measures, so the i36 `WIRED_STRUCTURAL_DIGEST` pin
+(`sha256:1a3a8d5c...`) went stale. i40 re-derived it via the harness's OWN derivation (the s16 structural_digest
+rule: the canonical report MINUS the measured-CLI identity) over the COMMITTED #36 0.7.0 + #40 0.9.0, and re-pinned
+`tests/test_rehearsal_eval.py` to the full value
+`sha256:d0d54abadce18a65274d8593f7b141b8501fa6ccab50682f0607227000c7e450` (matches the i39-fold-verified `d0d54aba`
+prefix). The wired metric IMPROVED -- 11/11 s10 criteria hold, `hierarchy_path_recall` 58823 -> 117647 ppm,
+guaranteed + packet recall stay 1,000,000 ppm -- ONLY the fingerprint moved. The FLAT pins (`da34250e...` /
+skeleton `b6947a21...`) are UNTOUCHED: fast-beam is descend-only, and the non-wired path stays byte-identical.
+
+**(V2) The version SINGLE-SOURCE rule (NORMATIVE from 0.8.1).** The defect: `skill.json` declared `0.8.0` (the i36
+bump -- semantically RIGHT) while `Invoke-RetrievalEval.ps1` and five test-harness checks still carried hardcoded
+`'0.7.0'` literals (the envelope emitted 0.7.0) -- an internal inconsistency predating i39, undetected because
+i37/i38 never re-ran #37 -Live. The rule that prevents recurrence:
+
+1. **`skill.json` `version` is the ONE declared module-release version.** No other module file may carry a
+   module-version literal (prose/history mentions excepted).
+2. **The wrapper DERIVES.** `Invoke-RetrievalEval.ps1` reads `skill_version` + `contract_version` from
+   `skill.json` at invocation time, fail-closed (missing/degenerate manifest -> non-zero exit, no envelope).
+3. **The harness asserts, never pins a literal.** The test harness checks the manifest version's SHAPE
+   (semver regex) and PERMANENTLY asserts envelope == manifest on EVERY parsed envelope (baseline + eval04 +
+   eval05 + hierarchy + rehearsal, identical cloud + -Live) -- the drift assertion; any surface a future bump
+   misses now FAILS loudly instead of sitting undetected.
+4. **A shipped-file change bumps the release version.** This reconcile ships as `0.8.0 -> 0.8.1`; the envelope
+   emitting `0.8.1` is itself live proof the derivation (not a refreshed literal) is what runs.
+5. **Measurement identities are a SEPARATE version domain** and never move in lockstep with the release version:
+   the rehearsal worker's `GENERATOR_VERSION` stays `0.8.0` (it stamps the digest-pinned report; it moves ONLY
+   when measurement/report semantics move -- s17), likewise the report schema ids and the
+   selpol/namespace/classifier policy versions. `examples/example-result.json` remains an era-stamped 0.2-era
+   illustration (documentation, not a version-truth surface; the truth surface is manifest + envelope + harness).

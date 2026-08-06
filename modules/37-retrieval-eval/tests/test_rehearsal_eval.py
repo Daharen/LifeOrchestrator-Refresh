@@ -20,9 +20,14 @@ import rehearsal_eval as R  # noqa
 # i36: generator 0.7.0 -> 0.8.0. The FLAT structural_digest moved ONLY because generator_version is stamped
 # 0.8.0 (the measurement skeleton -- which EXCLUDES the version stamp + digests + CLI identity -- is unchanged;
 # FLAT_METRICS_SKELETON_DIGEST pins that, regression-proving the flat metrics byte-identical to 0.7.0).
+# i40 RE-PIN (PB-5 / D-0108): #36 0.7.0's fast-beam (i39 Lane B) LEGITIMATELY moved the WIRED-descend
+# structure, so WIRED_STRUCTURAL_DIGEST was re-derived via this harness's OWN derivation over the committed
+# #36 0.7.0 + #40 0.9.0 and re-pinned (fold-verified prefix d0d54aba). The wired metric IMPROVED: 11/11 s10
+# criteria hold, hierarchy_path_recall 58823 -> 117647 ppm, guaranteed + packet recall stay 1,000,000 ppm --
+# only the fingerprint moved. The FLAT pins are untouched (fast-beam is descend-only; non-wired byte-identical).
 PINNED_STRUCTURAL_DIGEST = "sha256:da34250eea25b94f15b33631698ccb9dc5812dd221a8514b52d7bb3b1472c76f"
 FLAT_METRICS_SKELETON_DIGEST = "sha256:b6947a21aa90e307be0b9bf3b1db85d5c4ad2e60ee8b98867fb5332d470c3fff"
-WIRED_STRUCTURAL_DIGEST = "sha256:1a3a8d5cfc016f6a20f4a556e8c2319798500056dd2e51ff6c583d8c3825dd9d"
+WIRED_STRUCTURAL_DIGEST = "sha256:d0d54abadce18a65274d8593f7b141b8501fa6ccab50682f0607227000c7e450"
 
 PASS = 0
 FAIL = 0
