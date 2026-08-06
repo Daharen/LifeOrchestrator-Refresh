@@ -13,6 +13,7 @@ tool prose can never satisfy it. `indeterminate` is incomplete.
 
 from . import canon
 from .monitor import PermitRef, authorize
+from .stores import NO_COMPLETION_CONTRACT
 
 
 class MockCoordinator(object):
@@ -48,6 +49,27 @@ def _reject(st, reason, mutations):
     return ExecResult(False, [], reason=reason)
 
 
+def _apply_through_handles(effects, bound_targets):
+    """i40 Finding 2: apply each authorized effect THROUGH the captured target HANDLE the effect ledger
+    CONSUMES -- never by copying authorized_effect_set blind. The captured handle is the target's
+    unforgeable `resolution_proof_digest` bound at resolution. Returns the applied ledger, each atom
+    tagged with the consumed `applied_via_handle`, or None if any effect's target handle is missing /
+    malformed (the captured handle is not consumable => the effect cannot be applied => no effect)."""
+    handles = {}
+    for i, t in enumerate(bound_targets):
+        h = t.get("resolution_proof_digest")
+        if isinstance(h, str) and len(h) == 64:
+            handles[i] = h
+    ledger = []
+    for e in effects:
+        ti = e.get("target_index", 0)
+        h = handles.get(ti)
+        if h is None:
+            return None
+        ledger.append(dict(e, applied_via_handle=h))
+    return ledger
+
+
 class MockExecutor(object):
     """Boundary D."""
 
@@ -55,7 +77,7 @@ class MockExecutor(object):
         self.st = stores
 
     def execute(self, inp, mutations=frozenset(), reresolve_targets=None,
-                extra_effects=None, preflight_fail=False, followup=False):
+                extra_effects=None, preflight_fail=False, followup=False, post_claim_hook=None):
         st = self.st
 
         # ---- D1: reject everything that is not a privileged, store-authentic permit reference. ----
@@ -90,10 +112,11 @@ class MockExecutor(object):
         if permit is None:
             return _reject(st, "D2_no_permit", mutations)
         return self._run_permit(permit, mutations, reresolve_targets, extra_effects,
-                                preflight_fail, followup, from_store=True, permit_id=permit_id)
+                                preflight_fail, followup, from_store=True, permit_id=permit_id,
+                                post_claim_hook=post_claim_hook)
 
     def _run_permit(self, permit, mutations, reresolve_targets, extra_effects,
-                    preflight_fail, followup, from_store, permit_id):
+                    preflight_fail, followup, from_store, permit_id, post_claim_hook=None):
         st = self.st
 
         # === amendment 3 (contract s6 item 3): the executor TOCTOU order is ==================
@@ -136,6 +159,22 @@ class MockExecutor(object):
         if not st.permits.claim(permit_id, mutations):
             return _reject(st, "D5_not_claimable", mutations)
 
+        # ==== i40 Finding 2: a deterministic POST-CLAIM hook fires in the exact TOCTOU window ======
+        # immediately AFTER the successful atomic claim and BEFORE every mutable-epoch recheck. Tests
+        # inject one fault per independent mutable surface HERE (not pre-claim), and require for every
+        # fault: accepted==false AND state_diff==[] AND permit_state==rejected_no_effect (TERMINAL) AND
+        # a second execution attempt rejected. This exercises the race position the i39 oracle missed.
+        if post_claim_hook is not None:
+            post_claim_hook(st, permit)
+
+        # ---- i40 Finding 2: the issue snapshot is MANDATORY for every store-issued permit. ----
+        # Its ABSENCE fails closed (never skip-the-recheck); a store-issued permit with no snapshot
+        # cannot be executed. A34 records the snapshot for every issued permit.
+        snap = st.permits.issue_snapshot(permit_id)
+        if snap is None:
+            st.permits.reject_no_effect(permit_id)
+            return _reject(st, "D3_no_issue_snapshot", mutations)
+
         # ---- step 3: re-read mutable epochs AFTER claim (manifest/artifact drift, revocation). ----
         man = st.manifests.lookup(permit["tool_id"], mutations)
         if man is None:
@@ -149,41 +188,39 @@ class MockExecutor(object):
             st.permits.reject_no_effect(permit_id)
             return _reject(st, "D3_manifest_drift", mutations)
 
-        # ---- amendment 3 (red-team Finding 5): re-read ALL mutable epochs AFTER the claim. --------
-        # Not just manifest/artifact -- also grant (epoch/current/revocation), side-effect policy
-        # (epoch/current), approval (revocation/expiry), tool health, permit-store epoch, and
-        # packet/status currentness. Any post-claim drift -> rejected_no_effect: a TERMINAL permit +
-        # an EMPTY independent effect ledger. This is the ABSTRACT epoch model the logical gate owns;
-        # real Windows stable-handle/reparse/crash race-freedom stays ACTIVATION-gating (recorded).
-        snap = st.permits.issue_snapshot(permit_id)
-        if snap is not None:
-            gsx = st.grant(permit.get("grant_snapshot_ref"))
-            if (gsx is None or gsx.epoch != snap.get("grant_epoch") or (not gsx.current)
-                    or (set(gsx.revoked) & set(permit.get("matched_grant_ids", [])))):
+        # ---- Finding 2: re-read ALL mutable epochs AFTER the claim (snapshot now guaranteed). ------
+        # grant (epoch/current/MATCHED-grant revocation), side-effect policy (epoch/current), approval
+        # (revocation/expiry), tool health, permit-store epoch, and packet currentness/non_execution.
+        # Any post-claim drift -> rejected_no_effect: a TERMINAL permit + an EMPTY independent effect
+        # ledger. This is the ABSTRACT epoch model the logical gate owns; real Windows stable-handle /
+        # reparse / crash race-freedom stays ACTIVATION-gating (recorded).
+        gsx = st.grant(permit.get("grant_snapshot_ref"))
+        if (gsx is None or gsx.epoch != snap.get("grant_epoch") or (not gsx.current)
+                or (set(gsx.revoked) & set(permit.get("matched_grant_ids", [])))):
+            st.permits.reject_no_effect(permit_id)
+            return _reject(st, "D3_grant_epoch", mutations)
+        polx = st.policy(permit.get("side_effect_policy_ref"))
+        if polx is None or polx.epoch != snap.get("policy_epoch") or (not polx.current):
+            st.permits.reject_no_effect(permit_id)
+            return _reject(st, "D3_policy_epoch", mutations)
+        if permit.get("approval_ref") is not None:
+            appr = st.approvals._by_ref.get(permit["approval_ref"])
+            if (appr is None or appr.get("revoked") or appr.get("state") != "approved"
+                    or st.clock.now_ms() >= appr.get("expiry_unix_ms", 1 << 62)):
                 st.permits.reject_no_effect(permit_id)
-                return _reject(st, "D3_grant_epoch", mutations)
-            polx = st.policy(permit.get("side_effect_policy_ref"))
-            if polx is None or polx.epoch != snap.get("policy_epoch") or (not polx.current):
-                st.permits.reject_no_effect(permit_id)
-                return _reject(st, "D3_policy_epoch", mutations)
-            if permit.get("approval_ref") is not None:
-                appr = st.approvals._by_ref.get(permit["approval_ref"])
-                if (appr is None or appr.get("revoked") or appr.get("state") != "approved"
-                        or st.clock.now_ms() >= appr.get("expiry_unix_ms", 1 << 62)):
-                    st.permits.reject_no_effect(permit_id)
-                    return _reject(st, "D3_approval_epoch", mutations)
-            hnow = st.health.current(man["health_source"]["source_id"])
-            if snap.get("health") is not None and hnow != snap.get("health"):
-                st.permits.reject_no_effect(permit_id)
-                return _reject(st, "D3_health_epoch", mutations)
-            if st.permits.epoch != snap.get("store_epoch"):
-                st.permits.reject_no_effect(permit_id)
-                return _reject(st, "D3_store_epoch2", mutations)
-            pvx = st.packets.verify_and_get(permit.get("packet_id"))
-            if (pvx is None or (not pvx.current)
-                    or pvx.non_execution != snap.get("packet_non_execution")):
-                st.permits.reject_no_effect(permit_id)
-                return _reject(st, "D3_packet_epoch", mutations)
+                return _reject(st, "D3_approval_epoch", mutations)
+        hnow = st.health.current(man["health_source"]["source_id"])
+        if snap.get("health") is not None and hnow != snap.get("health"):
+            st.permits.reject_no_effect(permit_id)
+            return _reject(st, "D3_health_epoch", mutations)
+        if st.permits.epoch != snap.get("store_epoch"):
+            st.permits.reject_no_effect(permit_id)
+            return _reject(st, "D3_store_epoch2", mutations)
+        pvx = st.packets.verify_and_get(permit.get("packet_id"))
+        if (pvx is None or (not pvx.current)
+                or pvx.non_execution != snap.get("packet_non_execution")):
+            st.permits.reject_no_effect(permit_id)
+            return _reject(st, "D3_packet_epoch", mutations)
 
         # ---- steps 4-6: re-resolve dynamic targets AFTER claim; bind + verify SAME identity. ----
         # The permit's resolved_target_set entries each carry an unforgeable `resolution_proof_digest`
@@ -218,12 +255,19 @@ class MockExecutor(object):
                         st.permits.reject_no_effect(permit_id)
                         return _reject(st, "D7_over_limit", mutations)
 
+        # ---- Finding 2: the effect ledger CONSUMES the captured target handle (never a blind copy of
+        #      authorized_effect_set). A missing/malformed captured handle => rejected_no_effect. ----
+        applied = _apply_through_handles(actual, bound_targets)
+        if applied is None:
+            st.permits.reject_no_effect(permit_id)
+            return _reject(st, "D4_handle_unavailable", mutations)
+
         # ---- consume (claimed -> consumed) atomically with effect_started. ----
         st.permits.consume(permit_id)
         status = {"predicate_kind": "executor_status", "result_code": "ok", "exit_code": 0,
                   "subject": {"canonical_action_digest": permit["canonical_action_digest"],
                               "task_id": permit["task_id"]}}
-        return ExecResult(True, actual, consumed_permit_id=permit_id, status=status)
+        return ExecResult(True, applied, consumed_permit_id=permit_id, status=status)
 
 
 # ---------------------------------------------------------------------------
@@ -418,20 +462,35 @@ def evaluate_completion_via_permit(st, permit, mutations=frozenset(), evidence_c
         return "true"                                       # model/evidence prose satisfies completion
     if _rc_completion_launder(mutations, evidence_claims, "completion"):
         return "true"                                       # carrier laundered into completion
+
+    # === i40 Finding 1: completion is IMMUTABLY bound at issue time. The issue-time binding is =====
+    # MANDATORY (fail-closed if absent); a permit issued with NO contract carries the immutable
+    # NO_COMPLETION_CONTRACT sentinel and can NEVER become completable via a later contract insertion;
+    # on the reference path REQUIRE cc.packet_id PRESENT and == permit.packet_id, the contract's
+    # self-digest, task_id, and the issue-time binding's id/version/digest ALL matching the resolved
+    # contract. Any mismatch / absence => indeterminate.
+    b = st.permits.completion_binding(permit["permit_id"])
+    if "M-E36" not in mutations:
+        if b is None:
+            return "indeterminate"                          # no issue-time binding recorded (fail closed)
+        if b.get("sentinel") == NO_COMPLETION_CONTRACT:
+            return "indeterminate"                          # issued with NO contract; never completable
+
     cc = st.completion_contract_for_packet(permit["packet_id"], mutations)
     if cc is None:
         return "indeterminate"
     if canon.digest_omitting(cc, "contract_digest") != cc.get("contract_digest"):
         return "indeterminate"                              # tampered / mismatching content
     if "M-E36" not in mutations:
-        if cc.get("packet_id") is not None and cc.get("packet_id") != permit["packet_id"]:
-            return "indeterminate"                          # old-contract-vs-new-packet
+        # cc.packet_id MUST be PRESENT and == permit.packet_id (the immutable authentic binding).
+        if cc.get("packet_id") is None or cc.get("packet_id") != permit["packet_id"]:
+            return "indeterminate"                          # missing packet_id / old-contract-vs-new-packet
         if cc.get("task_id") != permit.get("task_id"):
             return "indeterminate"
-        b = st.permits.completion_binding(permit["permit_id"])
-        if b is not None and (b.get("completion_contract_id") != cc.get("completion_contract_id")
-                              or b.get("contract_version") != cc.get("contract_version")
-                              or b.get("contract_digest") != cc.get("contract_digest")):
+        # the contract resolved NOW must be identical to the one bound at ISSUE (id/version/digest).
+        if (b.get("completion_contract_id") != cc.get("completion_contract_id")
+                or b.get("contract_version") != cc.get("contract_version")
+                or b.get("contract_digest") != cc.get("contract_digest")):
             return "indeterminate"                          # not the contract bound at issue time
     v = _eval_expr_bound(cc["root"], st, mutations, cc["effective_namespace"], evidence_claims, permit)
     return {True: "true", False: "false", None: "indeterminate"}[v]

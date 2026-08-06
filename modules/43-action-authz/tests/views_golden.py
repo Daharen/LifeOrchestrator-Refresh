@@ -47,6 +47,40 @@ VIEW_DIGESTS = {
     "status_view": "247c0ba8e8f8956c5b8112ea29496e00e5f86476cfbc0b511cc402ccf3b9240b",
     "validator_view": "fe277edda1c368b85d26a787ec562a1715e07640ad58c68acabd50f168e5bd6c",
 }
+
+# i40 Finding 4 -- the ORDERED grant-matching algorithm + the CLOSED result shape encoded AS DATA
+# (not merely field declarations), pinned by canonical digest. Two implementations that both pass the
+# golden vectors AND reproduce this digest cannot diverge on limits[] / multi-grant limit composition.
+GRANT_MATCH_ALGORITHM = {
+    "schema": "lifeorch.grant_match_algorithm/0.1-test",
+    "ordered_steps": [
+        "exclude grants in the revoked set",
+        "tool_id == ca.tool_id",
+        "operation == ca.operation (no wildcard on the ordinary path)",
+        "action_namespace == ca.action_namespace",
+        "validity_from <= now_ms < validity_to",
+        "limits[] closed+well-formed else EXCLUDE the grant (fail closed)",
+        "resolved_target_set canonical ids SUBSET of allowed_target_ids",
+        "for each derived effect: class in effect_classes AND quantity <= grant_effect_limit(g,class) "
+        "AND externality_rank <= externality_max AND effect_risk_class <= risk_ceiling",
+    ],
+    "grant_effect_limit": "min(max_quantity[class], every limits[] entry whose limit_id==class); "
+                          "duplicate ids ALL apply (min); no applicable bound => uint63_max; "
+                          "malformed max_quantity for the class => 0 (fail closed)",
+    "conjunction_within_grant": "a grant matches ONLY if it covers ALL targets AND ALL effects",
+    "alternatives_across_grants": "grants are alternatives; covered scopes UNION across matched grants",
+    "effective_grant_limit_across_matched": "global MIN of grant_effect_limit over the MATCHED grants "
+                                            "(the tightest covering authority bounds the effect)",
+    "required_scope_rule": "required_permission_scopes SUBSET of union(matched scopes) else deny",
+    "a23_effective_permit_limit": "per effect class: min(manifest resource ceiling, grant-derived, "
+                                  "policy limit, approval limit)",
+    "closed_result_shape": {"matched_grant_ids": "sorted_unique<id>", "ok": "bool",
+                            "effective_grant_limits": "map<effect_class_nsid,uint63>"},
+    "fail_closed": ["empty grant array", "no covering grant", "uncovered required scope",
+                    "malformed/ambiguous/duplicate-shape limit entry", "unknown limit fields"],
+    "frozen_intersection_rule": "MIN (UNCHANGED from the freeze; this is its implementation)",
+}
+GRANT_MATCH_ALGORITHM_DIGEST = "ff5f66bdf9fd3f14a233637fad0e34543a8a95120857a3383fb4eb809dfdeac8"
 NOW = 1_700_000_000_000
 
 
@@ -79,7 +113,7 @@ def _grant(over=None):
 def _match(grants, ca, scopes=("fs.write",)):
     gs = S.GrantSnapshot("gsref", grants=[dict(g) for g in grants])
     opman = {"required_permission_scopes": list(scopes)}
-    _matched, ok = gs.match(ca, NOW, opman)
+    _matched, ok, _limits = gs.match(ca, NOW, opman)
     return ok
 
 
@@ -112,8 +146,68 @@ def run(check):
 
     # a REVOKED grant is excluded from matching (conjunction over the live set).
     gs = S.GrantSnapshot("gsref", grants=[_grant()], revoked={"g1"})
-    _m, ok = gs.match(_ca(), NOW, {"required_permission_scopes": ["fs.write"]})
+    _m, ok, _lim = gs.match(_ca(), NOW, {"required_permission_scopes": ["fs.write"]})
     ck("GrantView golden: revoked grant excluded -> deny", ok is False)
+
+    # (1b) i40 Finding 4 -- GRANT LIMIT ALGEBRA golden vectors (limits[] IMPLEMENTED + intersected).
+    def _m3(grants, ca, scopes=("fs.write",)):
+        g2 = S.GrantSnapshot("gsref", grants=[dict(g) for g in grants])
+        return g2.match(ca, NOW, {"required_permission_scopes": list(scopes)})
+
+    # class 1: limits.max_value < max_quantity -> the limits[] entry binds tighter than max_quantity.
+    g_l = _grant({"max_quantity": {"fs.write": 100}, "limits": [{"limit_id": "fs.write", "max_value": 30}]})
+    _m, ok1a, lim1 = _m3([g_l], _ca(effects=[_e(q=20)]))
+    ck("F4.1 limits(30)<max_quantity(100): qty 20 matches; effective grant limit == 30",
+       ok1a and lim1.get("fs.write") == 30)
+    _m, ok1b, _ = _m3([g_l], _ca(effects=[_e(q=50)]))          # 50 > limits 30 (though < max_quantity 100)
+    ck("F4.1 limits(30)<max_quantity(100): qty 50 > limits 30 -> deny", ok1b is False)
+
+    # class 2: manifest ceiling < grant ceiling -> A23 effective = manifest.
+    lims2 = S.effective_permit_limits([_e()], {"fs.write": 10}, {"fs.write": 100})
+    ck("F4.2 manifest(10) < grant(100) -> A23 effective permit limit == 10",
+       lims2 == [{"limit_id": "fs.write", "max_value": 10}])
+
+    # class 3: grant ceiling < manifest -> A23 effective = grant.
+    lims3 = S.effective_permit_limits([_e()], {"fs.write": 100}, {"fs.write": 7})
+    ck("F4.3 grant(7) < manifest(100) -> A23 effective permit limit == 7",
+       lims3 == [{"limit_id": "fs.write", "max_value": 7}])
+
+    # class 4: two matching grants, different scopes AND ceilings -> scope UNION; limit = global MIN.
+    gA = _grant({"grant_id": "gA", "scopes": ["s1"], "max_quantity": {"fs.write": 100},
+                 "limits": [{"limit_id": "fs.write", "max_value": 100}]})
+    gB = _grant({"grant_id": "gB", "scopes": ["s2"], "max_quantity": {"fs.write": 40},
+                 "limits": [{"limit_id": "fs.write", "max_value": 40}]})
+    _m, ok4, lim4 = _m3([gA, gB], _ca(effects=[_e(q=30)]), scopes=("s1", "s2"))
+    ck("F4.4 two grants diff scopes+ceilings: qty 30 matches (scope UNION); limit = min(100,40)=40",
+       ok4 and lim4.get("fs.write") == 40)
+
+    # class 5: malformed limit entry -> the grant is untrustable -> excluded (fail closed) -> deny.
+    g_bad = _grant({"limits": [{"limit_id": "fs.write", "max_value": -1}]})
+    _m, ok5, _ = _m3([g_bad], _ca())
+    ck("F4.5 malformed limit (negative max_value) -> grant excluded -> deny", ok5 is False)
+
+    # class 6: duplicate limit IDs -> all apply (min). qty 10 matches @ min 20; qty 30 denies.
+    g_dup = _grant({"max_quantity": {"fs.write": 100},
+                    "limits": [{"limit_id": "fs.write", "max_value": 50}, {"limit_id": "fs.write", "max_value": 20}]})
+    _m, ok6a, lim6 = _m3([g_dup], _ca(effects=[_e(q=10)]))
+    ck("F4.6 duplicate limit ids: qty 10 matches; effective == min(50,20)=20", ok6a and lim6.get("fs.write") == 20)
+    _m, ok6b, _ = _m3([g_dup], _ca(effects=[_e(q=30)]))
+    ck("F4.6 duplicate limit ids: qty 30 > min(20) -> deny", ok6b is False)
+
+    # class 7: revoked snapshot -> excluded from the algebra (tested above; asserted here on the tuple).
+    gsR = S.GrantSnapshot("gsref", grants=[_grant()], revoked={"g1"})
+    _m, ok7, lim7 = gsR.match(_ca(), NOW, {"required_permission_scopes": ["fs.write"]})
+    ck("F4.7 revoked grant excluded from the limit algebra -> deny + empty limits", ok7 is False and lim7 == {})
+
+    # class 8: unknown/ambiguous fields in a limit entry fail closed (closed shape {limit_id,max_value}).
+    g_unk = _grant({"limits": [{"limit_id": "fs.write", "max_value": 1048576, "surprise": 1}]})
+    _m, ok8, _ = _m3([g_unk], _ca())
+    ck("F4.8 unknown field in a limit entry -> fail closed -> deny", ok8 is False)
+
+    # the ORDERED matching algorithm + CLOSED result shape is pinned AS DATA (byte-exact).
+    ck("F4 grant-match algorithm + closed result shape pinned by digest",
+       canon.digest_of(GRANT_MATCH_ALGORITHM) == GRANT_MATCH_ALGORITHM_DIGEST,
+       "got=%s" % canon.digest_of(GRANT_MATCH_ALGORITHM))
 
     # (2) PolicyView golden: escalate for public/irreversible; never weaken. -----------------------
     pv = S.PolicyView("p")

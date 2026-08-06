@@ -14,6 +14,7 @@ leaf to the EXACT permit -- so every substitution resolves to `indeterminate` (i
 from action_authz import canon
 from action_authz.monitor import authorize
 from action_authz.boundary import evaluate_completion_via_permit, MIN_COMPLETION_SCOPE
+from action_authz.stores import NO_COMPLETION_CONTRACT
 from . import harness
 
 pb = harness.prop_bytes
@@ -147,6 +148,64 @@ def run(check):
     st.status.put(_status_for(p1, superseded=True))
     ck("completion superseded-status: superseded status cannot complete -> indeterminate",
        evaluate_completion_via_permit(st, p1) == "indeterminate")
+
+    # ===================================================================================
+    # i40 Finding 1 -- completion is IMMUTABLY bound at issue time. New deterministic vectors.
+    # ===================================================================================
+
+    # (F1.1) LATE CONTRACT INSERTION: a permit issued with NO completion contract records the immutable
+    # NO_COMPLETION_CONTRACT sentinel and can NEVER become completable by inserting a contract AFTER
+    # issuance -- even with a perfectly-matching status.
+    st, prop = harness.build_baseline()                          # no completion_by_packet entry
+    p1 = _permit_for(st, prop)                                   # sentinel stamped at A34
+    ck("F1.1 issue-with-no-contract stamps the immutable NO_COMPLETION_CONTRACT sentinel",
+       (st.permits.completion_binding(p1["permit_id"]) or {}).get("sentinel") == NO_COMPLETION_CONTRACT)
+    st.completion_by_packet[_PID] = _contract(scope="permit")    # contract inserted AFTER issuance
+    st.status.put(_status_for(p1))                               # + a perfectly-matching status
+    ck("F1.1 late-inserted contract can NEVER complete a sentinel permit -> indeterminate",
+       evaluate_completion_via_permit(st, p1) == "indeterminate")
+
+    # (F1.2) MISSING cc.packet_id: a contract present at issue but lacking packet_id -> indeterminate
+    # (even with a matching status). The packet_id binding is REQUIRED, not optional.
+    st, prop = harness.build_baseline()
+    st.completion_by_packet[_PID] = _contract(scope="permit", packet_id=None)
+    p1 = _permit_for(st, prop)
+    st.status.put(_status_for(p1))
+    ck("F1.2 contract missing packet_id -> indeterminate (packet_id binding REQUIRED)",
+       evaluate_completion_via_permit(st, p1) == "indeterminate")
+
+    # (F1.3) DELETED permit completion binding: the issue-time binding is MANDATORY; if it is absent
+    # (deleted from the permit store) the evaluator fails closed -> indeterminate.
+    st, prop = harness.build_baseline()
+    st.completion_by_packet[_PID] = _contract(scope="permit")
+    p1 = _permit_for(st, prop)
+    st.status.put(_status_for(p1))
+    del st.permits._completion_binding[p1["permit_id"]]          # delete the issue-time binding
+    ck("F1.3 deleted issue-time binding -> indeterminate (binding is MANDATORY, fail-closed)",
+       evaluate_completion_via_permit(st, p1) == "indeterminate")
+
+    # (F1.4) BINDING CHANGED AFTER ISSUE: the contract bound at issue is SWAPPED for a different
+    # (self-consistent) contract post-issue; the immutable issue-time binding no longer matches the
+    # resolved contract's id/version/digest -> indeterminate.
+    st, prop = harness.build_baseline()
+    st.completion_by_packet[_PID] = _contract(scope="permit")    # contract A (cc_1)
+    p1 = _permit_for(st, prop)                                   # binding stamped from A
+    st.status.put(_status_for(p1))
+    cc_b = _contract(scope="permit")
+    cc_b["completion_contract_id"] = "cc_2"                      # a DIFFERENT contract, self-consistent
+    cc_b["contract_digest"] = canon.digest_omitting(cc_b, "contract_digest")
+    st.completion_by_packet[_PID] = cc_b                         # swap the contract post-issue
+    ck("F1.4 contract swapped after issue -> issue-time binding mismatch -> indeterminate",
+       evaluate_completion_via_permit(st, p1) == "indeterminate")
+
+    # (F1.5) POSITIVE control for F1.1-F1.4: the SAME shape with the contract present at issue AND
+    # the binding intact completes -> true (proves the above deny on the binding, not on the status).
+    st, prop = harness.build_baseline()
+    st.completion_by_packet[_PID] = _contract(scope="permit")
+    p1 = _permit_for(st, prop)
+    st.status.put(_status_for(p1))
+    ck("F1.5 positive control: contract bound at issue + intact binding + status -> true",
+       evaluate_completion_via_permit(st, p1) == "true")
 
     # M-E36 DECIDABLE: a task-only contract + another action's status is INERT on the reference but
     # falsely completes under the by-task substitution defect M-E36 -> a kill.

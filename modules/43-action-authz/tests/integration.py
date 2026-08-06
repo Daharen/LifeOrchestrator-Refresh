@@ -28,6 +28,7 @@ from action_authz import canon, stores as S
 from action_authz.monitor import authorize
 from action_authz.boundary import MockExecutor, evaluate_completion_via_permit
 from . import harness
+from . import adapter_090
 
 _REAL_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                          "fixtures", "real_packets")
@@ -72,52 +73,18 @@ def _run_real(pkt):
 
 
 # --------------------------------------------------------------------------- 0.9.0 test-only authority
-def _fs_write_op(evidence_dependency="none"):
-    op = harness.make_operation()
-    op["evidence_dependency"] = evidence_dependency
-    return op
-
-
 def _trusted_090(pkt, non_execution, disposition=None):
-    """Build a FULL trusted authority config CONSISTENT with a real 0.9.0 packet's task/namespace, with
-    an explicit non_execution (TEST-ONLY when False). Preserves the packet's own identity/task_id; the
-    disposition (A08/A31) is taken from the real packet unless overridden."""
-    ns = (pkt.get("task_input", {}) or {}).get("namespace") or "nsa"
-    st = S.Stores()
-    st.current_corpus_version = None                          # skip A07 corpus-drift (real cv differs)
-    pv = S.PacketStore.view_from_real_m40_packet(pkt, non_execution=non_execution)
-    pv.grant_snapshot_ref = "grant_snap_090"                  # bind to a grant snapshot we control
-    st.packets.put(pv)
-    meta = S.PacketStore.meta_from_real_m40_packet(pkt)
-    if disposition is not None:
-        meta["disposition"] = disposition
-        meta["retrieval_complete"] = (disposition == "answerable")
-    st.packet_meta = {pv.packet_id: meta}
-    st.completion_contracts = {}
-    st.attest.put("run_real", "d" * 64, pv.packet_id, model_supplied_provenance=False)
-    op = _fs_write_op(evidence_dependency="packet_answerable")
-    st.manifests.register(S.build_manifest("fs.local", [op]))
-    st.health.put("health.fs/1", "ok", st.clock.now_ms())
-    st.resolve_ctx.path_ns = [("/u/%s" % ns, ns)]
-    st.grants["grant_snap_090"] = S.GrantSnapshot(
-        "grant_snap_090",
-        grants=[{"grant_id": "g_090", "tool_id": "fs.local", "operation": "fs.write",
-                 "action_namespace": ns, "allowed_target_ids": ["/u/%s/one.txt" % ns],
-                 "effect_classes": ["fs.write"], "max_quantity": {"fs.write": 1048576},
-                 "externality_max": "local", "risk_ceiling": 2, "validity_from": 0,
-                 "validity_to": 9_000_000_000_000_000, "approval_mode": "none",
-                 "scopes": ["fs.write"], "limits": [{"limit_id": "fs.write", "max_value": 1048576}]}],
-        request_namespaces=[ns])
-    st.policies["policy_090"] = S.PolicyView("policy_090")
-    st.side_effect_policy_ref = "policy_090"
-    prop = _proposal_for(pkt, "/u/%s/one.txt" % ns)
-    return st, prop, pv
+    """i40 Finding 5: delegate to the suite-owned EXACT context_packet/0.2 adapter, which PRESERVES the
+    packet's corpus_version (A07 exercised), grant-snapshot identity, and full carriers; the only
+    overlay is `non_execution`."""
+    return adapter_090.build_trusted(pkt, non_execution_overlay=non_execution, disposition=disposition)
 
 
 def _completion_contract_for(pkt, ns):
+    gref = pkt.get("identity", {}).get("control_plane_grant_snapshot_ref")
     cc = {"schema": "lifeorch.completion_contract/0.1", "completion_contract_id": "cc_090",
           "contract_version": 1, "task_id": pkt.get("identity", {}).get("task_id"),
-          "effective_namespace": ns, "grant_snapshot_ref": "grant_snap_090", "packet_id": pkt["packet_id"],
+          "effective_namespace": ns, "grant_snapshot_ref": gref, "packet_id": pkt["packet_id"],
           "root": {"kind": "leaf", "completion_scope": "permit", "predicate": {
               "predicate_id": "p1", "predicate_kind": "executor_status", "source_id": "exec.fs/1",
               "source_version": 1, "subject_binding": {}, "max_age_ms": 60000,
@@ -220,6 +187,57 @@ def run(check):
              d_r1.outcome == "DENY" and (d_r1.reason_code or "").startswith("A31"),
              "reason=%s" % d_r1.reason_code)
 
+    # ===== i40 Finding 5: the EXACT context_packet/0.2 adapter is decisive at the real seam =========
+    # (5a) A07 is EXERCISED (the current_corpus_version=None bypass is gone): the adapter PRESERVES the
+    # packet's corpus_version, so a corpus-drift denies at A07.
+    st_cv, prop_cv, pv_cv = adapter_090.build_trusted(routed, non_execution_overlay=False)
+    check.ok("0.9.0 adapter PRESERVES corpus_version (== packet identity)",
+             st_cv.current_corpus_version == routed["identity"]["corpus_version"]
+             and pv_cv.corpus_version == routed["identity"]["corpus_version"])
+    st_cv.current_corpus_version = "corpus_DRIFT"            # a drift the adapter did NOT introduce
+    d_cv = authorize(harness.prop_bytes(prop_cv), st_cv, mutations=frozenset())
+    v090_a07 = d_cv.outcome == "DENY" and (d_cv.reason_code or "").startswith("A07")
+    check.ok("0.9.0 adapter: corpus drift -> A07 DENY (A07 EXERCISED, not bypassed)", v090_a07,
+             "reason=%s" % d_cv.reason_code)
+
+    # (5b) the adapter does NOT rewrite the packet's grant-snapshot identity (id AGREES with the packet).
+    gref_pkt = routed["identity"]["control_plane_grant_snapshot_ref"]
+    st_id, _, pv_id = adapter_090.build_trusted(routed, non_execution_overlay=False)
+    check.ok("0.9.0 adapter: trusted grant-snapshot id AGREES with the packet (not rewritten)",
+             pv_id.grant_snapshot_ref == gref_pkt and gref_pkt in st_id.grants)
+
+    # (5c) the two-boolean reduction is RETIRED: the full carriers cross into the trusted meta as DATA.
+    meta = adapter_090.full_meta(routed)
+    v090_carriers = (isinstance(meta.get("routing_stage_trace"), list) and len(meta["routing_stage_trace"]) == 3
+                     and isinstance(meta.get("working_memory_items"), list) and len(meta["working_memory_items"]) == 1
+                     and isinstance(meta.get("evidence_excerpts"), list) and len(meta["evidence_excerpts"]) == 3
+                     and meta.get("working_state_version") == 2
+                     and isinstance(meta.get("namespace_closure"), dict))
+    check.ok("0.9.0 adapter PRESERVES full carriers as DATA (trace/wm items/evidence/state_version/ns)",
+             v090_carriers)
+
+    # (5d) INERTNESS at EVERY R1 sink through the exact seam. The REAL carriers (routing stage-trace +
+    # hydrated working memory) are present in the authentic packet's meta. For EVERY (carrier, sink)
+    # pair we run the corresponding R1-ROLE-1 laundering defect `M-RC-<carrier>-<sink>` through THIS
+    # exact seam and assert the decision + canonical digest are IDENTICAL to the reference -- the real
+    # carriers cannot launder authority into ANY of the 15 sinks. (role_matrix additionally proves each
+    # sink defect is DECISIVELY killed in a scenario where that sink's check is the deciding gate.)
+    from action_authz.monitor import RC_SINKS
+    st_ref, prop_ref, _ = adapter_090.build_trusted(routed, non_execution_overlay=False)
+    d_ref = authorize(harness.prop_bytes(prop_ref), st_ref, mutations=frozenset())
+    inert_all = (d_ref.outcome == "PERMIT")
+    for sink in RC_SINKS:
+        for tag in ("RT", "WM"):
+            defect = "M-RC-%s-%s" % (tag, sink.upper())
+            st_s, prop_s, _ = adapter_090.build_trusted(routed, non_execution_overlay=False)
+            d_s = authorize(harness.prop_bytes(prop_s), st_s, mutations=frozenset([defect]))
+            if not (d_s.outcome == d_ref.outcome and d_s.cad == d_ref.cad):
+                inert_all = False
+    check.ok("0.9.0 exact seam: real carriers INERT at EVERY R1 sink "
+             "(no M-RC-*-<sink> defect over the authentic carriers alters the decision/cad)", inert_all)
+    v090_exact_adapter = bool(v090_a07 and v090_carriers and inert_all
+                              and pv_id.grant_snapshot_ref == gref_pkt)
+
     # ===== positive permit path via the TEST-ONLY mock packet + the same-code non_execution=true deny ==
     st, prop = harness.build_baseline()
     dp = authorize(harness.prop_bytes(prop), st, mutations=frozenset())
@@ -235,4 +253,5 @@ def run(check):
             "real_total": len(results), "positive_permit": positive,
             "v090_test_only_permit": bool(d_ok.outcome == "PERMIT"),
             "v090_adversarial_identical": bool(d_adv.cad == d_ok.cad and d_adv.outcome == d_ok.outcome),
+            "v090_exact_adapter": v090_exact_adapter, "v090_a07_exercised": bool(v090_a07),
             "results": results}

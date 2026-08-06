@@ -257,3 +257,80 @@ activation_status = prohibited`. The pass is a DESIGN gate: `non_execution:true`
 the activation portions of 5/9 remain ACTIVATION-gating. An honest INCOMPLETE still beats a false PASS -- any
 `not_run` obligation, unkilled mutation, unrun family/fuzzer, absent 0.9.0 chain, failed role-sink kill,
 completion-substitution leak, view-golden drift, or p01gate divergence forces `incomplete`, never `pass`.
+
+---
+
+## i40 EXACT CLOSURES (VERSION 0.4.0, worker P01-EXACT-CLOSURE-43-i40)
+
+`action_authz` VERSION **`0.4.0`** builds the 7 per-finding EXACT CLOSURES from the i39 as-built
+RE-REVIEW (`research/2026-08-06-i39-p01gate-recheck-redteam.md`, D-0109, which returned FAIL --
+`p0_1_gate_status=pass` over-claimed a SECOND time). No frozen MEMORY_CONTRACT / CONTEXT_PACKET_CONTRACT
+field is reopened; every change is additive at the action layer.
+
+**THE GATE-STATUS RULE (M2-D / D-0110 -- non-negotiable).** The worker does NOT self-report pass.
+`p0_1_gate_status` stays **`incomplete`** in EVERY emitted artifact (runner output, this doc, report JSON,
+status fields). The claim is carried by per-finding `exact_closure_built: true|false` flags + the suite
+evidence; the ORCHESTRATOR ratifies s7 ONLY when the independent as-built re-review returns PASS. Suite
+**334/334** double-run byte-identical; **149** obligation rows (NOT_RUN=0); **30** role-sink kills;
+67/67 mandatory mutations; fuzzer 400/0; Finding-7 empty-dir self-verification reproduces the bundle
+byte-identically. `build_status = build_complete | activation_status = prohibited`; `non_execution:true`
+holds; A06 denies every authentic packet; nothing is action-capable.
+
+**Finding 1 -- completion IMMUTABLE at issue (`boundary.evaluate_completion_via_permit`, `stores.py`).**
+The issue-time completion binding is MANDATORY (fail-closed when absent). On the reference path REQUIRE:
+`cc.packet_id` PRESENT and `== permit.packet_id`; the contract self-digest; `task_id`; and the issue-time
+binding's `{completion_contract_id, contract_version, contract_digest}` ALL matching the resolved
+contract. A permit issued with NO contract records the immutable `NO_COMPLETION_CONTRACT` sentinel
+(`stores.completion_binding_for_packet`) and can NEVER become completable via a later contract insertion.
+Vectors: late insertion, missing packet_id, deleted binding, sentinel, binding-changed-after-issue.
+
+**Finding 2 -- Boundary-D POST-claim hook (`boundary.MockExecutor._run_permit`).** A deterministic
+`post_claim_hook` fires immediately AFTER the atomic claim and BEFORE every recheck. The issue snapshot is
+MANDATORY (absence -> `D3_no_issue_snapshot`, fail closed). One fault per independent mutable surface (14:
+grant epoch / grant currentness / MATCHED-grant revocation / policy epoch / policy currentness / approval
+revocation / approval EXPIRY / manifest disappearance / installed-artifact drift / health drift /
+permit-store epoch / packet currentness / packet non_execution / target identity drift). Every row:
+`accepted==false AND state_diff==[] AND permit_state==rejected_no_effect (TERMINAL) AND a 2nd attempt
+rejected`. The effect ledger CONSUMES the captured target handle (`_apply_through_handles`: each applied
+atom carries `applied_via_handle == resolution_proof_digest`), never a blind `authorized_effect_set` copy;
+target mutation tested BOTH before and after claim.
+
+**Finding 3 -- role matrix over ALL 15 frozen sinks (`tests/role_matrix.py`, `monitor.py`).** Adds the two
+omitted sinks: `manifest` (a carrier attesting installed-artifact currentness at A12 AND A32) and
+`working_memory` (a carrier altering the trusted task binding at A05 -- the prohibited
+working_memory->working_memory conversion). 15 sinks x 2 carriers = **30** (carrier, sink) kills, each
+seeded defect modifying ONLY its sink, run under the test-only `non_execution=false` path.
+
+**Finding 4 -- GrantView limit algebra IMPLEMENTED + pinned (`stores.GrantSnapshot.match`,
+`effective_permit_limits`).** `grant_effect_limit(g, cls) = min(max_quantity[cls], every limits[] entry
+with limit_id==cls)`; duplicate ids all apply (min); malformed / ambiguous / unknown-field limit entries
+FAIL CLOSED (the grant is excluded). `match` returns the CLOSED shape `(matched_grant_ids, ok,
+effective_grant_limits)` -- the global MIN over the MATCHED (alternative, scope-union) grants. A23:
+`effective_limit[cls] = min(manifest resource ceiling, grant-derived, policy, approval)` per effect class.
+The ordered algorithm + closed result shape are pinned AS DATA (`GRANT_MATCH_ALGORITHM`, digest
+`ff5f66bd...`); 8 golden-vector classes. The FROZEN MIN intersection rule is UNCHANGED (this is its
+implementation, NOT an amendment) -- no freeze amendment required or made.
+
+**Finding 5 -- suite-owned EXACT context_packet/0.2 adapter (`tests/adapter_090.py`).** Preserves
+corpus_version (A07 EXERCISED -- the `current_corpus_version=None` bypass is GONE), does NOT rewrite the
+packet's grant-snapshot identity (the trusted GrantSnapshot is registered under the packet's OWN ref), and
+preserves the complete routed stage-trace / working-memory envelope+items / evidence / provenance / ns
+metadata / state_version as DATA (the routing_present/working_present two-boolean reduction is RETIRED).
+The overlay flips ONLY `non_execution`. Benign + adversarial 0.9.0 run through THIS seam; carriers proven
+INERT at EVERY R1 sink (decision + canonical digest invariant to carrier presence).
+
+**Finding 6 -- decisive oracles (`tests/callgraph.py`, `tests/render.py`, `monitor.py`).** `no_path` is a
+real stdlib-`ast` import/CALL-GRAPH over EVERY action_authz module (canon/schemas/stores/monitor/boundary),
+resolving imports/aliases/attribute calls with over-approximated unresolved edges, proving
+`canon.authority_construct` UNREACHABLE from the ordinary entry points, plus an AST-verified guard (source
+-string pattern counting is retired). A36 asserts EXACTLY ONE correctly-shaped bounded audit event with
+NEW audit-emission DELETION (`AUDIT-DELETE`) and CORRUPTION (`AUDIT-CORRUPT`) faults (absence FAILS, not the
+secure baseline). Boundary-B rows MUTATE the ACTUAL render path (`render.render_packet`) and observe
+rendered-bytes / order / delimiter deltas -- defense-in-depth; Boundary C stays decisive.
+
+**Finding 7 -- complete runnable review tree + empty-dir self-verify (`tests/selfverify.py`,
+`run_suite.REVIEW_PACK_FILES`).** run_suite verifies pack completeness (every required file present).
+`selfverify.py` copies the COMPLETE tree into an EMPTY temp dir, runs the documented command there, and
+requires exit 0 + the full suite result + all 149 oracle rows + identical source/fixture digests + a
+BYTE-IDENTICAL report MANIFEST (`bundle_digest`); the transcript is committed at
+`tests/report/self_verify.json` (deliberately NOT part of the byte-compared bundle).

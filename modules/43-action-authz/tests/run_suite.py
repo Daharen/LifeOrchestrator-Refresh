@@ -40,6 +40,30 @@ ACTIVATION_STAGED = [
     "the freshness relaxation policy (Blocker 6) + the non_execution ACTIVATION transition (Blocker 7)",
 ]
 
+# i40 Finding 7 -- the COMPLETE independently-runnable review tree. run_suite verifies every required
+# file is present on disk (pack completeness); tests/selfverify.py performs the EMPTY-DIR reproduction.
+REVIEW_PACK_FILES = [
+    "action_authz/__init__.py", "action_authz/canon.py", "action_authz/schemas.py",
+    "action_authz/stores.py", "action_authz/monitor.py", "action_authz/boundary.py",
+    "tests/__init__.py", "tests/harness.py", "tests/fixtures_suite.py", "tests/properties.py",
+    "tests/mutations.py", "tests/integration.py", "tests/adapter_090.py", "tests/fuzzer.py",
+    "tests/oracle_matrix.py", "tests/callgraph.py", "tests/render.py", "tests/role_matrix.py",
+    "tests/completion_binding.py", "tests/views_golden.py", "tests/p01gate.py", "tests/report.py",
+    "tests/run_suite.py", "tests/selfverify.py",
+    "fixtures/real_packets/m40_070_pkt_0.json", "fixtures/real_packets/m40_070_pkt_1.json",
+    "fixtures/real_packets/m40_070_pkt_2.json", "fixtures/real_packets/m40_070_pkt_3.json",
+    "fixtures/real_packets/m40_090_routed.json", "fixtures/real_packets/m40_090_routed_adv.json",
+    "fixtures/real_packets/m40_090_flat.json", "fixtures/real_packets/PROVENANCE.md",
+    "SCHEMA_NOTES.md", "README.md", "WORK_ORDER.md",
+]
+
+
+def _review_pack_complete():
+    """True + [] iff every file the runnable review tree needs is present on disk (Finding 7)."""
+    missing = [f for f in REVIEW_PACK_FILES
+               if not os.path.exists(os.path.join(_MODDIR, f.replace("/", os.sep)))]
+    return (not missing), missing
+
 
 def run_once():
     checks = {}
@@ -152,33 +176,63 @@ def main():
     crit["14_v090_authentic_chain_in_suite"] = _criterion(
         "pass" if v090_ok else "fail",
         "the #40 0.9.0 routed+wm authentic chain is OWNED + RUN inside the suite gate (both modes)")
+    v090_exact = bool(integ1.get("v090_exact_adapter") and integ1.get("v090_a07_exercised"))
+    crit["15_exact_090_adapter"] = _criterion(
+        "pass" if v090_exact else "fail",
+        "the suite-owned EXACT context_packet/0.2 adapter preserves corpus_version (A07 exercised) + "
+        "grant-snapshot identity + full carriers; carriers INERT at every R1 sink")
 
+    # ---- i40 Finding closures -> per-finding exact_closure_built flags (the WORKER's claim carrier) --
+    def _rows_ok(pred):
+        return all(r.get("status") == "pass" for r in oracle1 if pred(r["obligation_id"]))
+    from tests import callgraph
+    bd_ok = _rows_ok(lambda oid: str(oid).startswith("Boundary-D3"))
+    f6_ids = {"U-ROLE", "A36-emission", "A36-corruption", "Boundary-B1", "Boundary-B2",
+              "Boundary-B3", "Boundary-B4"}
+    f6_rows_ok = _rows_ok(lambda oid: oid in f6_ids)
+    no_path_ok = callgraph.no_path(_MODDIR)
+    pack_complete, pack_missing = _review_pack_complete()
+    exact_closure_built = {
+        "finding_1": bool(completion_ok),                         # completion IMMUTABLE at issue
+        "finding_2": bool(bd_ok and oracle_complete),             # Boundary-D post-claim (terminal + 2nd)
+        "finding_3": bool(role_all and len(role1) == 30),         # 15-sink x 2-carrier role matrix
+        "finding_4": bool(views_ok),                              # GrantView limit algebra + pinned
+        "finding_5": bool(v090_exact),                            # exact context_packet/0.2 adapter
+        "finding_6": bool(f6_rows_ok and no_path_ok and oracle_complete),  # decisive oracles
+        "finding_7": bool(pack_complete),                         # complete runnable review tree
+    }
+
+    # === M2-D / D-0110 (NON-NEGOTIABLE): the WORKER never claims pass. `p0_1_gate_status` stays =====
+    # `incomplete` in EVERY emitted artifact -- the independent as-built RE-REVIEW's PASS (couriered by
+    # the orchestrator at fold) is the ONLY path to ratification. An honest incomplete-with-evidence,
+    # carried by the exact_closure_built flags + the suite evidence, IS the deliverable.
+    build_status = "build_complete"
+    p0_1_gate_status = "incomplete"
+    activation_status = "prohibited"   # non_execution:true holds; Blockers remain
+
+    # the criteria are still evaluated (evidence for the re-review), but they do NOT flip the gate.
     mandatory = ["1_all_ten_families_x2runs", "2_fixed_seed_fuzzer", "3_every_mandatory_mutation_killed",
                  "4_denied_no_permit_no_diff", "5_no_raw_model_path_to_executor",
                  "6_state_diff_one_consumed_permit", "7_constant_caller_bytes",
                  "8_one_canonical_implementation", "9_real_module_chain",
                  "11_obligation_oracle_complete", "12_role_sink_matrix",
-                 "13_completion_packet_binding", "14_v090_authentic_chain_in_suite"]
-    states = [crit[k]["state"] for k in mandatory]
-    build_status = "build_complete"
-    if "fail" in states:
-        p0_1_gate_status = "fail"
-    elif "not_run" in states or "incomplete" in states:
-        p0_1_gate_status = "incomplete"
-    elif all(s == "pass" for s in states):
-        p0_1_gate_status = "pass"
-    else:
-        p0_1_gate_status = "incomplete"
-    activation_status = "prohibited"   # non_execution:true holds; Blockers remain
+                 "13_completion_packet_binding", "14_v090_authentic_chain_in_suite",
+                 "15_exact_090_adapter"]
 
     print("=" * 82)
-    print("module #43 action.authz -- P0-1 deny-by-default reference monitor + injection SUITE (FULL GATE, i39)")
+    print("module #43 action.authz -- P0-1 deny-by-default reference monitor + injection SUITE (i40 EXACT CLOSURES)")
     print("action_authz VERSION %s | DESIGN-ONLY (non_execution:true holds; nothing action-capable)" % VERSION)
     print("=" * 82)
-    print("  RESULT TAXONOMY (amendment 1):")
+    print("  RESULT TAXONOMY (amendment 1; M2-D / D-0110 -- the worker does NOT claim pass):")
     print("     build_status      = %s" % build_status)
-    print("     p0_1_gate_status  = %s" % p0_1_gate_status)
+    print("     p0_1_gate_status  = %s   (PINNED; the independent as-built re-review PASS ratifies)" % p0_1_gate_status)
     print("     activation_status = %s" % activation_status)
+    print("  EXACT CLOSURES BUILT (i39 findings 1-7; the worker's machine-readable claim):")
+    for i in range(1, 8):
+        k = "finding_%d" % i
+        print("     %-11s exact_closure_built = %s" % (k, exact_closure_built[k]))
+    if not pack_complete:
+        print("     (review pack missing: %s)" % pack_missing)
     print("-" * 82)
     for name in ("fixtures", "properties", "mutations", "fuzzer", "oracle", "role", "completion",
                  "views", "p01gate", "integration"):
@@ -226,12 +280,15 @@ def main():
     consistent = (total_fail == 0 and identical and not missing and
                   integ1["real_denied"] == integ1["real_total"] and integ1["real_total"] >= 1 and
                   integ1["positive_permit"] and fuzz1["ok"] and oracle_complete and role_all and
-                  completion_ok and p01_ok and v090_ok and views_ok)
+                  completion_ok and p01_ok and v090_ok and v090_exact and views_ok and pack_complete)
 
     # ---- independently-auditable evidence bundle (red-team Finding 7) ------------------------
     payload = {
         "taxonomy": {"build_status": build_status, "p0_1_gate_status": p0_1_gate_status,
                      "activation_status": activation_status},
+        "exact_closure_built": exact_closure_built,
+        "gate_status_rule": "M2-D/D-0110: worker emits incomplete-with-evidence; the independent "
+                            "as-built re-review PASS (orchestrator, at fold) is the only ratification path",
         "criteria": crit,
         "double_run": {"identical": identical, "signature_sha256": sig1_hash},
         "totals": {"pass": total_pass, "fail": total_fail},
@@ -249,8 +306,13 @@ def main():
     print("  EVIDENCE BUNDLE ........ tests/report/ (%d files; bundle_digest %s)"
           % (len(manifest["files"]), manifest["bundle_digest"][:16]))
     print("=" * 82)
-    print("SUITE: %s | p0_1_gate_status = %s" % ("PASS" if consistent else "FAIL", p0_1_gate_status))
-    return 0 if consistent else 1
+    all_built = all(exact_closure_built.values())
+    print("SUITE: %s | build_complete | p0_1_gate_status = %s | activation=prohibited"
+          % ("consistent" if consistent else "INCONSISTENT", p0_1_gate_status))
+    print("EXACT CLOSURES: %d/7 built%s | activation prohibited | ratification awaits the independent "
+          "as-built re-review PASS (M2-D)" % (sum(exact_closure_built.values()),
+                                              "" if all_built else " (INCOMPLETE)"))
+    return 0 if (consistent and all_built) else 1
 
 
 if __name__ == "__main__":

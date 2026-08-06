@@ -82,10 +82,32 @@ def _effect(carrier):
     return st, prop
 
 
+def _manifest(carrier):
+    # i40 Finding 3: `manifest` sink. Installed-artifact drift -> A12 (and A32) DENY. A defect that
+    # lets the carrier attest the trusted manifest/artifact currentness launders it into the manifest.
+    st, prop = harness.build_baseline()
+    st.manifests.set_current_installed("fs.local", "f" * 64)     # installed-artifact drift -> A12 DENY
+    _mark(st, carrier)
+    return st, prop
+
+
+def _working_memory(carrier):
+    # i40 Finding 3: `working_memory` sink. The trusted working-state TASK BINDING is derived ONLY from
+    # the authentic packet; a task-binding mismatch denies at A05. A defect that lets the carrier's
+    # untrusted working-memory content alter that trusted task binding launders it into working_memory
+    # (the prohibited working_memory->working_memory conversion: untrusted wm content altering trusted
+    # state metadata / task binding / namespace authorization / state_version / can_instruct).
+    st, prop = harness.build_baseline()
+    prop["task_id"] = "task_OTHER"                               # task-binding mismatch -> A05 DENY
+    _mark(st, carrier)
+    return st, prop
+
+
 _DECISION_SCENARIO = {
     "evidence": _ev, "evidence_requirement": _ev, "coverage_result": _ev, "packet_disposition": _ev,
     "control_plane": _control_plane, "target": _target, "grant": _grant,
-    "policy": _delete, "approval": _delete, "health": _health, "effect": _effect,
+    "policy": _delete, "approval": _delete, "manifest": _manifest, "health": _health, "effect": _effect,
+    "working_memory": _working_memory,
 }
 
 
@@ -128,9 +150,11 @@ def _completion_secure(sink, carrier, mutations):
 
 _COMPLETION_SINKS = ("trusted_status", "completion")
 
+# ALL 15 FROZEN R1-ROLE-1 sinks (i40 Finding 3 -- i39 omitted `manifest` + `working_memory`), each
+# protected against BOTH carriers => 30 killable (carrier, sink) pairs.
 SINKS = ("evidence", "evidence_requirement", "coverage_result", "packet_disposition",
-         "control_plane", "grant", "policy", "approval", "health",
-         "trusted_status", "completion", "target", "effect")
+         "control_plane", "grant", "policy", "approval", "manifest", "health",
+         "trusted_status", "completion", "target", "effect", "working_memory")
 CARRIERS = ("routing", "working")
 
 

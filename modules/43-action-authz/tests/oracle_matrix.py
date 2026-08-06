@@ -20,7 +20,6 @@ authority-constructor capability AND a static import/call-graph reachability sca
 """
 
 import os
-import re
 
 from action_authz import canon, stores as S
 from action_authz.monitor import authorize, canonical_digest, PermitRef
@@ -305,6 +304,34 @@ def _obs_a36_log(m):
     return any("leak" in ev for ev in st.log.events)           # its OWN surface: privileged security log
 
 
+def _obs_audit_emission(m):
+    """i40 Finding 6b -- the A36 audit surface after a PERMIT: EXACTLY ONE correctly-shaped bounded
+    audit event and NO attacker payload. Returns (count, all_correct_shape, no_payload)."""
+    st, d = harness.run_happy(m)
+    if d.outcome != "PERMIT":
+        return (0, False, False)
+    evs = [e for e in st.log.events if e.get("event") == "authz_permit"]
+    shaped = all(set(e.keys()) == {"event", "permit_id", "cad", "tool_id", "operation"} for e in evs)
+    no_payload = all("leak" not in e for e in st.log.events)
+    return (len(evs), bool(shaped), bool(no_payload))
+
+
+def _render_row(fault, desc):
+    """i40 Finding 6c -- MUTATE the ACTUAL rendering path and observe a rendered-bytes difference."""
+    import json
+    from . import render
+    p = os.path.join(_MODDIR, "fixtures", "real_packets", "m40_090_routed.json")
+    pkt = json.load(open(p, "r", encoding="utf-8"))
+    base = render.render_packet(pkt)
+    mut = render.render_packet(pkt, fault=fault)
+    ok = (len(base) > 0) and (base != mut)
+    return {"status": "pass" if ok else "fail",
+            "baseline_expected": "the real render path produces bytes; the fault CHANGES rendered bytes",
+            "observed": "base=%dB mut=%dB differ=%s" % (len(base), len(mut), base != mut),
+            "expected_fault_difference": desc,
+            "observed_fault": "rendered-bytes delta (defense-in-depth; Boundary C is decisive)"}
+
+
 # --------------------------------------------------------------------------- no_path (capability + call-graph)
 def _no_path_capability():
     ok = True
@@ -324,15 +351,12 @@ def _no_path_capability():
 
 
 def _no_path_callgraph():
-    """Static import/call-graph inspection: the ONLY Authority constructor is canon.authority_construct,
-    its guard is present, and the ordinary monitor path never calls it (so no ordinary path mints
-    Authority). Runtime fuzzing cannot prove 'no path'; this reads the source."""
-    canon_src = open(os.path.join(_MODDIR, "action_authz", "canon.py"), "r", encoding="utf-8").read()
-    monitor_src = open(os.path.join(_MODDIR, "action_authz", "monitor.py"), "r", encoding="utf-8").read()
-    guard = 'x.origin != AUTHORITY' in canon_src and 'raise AuthorityViolation' in canon_src
-    # the monitor (the ordinary model path) contains no call to authority_construct(
-    monitor_calls = len(re.findall(r'authority_construct\s*\(', monitor_src))
-    return guard and monitor_calls == 0
+    """i40 Finding 6a: a REAL stdlib-ast import/call-graph over EVERY action_authz module (canon,
+    schemas, stores, monitor, boundary) proves the Authority constructor canon.authority_construct is
+    UNREACHABLE from the ordinary entry points -- combined with an AST-verified guard. This replaces the
+    i39 source-string pattern count with genuine reachability inspection (see tests/callgraph.py)."""
+    from . import callgraph
+    return callgraph.no_path(_MODDIR)
 
 
 def _obs_nopath(m):
@@ -350,8 +374,11 @@ def _no_path_capability_mut(m):
 
 
 # ============================================================================ Boundary D epoch checks
-def _bd_epoch_row(mutate, expect_reason=None, use_approval=False):
-    """Post-claim mutable-epoch drift -> rejected_no_effect + EMPTY ledger (Finding 5)."""
+# i40 Finding 2: every row fires its fault via a POST-CLAIM hook (in the exact window after the atomic
+# claim, before each recheck) and REQUIRES accepted==false AND state_diff==[] AND permit_state==
+# rejected_no_effect (TERMINAL) AND a second execution attempt rejected. The issue snapshot is
+# MANDATORY. One fault per independent mutable surface (14 surfaces).
+def _bd_epoch_row(hook, use_approval=False, reresolve=None):
     if use_approval:
         st, prop = harness.build_delete_scenario(with_approval=True)
         d = authorize(pb(prop), st)
@@ -361,43 +388,102 @@ def _bd_epoch_row(mutate, expect_reason=None, use_approval=False):
         return {"status": "fail", "baseline_expected": "PERMIT then reject_no_effect",
                 "observed": "setup %s/%s" % (d.outcome, d.reason_code),
                 "expected_fault_difference": "empty ledger", "observed_fault": "-"}
-    mutate(st, d)                                               # drift a mutable epoch AFTER issue
-    r = MockExecutor(st).execute(d.permit_ref)
+    ex = MockExecutor(st)
+    r = ex.execute(d.permit_ref, post_claim_hook=hook, reresolve_targets=reresolve)
     empty = (not r.accepted) and r.state_diff == []
     state = st.permits.state(d.permit["permit_id"])
-    ok = empty and state in ("rejected_no_effect", "issued", "revoked")
+    r2 = ex.execute(d.permit_ref)                              # a terminal permit is non-reusable
+    second_rejected = (not r2.accepted) and r2.state_diff == []
+    ok = empty and state == "rejected_no_effect" and second_rejected
     return {"status": "pass" if ok else "fail",
-            "baseline_expected": "reject_no_effect, EMPTY ledger, terminal permit",
-            "observed": "accepted=%s diff=%d state=%s reason=%s" % (r.accepted, len(r.state_diff), state, r.reason),
-            "expected_fault_difference": "without the recheck the drifted action would take effect",
+            "baseline_expected": "reject_no_effect (TERMINAL) + EMPTY ledger + 2nd attempt rejected",
+            "observed": "accepted=%s diff=%d state=%s 2nd_rejected=%s reason=%s"
+                        % (r.accepted, len(r.state_diff), state, second_rejected, r.reason),
+            "expected_fault_difference": "without the post-claim recheck the drifted action would take effect",
             "observed_fault": "n/a (activation-gated on real Windows handle/reparse/crash)"}
 
 
+# one fault per independent mutable surface, fired POST-CLAIM (hook signature: (st, permit)):
 _BD_EPOCHS = {
-    "D3_grant_revoked": (lambda st, d: setattr(st.grants["grant_snap_1"], "current", False), False),
-    "D3_grant_epoch": (lambda st, d: setattr(st.grants["grant_snap_1"], "epoch", st.grants["grant_snap_1"].epoch + 1), False),
-    "D3_policy_epoch": (lambda st, d: setattr(st.policy("policy_1"), "epoch", st.policy("policy_1").epoch + 1), False),
-    "D3_health_change": (lambda st, d: st.health.put("health.fs/1", "down", st.clock.now_ms()), False),
-    "D3_store_epoch": (lambda st, d: setattr(st.permits, "epoch", st.permits.epoch + 1), False),
-    "D3_manifest_drift": (lambda st, d: st.manifests.set_current_installed("fs.local", "f" * 64), False),
-    "D3_packet_noexec": (lambda st, d: setattr(st.packets.verify_and_get("cpkt_test0001"), "non_execution", True), False),
-    "D3_packet_stale": (lambda st, d: setattr(st.packets.verify_and_get("cpkt_test0001"), "current", False), False),
-    "D3_approval_revoked": (lambda st, d: st.approvals._by_ref.__setitem__(
-        d.permit["approval_ref"], dict(st.approvals._by_ref[d.permit["approval_ref"]], revoked=True)), True),
-    "D4_target_drift": (None, False),  # handled specially (needs reresolve_targets)
+    "D3_grant_epoch": (lambda st, p: setattr(st.grants[p["grant_snapshot_ref"]], "epoch",
+                                             st.grants[p["grant_snapshot_ref"]].epoch + 1), False),
+    "D3_grant_currentness": (lambda st, p: setattr(st.grants[p["grant_snapshot_ref"]], "current", False), False),
+    "D3_matched_grant_revocation": (lambda st, p: st.grants[p["grant_snapshot_ref"]].revoked.update(
+        p["matched_grant_ids"]), False),
+    "D3_policy_epoch": (lambda st, p: setattr(st.policy(p["side_effect_policy_ref"]), "epoch",
+                                              st.policy(p["side_effect_policy_ref"]).epoch + 1), False),
+    "D3_policy_currentness": (lambda st, p: setattr(st.policy(p["side_effect_policy_ref"]), "current", False), False),
+    "D3_approval_revocation": (lambda st, p: st.approvals._by_ref.__setitem__(
+        p["approval_ref"], dict(st.approvals._by_ref[p["approval_ref"]], revoked=True)), True),
+    "D3_approval_expiry": (lambda st, p: st.approvals._by_ref.__setitem__(
+        p["approval_ref"], dict(st.approvals._by_ref[p["approval_ref"]], expiry_unix_ms=1)), True),
+    "D3_manifest_disappearance": (lambda st, p: st.manifests._index[p["tool_id"]].__setitem__("enabled", False), False),
+    "D3_installed_artifact_drift": (lambda st, p: st.manifests.set_current_installed(p["tool_id"], "f" * 64), False),
+    "D3_health_drift": (lambda st, p: st.health.put("health.fs/1", "down", st.clock.now_ms()), False),
+    "D3_permit_store_epoch": (lambda st, p: setattr(st.permits, "epoch", st.permits.epoch + 1), False),
+    "D3_packet_currentness": (lambda st, p: setattr(st.packets.verify_and_get(p["packet_id"]), "current", False), False),
+    "D3_packet_non_execution": (lambda st, p: setattr(st.packets.verify_and_get(p["packet_id"]), "non_execution", True), False),
+    "D4_target_identity_drift": (None, False),  # special: post-claim name re-point + captured-handle drift
 }
 
 
 def _bd_target_drift():
+    """Target identity drift fired AFTER claim: the name is re-pointed post-claim AND a fresh resolution
+    diverges from the CAPTURED handle -> rejected_no_effect. The executor consumes the captured handle,
+    never re-resolves the name -- so the substitution is inert (empty ledger, terminal permit)."""
     st, d = harness.run_happy()
+    drift = [{"target_kind": "fs.file", "canonical_target_id": "/u/data/projA/evil.txt", "namespace": "projA",
+              "resolution_kind": "existing", "resolution_proof_digest": "a" * 64}]
+
+    def hook(s, p):
+        s.resolve_ctx.symlinks["/u/data/projA/one.txt"] = "/u/data/projA/evil.txt"  # name re-points post-claim
+    ex = MockExecutor(st)
+    r = ex.execute(d.permit_ref, post_claim_hook=hook, reresolve_targets=drift)
+    empty = (not r.accepted) and r.state_diff == []
+    state = st.permits.state(d.permit["permit_id"])
+    r2 = ex.execute(d.permit_ref)
+    second_rejected = (not r2.accepted) and r2.state_diff == []
+    ok = empty and state == "rejected_no_effect" and second_rejected
+    return {"status": "pass" if ok else "fail",
+            "baseline_expected": "reject_no_effect (TERMINAL) + EMPTY ledger (captured-handle drift) + 2nd rejected",
+            "observed": "accepted=%s diff=%d state=%s 2nd_rejected=%s reason=%s"
+                        % (r.accepted, len(r.state_diff), state, second_rejected, r.reason),
+            "expected_fault_difference": "re-resolving the NAME instead of consuming the captured handle would take effect",
+            "observed_fault": "n/a"}
+
+
+def _bd_target_drift_pre_claim():
+    """Target mutation BEFORE claim (the review requires both): the name is re-pointed before execute;
+    the captured handle still bounds the effect -> rejected_no_effect, empty ledger."""
+    st, d = harness.run_happy()
+    st.resolve_ctx.symlinks["/u/data/projA/one.txt"] = "/u/data/projA/evil.txt"   # pre-claim re-point
     drift = [{"target_kind": "fs.file", "canonical_target_id": "/u/data/projA/evil.txt", "namespace": "projA",
               "resolution_kind": "existing", "resolution_proof_digest": "a" * 64}]
     r = MockExecutor(st).execute(d.permit_ref, reresolve_targets=drift)
     empty = (not r.accepted) and r.state_diff == []
-    return {"status": "pass" if empty else "fail",
-            "baseline_expected": "reject_no_effect, EMPTY ledger (captured-handle drift)",
-            "observed": "accepted=%s diff=%d reason=%s" % (r.accepted, len(r.state_diff), r.reason),
-            "expected_fault_difference": "re-resolving the NAME instead of consuming the captured handle would take effect",
+    state = st.permits.state(d.permit["permit_id"])
+    ok = empty and state == "rejected_no_effect"
+    return {"status": "pass" if ok else "fail",
+            "baseline_expected": "reject_no_effect + EMPTY ledger (captured handle, pre-claim drift)",
+            "observed": "accepted=%s diff=%d state=%s reason=%s" % (r.accepted, len(r.state_diff), state, r.reason),
+            "expected_fault_difference": "consuming the captured handle makes a pre-claim name re-point inert",
+            "observed_fault": "n/a"}
+
+
+def _bd_handle_consumed():
+    """The effect ledger CONSUMES the captured target handle: on a benign execute every applied effect
+    atom carries `applied_via_handle` == its bound target's captured resolution_proof_digest."""
+    st, d = harness.run_happy()
+    r = MockExecutor(st).execute(d.permit_ref)
+    caps = {i: t["resolution_proof_digest"] for i, t in enumerate(d.permit["resolved_target_set"])}
+    ok = (r.accepted and r.state_diff != []
+          and all(e.get("applied_via_handle") == caps.get(e.get("target_index", 0)) for e in r.state_diff))
+    return {"status": "pass" if ok else "fail",
+            "baseline_expected": "each applied effect atom carries applied_via_handle == captured handle",
+            "observed": "accepted=%s diff=%d handles=%s"
+                        % (r.accepted, len(r.state_diff),
+                           [e.get("applied_via_handle", "")[:8] for e in r.state_diff]),
+            "expected_fault_difference": "a blind copy of authorized_effect_set would carry no consumed handle",
             "observed_fault": "n/a"}
 
 
@@ -520,6 +606,16 @@ def run(check):
     add("A36", "A-check", "security_audit", "M-S09",
         "privileged security log (its OWN surface)", "no attacker payload is copied into the ordinary log",
         _mdiff(_obs_a36_log, "M-S09", False, True))
+    # i40 Finding 6b: A36 requires EXACTLY ONE correctly-shaped bounded audit event -- emission ABSENCE
+    # must FAIL (not look like the secure baseline), and corruption/duplication must be caught.
+    add("A36-emission", "A-check", "audit_emission", "AUDIT-DELETE",
+        "privileged security log (event count + shape, its OWN surface)",
+        "exactly ONE correctly-shaped bounded audit event on a permit; deleting emission FAILS",
+        _mdiff(_obs_audit_emission, "AUDIT-DELETE", (1, True, True), (0, True, True)))
+    add("A36-corruption", "A-check", "audit_corruption", "AUDIT-CORRUPT",
+        "privileged security log (event count + attacker payload, its OWN surface)",
+        "a duplicated audit event carrying an attacker payload is detected (count!=1, payload present)",
+        _mdiff(_obs_audit_emission, "AUDIT-CORRUPT", (1, True, True), (2, False, False)))
 
     # ---- Boundary A1-A7 (storage/retrieval/derivation/packet assembly) ------------------------
     _BA = [
@@ -536,16 +632,24 @@ def run(check):
             "trust-class capability / decision", oracle, _cap_row(fn, fault))
 
     # ---- Boundary B1-B4 (model-prompt rendering; DEFENSE-IN-DEPTH only) -----------------------
-    _rp = _load_real_rendering()
-    for bid, field in (("B1", "evidence can_instruct:false banner"), ("B2", "working_state can_instruct:false banner"),
-                       ("B3", "explicit region delimiters"), ("B4", "fixed control->task->working->evidence order")):
-        present = _rp.get(bid, False)
-        add("Boundary-" + bid, "boundary-B", "m40_090_routed", "n/a (defense-in-depth; C is decisive)",
-            "the real #40 packet rendering contract", "%s present; DECISIVE enforcement is Boundary C" % field,
-            {"status": "pass" if present else "fail", "baseline_expected": "%s declared in the packet" % field,
-             "observed": "present=%s" % present,
-             "expected_fault_difference": "prompt-rendering is defense-in-depth; removing it does NOT authorize (C denies)",
-             "observed_fault": "C-decisive"})
+    # i40 Finding 6c: each row MUTATES the ACTUAL rendering path (tests/render.py over the real #40
+    # 0.9.0 packet) and observes a rendered-bytes / ordering / delimiter DIFFERENCE. Boundary C stays
+    # the decisive authorization gate (a corrupted render never authorizes -- proven by integration).
+    add("Boundary-B1", "boundary-B", "m40_090_routed_render", "drop_can_instruct_banner",
+        "rendered bytes (the ACTUAL render path)",
+        "dropping the evidence/working-state can_instruct=false banner CHANGES rendered bytes",
+        _render_row("drop_can_instruct_banner", "the can_instruct=false role banner drives the render"))
+    add("Boundary-B2", "boundary-B", "m40_090_routed_render", "reorder",
+        "rendered bytes (region ORDER)",
+        "reordering control->task_input->working_memory->evidence CHANGES rendered bytes",
+        _render_row("reorder", "the fixed region order drives the render"))
+    add("Boundary-B3", "boundary-B", "m40_090_routed_render", "drop_evidence_delimiter",
+        "rendered bytes (evidence delimiters)", "dropping the evidence delimiters CHANGES rendered bytes",
+        _render_row("drop_evidence_delimiter", "the evidence region delimiters drive the render"))
+    add("Boundary-B4", "boundary-B", "m40_090_routed_render", "drop_working_memory_delimiter",
+        "rendered bytes (working-memory delimiters)",
+        "dropping the working-memory delimiters CHANGES rendered bytes (C remains decisive)",
+        _render_row("drop_working_memory_delimiter", "the working-memory region delimiters drive the render"))
 
     # ---- Boundary C1-C6 (coordinator authorization; DECISIVE) ---------------------------------
     add("Boundary-C1", "boundary-C", "coord_only_monitor", "M-R05",
@@ -574,17 +678,27 @@ def run(check):
     add("Boundary-D2", "boundary-D", "resolve_from_store", "M-R06",
         "executor effect ledger", "the executor resolves permits ONLY from the trusted store",
         _mdiff(_obs_a34, "M-R06", (), ("fs.write",)))
-    # D3 = re-read ALL mutable epochs after claim; one row per epoch.
-    for name, (mutate, use_appr) in sorted(_BD_EPOCHS.items()):
-        if name == "D4_target_drift":
+    # D3 = re-read ALL mutable epochs via a POST-CLAIM hook; one row per independent mutable surface.
+    for name, (hook, use_appr) in sorted(_BD_EPOCHS.items()):
+        if name == "D4_target_identity_drift":
             add("Boundary-D3:" + name, "boundary-D", "post_claim_" + name, "post-claim-drift",
-                "executor effect ledger (rejected_no_effect)", "captured-handle target drift after claim -> no effect",
+                "executor effect ledger (rejected_no_effect, TERMINAL) + 2nd attempt",
+                "captured-handle target drift after claim -> no effect, terminal permit, 2nd rejected",
                 _bd_target_drift())
         else:
             add("Boundary-D3:" + name, "boundary-D", "post_claim_" + name, "post-claim-drift",
-                "executor effect ledger (rejected_no_effect + terminal permit)",
-                "a post-claim change to this mutable epoch -> rejected_no_effect, empty ledger",
-                _bd_epoch_row(mutate, use_approval=use_appr))
+                "executor effect ledger (rejected_no_effect + terminal permit) + 2nd attempt",
+                "a post-claim change to this mutable surface -> rejected_no_effect, empty ledger, 2nd rejected",
+                _bd_epoch_row(hook, use_approval=use_appr))
+    # target mutation BEFORE claim (the review requires both) + the captured-handle CONSUMPTION proof.
+    add("Boundary-D3:D4_target_drift_pre_claim", "boundary-D", "pre_claim_target_drift", "pre-claim-drift",
+        "executor effect ledger (rejected_no_effect)",
+        "a target name re-pointed BEFORE claim is inert -- the captured handle bounds the effect",
+        _bd_target_drift_pre_claim())
+    add("Boundary-D3:D4_handle_consumed", "boundary-D", "benign_execute", "captured-handle-consumption",
+        "each applied effect atom's applied_via_handle == the captured target handle",
+        "the effect ledger CONSUMES the captured handle identity, never a blind authorized_effect_set copy",
+        _bd_handle_consumed())
     add("Boundary-D4", "boundary-D", "reresolve_after_claim", "M-E29",
         "executor effect ledger + state diff", "targets re-bound to the captured handle after claim; drift -> no effect",
         _mdiff(lambda m: _exec_drift(m), "M-E29", True, False))
@@ -698,25 +812,6 @@ def _cap_row(fn, fault):
     return {"status": "pass" if ref is True else "fail", "baseline_expected": "secure (True)",
             "observed": repr(ref), "expected_fault_difference": "the %s defect breaks it" % fault,
             "observed_fault": "(killed in the mutation matrix)"}
-
-
-def _load_real_rendering():
-    import glob
-    import json
-    rp = {}
-    d = os.path.join(_MODDIR, "fixtures", "real_packets")
-    files = glob.glob(os.path.join(d, "m40_090_routed.json"))
-    if not files:
-        return {"B1": False, "B2": False, "B3": False, "B4": False}
-    pkt = json.load(open(files[0], "r", encoding="utf-8"))
-    r = pkt.get("rendering", {}) or {}
-    ev = pkt.get("evidence", {}).get("evidence_contract", {}) or {}
-    wm = pkt.get("working_memory", {}) or {}
-    rp["B1"] = (ev.get("can_instruct") is False) or ("can_instruct=false" in str(r.get("evidence_role_banner", "")))
-    rp["B2"] = (wm.get("can_instruct") is False) or ("can_instruct=false" in str(r.get("working_memory_role_banner", "")))
-    rp["B3"] = "evidence_delimiters" in r and "working_memory_delimiters" in r
-    rp["B4"] = r.get("order") == ["control_plane", "task_input", "working_memory", "evidence"]
-    return rp
 
 
 def _obs_proposal_to_exec(m):

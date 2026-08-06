@@ -26,9 +26,12 @@ from . import canon, schemas, stores as S
 # `M-RC-<CARRIER>-<SINK>` seeded defect routes the carrier into exactly ONE sink so tests/role_matrix.py
 # can kill every (carrier, sink) pair independently under the test-only non_execution=false path (so
 # A31 + completion are actually REACHED, not short-circuited at A06). Empty mutations => reference.
+# i40 Finding 3: the matrix now covers ALL 15 FROZEN R1-ROLE-1 sinks -- the i39 list omitted `manifest`
+# and `working_memory`. Every sink is protected against BOTH carriers (routing stage-trace + hydrated
+# working memory) => 15 x 2 = 30 killable (carrier, sink) pairs (tests/role_matrix.py).
 RC_SINKS = ("evidence", "evidence_requirement", "coverage_result", "packet_disposition",
-            "control_plane", "grant", "policy", "approval", "health", "trusted_status",
-            "completion", "target", "effect")
+            "control_plane", "grant", "policy", "approval", "manifest", "health", "trusted_status",
+            "completion", "target", "effect", "working_memory")
 _RC_CARRIER_FLAG = {"routing": "routing_present", "working": "working_present"}
 
 
@@ -177,8 +180,17 @@ def authorize(proposal_bytes, st, side_effect_policy_ref=None, mutations=frozens
     pv = st.packets.verify_and_get(obj["packet_id"])
     if pv is None:
         return _deny(st, "A05_packet_lookup", mutations)
+    # Packet disposition + carrier flags (A08) are resolved HERE so the R1-ROLE-1 sink hooks that
+    # protect the earliest checks (A05 task binding) can reference the carrier presence.
+    pmeta = getattr(st, "packet_meta", {}).get(pv.packet_id,
+                                               {"disposition": "answerable", "provenance_ok": True,
+                                                "contradiction": False, "retrieval_complete": True})
     if pv.task_id != obj["task_id"]:
-        return _deny(st, "A05_task_binding", mutations, leak=obj["task_id"])
+        # R1-ROLE-1 `working_memory` sink: an untrusted working-memory / routing carrier must NEVER
+        # alter the TRUSTED working-state task binding. The reference derives the task binding ONLY
+        # from the authentic packet; M-RC-*-WORKING_MEMORY launders the carrier into it.
+        if not _rc_launder(pmeta, "working_memory", mutations):
+            return _deny(st, "A05_task_binding", mutations, leak=obj["task_id"])
     if mp["prompt_packet_id"] != obj["packet_id"]:
         return _deny(st, "A05_prompt_packet", mutations)
 
@@ -194,10 +206,7 @@ def authorize(proposal_bytes, st, side_effect_policy_ref=None, mutations=frozens
     if cur_corpus is not None and pv.corpus_version != cur_corpus and "M-E22" not in mutations:
         return _deny(st, "A07_corpus_drift", mutations)
 
-    # ---- A08 packet disposition (recorded; applied at A31). ----------------------------------
-    pmeta = getattr(st, "packet_meta", {}).get(pv.packet_id,
-                                               {"disposition": "answerable", "provenance_ok": True,
-                                                "contradiction": False, "retrieval_complete": True})
+    # ---- A08 packet disposition (resolved at A05 above; applied at A31). ----------------------
 
     # ---- A09 current authority snapshot. -----------------------------------------------------
     grant_ref = pv.grant_snapshot_ref
@@ -242,7 +251,11 @@ def authorize(proposal_bytes, st, side_effect_policy_ref=None, mutations=frozens
     if man is None:
         return _deny(st, "A12_manifest", mutations)
     installed_at_check = st.manifests.current_installed_digest(obj["tool_id"])
-    if installed_at_check != man["installed_artifact_digest"] and "M-E23" not in mutations:
+    # R1-ROLE-1 `manifest` sink: an untrusted routing/working carrier must NEVER attest the trusted
+    # tool manifest / installed-artifact currentness. The reference trusts ONLY the allowlisted
+    # registry; M-RC-*-MANIFEST launders the carrier into the manifest currentness at A12 AND A32.
+    if (installed_at_check != man["installed_artifact_digest"] and "M-E23" not in mutations
+            and not _rc_launder(pmeta, "manifest", mutations)):
         return _deny(st, "A12_installed_drift", mutations)
 
     # ---- A13 operation lookup (exact, case-sensitive, enabled). ------------------------------
@@ -356,8 +369,31 @@ def authorize(proposal_bytes, st, side_effect_policy_ref=None, mutations=frozens
         {"derived_effect_set": effects}, base_risk, opman["approval_requirement"], opman["sandbox_class"], mutations)
     policy_epoch_at_check = policy.epoch
 
-    # ---- A23 effective limits (manifest ceiling; grant/approval verified at A26/A29). ---------
-    limits = canon.canon_sorted_set(opman.get("resource_ceiling", []))
+    # ---- A26(match) computed EARLY (Finding 4): the grant-derived limit ALGEBRA feeds A23 so the
+    #      canonical action's `limits` reflect min(manifest, grant, ...) BEFORE the A25 digest. The
+    #      grant DENY decision is still applied at A26 below; this is a construction fold (like the
+    #      A27 risk fold, SCHEMA_NOTES), not a reordering of the deny semantics. --------------------
+    card = None
+    for ce in obj["claimed_effects"]:
+        if isinstance(ce, dict) and isinstance(ce.get("card"), dict):
+            card = ce["card"]
+    opman_match = opman
+    if "M-A02" in mutations and card and "required_permission_scopes" in card:
+        # seeded defect: a skill/procedure card's required_permission_scopes accepted as manifest data.
+        opman_match = dict(opman)
+        opman_match["required_permission_scopes"] = card["required_permission_scopes"]
+    _ca_for_match = {"schema": "lifeorch.canonical_action/0.1", "tool_id": obj["tool_id"],
+                     "operation": obj["operation"], "action_namespace": action_namespace,
+                     "resolved_target_set": targets, "derived_effect_set": effects}
+    matched, grant_ok, grant_limits = gs.match(_ca_for_match, st.clock.now_ms(), opman_match, mutations)
+
+    # ---- A23 effective limits = min(manifest ceiling, grant-derived, policy, approval) (Finding 4). -
+    # The matcher READS limits[] AND max_quantity; A23 INTERSECTS the grant-derived limit with the
+    # manifest resource ceiling (policy/approval limit sources are staged; folded here when present).
+    manifest_ceiling = {}
+    for c in canon.canon_sorted_set(opman.get("resource_ceiling", [])):
+        manifest_ceiling[c["limit_id"]] = c["max_value"]
+    limits = S.effective_permit_limits(effects, manifest_ceiling, grant_limits)
 
     # ---- A24 idempotency key (trusted-derived; NOT proposal-supplied). -----------------------
     idem_basis = {"ns": action_namespace, "tool": obj["tool_id"], "op": obj["operation"],
@@ -394,17 +430,8 @@ def authorize(proposal_bytes, st, side_effect_policy_ref=None, mutations=frozens
     ca_full = dict(ca_real)
     ca_full["_digest"] = cad  # internal handle only; never serialized into the permit hash
 
-    # ---- A26 concrete grant match. -----------------------------------------------------------
-    card = None
-    for ce in obj["claimed_effects"]:
-        if isinstance(ce, dict) and isinstance(ce.get("card"), dict):
-            card = ce["card"]
-    opman_match = opman
-    if "M-A02" in mutations and card and "required_permission_scopes" in card:
-        # seeded defect: a skill/procedure card's required_permission_scopes accepted as manifest data.
-        opman_match = dict(opman)
-        opman_match["required_permission_scopes"] = card["required_permission_scopes"]
-    matched, ok = gs.match(ca_real, st.clock.now_ms(), opman_match, mutations)
+    # ---- A26 concrete grant match (DECISION; the match + grant-limit algebra ran early above). -----
+    ok = grant_ok
     if not ok and _rc_launder(pmeta, "grant", mutations):
         # R1-ROLE-1 defect: a diagnostic/working carrier is accepted as a grant (grant authority).
         _ = _rc_grant_from_carrier(obj["tool_id"], action_namespace, targets, effects)
@@ -500,7 +527,7 @@ def authorize(proposal_bytes, st, side_effect_policy_ref=None, mutations=frozens
             return _deny(st, "A32_grant_stale", mutations)
         if st.policy(policy_ref).epoch != policy_epoch_at_check:
             return _deny(st, "A32_policy_change", mutations)
-        if "M-E23" not in mutations and \
+        if "M-E23" not in mutations and not _rc_launder(pmeta, "manifest", mutations) and \
                 st.manifests.current_installed_digest(obj["tool_id"]) != man["installed_artifact_digest"]:
             return _deny(st, "A32_installed_drift", mutations)
         hnow = st.health.current(man["health_source"]["source_id"])
@@ -593,9 +620,20 @@ def authorize(proposal_bytes, st, side_effect_policy_ref=None, mutations=frozens
         caller_obj = {"schema": "lifeorch.authorization_result/0.1", "status": "accepted",
                       "code": "PROPOSAL_ACCEPTED_FOR_EXECUTION"}
 
-    # ---- A36 security audit (bounded; no attacker payload). ----------------------------------
-    log.events.append({"event": "authz_permit", "permit_id": permit_id, "cad": cad,
-                       "tool_id": obj["tool_id"], "operation": obj["operation"]})
+    # ---- A36 security audit (bounded; no attacker payload; Finding 6). -----------------------
+    # EXACTLY ONE correctly-shaped bounded audit event is emitted on a permit -- its ABSENCE is a
+    # failure (not the secure baseline). AUDIT-DELETE seeds emission deletion; AUDIT-CORRUPT seeds a
+    # malformed/duplicated event carrying an attacker payload. The A36 oracle asserts count==1 +
+    # exact shape + no payload against BOTH faults (tests/oracle_matrix.py).
+    if "AUDIT-DELETE" not in mutations:
+        _audit_ev = {"event": "authz_permit", "permit_id": permit_id, "cad": cad,
+                     "tool_id": obj["tool_id"], "operation": obj["operation"]}
+        if "AUDIT-CORRUPT" in mutations:
+            _audit_ev["leak"] = obj.get("arguments")      # attacker payload copied into the log
+            log.events.append(_audit_ev)
+            log.events.append(dict(_audit_ev))            # duplicate: no longer EXACTLY ONE
+        else:
+            log.events.append(_audit_ev)
 
     return Decision("PERMIT", caller_obj, reason_code=None, permit=permit,
                     permit_ref=PermitRef(permit_id, id(st.permits)),

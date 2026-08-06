@@ -24,6 +24,12 @@ from .schemas import UINT63_MAX
 CONSTANT_DENIAL = {"schema": "lifeorch.authorization_result/0.1", "status": "denied", "code": "AUTHZ_DENIED"}
 CONSTANT_DENIAL_BYTES = canon.canonical_bytes(CONSTANT_DENIAL)
 
+# i40 Finding 1 (completion IMMUTABLE at issue): when a permit is issued with NO completion contract
+# bound at issue time, the permit store records this IMMUTABLE sentinel instead of a null binding. A
+# permit carrying the sentinel can NEVER become completable via a completion contract inserted AFTER
+# issuance (the "late contract insertion" vector). The binding is MANDATORY: absence is fail-closed.
+NO_COMPLETION_CONTRACT = "NO_COMPLETION_CONTRACT"
+
 
 class SecurityLog(object):
     """Bounded, privileged, local security log (s0.5 / A36). Attacker-controlled payload is NEVER
@@ -353,6 +359,73 @@ def build_manifest(tool_id, operations, sandbox_class="local_bounded",
 
 # ===========================================================================
 # Grant snapshot + GrantView matcher (A26). Concrete op+target+effect+limit+window matching.
+#
+# i40 Finding 4 -- the byte-exact GrantView IMPLEMENTS its declared limit algebra (it no longer reads
+# only `max_quantity`). The effective grant-derived quantitative limit for an effect class is
+#   grant_effect_limit(g, cls) = min( g.max_quantity[cls] , every g.limits[] entry whose limit_id==cls )
+# and, because grants are ALTERNATIVES (scope union) but authority is deny-by-default, the effective
+# grant-derived limit across the MATCHED (covering) grants is the GLOBAL MINIMUM (the tightest covering
+# authority bounds the effect). A26 intersects THAT with the manifest ceiling (and policy/approval when
+# present) at A23. Malformed / duplicate / ambiguous limit entries FAIL CLOSED. The frozen intersection
+# rule (MIN) is UNCHANGED -- this is its implementation, not an amendment.
+
+def _limits_wellformed(g):
+    """A grant's `limits[]` must be a well-formed array of {limit_id:str, max_value:uint63}. Anything
+    malformed (non-list, non-dict entry, missing/negative/oversized/non-int max_value, non-string
+    limit_id) makes the grant UNTRUSTABLE for effect bounding -> the grant fails closed (excluded)."""
+    lims = g.get("limits", [])
+    if not isinstance(lims, list):
+        return False
+    for lim in lims:
+        if not isinstance(lim, dict):
+            return False
+        if set(lim.keys()) != {"limit_id", "max_value"}:
+            return False  # unknown / ambiguous fields fail closed (the CLOSED limit shape)
+        lid = lim.get("limit_id")
+        mv = lim.get("max_value")
+        if not isinstance(lid, str):
+            return False
+        if not (isinstance(mv, int) and not isinstance(mv, bool) and 0 <= mv <= UINT63_MAX):
+            return False
+    return True
+
+
+def grant_effect_limit(g, effect_class):
+    """The grant's effective quantitative limit for one effect class = MIN of its max_quantity[cls] and
+    EVERY limits[] entry whose limit_id == cls (duplicate ids all apply -> min). No applicable bound =>
+    UINT63_MAX (the manifest ceiling still bounds it at A23). Assumes _limits_wellformed(g) is True."""
+    vals = []
+    mq = g.get("max_quantity", {})
+    if isinstance(mq, dict) and effect_class in mq:
+        v = mq[effect_class]
+        if isinstance(v, int) and not isinstance(v, bool) and 0 <= v <= UINT63_MAX:
+            vals.append(v)
+        else:
+            return 0  # malformed max_quantity for this class -> fail closed
+    for lim in g.get("limits", []):
+        if lim.get("limit_id") == effect_class:
+            vals.append(lim["max_value"])
+    return min(vals) if vals else UINT63_MAX
+
+
+def effective_permit_limits(effects, manifest_ceiling, grant_limits,
+                            policy_limits=None, approval_limits=None):
+    """A23: effective_limit[cls] = min(manifest ceiling, grant-derived, policy, approval) per effect
+    class actually derived. Returns the canonical CLOSED limits array [{limit_id, max_value}] sorted.
+    Sources with no entry for a class do not bound it; a class with NO source bound => UINT63_MAX."""
+    policy_limits = policy_limits or {}
+    approval_limits = approval_limits or {}
+    out = {}
+    for e in effects:
+        cls = e["effect_class"]
+        vals = []
+        for src in (manifest_ceiling, grant_limits, policy_limits, approval_limits):
+            if cls in src:
+                vals.append(src[cls])
+        out[cls] = min(vals) if vals else UINT63_MAX
+    return canon.canon_sorted_set([{"limit_id": k, "max_value": out[k]} for k in sorted(out)])
+
+
 class GrantSnapshot(object):
     def __init__(self, grant_snapshot_ref, grants, epoch=1, current=True, revoked=None,
                  request_namespaces=None):
@@ -367,10 +440,16 @@ class GrantSnapshot(object):
         return {g["action_namespace"] for g in self.grants if g["grant_id"] not in self.revoked}
 
     def match(self, ca, now_ms, opman, mutations=frozenset()):
-        """Return (matched_grant_ids sorted-unique, ok). Deny (ok=False) if scopes uncovered."""
+        """CLOSED matcher result (Finding 4): a 3-tuple (matched_grant_ids sorted-unique, ok,
+        effective_grant_limits). `effective_grant_limits` is {effect_class: uint63} -- the GLOBAL MIN
+        of grant_effect_limit(g, cls) over the MATCHED grants (the tightest covering authority). Deny
+        (ok=False, {}) if no grant covers or a required scope is uncovered. The DECISION semantics are
+        unchanged; the third element is the newly-implemented grant-derived limit algebra."""
         target_ids = {t["canonical_target_id"] for t in ca["resolved_target_set"]}
+        classes = {e["effect_class"] for e in ca["derived_effect_set"]}
         matched = []
         covered_scopes = set()
+        eff_limits = {}                     # effect_class -> running MIN over matched grants
         for g in self.grants:
             if g["grant_id"] in self.revoked:
                 continue
@@ -383,20 +462,23 @@ class GrantSnapshot(object):
             # validity window
             if not (g.get("validity_from", 0) <= now_ms < g.get("validity_to", UINT63_MAX)):
                 continue
+            # malformed/ambiguous limits[] => the grant is untrustable for bounding => fail closed.
+            if not _limits_wellformed(g):
+                continue
             # concrete target closure (A26)
             if "M-E09" not in mutations:
                 allowed_t = set(g.get("allowed_target_ids", []))
                 if not target_ids.issubset(allowed_t):
                     continue  # some target not authorized by this grant
-            # concrete effect closure (A26)
+            # concrete effect closure (A26) -- now reads BOTH max_quantity AND limits[] (min).
             if "M-E10" not in mutations:
                 ok_eff = True
                 for e in ca["derived_effect_set"]:
                     if e["effect_class"] not in g.get("effect_classes", []):
                         ok_eff = False
                         break
-                    maxq = g.get("max_quantity", {}).get(e["effect_class"], UINT63_MAX)
-                    if e["quantity"] > maxq:
+                    eff_lim = grant_effect_limit(g, e["effect_class"])   # min(max_quantity, limits[])
+                    if e["quantity"] > eff_lim:
                         ok_eff = False
                         break
                     if _externality_rank(e["externality"]) > _externality_rank(g.get("externality_max", "public_external")):
@@ -409,12 +491,16 @@ class GrantSnapshot(object):
                     continue
             matched.append(g["grant_id"])
             covered_scopes |= set(g.get("scopes", []))
+            # accumulate the GLOBAL MIN grant-derived limit per derived effect class over matched grants
+            for cls in classes:
+                gl = grant_effect_limit(g, cls)
+                eff_limits[cls] = gl if cls not in eff_limits else min(eff_limits[cls], gl)
         required = set(opman.get("required_permission_scopes", []))
         if not matched:
-            return [], False
+            return [], False, {}
         if not required.issubset(covered_scopes):
-            return [], False
-        return sorted(set(matched)), True
+            return [], False, {}
+        return sorted(set(matched)), True, eff_limits
 
 
 _EXT_RANK = {"local": 0, "private_external": 1, "public_external": 2}
@@ -729,10 +815,18 @@ class Stores(object):
         return None
 
     def completion_binding_for_packet(self, packet_id):
-        """The {id, version, digest} stamped into a permit at issue time (immutable binding)."""
+        """The IMMUTABLE completion binding stamped into a permit at issue time (Finding 1).
+
+        Returns the {completion_contract_id, contract_version, contract_digest} of the contract bound
+        by the authentic packet_id AT ISSUE, or -- when NO completion contract exists at issue time --
+        the explicit immutable ``{"sentinel": NO_COMPLETION_CONTRACT}``. The binding is NEVER None:
+        every store-issued permit records exactly one immutable binding, and a permit issued with the
+        sentinel can never become completable through a later contract insertion. Fail-closed by
+        construction: the completion evaluator treats an absent binding (permit never stamped) as
+        indeterminate, and the sentinel as permanently-incomplete."""
         cc = self.completion_by_packet.get(packet_id)
         if cc is None:
-            return None
+            return {"sentinel": NO_COMPLETION_CONTRACT}
         return {"completion_contract_id": cc.get("completion_contract_id"),
                 "contract_version": cc.get("contract_version"),
                 "contract_digest": cc.get("contract_digest")}
