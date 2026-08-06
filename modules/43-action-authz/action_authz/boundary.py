@@ -96,7 +96,18 @@ class MockExecutor(object):
                     preflight_fail, followup, from_store, permit_id):
         st = self.st
 
-        # ---- D3: verify permit digest, epoch, expiry, nonce, revocation, manifest/artifact drift. ----
+        # === amendment 3 (contract s6 item 3): the executor TOCTOU order is ==================
+        #   1. resolve + verify immutable permit structure/digest;
+        #   2. ATOMIC claim;
+        #   3. re-read all mutable epochs (grant/approval/policy/manifest/artifact/health/revocation);
+        #   4. re-resolve dynamic targets AFTER claim;
+        #   5. bind execution to the re-resolved stable canonical identities;
+        #   6. immediately before the first effect, verify the SAME bound identity;
+        #   7. on any failure -> rejected_no_effect (empty diff; permit not retriable).
+        # Claiming BEFORE the recheck/re-resolve closes the window in which another executor
+        # could substitute the target between the last comparison and the effect.
+
+        # ---- step 1: verify immutable permit digest (+ expiry/epoch unless M-E28). ----
         if canon.digest_omitting(permit, "permit_digest") != permit.get("permit_digest"):
             return _reject(st, "D3_digest", mutations)
         if "M-E28" not in mutations:
@@ -104,26 +115,14 @@ class MockExecutor(object):
                 return _reject(st, "D3_store_epoch", mutations)
             if st.clock.now_ms() >= permit.get("expiry_unix_ms", 0):
                 return _reject(st, "D3_expired", mutations)
-        man = st.manifests.lookup(permit["tool_id"], mutations)
-        if man is None:
-            return _reject(st, "D3_manifest_gone", mutations)
-        if "M-E23" not in mutations:
-            if st.manifests.current_installed_digest(permit["tool_id"]) != man["installed_artifact_digest"]:
-                return _reject(st, "D3_installed_drift", mutations)
-        if permit["tool_manifest_digest"] != man["manifest_digest"]:
-            return _reject(st, "D3_manifest_drift", mutations)
-
-        # ---- D4: re-resolve dynamic target identity; require an exact match. ----
-        if reresolve_targets is not None and "M-E29" not in mutations:
-            if canon.canonical_bytes(reresolve_targets) != canon.canonical_bytes(permit["resolved_target_set"]):
-                return _reject(st, "D4_target_drift", mutations)
 
         # ---- M-R06 ONLY: a caller-supplied permit JSON trusted without trusted-store resolution. ----
         if not from_store:
+            man = st.manifests.lookup(permit["tool_id"], mutations)
             return ExecResult(True, list(permit["authorized_effect_set"]),
                               consumed_permit_id=permit.get("permit_id"), reason="M-R06_caller_permit")
 
-        # ---- one-shot state handling (reuse / retry / follow-up all fail closed). ----
+        # ---- pre-claim one-shot state handling (reuse / retry / follow-up all fail closed). ----
         state = st.permits.state(permit_id)
         if followup and state == "consumed":
             if "M-E34" in mutations:                       # rollback/follow-up under the original permit
@@ -133,9 +132,30 @@ class MockExecutor(object):
         if state == "rejected_no_effect" and "M-E33" in mutations:
             st.permits._state[permit_id] = "issued"        # retry a failed op under the same permit
 
-        # ---- D5: atomic claim (issued -> claimed). Reuse after claim/consume/reject fails closed. ----
+        # ---- step 2: ATOMIC claim (issued -> claimed) BEFORE any recheck/re-resolve. ----
         if not st.permits.claim(permit_id, mutations):
             return _reject(st, "D5_not_claimable", mutations)
+
+        # ---- step 3: re-read mutable epochs AFTER claim (manifest/artifact drift, revocation). ----
+        man = st.manifests.lookup(permit["tool_id"], mutations)
+        if man is None:
+            st.permits.reject_no_effect(permit_id)
+            return _reject(st, "D3_manifest_gone", mutations)
+        if "M-E23" not in mutations:
+            if st.manifests.current_installed_digest(permit["tool_id"]) != man["installed_artifact_digest"]:
+                st.permits.reject_no_effect(permit_id)
+                return _reject(st, "D3_installed_drift", mutations)
+        if permit["tool_manifest_digest"] != man["manifest_digest"]:
+            st.permits.reject_no_effect(permit_id)
+            return _reject(st, "D3_manifest_drift", mutations)
+
+        # ---- steps 4-6: re-resolve dynamic targets AFTER claim; bind + verify SAME identity. ----
+        bound_targets = permit["resolved_target_set"]
+        if reresolve_targets is not None and "M-E29" not in mutations:
+            if canon.canonical_bytes(reresolve_targets) != canon.canonical_bytes(permit["resolved_target_set"]):
+                st.permits.reject_no_effect(permit_id)     # TOCTOU substitution -> rejected_no_effect
+                return _reject(st, "D4_target_drift", mutations)
+            bound_targets = reresolve_targets
 
         # ---- preflight failure => rejected_no_effect, NO state diff (permit not retriable). ----
         if preflight_fail:

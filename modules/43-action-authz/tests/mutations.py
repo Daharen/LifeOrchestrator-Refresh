@@ -306,6 +306,17 @@ def sec_r10(m):
     return _denies(harness.build_absence_scenario, m)
 
 
+def sec_r11(m):
+    # amendment 6 / R1-ROLE-1: the #40 0.8.0 router stage-trace is a non-authoritative
+    # diagnostic; casting it into evidence coverage (M-R11) must not authorize an
+    # evidence-dependent action against a non-answerable packet.
+    def build():
+        st, prop = harness.build_evidence_scenario(navigation_present=False, working_present=False)
+        st.packet_meta["cpkt_test0001"]["routing_present"] = True
+        return st, prop
+    return _denies(build, m)
+
+
 # ===== EFFECT / CANON / REPLAY / TOCTOU =====
 def sec_e01(m):
     try:
@@ -587,6 +598,7 @@ REGISTRY = [
     ("M-R05", "role", sec_r05, None), ("M-R06", "role", sec_r06, None),
     ("M-R07", "role", sec_r07, None), ("M-R08", "role", sec_r08, None),
     ("M-R09", "role", sec_r09, None), ("M-R10", "role", sec_r10, None),
+    ("M-R11", "role", sec_r11, None),  # amendment 6: R-1 router-diagnostic role laundering
     ("M-E01", "effect", sec_e01, None), ("M-E02", "effect", sec_e02, None),
     ("M-E03", "effect", sec_e03, None), ("M-E04", "effect", sec_e04, None),
     ("M-E05", "effect", sec_e05, _D_PROFILE), ("M-E06", "effect", sec_e06, _D_PROFILE),

@@ -256,6 +256,52 @@ def run(check, mutations=frozenset()):
     check.ok("F9h_toctou_a32[9] DENY at A32", d.outcome == "DENY" and (d.reason_code or "").startswith("A32"),
              "reason=%s" % d.reason_code)
 
+    # ================= FAMILY 3: navigation / diagnostic injection (i38) =======================
+    # 3a: navigation content never satisfies an evidence-dependent action -> A31 DENY.
+    st, prop = harness.build_evidence_scenario(navigation_present=True, working_present=False)
+    d = authorize(harness.prop_bytes(prop), st, mutations=mutations)
+    hashes["F3a_navigation_not_evidence"] = _hash_prop(prop)
+    check.ok("F3a_navigation_not_evidence[3] DENY at A31",
+             d.outcome == "DENY" and (d.reason_code or "").startswith("A31"), "reason=%s" % d.reason_code)
+    check.ok("F3a constant caller bytes", d.caller_bytes == _CONST)
+    # 3b: the #40 0.8.0 R-1 router stage-trace is a non-authoritative diagnostic (R1-ROLE-1).
+    st, prop = harness.build_evidence_scenario(navigation_present=False, working_present=False)
+    st.packet_meta["cpkt_test0001"]["routing_present"] = True
+    d = authorize(harness.prop_bytes(prop), st, mutations=mutations)
+    hashes["F3b_router_trace_not_evidence"] = _hash_prop(prop)
+    check.ok("F3b_router_trace_not_evidence[3] DENY at A31",
+             d.outcome == "DENY" and (d.reason_code or "").startswith("A31"), "reason=%s" % d.reason_code)
+
+    # ================= FAMILY 4: working-memory poisoning + approval laundering (i38) ==========
+    # 4a: 'approval received' written to working memory is NOT an approval -> A29 DENY.
+    st, prop = harness.build_delete_scenario(with_approval=False)
+    st.packet_meta["cpkt_test0001"]["working_approval_claim"] = True
+    d = authorize(harness.prop_bytes(prop), st, mutations=mutations)
+    hashes["F4a_working_approval_inert"] = _hash_prop(prop)
+    check.ok("F4a_working_approval_inert[4] DENY at A29",
+             d.outcome == "DENY" and (d.reason_code or "").startswith("A29"), "reason=%s" % d.reason_code)
+    check.ok("F4a constant caller bytes", d.caller_bytes == _CONST)
+
+    # ================= FAMILY 5: skill / procedure card claiming permission (i38) ==============
+    # 5a: a card cannot define required scopes; the real grant (no scope) still gates -> A26 DENY.
+    st, prop = harness.build_baseline()
+    st.grants["grant_snap_1"].grants[0]["scopes"] = []
+    prop["claimed_effects"] = [{"card": {"required_permission_scopes": []}}]
+    d = authorize(harness.prop_bytes(prop), st, mutations=mutations)
+    hashes["F5a_skill_card_permission_inert"] = _hash_prop(prop)
+    check.ok("F5a_skill_card_permission_inert[5] DENY at A26",
+             d.outcome == "DENY" and (d.reason_code or "").startswith("A26"), "reason=%s" % d.reason_code)
+    check.ok("F5a constant caller bytes", d.caller_bytes == _CONST)
+
+    # ================= FAMILY 8: multi-hop / planted-target injection (i38) ====================
+    # 8a: a planted out-of-scope (projB) target reached via the request -> A18 ns-closure DENY.
+    st, prop = harness.build_scope_scenario()
+    d = authorize(harness.prop_bytes(prop), st, mutations=mutations)
+    hashes["F8a_planted_cross_ns_target"] = _hash_prop(prop)
+    check.ok("F8a_planted_cross_ns_target[8] DENY at A18",
+             d.outcome == "DENY" and (d.reason_code or "").startswith("A18"), "reason=%s" % d.reason_code)
+    check.ok("F8a constant caller bytes", d.caller_bytes == _CONST)
+
     # pinned-hash drift detection (s8.5): each committed fixture's canonical artifact hash is stable.
     if not mutations:
         for nm, hv in sorted(hashes.items()):

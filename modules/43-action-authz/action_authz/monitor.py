@@ -401,6 +401,10 @@ def authorize(proposal_bytes, st, side_effect_policy_ref=None, mutations=frozens
             answerable = True   # seeded defect: navigation cast into evidence coverage
         if not answerable and "M-R02" in mutations and pmeta.get("working_present"):
             answerable = True   # seeded defect: working memory cast into evidence coverage
+        if not answerable and "M-R11" in mutations and pmeta.get("routing_present"):
+            # amendment 6 / R1-ROLE-1: the #40 0.8.0 router stage-trace is a non-authoritative
+            # DIAGNOSTIC; seeded defect M-R11 launders it into evidence coverage.
+            answerable = True
         if not answerable:
             return _deny(st, "A31_not_answerable", mutations)
         if not pmeta.get("provenance_ok", False):

@@ -85,3 +85,44 @@ trusted-origin closure), U-SCOPE (permit targets/effects within one effective na
 constant bytes + zero permit delta + empty state diff), U-ROLE (no Untrusted/Request -> Authority path; no
 proposal -> executor path; completion only via allowlisted trusted status), U-EFFECT (every state diff maps to
 exactly one consumed digest-matching non-reused permit; no valid permit -> empty state diff).
+
+---
+
+## i38 FULL GATE -- the 7 frozen red-team amendments (contract s6, worker P01-GATE-FULL-i38)
+
+This module was extended from the i37 MVP to the full P0-1 gate. `action_authz` VERSION `0.2.0`.
+`p0_1_gate_status = pass` (204/204 suite, 67/67 mandatory mutations killed, all 10 families, fixed-seed
+fuzzer, double-run byte-identity, real #40 chain). `non_execution:true` holds; `activation_status =
+prohibited`. Cross-validated byte-equivalent to an independent second implementation (`p01gate`) over the
+canonical parse/serialize/digest/ns surface (Blocker-8 differential check).
+
+1. **Result taxonomy (amendment 1).** `tests/run_suite.py` emits `build_status` / `p0_1_gate_status`
+   (not_run|incomplete|pass|fail) / `activation_status` and lists every s8.7 criterion as
+   pass|fail|not_run|not_applicable. `build_complete` never implies `pass`; a skipped family, unrun fuzzer,
+   surviving mutation, or absent real-chain test => `incomplete`.
+2. **Test-facing views (amendment 2).** The `GrantView`/`PolicyView`/`ApprovalView` + status/validator view
+   the monitor consumes at A26/A27/A29/U-ROLE are the frozen test interfaces (see s58-70 above + `stores.py`).
+   Production storage schemas stay activation-gating and must prove byte-equivalence to these at activation.
+3. **Executor TOCTOU order (amendment 3).** `boundary.MockExecutor._run_permit` now: verify immutable permit
+   -> ATOMIC claim -> re-read mutable epochs (manifest/artifact/revocation) -> re-resolve dynamic targets AFTER
+   claim -> bind to the re-resolved canonical identity -> verify before the first effect -> else
+   `rejected_no_effect` (empty diff, permit not retriable). Claiming BEFORE re-resolve closes the executor-side
+   substitution window (red-team Finding 3). M-E29 substitution is killed with the drift applied post-claim.
+4. **Completion binding (amendment 4).** Completion leaves are bound to their subject (task/action/permit/object)
+   and evaluated only over allowlisted trusted status; the contract is selected by the authentic packet's task.
+   M-E36 (status from another task/action) and M-S10 (out-of-scope status) are decidable and killed.
+5. **Oracle matrix (amendment 5).** `tests/oracle_matrix.py` commits one row per mandatory mutation naming its
+   INDEPENDENT observable surface (decision + permit-store delta / caller bytes / effect ledger / completion
+   result / trust-class origin / no_path capability), never trace-presence alone (red-team Finding 5).
+6. **R-1 diagnostic role isolation (amendment 6).** R1-AUTH-1/R1-ROLE-1: the #40 0.8.0 router stage-trace is a
+   non-authoritative diagnostic. New mutation **M-R11** (cast the router stage-trace into evidence coverage) is
+   killed at A31; fixture F3b proves the router carrier denies. No packet field is reopened.
+7. **Split Blocker 9 (amendment 7).** Build-gating: constant caller bytes across distinct denial stages (M-S08,
+   fixture F6b) + no attacker payload on the ordinary log (M-S09). Production ACL/retention/timing equalization
+   stays activation-gating; the suite claims constant bytes + no deterministic branch/step oracle, not the
+   absence of all timing channels.
+
+**Promoted from i37 staging:** the full 10-family corpus (families 3,4,5,8 added), the fixed-seed mutational
+fuzzer, M-R11, and the complete kill matrix. **Real chain:** the 4 authentic #40 0.7.0 outputs deny at A06;
+capturing an authentic 0.8.0 routed packet is recommended at fold (the 0.8.0 flat compile is byte-identical to
+0.7.0; the 0.8.0 router carrier is proven inert here via F3b/M-R11).
