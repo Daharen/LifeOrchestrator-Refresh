@@ -91,3 +91,7 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 
 - 2026-08-05 -- `archive/handoffs/2026-08-05-FANOUT_ORCHESTRATOR_HANDOFF-i35-close.md` -- the pre-i35-close handoff snapshot (D-0100).
 - 2026-08-05 -- `archive/fanout-agents/i35-HIERARCHY-PORT.md` + `i35-REHEARSAL-HARNESS.md` -- the i35 filled worker briefs (plan fo-35-0a5bf334).
+
+## mandates/
+
+- `mandate-01-i32-i40.md` | the sunsetted process-hygiene mandate 01 (opened i32, D-0094; header finalized 40/0/SUNSET) | s4 self-archive at report delivery; the durable record is `core-docs/research/2026-08-06-process-mandate-01-report.md`; the live doc was replaced in place by the LICENSED mandate 02 | 2026-08-06 | D-0110
