@@ -1,0 +1,4 @@
+# The widget's private scratch: reserved for a FUTURE persisted "new since last wave" marker. The
+# console is READ-ONLY over the repo; this dir is the ONLY thing it may ever write, and it is never
+# shipped. The render path today writes NOTHING.
+runtime/

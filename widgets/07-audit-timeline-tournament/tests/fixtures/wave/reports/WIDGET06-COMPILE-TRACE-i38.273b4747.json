@@ -1,0 +1,9 @@
+{
+  "schema": "lifeorch.fanout.report/0.1",
+  "plan_id": "fo-38-2b1efe73",
+  "worker_id": "WIDGET06-COMPILE-TRACE-i38",
+  "state": "done",
+  "summary": "Widget 06 Compile Trace Console SHIPPED (HEAD c912854, 15 files). Read-only audit console, panes 1-4,6 (task timeline; four packet regions + trust banners; retrieval+selection with selpol ranked/reason_codes/stages + the R-1 router stage-trace + retrieval lineage + V3 completeness; rule/exception stack; token+state ledger) + the s2.5a compile-layer counterfactual runner. Varied-input set: budget, temporal_intent, namespace, channel_mask, route, exclude_record (selection_policy_version NAMED but pinned at A1). ZERO model calls (deterministic re-compile). Real-artifact render proof: a real #40 routed packet (3 router stages) + the i36 rehearsal report + a fold-i37 smoke log (13/13). i33 diagnostic-array sanitization HONORED (router trace channel-only; injected cross-ns key fails closed). WRITES NOTHING outside the widget runtime dir (asserted; write-guard). NO skill.json. Gates: off-machine cloud 85/85 + on-device -Live 98/98 incl. the WinForms STA SelfTest 9/9 (FORM/MODEL/PANES/SANITIZE/COMPANION/COUNTERFACTUAL/REFRESH/READONLY/LAYOUT_OK) + a real #40 runtime-artifact render. dev.ship ok, git lease clean, 0 llama-server orphans. OPEN follow-on: human live-GUI confirm (D-0064).",
+  "needs": "",
+  "reported_at_utc": "2026-08-06T01:39:54.9792528Z"
+}
