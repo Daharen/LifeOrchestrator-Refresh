@@ -132,6 +132,58 @@ be implemented as deterministic code and separately specified.
 > dispositioned, every mandatory mutation is killed, the real module chain passes, and an explicit activation
 > decision authorizes selected manifests.
 
+## 6. i37 red-team amendments (GO-WITH-AMENDMENTS; D-0104) -- required for a FULL P0-1 gate pass
+
+The i37 frontier red-team of THIS freeze (`research/2026-08-05-i37-action-authz-freeze-redteam.md`, pack
+`2121775f`, read-return captured/valid) returned **GO-WITH-AMENDMENTS**: the architecture is sound as the design
+target and the build may continue, but the reduced i37 MVP scope MUST NOT be called a full `P0-1 gate pass`. The
+i37 module-#43 build is therefore **`build_complete`** with **`p0_1_gate_status = incomplete`** (consistent with
+#43's own reporting: family 10 + a subset of 1/2/6/7/9 + the exercisable mutations, STAGING the full corpus +
+fuzzer + per-tool profiles). The following are FROZEN as required for `p0_1_gate_status = pass` (an i38 build set);
+NONE reopens a frozen MEMORY_CONTRACT / CONTEXT_PACKET_CONTRACT field.
+
+1. **Result taxonomy (NEW).** `build_status` (incomplete|build_complete) / `p0_1_gate_status`
+   (not_run|incomplete|pass|fail) / `activation_status` (prohibited|eligible|activated). `build_complete` NEVER
+   implies `pass`; a skipped family, unrun fuzzer, surviving/unimplemented mutation, or absent real-chain test =>
+   `incomplete`, never `pass`. Activation requires `pass` + all blockers + the separate activation decision.
+2. **Test-facing GrantView/PolicyView (Blocker 1 PARTLY build-gating).** Freeze `lifeorch.grant_view/0.1-test` +
+   `policy_view/0.1-test` -- the byte-exact matching language (field types/canonicalization, validity/revocation,
+   exact tool/operation match, target-predicate language, ns via the canonical `ns_permitted`, effect/externality
+   match, limit intersection, risk/approval escalation, conjunction/alternative rules, matcher output) BEFORE the
+   gate tests A26/A27. Production storage schemas stay activation-gating. Likewise a closed `ApprovalView`
+   (Blocker 2) for A29/M-E13 and a closed status/validator view (Blocker 5) for U-ROLE/M-E35/M-E36.
+3. **Executor TOCTOU order (Boundary D).** Resolve+verify permit -> ATOMIC claim -> re-read all mutable epochs ->
+   re-resolve dynamic targets AFTER claim -> bind execution to stable handles/canonical identities -> verify the
+   same bound identity immediately before the first effect -> else `rejected_no_effect`. Expand M-E29 (mutate
+   alias/reparse/recipient after resolve, both before AND after claim; expect `rejected_no_effect` + EMPTY diff).
+4. **Completion binding.** Add `completion_scope` (task|action|permit|object) with per-kind minimum scope
+   (executor-status / state-diff leaves are NOT task-only); bind the completion contract via a permit field OR the
+   authentic immutable `packet_id` -- one normative mechanism. Add cross-action/permit/object substitution
+   fixtures. Makes M-E36 decidable.
+5. **Per-check / U-property oracle matrix.** One row per A-check / boundary-obligation / U-property / M-mutation
+   naming the independent observable surface (decision+permit-store delta / caller bytes / privileged channel /
+   audit event / origin ledger / executor-entry ledger / permit-state / digest / independent effect ledger /
+   completion result). `no_path` properties need an unforgeable authority-constructor capability + import/call-graph
+   inspection (runtime fuzzing cannot prove "no path"); A35/A36 are killed by inspecting their OWN output surface;
+   trace-presence is NOT proof a property held.
+6. **R-1 diagnostic role isolation (additive; no packet field change).** R1-AUTH-1: the router stage-trace
+   envelope+payload are non-authoritative diagnostics (participate only in identity, deterministic evaluation,
+   privileged audit, fail-closed ns validation). R1-ROLE-1: no router diagnostic field may populate/satisfy
+   control_plane, evidence[]/evidence_requirements/coverage_results, packet_disposition, working_memory,
+   grant/policy/approval/manifest/health, TrustedStatus, completion, target resolution, or effect derivation. Add
+   mutation **M-R11** (cast an R-1 diagnostic record / reason-code / candidate-id into evidence coverage / authority
+   / approval / health / completion). (The i37 D-0077 fold already proved the NAMESPACE-crossing case: an
+   adversarial stage-trace still denies at A06 with constant bytes + no permit.)
+7. **Split Blocker 9.** Build-gating: define every ordinary authz API surface, assert identical response
+   schema/length, instrument a caller-visible deterministic step/branch signature, kill M-S08/M-S09.
+   Activation-gating: production ACL/retention/redaction/IPC + physical timing equalization. The freeze claims
+   constant bytes + no deterministic branch/step oracle, NOT absence of all timing channels.
+
+**Corrected Blocker disposition (supersedes s2 where they differ):** Blockers 1, 2, 5 are PARTLY build-gating
+(the test-facing views); 8 (canonical-impl equivalence) and 14 (real-module integration) are BUILD-gating and were
+SATISFIED this wave (one canonical impl; real #36/#37/#40 0.7.0 chain); 9 and 12 have build-gating portions. Blockers
+3, 4, 6, 7, 10, 11 remain activation-gating. `non_execution:true` holds throughout; nothing is action-capable.
+
 ---
 
 **Freeze state:** FROZEN design target (D-0103, i37); design-only; `non_execution:true` holds. Amend only by a new
