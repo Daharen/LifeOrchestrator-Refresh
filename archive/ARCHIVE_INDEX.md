@@ -95,3 +95,8 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 ## mandates/
 
 - `mandate-01-i32-i40.md` | the sunsetted process-hygiene mandate 01 (opened i32, D-0094; header finalized 40/0/SUNSET) | s4 self-archive at report delivery; the durable record is `core-docs/research/2026-08-06-process-mandate-01-report.md`; the live doc was replaced in place by the LICENSED mandate 02 | 2026-08-06 | D-0110
+
+## doc-snapshots/2026-08-06/ (PB-3 slim, i40)
+
+- `doc-snapshots/2026-08-06/CURRENT_STATE.md` | the pre-slim CURRENT_STATE (63,108 B, 185% of budget) | PB-3 hot-doc slim at its i40 deadline (DOC_PROTOCOL s2/s5; mandate-02 M2-B); slimmed to 32,532 B | 2026-08-06 | D-0110
+- `doc-snapshots/2026-08-06/MODULE_ROADMAP.md` | the pre-slim MODULE_ROADMAP (48,983 B, 132% of budget; widgets/05-06 still marked Proposed, memory modules #35-#43 rowless) | PB-3 slim + per-module currency (#35-#43 rows added, widgets 05/06/07 current) ; slimmed to 28,594 B | 2026-08-06 | D-0110
