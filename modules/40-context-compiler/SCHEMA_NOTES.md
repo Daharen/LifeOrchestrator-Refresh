@@ -1,4 +1,4 @@
-# context.compile -- SCHEMA_NOTES (Module 40, skill `context.compile` 0.7.0, i35 REAL hierarchy_port -> PUBLIC artifact_search path; i34 Tier-1 BOUNDED-FANOUT HIERARCHY = s17)
+# context.compile -- SCHEMA_NOTES (Module 40, skill `context.compile` 0.9.0, i38 WORKING-MEMORY HYDRATION = s20; i37 the multi-channel query ROUTER = s19; i35 REAL hierarchy_port -> PUBLIC artifact_search path = s18; i34 Tier-1 BOUNDED-FANOUT HIERARCHY = s17)
 
 **Authority.** This file records EVERY schema/interface interpretation for the D-0077 cross-module fold.
 The orchestrator's fold smoke (this compiler's REAL packets -> retrieval.eval #37 + a fresh 9B, and #40
@@ -870,3 +870,61 @@ public-port gate 32/32 + the i34 injected-port fold smoke 38/38, all green.
 retrieval channel implementation beyond naming + selecting the ones #40 already reaches; NO P0-1 adversarial
 injection SUITE / action-capable release (`non_execution:true` UNCHANGED); NO real embeddings/vector; NO 9B/
 models.json; NO UI; NO core-doc edits (`docs:[]` -- the orchestrator mirrors).
+
+## s20 -- i38 WORKING-MEMORY HYDRATION: wire the packet `working_memory` region to #42's per-task store (D-0104 follow-on) -- the full interpretation (REQUIRED for the D-0077 fold)
+
+**What i38 is.** The i37 router (s19) NAMED a `working_memory` channel but left the packet's `working_memory`
+region reserved/empty (the #42 store was Tier-1, un-wired into #40). i38 HYDRATES that region from #42
+`working.memory` 0.1.0 (FROZEN this wave; imported READ-ONLY by a resolved portable path -- NEVER modified).
+ADDITIVE over `context_packet/0.2` -- the schema string is UNCHANGED; module semver `0.8.0 -> 0.9.0`. A compile
+that binds NO #42 store / has no coordinator `task_id` / runs `route` off keeps the region reserved -> the whole
+packet is BYTE-IDENTICAL to 0.8.0. Governing: `MEMORY_CONTRACT.md` A5 (U3' the `working` kind + conjunctive
+scope + `can_instruct:false` + the canonical `ns_permitted`); `CONTEXT_PACKET_CONTRACT.md` s6 (identity) + the
+i33 `working_memory` region + s9; `modules/42-working-memory/SCHEMA_NOTES.md` (the `get_active_head` seam).
+
+**The hydration trigger (W1).** `route` engaged AND the request BINDS a #42 store (`working_memory_store_path`,
+also accepted as `working_memory_db` or nested `working_memory.store_path`) AND a coordinator
+`working_memory_task_id` (the id the coordinator used when it wrote the #42 head -- NOT #40's derived packet
+`_task_id`, which is a task-content hash) AND an ENFORCED, non-empty effective namespace closure. Any miss keeps
+the region reserved (byte-identical). `hydrate_active_working_memory` opens the #42 store READ-ONLY, loads #42's
+canonical `ns_policy` (which resolves the ONE `#37 namespace_policy`), and calls
+`#42.op_get_active_head(task_id, effective_allowed_namespaces=intersection(request,grant))`. Only the ACTIVE head
+hydrates (`lifecycle_state=active`); a `closed`/`archived` head is not retrievable (`archive != evidence`).
+
+**CONJUNCTIVE + fail-closed, ZERO leakage (W2).** #40 passes its OWN effective closed set (the i33 U1'
+`intersection(request, grant)`); #42 re-checks it with the SAME canonical `ns_permitted` -> the byte-identical
+conjunctive decision `#36/#37/#40/#42` all make. A cross-namespace / not-permitted / closed / absent task ALL
+return not-found IDENTICALLY -- NO existence oracle: the router removes `working_memory` with the SAME reserved
+reason `working_memory_reserved_not_hydrated`, the region stays present-but-empty, and the identifying detail
+stays in #42's PRIVILEGED `NamespaceRejectionPolicy` accumulator and is DISCARDED here (a count only, never the
+packet). An UNSCOPED compile (no namespace authorization) never hydrates (fail-closed -- a request never widens
+scope). The gate proves the cross-ns-denied packet is BYTE-IDENTICAL to the genuine-absence packet.
+
+**The hydrated region (W3).** `present:true`, `store_status:active_head_hydrated`, `state_version:<head>`,
+`item_count:1`, `items:[<item>]`, and the reserved A5 store fields filled from the head. The ONE item is a
+projection of #42's MEMORY_CONTRACT s1 `working` envelope: `record_kind:working`, `content_role:working_state`,
+`can_instruct:false`, `is_evidence:false`, the head identity (`record_version_id` `wsv_`, `working_state_id`
+`ws_`, `content_hash`), the A5 store fields, the head `body`, and a deterministic `text` (the region renderer
+reads `text`). EVIDENCE-INELIGIBLE by construction: the item is NOT in the #36 candidate pool / `excerpts`, NEVER
+enters `evidence[]`, NEVER satisfies a coverage requirement, carries no instruction authority; the store never
+enters #36's searchable long-term pool (a SEPARATE db). It renders THIRD (`control_plane -> task_input ->
+working_memory -> evidence`). The hydrated `record_version_id`/`working_state_id` are registered into
+`permitted_rvids` so the U1' defense-in-depth packet-closure sweep treats the working item as a scope-permitted
+object (conjunctive access already verified); its single-string `namespace_scope` passes `_scope_ok`.
+
+**Identity (W4).** `identity.working_state_version` (reserved at i33) is now the hydrated head `state_version`;
+because the whole `working_memory` region is in the hashed body, a NEW `state_version` -> a NEW `packet_id`, the
+SAME -> an identical `packet_id`, and double-run byte-identity holds. The router SELECTS `working_memory`
+(`availability=True`), so it appears in `routing_plan.selected_channels` + the channel-selection stage.
+
+**The router change (additive).** `run_query_router`'s `working_memory` branch SELECTS the channel iff
+`availability["working_memory"]` (set from `wm_hydration["found"]`); else it removes it with the UNCHANGED reason
+`working_memory_reserved_not_hydrated`. When no #42 store is bound -- EVERY 0.8.0 routed compile -- availability is
+False and the router output is BYTE-IDENTICAL to 0.8.0. `named_targets` stays `["working_memory"]`.
+
+**i38 non-goals (unchanged).** NO modification of #42 (READ-ONLY; only `get_active_head` is called -- the store is
+byte-identical before/after a hydrating compile) or #36/#37/#43 or any core-doc (`docs:[]` -- the orchestrator
+mirrors); NO promotion / write / lifecycle op from #40; NO change to the flat/legacy/i35/i37 paths (byte-identical);
+`non_execution:true` UNCHANGED (working memory is STATE, never execution authority). Proven off-machine over a REAL
+#42 store + a REAL #36 tree by the OWNED gate `tests/test_i38_working_memory.py` (42/42) + regression: i37 router
+(34/34) + i35 public-port (32/32) + i34 smoke (38/38) + the shipped suite (322/322) + #42's own tests (30/30).

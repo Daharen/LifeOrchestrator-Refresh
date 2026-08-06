@@ -1,11 +1,36 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-context_compiler.py -- Life Orchestrator Module 40 (skill `context.compile` 0.8.0)
+context_compiler.py -- Life Orchestrator Module 40 (skill `context.compile` 0.9.0)
 
 The Collective Agent's context-packet compiler (directive Priority 4 / section 8). DETERMINISTIC,
 CPU-only, NO model, NO network. Turns a task descriptor into a versioned, token-budgeted, SAFE,
 self-describing `lifeorch.context_packet/0.2` artifact the coordinator hands a disposable model.
+
+0.9 (i38 WORKING-MEMORY HYDRATION -- wire the packet `working_memory` region to #42's per-task store;
+D-0104 follow-on) closes the seam the i37 router NAMED but left reserved: the router NAMED a
+`working_memory` channel yet the region stayed empty (the #42 store was Tier-1, unbuilt-into-#40). This
+HYDRATES the region from #42 `working.memory` 0.1.0 (FROZEN; imported READ-ONLY by a resolved portable
+path -- NEVER modified). ADDITIVE over `context_packet/0.2` -- schema string UNCHANGED; module semver
+0.8.0 -> 0.9.0. A compile that binds NO #42 store / has no coordinator task_id / runs with `route` off
+keeps the region reserved/empty -> BYTE-IDENTICAL to 0.8.0 (the hydration adds NOTHING unless engaged).
+  (W1) When `route` is engaged AND the request BINDS a #42 store (`working_memory_store_path`) AND a
+       coordinator `working_memory_task_id`, #40 consults #42.get_active_head(task_id,
+       effective_allowed_namespaces) CONJUNCTIVELY (task_id AND effective-namespace) and renders the
+       returned MEMORY_CONTRACT s1 `working` envelope (record_kind=working) into the packet's
+       `working_memory` region. The router then SELECTS the `working_memory` channel (availability=True).
+  (W2) CONJUNCTIVE + FAIL-CLOSED, ZERO leakage: the effective closed set (intersection(request, grant),
+       i33 U1') is passed to #42, which re-checks it with the SAME canonical `ns_permitted`. A cross-
+       namespace / not-permitted / closed / absent task ALL return not-found IDENTICALLY (no existence
+       oracle); the identifying detail stays in #42's privileged rejection accumulator and is DISCARDED
+       (never the packet). An UNSCOPED compile (no namespace authorization) never hydrates (fail-closed).
+  (W3) EVIDENCE-INELIGIBLE + can_instruct:false (MEMORY_CONTRACT A5): the region renders THIRD
+       (control_plane -> task_input -> working_memory -> evidence), NEVER enters `evidence[]`, NEVER
+       satisfies a coverage requirement (it is not a #36 candidate/excerpt), carries no instruction
+       authority. The store never enters #36's searchable long-term pool (a SEPARATE db).
+  (W4) packet IDENTITY (s6) covers the working-state `state_version` (already reserved at i33): a NEW
+       state_version -> a NEW packet_id; the SAME state_version -> an identical packet_id; double-run
+       byte-identity holds.
 
 0.8 (i37 the multi-channel query ROUTER, BORN INSTRUMENTED -- R-1, D-0101/D-0103) realizes the last
 un-routed retrieval seam: the i32 `query_class` stub + DESCEND_QUERY_CLASSES are turned into a real,
@@ -319,9 +344,9 @@ else:
     CLASSIFIER_POLICY_SOURCE = "local_offmachine_replica_pending_37_canonical"
 
 WORKER_NAME = "context_compiler.py"
-WORKER_VERSION = "0.8.0"
-COMPILER_VERSION = "0.8.0"
-PACKET_SCHEMA = "lifeorch.context_packet/0.2"  # UNCHANGED at i33 -- A5/D-0096 amendment is ADDITIVE over 0.2
+WORKER_VERSION = "0.9.0"
+COMPILER_VERSION = "0.9.0"
+PACKET_SCHEMA = "lifeorch.context_packet/0.2"  # UNCHANGED at i38 -- working-memory hydration is ADDITIVE over 0.2
 EXPANSION_SCHEMA = "lifeorch.context_expansion/0.2"
 
 # ------------------------------------------------------------------------------------------------
@@ -1147,8 +1172,15 @@ def run_query_router(norm, closure, availability, warnings):
     removed, selected = [], []
     for ch in universe:
         if ch == "working_memory":
-            # NAMED as a routing target but NEVER hydrated at i37 (#42 wiring = i38): reserved/empty.
-            removed.append({"channel_id": ch, "reason_codes": ["working_memory_reserved_not_hydrated"]})
+            # i38: SELECT when a #42 ACTIVE head hydrated the region (conjunctive access); else NAMED but
+            # reserved/empty. A cross-namespace denial and a genuine absence are INDISTINGUISHABLE here
+            # (both -> not selected, the SAME reason) -- count-only, ZERO leakage (no existence oracle).
+            # When NO #42 store is bound (every 0.8.0 routed compile) availability is False -> removed with
+            # the SAME reason -> BYTE-IDENTICAL to 0.8.0.
+            if availability.get("working_memory"):
+                selected.append(ch)
+            else:
+                removed.append({"channel_id": ch, "reason_codes": ["working_memory_reserved_not_hydrated"]})
             continue
         if availability.get(ch):
             selected.append(ch)
@@ -1883,16 +1915,161 @@ def _contradicts_of(hit):
 def _task_id(task):
     return "task_" + sha256_of_obj(_canonical_task(task))[:32]
 
-def build_working_memory(task, closure, grant_snapshot_ref):
-    """U3' (i33): the FOURTH top-level packet region -- RESERVED at Tier 0 (present-but-empty; the store is
-    Tier 1). Per-`task_id` evolving state, so a deepening task distinguishes its OWN current intermediate
-    state from STALE earlier state. It is CONTINUITY-authoritative: the recorded current state of THIS task,
-    NOT world-truth, NOT execution authority (`content_role=working_state`, `can_instruct=false`; permissions
-    live ONLY in control_plane). ACCESS IS CONJUNCTIVE -- `task_id` AND effective-namespace authorization
-    (task-isolation and namespace-isolation are DIFFERENT mechanisms). Items carry the A5 `state_version`,
-    and packet identity (s6) includes the working-state `state_version`. Tier 0 builds NO store/promotion/
-    retrieval -- only the region + its access invariant + the reserved A5 store fields + rendering."""
+# ------------------------------------------------------------------------------------------------
+# i38 (D-0104 follow-on): WORKING-MEMORY HYDRATION -- wire the packet `working_memory` region to #42's
+# per-task store (working.memory 0.1.0, FROZEN). The i37 router NAMED a `working_memory` channel but left
+# the region reserved/empty; this hydrates it from #42.get_active_head CONJUNCTIVELY (task_id AND effective
+# namespace), READ-ONLY. ADDITIVE + GATED: a compile that binds NO #42 store / has no task_id / runs `route`
+# off keeps the region reserved -> BYTE-IDENTICAL to 0.8.0. #42 is imported by a RESOLVED PORTABLE path,
+# never modified (only its READ op `get_active_head` is called).
+# ------------------------------------------------------------------------------------------------
+
+def _load_working_memory():
+    """Import #42 `working_memory` by a RESOLVED PORTABLE path (env override LIFEORCH_WORKING_MEMORY_PATH,
+    else the sibling `modules/42-working-memory/working_memory.py`). Returns (module, path) or (None, None)
+    so a MISSING producer NEVER crashes a compile -- it degrades to the reserved/empty region (back-compat).
+    Imported LAZILY (only when a request BINDS a #42 store), so a compile that never touches working memory
+    adds NO #42 dependency. READ-ONLY -- #42 is never modified."""
+    path = os.environ.get("LIFEORCH_WORKING_MEMORY_PATH")
+    if not path:
+        here = os.path.dirname(os.path.abspath(__file__))
+        cand = os.path.normpath(os.path.join(here, os.pardir, "42-working-memory", "working_memory.py"))
+        if os.path.isfile(cand):
+            path = cand
+    if path and os.path.isfile(path):
+        try:
+            d = os.path.dirname(path)
+            if d not in sys.path:
+                sys.path.insert(0, d)
+            spec = importlib.util.spec_from_file_location("lifeorch_working_memory", path)
+            m = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(m)
+            return m, path
+        except Exception:  # noqa: BLE001 -- an unimportable producer -> reserved region (never a crash)
+            return None, None
+    return None, None
+
+
+def _wm_binding(task, args):
+    """Resolve the OPTIONAL #42 store binding from the compile request. Returns (store_path, wm_task_id,
+    ns_policy_path) -- all None when nothing is bound (the DEFAULT: the region stays reserved/empty and the
+    whole compile is BYTE-IDENTICAL to 0.8.0). `wm_task_id` is the COORDINATOR's task id that keys the #42
+    store (NOT #40's derived packet `_task_id`, which is a content hash) -- get_active_head is keyed on it."""
+    wm = args.get("working_memory") or {}
+    store = args.get("working_memory_store_path") or args.get("working_memory_db") or wm.get("store_path")
+    wm_task = (args.get("working_memory_task_id") or wm.get("task_id") or task.get("working_memory_task_id"))
+    ns_policy = args.get("working_memory_ns_policy_path") or wm.get("ns_policy_path")
+    return store, wm_task, ns_policy
+
+
+def hydrate_active_working_memory(task, args, closure, warnings):
+    """CONJUNCTIVE read of #42's per-task ACTIVE working-memory head (task_id AND effective-namespace),
+    READ-ONLY. Returns {found, env, store_bound, reason, namespace_violation_count}. GATED (any miss ->
+    found=False, region stays reserved -> byte-identical to 0.8.0):
+      * `route` engaged (the router selects the channel) AND a #42 store bound AND a coordinator wm_task_id;
+      * an ENFORCED, non-empty effective closure -- namespace authorization is REQUIRED (conjunctive);
+      * #42.get_active_head returns an ACTIVE head whose namespace is permitted under the effective set.
+    A cross-namespace / not-permitted / closed / absent task ALL return found=False IDENTICALLY -- count-only,
+    ZERO leakage (no existence oracle): the identifying detail stays in #42's PRIVILEGED rejection accumulator
+    and is DISCARDED here, never surfaced in the packet."""
+    result = {"found": False, "env": None, "store_bound": False, "reason": None,
+              "namespace_violation_count": 0}
+    if not bool(args.get("route") or task.get("route")):
+        result["reason"] = "route_off"
+        return result
+    store_path, wm_task_id, ns_policy_path = _wm_binding(task, args)
+    if not store_path or not wm_task_id:
+        result["reason"] = "no_binding"
+        return result
+    result["store_bound"] = True
+    # CONJUNCTIVE: namespace authorization is REQUIRED. An UNSCOPED / empty-effective compile has no namespace
+    # authorization -> fail-closed (no hydration); a request can never WIDEN scope (U1').
+    if not (closure.get("enforced") and closure.get("effective")):
+        result["reason"] = "unscoped_no_namespace_authorization"
+        return result
+    if not os.path.isfile(store_path):
+        result["reason"] = "no_store"
+        return result
+    mod, _ = _load_working_memory()
+    if mod is None:
+        result["reason"] = "producer_unavailable"
+        return result
+    try:
+        nsmod, _ = mod._load_ns_policy(ns_policy_path)
+        rej = nsmod.NamespaceRejectionPolicy()
+        conn = mod.open_store(store_path)
+        try:
+            summ, arts = mod.op_get_active_head(conn, nsmod, rej, {
+                "task_id": wm_task_id,
+                # pass #40's OWN effective closed set (intersection(request, grant), i33 U1'); #42 re-checks
+                # it with the SAME canonical `ns_permitted` -> the byte-identical conjunctive decision.
+                "effective_allowed_namespaces": list(closure["effective"]),
+            })
+        finally:
+            conn.close()
+    except Exception:  # noqa: BLE001 -- any #42 read error -> reserved region (fail-closed, never a crash)
+        result["reason"] = "read_error"
+        return result
+    # count-only sanitized surface; the privileged detail (rej.security_log) is DISCARDED, never the packet.
+    result["namespace_violation_count"] = int(getattr(rej, "violation_count", 0) or 0)
+    env = (arts or {}).get("state")
+    if summ.get("found") and env is not None:
+        result["found"] = True
+        result["env"] = env
+        result["reason"] = "hydrated"
+        warnings.append("working_memory_hydrated:v%s" % env.get("state_version"))
+    else:
+        # a cross-ns denial and a genuine absence are INDISTINGUISHABLE here (no existence oracle).
+        result["reason"] = "no_active_head"
+    return result
+
+
+def _working_state_item(env):
+    """Project #42's MEMORY_CONTRACT s1 `working` envelope into a packet working_memory ITEM. EVIDENCE-
+    INELIGIBLE by construction: record_kind=working, content_role=working_state, can_instruct=false,
+    is_evidence=false. Carries the A5 store fields + a deterministic rendered `text` (the region renderer
+    reads `text`; s1). It NEVER enters `evidence[]`, NEVER satisfies a coverage requirement (it is not in
+    the #36 candidate pool / excerpts), and carries no instruction authority."""
+    body = env.get("body")
+    ns = env.get("namespace_scope") or env.get("namespace")
+    text = ("[working_state v%s | ws=%s | rvid=%s | ns=%s | content_role=working_state | can_instruct=false]\n%s"
+            % (env.get("state_version"), env.get("working_state_id"), env.get("record_version_id"),
+               ns, canonical_json(body)))
     return {
+        "record_kind": "working",
+        "content_role": "working_state",
+        "can_instruct": False,
+        "is_evidence": False,
+        "authority_level": env.get("authority_level"),
+        "provenance_mode": env.get("provenance_mode"),
+        "status": env.get("status"),
+        "record_id": env.get("record_id"),
+        "record_version_id": env.get("record_version_id"),
+        "working_state_id": env.get("working_state_id"),
+        "state_version": env.get("state_version"),
+        "parent_state_version": env.get("parent_state_version"),
+        # a SINGLE namespace string (the head's scope) -- the closure sweep scope-checks it via ns_permitted.
+        "namespace_scope": ns,
+        "content_hash": env.get("content_hash"),
+        "lifecycle_state": env.get("lifecycle_state"),
+        "created_from_packet_id": env.get("created_from_packet_id"),
+        "writer_authority": env.get("writer_authority"),
+        "body": body,
+        "text": text,
+    }
+
+
+def build_working_memory(task, closure, grant_snapshot_ref, hydration=None):
+    """U3' (i33): the FOURTH top-level packet region. RESERVED (present-but-empty) UNLESS a #42 ACTIVE head
+    is HYDRATED (i38, conjunctive access) -- then it is POPULATED from that head's envelope. Per-`task_id`
+    evolving state, so a deepening task distinguishes its OWN current intermediate state from STALE earlier
+    state. It is CONTINUITY-authoritative: the recorded current state of THIS task, NOT world-truth, NOT
+    execution authority (`content_role=working_state`, `can_instruct=false`; permissions live ONLY in
+    control_plane). ACCESS IS CONJUNCTIVE -- `task_id` AND effective-namespace authorization (task-isolation
+    and namespace-isolation are DIFFERENT mechanisms). Items carry the A5 `state_version`, and packet identity
+    (s6) includes the working-state `state_version`. With NO hydration the region is BYTE-IDENTICAL to 0.8.0
+    (the i38 store wiring adds NOTHING unless a #42 head is bound + found)."""
+    region = {
         "task_id": _task_id(task),
         "present": False,
         "store_tier": "tier_1",
@@ -1931,6 +2108,43 @@ def build_working_memory(task, closure, grant_snapshot_ref):
                  "are Tier 1; at Tier 0 this region is present-but-empty. Render order control_plane -> "
                  "task_input -> working_memory -> evidence."),
     }
+    # i38 (W1-W4): HYDRATE from a #42 ACTIVE head (conjunctive access already verified by the caller). This
+    # is the ONLY mutation of the reserved dict -- with NO hydration `region` is returned UNCHANGED, so a
+    # no-store / no-head / route-off compile is BYTE-IDENTICAL to 0.8.0. state_version enters packet identity.
+    if hydration and hydration.get("found") and hydration.get("env"):
+        env = hydration["env"]
+        item = _working_state_item(env)
+        region["present"] = True
+        region["store_status"] = "active_head_hydrated"
+        region["state_version"] = env.get("state_version")
+        region["items"] = [item]
+        region["item_count"] = 1
+        region["reserved_store_fields"].update({
+            "working_state_id": env.get("working_state_id"),
+            "state_version": env.get("state_version"),
+            "parent_state_version": env.get("parent_state_version"),
+            "namespace_scope": [item["namespace_scope"]],
+            "grant_snapshot_ref": env.get("grant_snapshot_ref") or grant_snapshot_ref,
+            "created_from_packet_id": env.get("created_from_packet_id"),
+            "content_hash": env.get("content_hash"),
+            "lifecycle_state": env.get("lifecycle_state"),
+            "content_role": env.get("content_role") or "working_state",
+            "writer_authority": env.get("writer_authority") or "task_coordinator",
+        })
+        region["hydrated_from"] = {
+            "store": "working.memory#42", "record_kind": "working",
+            "record_version_id": env.get("record_version_id"),
+            "working_state_id": env.get("working_state_id"),
+            "task_id": env.get("task_id"),
+            "access": "conjunctive_task_id_and_effective_namespace",
+        }
+        region["note"] = ("HYDRATED per-task working-memory region (CONTEXT_PACKET_CONTRACT i33/U3'; "
+                          "MEMORY_CONTRACT A5 `working` kind) from the ACTIVE #42 head, accessed CONJUNCTIVELY "
+                          "(task_id AND effective-namespace). CONTINUITY-authoritative (recorded current state "
+                          "of THIS task, NOT world-truth, NOT execution authority -- permissions live ONLY in "
+                          "control_plane; NEVER evidence, can_instruct=false). state_version enters packet "
+                          "identity. Render order control_plane -> task_input -> working_memory -> evidence.")
+    return region
 
 def _working_item_accessible(item, task_id, closure):
     """U3' (i33) CONJUNCTIVE access predicate (reserved; the store is Tier 1, so this is a no-op at Tier 0):
@@ -2828,8 +3042,22 @@ def op_compile(args, warnings):
     original_goal = norm["original_goal"]
     control_plane = build_control_plane(task, original_goal)
     task_input = build_task_input(task, norm)
-    # U3' (i33): the reserved fourth region -- conjunctive access + namespace_scope + reserved state_version.
-    working_memory = build_working_memory(task, closure, control_plane["grant_snapshot_ref"])
+    # U3' (i33) / i38 (W1-W4): the FOURTH region. CONJUNCTIVELY hydrate #42's ACTIVE working-memory head
+    # (READ-ONLY; gated on `route` + a bound #42 store + an ENFORCED namespace closure). A miss keeps the
+    # region reserved -> BYTE-IDENTICAL to 0.8.0. Computed AFTER the namespace fail-closed gates (a fail-
+    # closed compile never reaches here) so the effective closed set is authorized before it is passed to #42.
+    wm_hydration = hydrate_active_working_memory(task, args, closure, warnings)
+    working_memory = build_working_memory(task, closure, control_plane["grant_snapshot_ref"], wm_hydration)
+    if wm_hydration.get("found") and wm_hydration.get("env"):
+        # the hydrated #42 head is a scope-permitted object (conjunctive access verified by #42's canonical
+        # ns_permitted) -> register its rvid so the U1' defense-in-depth packet-closure sweep treats the
+        # working item as PERMITTED. It is NOT a #36 evidence-pool candidate; it is a SEPARATE-store working
+        # record (never evidence, never in the searchable long-term pool).
+        _wenv = wm_hydration["env"]
+        if _wenv.get("record_version_id"):
+            permitted_rvids.add(str(_wenv.get("record_version_id")))
+        if _wenv.get("working_state_id"):
+            permitted_rvids.add(str(_wenv.get("working_state_id")))
 
     # P1-1 / D-0089: select via #37's CANONICAL selpol_rrf_v1 (IMPORTED, not reimplemented). `params`
     # carry hard_filter from control_plane.permission_grants (+ descriptor forbidden/privacy),
@@ -2914,7 +3142,7 @@ def op_compile(args, warnings):
             "lexical_fts": bool(norm.get("query_set")),
             "flat_index": flat_present,
             "hierarchy_descend": hierarchy_ran,
-            "working_memory": False,                      # reserved; NEVER hydrated at i37 (#42 wiring = i38)
+            "working_memory": bool(wm_hydration.get("found")),   # i38: True iff a #42 ACTIVE head hydrated
             "hierarchy_reason": hierarchy_reason,
         }
         route_plan = run_query_router(norm, closure, availability, warnings)
@@ -3062,9 +3290,10 @@ def assemble_packet(task, norm, config, profile, control_plane, task_input, work
             "selected_channels": route_plan["selected_channels"],
             "named_targets": route_plan["named_targets"],
             "channel_availability": route_plan["channel_availability"],
-            "note": ("EMISSION + routing REALIZATION only (R-1) -- the router DESCRIBES (versioned + "
-                     "instrumented) the SAME channel set the compile executed; `working_memory` is NAMED as "
-                     "a target but NEVER hydrated at i37 (reserved; the #40<->#42 wiring is i38)."),
+            "note": ("EMISSION + routing REALIZATION (R-1) -- the router DESCRIBES (versioned + instrumented) "
+                     "the SAME channel set the compile executed; `working_memory` is SELECTED + hydrated from "
+                     "#42's ACTIVE head when a store is bound AND the task_id is authorized under the effective "
+                     "namespace closure (i38, conjunctive), else NAMED-but-reserved (no existence oracle)."),
         }
 
     selection_block = {
