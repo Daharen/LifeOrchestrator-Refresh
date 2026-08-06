@@ -11,7 +11,7 @@
 - **Docs:** `[]`
 
 ## Mission
-_EMPTY -- no unit assigned._ Fill from the candidate menu in `core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md` section 4. **i40 = SUNSET:** the MANDATORY PROCESS_MANDATE-01 metastability report is due BEFORE any wave work (mandate s3); then candidates: PB-5 the #37 fold-reconciliation lane (re-pin WIRED_STRUCTURAL_DIGEST -> d0d54aba + reconcile the pre-existing #37 -Live manifest-version inconsistency); PB-3 the hot-doc slim; fold the frontier as-built re-review (pack b2b1e5fb); the #40 beam-width fast-beam follow-on; Widget 05/06/07 human live-GUI confirms; MODULE_ROADMAP currency. Paste the `plan`-emitted worker prompt (or a tight summary + the governing design doc); keep within the 8 KB budget; mirror it.
+_EMPTY -- no unit assigned._ Fill from the candidate menu in `core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md` section 4 (i41: unit-0 = fold the round-3 ratification pack `5807bc3e`; unit-1 = scope the M2-A doc gate, deadline i42). Paste the `plan`-emitted worker prompt (or a tight summary + a pointer to the emitted copy when over the 8 KB budget); mirror it.
 
 ## Unit (the full worker prompt)
 _pending -- filled at wave scoping._

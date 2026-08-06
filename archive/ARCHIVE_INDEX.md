@@ -100,3 +100,7 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 
 - `doc-snapshots/2026-08-06/CURRENT_STATE.md` | the pre-slim CURRENT_STATE (63,108 B, 185% of budget) | PB-3 hot-doc slim at its i40 deadline (DOC_PROTOCOL s2/s5; mandate-02 M2-B); slimmed to 32,532 B | 2026-08-06 | D-0110
 - `doc-snapshots/2026-08-06/MODULE_ROADMAP.md` | the pre-slim MODULE_ROADMAP (48,983 B, 132% of budget; widgets/05-06 still marked Proposed, memory modules #35-#43 rowless) | PB-3 slim + per-module currency (#35-#43 rows added, widgets 05/06/07 current) ; slimmed to 28,594 B | 2026-08-06 | D-0110
+
+- `handoffs/2026-08-06-FANOUT_ORCHESTRATOR_HANDOFF-i40-close.md` | the pre-i40-close live handoff (47,286 B, 197% of budget; i39-era TL;DR/menus) | DOC_PROTOCOL s5 snapshot before the i40 close rewrite (slimmed under the 24 KB budget) | 2026-08-06 | D-0112
+- `fanout-agents/i40-FANOUT_AGENT_002.md` | the used i40 Lane B brief (M37-RECONCILE-i40; #37 0.8.1, PB-5) | DOC_PROTOCOL s6 used-brief archive at the i40 close | 2026-08-06 | D-0112
+- `fanout-agents/i40-FANOUT_AGENT_003.md` | the used i40 Lane A brief (P01-EXACT-CLOSURE-43-i40; #43 0.4.0 exact closures) | DOC_PROTOCOL s6 used-brief archive at the i40 close | 2026-08-06 | D-0112
