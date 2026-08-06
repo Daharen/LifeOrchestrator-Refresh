@@ -26,8 +26,8 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
   repo.intel, #39 episode.record 0.1.1, #40 context.compiler (now **0.9.0**: hierarchy port + R-1 router +
   working-memory hydration), #41 skill.card 0.2.0, #42 working.memory 0.1.0. **Project `tier1_accepted` = TRUE**
   (i36, D-0102: 11/11 s10 criteria over a distinct 6-package foreign corpus at 100x leaf span). Fast-beam recall
-  lever shipped i39 (D-0108: hierarchy_path_recall 58823->117647 ppm; guaranteed+packet recall stay 1e6).
-  Arc detail: D-0082..D-0108 via the index; per-module state: `MODULE_ROADMAP.md`.
+  lever shipped i39 (D-0108; hpr ~2x; guaranteed+packet recall stay 1e6).
+  Arc detail: the index; per-module state: `MODULE_ROADMAP.md`.
 - **P0-1 action-authorization gate (#43): `build_status=build_complete | p0_1_gate_status=INCOMPLETE |
   activation_status=prohibited` — exact-closure-complete, RATIFICATION PENDING.** The deny-by-default monitor +
   injection suite is BUILT to the FROZEN `ACTION_AUTHORIZATION_CONTRACT.md` (D-0103); **#43 0.4.0 (`663145b`)
@@ -35,23 +35,25 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
   matrix 30/30 over ALL 15 frozen sinks; completion via packet_id 17/17; views golden 48/48; empty-dir
   self-verify VERIFIED). A06 denies every authentic packet; `non_execution:true` holds. The pass was
   OVER-CLAIMED TWICE (D-0107, D-0109); under **M2-D** the builder no longer claims it: the module EMITS
-  `incomplete` + `exact_closure_built` 7/7, and **contract s7 flips ONLY when the couriered ROUND-3 as-built
-  review (pack `5807bc3e`) returns PASS** — i41 unit-0.
-- **i40 CLOSED (D-0110/D-0111/D-0112, plan `fo-40-d42fd1ac`):** the SUNSET session — mandate-01 report (verdict
-  NO) -> **mandate 02 LICENSED** (i40-i47; M2-A doc-gate deadline i42; M2-D verification-before-ratification);
-  PB-3 slim executed (this doc + MODULE_ROADMAP + the handoff at close); Lane A #43 **0.4.0** shipped via an
-  ORCHESTRATOR-RECOVERED ship (the worker's bridge died pre-push; Nicholas resumed it to re-push; the
-  orchestrator ran gates/devship/report) + Lane B #37 **0.8.1** (PB-5 CLOSED); fold green (harness exit 0 +
-  i34 38/38); the round-3 ratification pack couriered.
+  `incomplete` + `exact_closure_built` 7/7. **The ROUND-3 ratification review (pack `5807bc3e`) RETURNED FAIL
+  (D-0113)** — F3 + F6 accepted closed, F2/F4 partial, **5 suite-build findings remain** (write-once completion
+  binding; consumed TargetHandle; lossless 0.9.0 adapter; top-level GrantView enforcement; complete pack
+  transport — WORK_ORDER.md omitted by the orchestrator's pack list). No walk-back was needed (nothing was
+  claimed). The 5 findings = the i41 #43 unit (`research/2026-08-06-i40-p01gate-round3-redteam.md`); s7 stays
+  walked-back until a PASS.
+- **i40 CLOSED (D-0110/11/12/13, plan `fo-40-d42fd1ac`):** the SUNSET session — mandate-01 report (verdict NO)
+  -> **mandate 02 LICENSED** (i40-i47; M2-A deadline i42; M2-D verification-before-ratification); PB-3 slim;
+  Lane A #43 **0.4.0** via an ORCHESTRATOR-RECOVERED ship (bridge died pre-push; see Known failures) + Lane B
+  #37 **0.8.1** (PB-5 CLOSED); fold green (harness exit 0 + i34 38/38); post-close the round-3 answer folded:
+  **FAIL, 5 findings -> i41 (D-0113)**.
 - **FROZEN / deferred (D-0080):** durable-supervisor / warm-pool hardening (D-0079 GATE-NO stands; classic
   detached-warm is the trusted default); generator upgrades; `video.interpret` + live composition; deep
   real-time perception (arch 27-49); broad training.
 - **Fan-out loop:** 40 iterations run via `orchestrate.fanout` #30 over `res.lease` #29; workers hand-dispatched
   into fresh Cowork sessions. Ledger + wave model: **`FANOUT_ORCHESTRATOR_HANDOFF.md`**.
 - **Boundary (D-0051, amended by D-0080):** the orchestrator never drives another *external/frontier* AI session
-  (human-couriered only); a future deterministic LOCAL coordinator IS authorized to spawn fresh local contexts +
-  invoke local models (Priority 10). Whether in-session cloud subagents fall inside this boundary is an OPEN
-  Nicholas ruling (mandate 02 M2-E).
+  (human-couriered only); a deterministic LOCAL coordinator IS authorized to spawn local contexts (Priority 10).
+  In-session cloud subagents = an OPEN Nicholas ruling (mandate 02 M2-E).
 
 ## Adaptive Resource Governor (agent.local #21)
 
@@ -257,20 +259,19 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 | #40 context.compiler | **0.9.0 (i38): working_memory hydrated from #42 (conjunctive ns fail-closed; state_version in identity; flat byte-identical to 0.8.0); 42/42 owned + full regression (322/322 + i35 32/32 + router 35/35 + i34 38/38)** | `52a0381` | 08-05 |
 | #41 skill.card | 0.2.0: 81/81 python + 85/85 -Live | `54c2e79` | 08-03 |
 | #42 working.memory | 0.1.0: 30/30 + 30/30 live + 14/14 pwsh | `601a2db` | 08-05 |
-| #43 action.authz | **0.4.0 (i40): the 7 D-0109 exact closures; suite x2 exit 0 (fixtures 86/86, properties 26/26, mutations 67/67, fuzzer 400/0, oracle 149 rows not_run=0-GATING, role 30/30 all-15-sinks, completion 17/17, views 48/48, authentic 0.7.0+0.9.0 chain 7/7); double-run bundle byte-identical; empty-dir self-verify VERIFIED (f0964b53). Taxonomy `incomplete` by M2-D; ratification = the round-3 review (pack 5807bc3e)** | `663145b` | 08-06 |
+| #43 action.authz | **0.4.0 (i40): the 7 D-0109 exact closures; suite x2 exit 0 (fixtures 86/86, properties 26/26, mutations 67/67, fuzzer 400/0, oracle 149 rows not_run=0-GATING, role 30/30 all-15-sinks, completion 17/17, views 48/48, authentic 0.7.0+0.9.0 chain 7/7); double-run bundle byte-identical; empty-dir self-verify VERIFIED (f0964b53). Taxonomy `incomplete` by M2-D. Round-3 review: FAIL (D-0113; 334/334 behavioral confirmed; F3/F6 closed; 5 findings -> i41)** | `663145b` | 08-06 |
 | widgets/05 / 06 / 07 | 100/100+STA 8/8 · 85/85+98/98 -Live (STA 9/9) · 81 cloud + 93 -Live (STA 8/8) — live-GUI confirms OPEN | `3ad71d3`/`c912854`/`855c242` | 08-05..06 |
-| D-0077 cross-module folds | i34 smoke 38/38 · i36 Tier-1 acceptance 11/11 (`tier1_accepted=TRUE`) · i37 13/13 · i38 18/18 · i39 18/18 · **i40: the fold harness vs the 0.4.0 monitor exit 0 (real routed+wm packet [sv=2, 3-record trace] + adversarial -> deterministic A06 DENY) + i34 re-run 38/38** | `runtime/smoke-i34.py`/`fold-i39.py` | 08-06 |
+| D-0077 cross-module folds | i34 smoke 38/38 · i36 Tier-1 acceptance 11/11 (`tier1_accepted=TRUE`) · i37 13/13 · i38 18/18 · i39 18/18 · **i40: the fold harness vs the 0.4.0 monitor exit 0 (real routed+wm packet + adversarial -> A06 DENY) + i34 re-run 38/38** | `runtime/smoke-i34.py`/`fold-i39.py` | 08-06 |
 
 ## Known failures / gotchas
 
 **Highest-value section. Do not compress a live gotcha away.**
 
-- **A WORKER'S DEVICE BRIDGE CAN DIE BEFORE ITS FIRST PUSH (i40).** The worker "finishes" in its own session
-  but NOTHING lands on the box — and mount mtimes MISLEAD when checking (`ls` over the mount shows UTC; git log
-  shows local PDT; i39-era writes looked like i40 activity). Verify what actually LANDED via NATIVE git
-  status/log through the executor, never the mount view. Recovery: Nicholas resumes the worker session to
-  re-push its files (its container persists); the orchestrator then runs the gates + devship + files the
-  `-Action report` on its behalf, recording the recovery in the commit + report (the i40 Lane-A pattern).
+- **A WORKER'S DEVICE BRIDGE CAN DIE BEFORE ITS FIRST PUSH (i40).** The worker "finishes" in its session but
+  NOTHING lands — and mount mtimes MISLEAD (`ls` shows UTC, git log local PDT; i39-era writes looked like i40
+  activity). Verify what LANDED via NATIVE git through the executor, never the mount view. Recovery: Nicholas
+  resumes the worker session to re-push (its container persists); the orchestrator runs gates + devship +
+  files the report on its behalf, recording the recovery (the i40 Lane-A pattern, D-0112).
 - **Cowork `device_stage_files` can return a STALE snapshot.** Re-staging a path already staged this session
   returns the **old** (pre-edit) bytes even though `mtimeMs` looks current — it nearly reverted committed doc
   edits. **Workaround:** copy the file to a **fresh, never-staged path** and stage that, or verify by a marker
@@ -368,24 +369,26 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ## Next expected action
 
-**i40 CLOSED (D-0112).** Both lanes shipped + verified (#43 0.4.0 `663145b` via orchestrator-recovered ship;
-#37 0.8.1 `6c7269d`, PB-5 closed); fold green (harness exit 0 + i34 38/38); doc-health regenerated; slots
-archived + reset. **The ROUND-3 ratification pack `5807bc3e` (48 files, the complete runnable tree) is with
-Nicholas to courier.**
+**i40 CLOSED (D-0112) + the round-3 answer FOLDED (D-0113).** Both lanes shipped + verified (#43 0.4.0
+`663145b` via orchestrator-recovered ship; #37 0.8.1 `6c7269d`, PB-5 closed); fold green; the round-3 review
+returned **FAIL — s7 NOT ratified** (F3/F6 accepted closed; 5 suite-build findings; no walk-back needed —
+M2-D meant nothing was claimed).
 
-**NEXT = i41:** unit-0 = read-return + fold the pack answer — **contract s7 flips to `p0_1_gate_status=pass`
-ONLY on its PASS** (M2-D; on FAIL the findings are the next #43 unit). Unit-1 = scope the M2-A doc-gate build
-(HARD deadline i42). Candidates: #40 beam-width follow-on (Bloom saturation); Widget 05/06/07 live-GUI
-confirms (Nicholas); M2-C docs-into-memory design note (after M2-A). Menu: **`FANOUT_ORCHESTRATOR_HANDOFF.md`**
-section 4. Mandate-02 countdown: i41 -> 41/6.
+**NEXT = i41:** unit-0 = **the 5-findings #43 lane (0.4.0 -> 0.5.0)** — spec: the round-3 digest + handoff s4
+(write-once binding; consumed TargetHandle + kill the copy+tag mutant; lossless 0.9.0 adapter; top-level
+GrantView enforcement); then the orchestrator re-packs from the suite's manifest + empty-dir pre-verifies
+before couriering. Unit-1 = scope the M2-A doc-gate build (HARD deadline i42). Candidates: #40 beam-width;
+Widget 05/06/07 live-GUI confirms (Nicholas); M2-C design note (after M2-A). Menu:
+**`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4. Mandate-02 countdown: i41 -> 41/6.
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades;
 `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-06 — i40 CLOSED (D-0112): the sunset session (mandate 01 -> report, verdict NO ->
-mandate 02 LICENSED, D-0110) + PB-3 slim + wave `fo-40-d42fd1ac` shipped/verified (#43 0.4.0 exact closures via
-orchestrator-recovered ship, M2-D held; #37 0.8.1, PB-5 closed) + fold green + the round-3 ratification pack
-`5807bc3e` couriered (s7 flips only on its PASS). NEXT = i41.
+**Last updated:** 2026-08-06 — i40 CLOSED (D-0112) + the round-3 fold (D-0113): the sunset session (mandate 01
+-> report, verdict NO -> mandate 02 LICENSED, D-0110) + PB-3 slim + wave `fo-40-d42fd1ac` shipped/verified
+(#43 0.4.0 exact closures via orchestrator-recovered ship, M2-D held; #37 0.8.1, PB-5 closed) + fold green +
+the round-3 review returned **FAIL** (pack 5807bc3e; F3/F6 closed; 5 findings -> i41; s7 walked-back; no
+over-claim this round). NEXT = i41.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*
