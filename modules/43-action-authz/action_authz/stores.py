@@ -13,10 +13,25 @@ The generic resolver/effect INTERFACES are frozen here; the Windows-specific per
 (reparse points, alternate data streams, junctions, device names) is STAGED to i38 (Blocker 4).
 """
 
+import json
 import unicodedata
 
 from . import canon
 from .schemas import UINT63_MAX
+
+
+class WriteOnceError(Exception):
+    """i41 round-3 Finding 1: a write-once store slot was written a second time. `.reason` is a stable
+    machine code. Raised (fail-closed) so an immutable issue-time binding can never be overwritten."""
+
+    def __init__(self, reason, detail=""):
+        super().__init__("%s: %s" % (reason, detail) if detail else reason)
+        self.reason = reason
+
+
+def _gv_uint63(x):
+    """True iff x is a JSON integer in [0, UINT63_MAX] (bool is NOT an int here)."""
+    return isinstance(x, int) and not isinstance(x, bool) and 0 <= x <= UINT63_MAX
 
 
 # ===========================================================================
@@ -369,6 +384,74 @@ def build_manifest(tool_id, operations, sandbox_class="local_bounded",
 # present) at A23. Malformed / duplicate / ambiguous limit entries FAIL CLOSED. The frozen intersection
 # rule (MIN) is UNCHANGED -- this is its implementation, not an amendment.
 
+# i41 round-3 Finding 4: the OPERATIONAL pinned CLOSED top-level GrantView. The i40 build validated only
+# the closed shape of entries INSIDE limits[]; the top-level grant object was never validated against the
+# pinned closed field set, so an arbitrary unknown top-level field on an otherwise-valid grant still
+# MATCHED (the reviewer's probe). This validator enforces the exact closed top-level field set + the exact
+# operational type of every top-level value BEFORE matching; a grant that diverges is UNTRUSTABLE and
+# EXCLUDED (fail closed). The accepted quantitative limit-intersection algebra and the limits[]-ENTRY
+# closed-shape checks (_limits_wellformed) are UNCHANGED -- here `limits` need only be a list; its entries
+# stay owned by _limits_wellformed. The behavior is pinned AS DATA by GRANT_VIEW_TOPLEVEL (+ digest) and
+# exercised by the unknown/missing/mistyped/malformed golden vectors in tests/views_golden.py.
+GRANT_VIEW_TOPLEVEL = {
+    "schema": "lifeorch.grant_view_operational/0.1-test",
+    "closed_fields": {
+        "grant_id": "id_str", "tool_id": "str", "operation": "str_or_star", "action_namespace": "str",
+        "allowed_target_ids": "array<str>", "effect_classes": "array<str>",
+        "max_quantity": "map<str,uint63>", "externality_max": "enum{local,private_external,public_external}",
+        "risk_ceiling": "uint{0..4}", "validity_from": "uint63", "validity_to": "uint63",
+        "approval_mode": "enum{none,policy_dependent,always}", "scopes": "array<str>",
+        "limits": "array (entry shape owned by _limits_wellformed, UNCHANGED)",
+    },
+    "rule": "EXACTLY the closed field set (no unknown, none missing) with the exact operational type for "
+            "every value BEFORE matching; any divergence => the grant is untrustable => excluded (fail closed)",
+    "unchanged": "limit-intersection algebra (MIN) + limits[]-entry closed-shape checks",
+}
+_GV_EXTERNALITY = ("local", "private_external", "public_external")
+_GV_APPROVAL_MODE = ("none", "policy_dependent", "always")
+
+
+def _grant_view_wellformed(g):
+    """True iff `g` matches the pinned CLOSED top-level GrantView shape (Finding 4): EXACTLY the closed
+    field set (unknown OR missing top-level field fails closed) with the exact operational type for every
+    top-level value. Never raises; a malformed grant returns False (excluded from matching). The limits[]
+    ENTRY shape is NOT re-validated here (owned, unchanged, by _limits_wellformed) -- `limits` need only
+    be a list."""
+    if not isinstance(g, dict):
+        return False
+    if set(g.keys()) != set(GRANT_VIEW_TOPLEVEL["closed_fields"].keys()):
+        return False  # unknown OR missing top-level field (the exact closed set)
+    if not (isinstance(g["grant_id"], str) and isinstance(g["tool_id"], str)
+            and isinstance(g["operation"], str) and isinstance(g["action_namespace"], str)):
+        return False
+    if not (isinstance(g["allowed_target_ids"], list)
+            and all(isinstance(x, str) for x in g["allowed_target_ids"])):
+        return False
+    if not (isinstance(g["effect_classes"], list)
+            and all(isinstance(x, str) for x in g["effect_classes"])):
+        return False
+    mq = g["max_quantity"]
+    if not isinstance(mq, dict):
+        return False
+    for k, v in mq.items():
+        if not isinstance(k, str) or not _gv_uint63(v):
+            return False
+    if g["externality_max"] not in _GV_EXTERNALITY:
+        return False
+    rc = g["risk_ceiling"]
+    if not (isinstance(rc, int) and not isinstance(rc, bool) and 0 <= rc <= 4):
+        return False
+    if not (_gv_uint63(g["validity_from"]) and _gv_uint63(g["validity_to"])):
+        return False
+    if g["approval_mode"] not in _GV_APPROVAL_MODE:
+        return False
+    if not (isinstance(g["scopes"], list) and all(isinstance(x, str) for x in g["scopes"])):
+        return False
+    if not isinstance(g["limits"], list):
+        return False
+    return True
+
+
 def _limits_wellformed(g):
     """A grant's `limits[]` must be a well-formed array of {limit_id:str, max_value:uint63}. Anything
     malformed (non-list, non-dict entry, missing/negative/oversized/non-int max_value, non-string
@@ -451,6 +534,11 @@ class GrantSnapshot(object):
         covered_scopes = set()
         eff_limits = {}                     # effect_class -> running MIN over matched grants
         for g in self.grants:
+            # Finding 4: enforce the pinned CLOSED top-level GrantView BEFORE matching. A grant whose
+            # top-level shape diverges (unknown/missing/mistyped/malformed field) is untrustable and
+            # EXCLUDED (fail closed). M-GV01 is the decidable defect that skips this validation.
+            if "M-GV01" not in mutations and not _grant_view_wellformed(g):
+                continue
             if g["grant_id"] in self.revoked:
                 continue
             if g["tool_id"] != ca["tool_id"]:
@@ -684,9 +772,10 @@ class PermitStore(object):
         # executor re-reads ALL of after the atomic claim (grant/policy/approval/manifest+artifact/
         # health/packet+status currentness/store-epoch). Keyed by permit_id; recorded at A34.
         self._issue_snapshot = {}  # permit_id -> {grant_epoch, policy_epoch, installed_digest, ...}
-        # amendment 4 (red-team Finding 4): the IMMUTABLE completion binding stamped at issue time
-        # from the authentic packet_id -> {completion_contract_id, contract_version, contract_digest}.
-        self._completion_binding = {}  # permit_id -> binding | None
+        # amendment 4 (red-team Finding 4) + i41 round-3 Finding 1: the IMMUTABLE, WRITE-ONCE completion
+        # binding stamped at issue time from the authentic packet_id, stored as private canonical bytes
+        # (record_completion_binding rejects any second write; completion_binding returns a defensive copy).
+        self._completion_binding = {}  # permit_id -> immutable canonical bytes (write-once)
 
     def idempotency_conflict(self, idempotency_key):
         pid = self._idem.get(idempotency_key)
@@ -724,10 +813,24 @@ class PermitStore(object):
         return self._issue_snapshot.get(permit_id)
 
     def record_completion_binding(self, permit_id, binding):
-        self._completion_binding[permit_id] = (dict(binding) if binding is not None else None)
+        """i41 round-3 Finding 1: WRITE-ONCE per permit_id. The issue-time completion binding is
+        IMMUTABLE -- ANY second recording attempt (even one carrying an identical value) is REJECTED
+        (raises WriteOnceError, fail-closed), so the NO_COMPLETION_CONTRACT sentinel or the original
+        binding can NEVER be overwritten after issuance. The stored representation is PRIVATE CANONICAL
+        BYTES (immutable); completion_binding() returns a defensive copy. This makes the review's
+        reproduced 5-step overwrite sequence fail at step 3 (the re-record)."""
+        if permit_id in self._completion_binding:
+            raise WriteOnceError("completion_binding_write_once", permit_id)
+        self._completion_binding[permit_id] = canon.canonical_bytes(binding)  # immutable bytes
 
     def completion_binding(self, permit_id):
-        return self._completion_binding.get(permit_id)
+        """Return a DEFENSIVE COPY (a fresh object parsed from the immutable stored canonical bytes) of
+        the issue-time binding, or None if no binding was ever stamped (the evaluator fails closed on an
+        absent binding). Mutating the returned object NEVER affects the store."""
+        raw = self._completion_binding.get(permit_id)
+        if raw is None:
+            return None
+        return json.loads(raw.decode("utf-8"))
 
     def get(self, permit_id):
         return self._permits.get(permit_id)

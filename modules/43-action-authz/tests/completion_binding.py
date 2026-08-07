@@ -14,7 +14,7 @@ leaf to the EXACT permit -- so every substitution resolves to `indeterminate` (i
 from action_authz import canon
 from action_authz.monitor import authorize
 from action_authz.boundary import evaluate_completion_via_permit, MIN_COMPLETION_SCOPE
-from action_authz.stores import NO_COMPLETION_CONTRACT
+from action_authz.stores import NO_COMPLETION_CONTRACT, WriteOnceError
 from . import harness
 
 pb = harness.prop_bytes
@@ -222,4 +222,64 @@ def run(check):
     killed = sec_me36(frozenset()) is True and sec_me36(frozenset(["M-E36"])) is False
     ck("M-E36 decidable: by-task substitution completes falsely ONLY under the defect (killed)", killed)
 
-    return {"min_scope": {k: sorted(v) for k, v in MIN_COMPLETION_SCOPE.items()}}
+    # ===================================================================================
+    # i41 round-3 Finding 1 -- record_completion_binding is WRITE-ONCE + immutable + defensive-copy getter.
+    # The i40 store overwrote the binding on any second record and returned the stored mutable dict; the
+    # review reproduced a 5-step sequence that re-recorded the binding at step 3. These vectors prove the
+    # store now REJECTS every second write (even an identical value) and returns a defensive copy.
+    # ===================================================================================
+    def _raises_write_once(fn):
+        try:
+            fn()
+            return False
+        except WriteOnceError:
+            return True
+
+    # (F1.R3a) SENTINEL-OVERWRITE after later contract insertion: a permit issued with NO contract stamps
+    # the immutable sentinel; inserting a contract afterward and RE-RECORDING the binding is REJECTED, so
+    # the binding stays the sentinel -> still indeterminate even with a matching status (review step 3 fails).
+    st, prop = harness.build_baseline()
+    p1 = _permit_for(st, prop)                                    # sentinel stamped at A34
+    st.completion_by_packet[_PID] = _contract(scope="permit")    # contract inserted AFTER issuance
+    _reja = _raises_write_once(lambda: st.permits.record_completion_binding(
+        p1["permit_id"], {"completion_contract_id": "cc_1", "contract_version": 1,
+                          "contract_digest": st.completion_by_packet[_PID]["contract_digest"]}))
+    _still_sentinel = (st.permits.completion_binding(p1["permit_id"]) or {}).get("sentinel") == NO_COMPLETION_CONTRACT
+    st.status.put(_status_for(p1))
+    r3a = _reja and _still_sentinel and evaluate_completion_via_permit(st, p1) == "indeterminate"
+    ck("F1.R3a sentinel-overwrite after contract insertion REJECTED (write-once); stays indeterminate", r3a)
+
+    # (F1.R3b) VALID-BINDING OVERWRITE with a replacement contract identity is REJECTED; binding unchanged.
+    st, prop = harness.build_baseline()
+    st.completion_by_packet[_PID] = _contract(scope="permit")    # contract A (cc_1) present at issue
+    p1 = _permit_for(st, prop)                                    # binding stamped from A
+    _before = st.permits.completion_binding(p1["permit_id"])
+    _rejb = _raises_write_once(lambda: st.permits.record_completion_binding(
+        p1["permit_id"], {"completion_contract_id": "cc_2", "contract_version": 9, "contract_digest": "0" * 64}))
+    _after = st.permits.completion_binding(p1["permit_id"])
+    r3b = _rejb and _before == _after and _after.get("completion_contract_id") == "cc_1"
+    ck("F1.R3b valid-binding overwrite with a replacement contract REJECTED; stored binding unchanged", r3b)
+
+    # (F1.R3c) GETTER-MUTATION: mutating the returned object does NOT affect the store (defensive copy).
+    st, prop = harness.build_baseline()
+    st.completion_by_packet[_PID] = _contract(scope="permit")
+    p1 = _permit_for(st, prop)
+    _got = st.permits.completion_binding(p1["permit_id"])
+    _got["completion_contract_id"] = "TAMPERED"
+    _got["injected"] = True
+    _reread = st.permits.completion_binding(p1["permit_id"])
+    r3c = _reread.get("completion_contract_id") == "cc_1" and "injected" not in _reread
+    ck("F1.R3c getter returns a DEFENSIVE COPY; mutating it leaves the store unchanged", r3c)
+
+    # (F1.R3d) DUPLICATE recording of an IDENTICAL value is REJECTED (write-once, not merely a value diff).
+    st, prop = harness.build_baseline()
+    st.completion_by_packet[_PID] = _contract(scope="permit")
+    p1 = _permit_for(st, prop)
+    _same = st.permits.completion_binding(p1["permit_id"])
+    r3d = _raises_write_once(lambda: st.permits.record_completion_binding(p1["permit_id"], _same))
+    ck("F1.R3d duplicate recording of an IDENTICAL binding value is REJECTED (write-once)", r3d)
+
+    round3_f1 = bool(r3a and r3b and r3c and r3d)
+
+    return {"min_scope": {k: sorted(v) for k, v in MIN_COMPLETION_SCOPE.items()},
+            "round3_f1_write_once_binding": round3_f1}

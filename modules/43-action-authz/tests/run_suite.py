@@ -25,11 +25,12 @@ from action_authz import canon, VERSION  # noqa: E402
 from tests import (harness, fixtures_suite, properties, mutations, integration, fuzzer,  # noqa: E402
                    oracle_matrix, role_matrix, completion_binding, p01gate, views_golden, report)
 
-# The mandatory seeded mutations (s8.6 + amendment 6 M-R11): A01-A10, S01-S10, R01-R11, E01-E36 = 67.
+# The mandatory seeded mutations (s8.6 + amendment 6 M-R11 + i41 round-3 Finding 2 M-E37):
+# A01-A10, S01-S10, R01-R11, E01-E37 = 68.
 MANDATORY_MUTATIONS = (["M-A%02d" % i for i in range(1, 11)]
                        + ["M-S%02d" % i for i in range(1, 11)]
                        + ["M-R%02d" % i for i in range(1, 12)]
-                       + ["M-E%02d" % i for i in range(1, 37)])
+                       + ["M-E%02d" % i for i in range(1, 38)])
 FAMILIES_ALL = list(range(1, 11))
 
 ACTIVATION_STAGED = [
@@ -202,6 +203,18 @@ def main():
         "finding_7": bool(pack_complete),                         # complete runnable review tree
     }
 
+    # === i41 round-3 (D-0113) -- the 4 WORKER-SIDE exact closures from the round-3 ratification review.
+    # Machine-readable, alongside the D-0109 exact_closure_built flags (which ALL stay true; no regression).
+    # These CARRY the round-3 claim; the gate still stays `incomplete` (M2-D) -- the orchestrator's
+    # independent round-4 re-review PASS is the only ratification path.
+    handle_consumed_ok = _rows_ok(lambda oid: oid == "Boundary-D3:D4_handle_consumed")
+    round3_closure_built = {
+        "f1_write_once_binding": bool(completion_ok and completion1.get("round3_f1_write_once_binding")),
+        "f2_consumed_target_handle": bool("M-E37" in killed and handle_consumed_ok and oracle_complete),
+        "f4_toplevel_grantview": bool(views_ok and views1.get("round3_f4_toplevel_grantview")),
+        "f5_lossless_adapter": bool(integ1.get("v090_lossless_adapter")),
+    }
+
     # === M2-D / D-0110 (NON-NEGOTIABLE): the WORKER never claims pass. `p0_1_gate_status` stays =====
     # `incomplete` in EVERY emitted artifact -- the independent as-built RE-REVIEW's PASS (couriered by
     # the orchestrator at fold) is the ONLY path to ratification. An honest incomplete-with-evidence,
@@ -220,7 +233,7 @@ def main():
                  "15_exact_090_adapter"]
 
     print("=" * 82)
-    print("module #43 action.authz -- P0-1 deny-by-default reference monitor + injection SUITE (i40 EXACT CLOSURES)")
+    print("module #43 action.authz -- P0-1 deny-by-default reference monitor + injection SUITE (i41 ROUND-3 CLOSURES)")
     print("action_authz VERSION %s | DESIGN-ONLY (non_execution:true holds; nothing action-capable)" % VERSION)
     print("=" * 82)
     print("  RESULT TAXONOMY (amendment 1; M2-D / D-0110 -- the worker does NOT claim pass):")
@@ -233,6 +246,10 @@ def main():
         print("     %-11s exact_closure_built = %s" % (k, exact_closure_built[k]))
     if not pack_complete:
         print("     (review pack missing: %s)" % pack_missing)
+    print("  ROUND-3 CLOSURES BUILT (i41 / D-0113; the 4 worker-side round-3 exact closures):")
+    for k in ("f1_write_once_binding", "f2_consumed_target_handle", "f4_toplevel_grantview",
+              "f5_lossless_adapter"):
+        print("     %-26s round3_closure_built = %s" % (k, round3_closure_built[k]))
     print("-" * 82)
     for name in ("fixtures", "properties", "mutations", "fuzzer", "oracle", "role", "completion",
                  "views", "p01gate", "integration"):
@@ -277,16 +294,19 @@ def main():
         print("     - %s" % s)
     print("=" * 82)
 
+    all_round3 = all(round3_closure_built.values())
     consistent = (total_fail == 0 and identical and not missing and
                   integ1["real_denied"] == integ1["real_total"] and integ1["real_total"] >= 1 and
                   integ1["positive_permit"] and fuzz1["ok"] and oracle_complete and role_all and
-                  completion_ok and p01_ok and v090_ok and v090_exact and views_ok and pack_complete)
+                  completion_ok and p01_ok and v090_ok and v090_exact and views_ok and pack_complete and
+                  all_round3)
 
     # ---- independently-auditable evidence bundle (red-team Finding 7) ------------------------
     payload = {
         "taxonomy": {"build_status": build_status, "p0_1_gate_status": p0_1_gate_status,
                      "activation_status": activation_status},
         "exact_closure_built": exact_closure_built,
+        "round3_closure_built": round3_closure_built,
         "gate_status_rule": "M2-D/D-0110: worker emits incomplete-with-evidence; the independent "
                             "as-built re-review PASS (orchestrator, at fold) is the only ratification path",
         "criteria": crit,
@@ -309,10 +329,11 @@ def main():
     all_built = all(exact_closure_built.values())
     print("SUITE: %s | build_complete | p0_1_gate_status = %s | activation=prohibited"
           % ("consistent" if consistent else "INCONSISTENT", p0_1_gate_status))
-    print("EXACT CLOSURES: %d/7 built%s | activation prohibited | ratification awaits the independent "
-          "as-built re-review PASS (M2-D)" % (sum(exact_closure_built.values()),
-                                              "" if all_built else " (INCOMPLETE)"))
-    return 0 if (consistent and all_built) else 1
+    print("EXACT CLOSURES: %d/7 built (i39) + %d/4 round-3 built (i41)%s | activation prohibited | "
+          "ratification awaits the independent round-4 re-review PASS (M2-D)"
+          % (sum(exact_closure_built.values()), sum(round3_closure_built.values()),
+             "" if (all_built and all_round3) else " (INCOMPLETE)"))
+    return 0 if (consistent and all_built and all_round3) else 1
 
 
 if __name__ == "__main__":

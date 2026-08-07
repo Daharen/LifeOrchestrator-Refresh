@@ -1,6 +1,54 @@
 
 ---
 
+## i41 ROUND-3 CLOSURES (VERSION 0.5.0, worker P01-R3-CLOSURE-43-i41)
+
+The i40 build (0.4.0) emitted `p0_1_gate_status = incomplete` with `exact_closure_built` 7/7 (M2-D held --
+NOTHING over-claimed). The couriered ROUND-3 ratification review (`research/2026-08-06-i40-p01gate-round3-redteam.md`,
+pack `5807bc3e`, D-0113) returned **FAIL** with 5 findings: F3/F6 accepted CLOSED; F7 (complete pack
+transport) is ORCHESTRATOR-owned at fold; the 4 WORKER-SIDE findings are built here (0.4.0 -> 0.5.0), to the
+letter of each "Exact closure required" block. Run: `python -X utf8 -B tests/run_suite.py` then
+`python -X utf8 -B tests/selfverify.py`.
+
+**The gate-status rule (M2-D, D-0110 -- non-negotiable).** The worker does NOT claim pass. The taxonomy stays
+**build_status = build_complete | p0_1_gate_status = `incomplete` | activation_status = prohibited** in EVERY
+emitted artifact. The claim is carried by the NEW `round3_closure_built.{f1_write_once_binding,
+f2_consumed_target_handle, f4_toplevel_grantview, f5_lossless_adapter}` flags ALONGSIDE the (unchanged,
+still-true) i39 `exact_closure_built` finding_1..7; the orchestrator ratifies contract s7 ONLY when the
+independent round-4 re-review returns PASS. Suite **352/352** on TWO byte-identical runs; **68/68** mandatory
+mutations killed; **150** obligation rows (not_run=0); **30** role-sink kills; **7/7** i39 + **4/4** round-3
+closures built. No frozen contract field was reopened (none needed it).
+
+The 4 round-3 closures (round-3 review finding numbering):
+
+1. **F1 -- WRITE-ONCE immutable completion binding** (`stores.PermitStore`): `record_completion_binding` is
+   write-once per `permit_id`; ANY second attempt (even an identical value) raises `WriteOnceError` (fail
+   closed). Stored as private canonical bytes; `completion_binding()` returns a defensive copy. The review's
+   5-step overwrite sequence now fails at step 3. New vectors (`tests/completion_binding.py`):
+   sentinel-overwrite, valid-binding overwrite, getter-mutation, duplicate-identical.
+2. **F2 -- CONSUMED `TargetHandle`** (`action_authz/boundary.py`): the captured target is a DISTINCT one-shot
+   capability object required by the effect-applicator API (`apply_effects_through_handles`); the ledger is
+   generated from the handle's `consume()` result, never from `authorized_effect_set`; consumption is
+   observable (`ExecResult.consumed_handles`) and one-shot. The retired 0.4.0 blind-copy+tag behavior is the
+   MANDATORY killed mutant **M-E37** (kill matrix 68/68; oracle `Boundary-D3:D4_handle_consumed`).
+3. **F4 -- OPERATIONAL top-level GrantView enforcement** (`stores.GrantSnapshot.match`,
+   `_grant_view_wellformed`): the pinned CLOSED top-level field set + exact operational types are validated
+   BEFORE matching; unknown/missing/mistyped/malformed top-level fields fail closed (the reviewer's unknown
+   top-level probe now denies). The operational validator is pinned AS DATA (`GRANT_VIEW_TOPLEVEL`, digest
+   `cd136af2...`) with unknown/missing/mistyped/malformed vectors + the decidable `M-GV01` skip-defect
+   (`tests/views_golden.py`). The limit algebra + limits[]-entry checks are UNCHANGED.
+4. **F5 -- LOSSLESS context_packet/0.2 adapter** (`tests/adapter_090.py`): `adapt_packet_lossless` preserves
+   the COMPLETE packet as canonical bytes + a validated derived view; `identity_digest` over the whole packet
+   means changing ANY field is detected; round-trips byte-identically. The five carriers the reviewer proved
+   inert (compiler_version, selection_policy, retrieval_provenance, evidence.current_state_refs,
+   selection-stage content) now alter the preserved identity; per-field-mutation + round-trip run over BOTH
+   0.7.0 and 0.9.0 packets; the overlay alters ONLY `non_execution` (`tests/integration.py`).
+
+Still staged to ACTIVATION (unchanged): Blockers 3/4/6/7 + the activation portions of 5/9. `non_execution:true`
+holds throughout; A06 denies every authentic packet; nothing is action-capable.
+
+---
+
 ## i40 EXACT CLOSURES (VERSION 0.4.0, worker P01-EXACT-CLOSURE-43-i40)
 
 The i39 build (0.3.0) reported `p0_1_gate_status = pass`, but the couriered frontier AS-BUILT RE-REVIEW

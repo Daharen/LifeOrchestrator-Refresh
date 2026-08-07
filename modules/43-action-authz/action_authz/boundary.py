@@ -30,14 +30,18 @@ class MockCoordinator(object):
 
 
 class ExecResult(object):
-    __slots__ = ("accepted", "state_diff", "consumed_permit_id", "status", "reason")
+    __slots__ = ("accepted", "state_diff", "consumed_permit_id", "status", "reason", "consumed_handles")
 
-    def __init__(self, accepted, state_diff, consumed_permit_id=None, status=None, reason=None):
+    def __init__(self, accepted, state_diff, consumed_permit_id=None, status=None, reason=None,
+                 consumed_handles=None):
         self.accepted = accepted
         self.state_diff = state_diff        # list of effect atoms actually applied ([] == no state diff)
         self.consumed_permit_id = consumed_permit_id
         self.status = status
         self.reason = reason
+        # i41 round-3 Finding 2: the OBSERVABLE set of target indices whose captured TargetHandle was
+        # consumed to produce the ledger. A blind authorized_effect_set copy consumes none.
+        self.consumed_handles = sorted(consumed_handles) if consumed_handles else []
 
 
 def _reject(st, reason, mutations):
@@ -49,24 +53,88 @@ def _reject(st, reason, mutations):
     return ExecResult(False, [], reason=reason)
 
 
-def _apply_through_handles(effects, bound_targets):
-    """i40 Finding 2: apply each authorized effect THROUGH the captured target HANDLE the effect ledger
-    CONSUMES -- never by copying authorized_effect_set blind. The captured handle is the target's
-    unforgeable `resolution_proof_digest` bound at resolution. Returns the applied ledger, each atom
-    tagged with the consumed `applied_via_handle`, or None if any effect's target handle is missing /
-    malformed (the captured handle is not consumable => the effect cannot be applied => no effect)."""
+class TargetHandle(object):
+    """i41 round-3 Finding 2: a DISTINCT trusted capability object standing in for a captured OS target
+    handle. It wraps the target's stable canonical identity + the unforgeable `resolution_proof_digest`
+    captured at resolution, and is ONE-SHOT: `consume()` yields the applicator binding exactly once and
+    marks the handle observably consumed; any later consume fails closed (None). A digest STRING is NOT a
+    TargetHandle -- the effect-applicator API REQUIRES this object, so a blind copy of
+    authorized_effect_set tagged with a digest string cannot produce a valid ledger. Real Windows
+    handle/reparse behavior stays ACTIVATION-gating; this models the logical consumption."""
+
+    __slots__ = ("target_index", "canonical_target_id", "_proof_digest", "_consumed")
+
+    def __init__(self, target_index, canonical_target_id, proof_digest):
+        self.target_index = target_index
+        self.canonical_target_id = canonical_target_id
+        self._proof_digest = proof_digest
+        self._consumed = False
+
+    @property
+    def consumed(self):
+        """Observable one-shot consumption state (False until the handle is applied through)."""
+        return self._consumed
+
+    def consume(self):
+        """One-shot: return the capability binding (the consumed handle's canonical target + its
+        applied_via_handle proof) exactly once, marking the handle observably consumed; a second attempt
+        fails closed (None)."""
+        if self._consumed:
+            return None
+        self._consumed = True
+        return {"canonical_target_id": self.canonical_target_id,
+                "applied_via_handle": self._proof_digest}
+
+
+def capture_target_handles(bound_targets):
+    """Build the trusted ONE-SHOT TargetHandle set from the permit's bound resolved_target_set (keyed by
+    target_index). A target whose captured `resolution_proof_digest` is missing/malformed or whose
+    canonical id is absent yields NO handle for that index (the effect is unapplicable => fail closed)."""
     handles = {}
     for i, t in enumerate(bound_targets):
         h = t.get("resolution_proof_digest")
-        if isinstance(h, str) and len(h) == 64:
-            handles[i] = h
+        cid = t.get("canonical_target_id")
+        if isinstance(h, str) and len(h) == 64 and isinstance(cid, str):
+            handles[i] = TargetHandle(i, cid, h)
+    return handles
+
+
+def apply_effects_through_handles(effects, handles, mutations=frozenset()):
+    """i41 round-3 Finding 2: GENERATE the effect ledger by CONSUMING the captured TargetHandle for each
+    effect's target -- NEVER by copying authorized_effect_set and tagging it. Each atom's
+    `applied_via_handle` is supplied by the handle's one-shot `consume()` result (not read off the permit
+    effect), and the atom is bound to the consumed handle's canonical target. The handle for a given
+    target is consumed exactly once per execution (multiple effects on one target share that single
+    consumption). Returns the applied ledger, or None if any effect's handle is missing or already
+    consumed within this execution (fail closed => rejected_no_effect => no state diff).
+
+    MANDATORY killed mutant M-E37 reproduces the RETIRED 0.4.0 behavior: a BLIND copy of the permit
+    effect tagged with the captured digest WITHOUT consuming the handle -- leaving every handle
+    UNCONSUMED, which the suite/oracle detects (the effect ledger is no longer produced by consuming a
+    trusted capability)."""
     ledger = []
+    caps = {}  # target_index -> the cap yielded by the single consumption of that handle this execution
     for e in effects:
         ti = e.get("target_index", 0)
         h = handles.get(ti)
         if h is None:
             return None
-        ledger.append(dict(e, applied_via_handle=h))
+        if "M-E37" in mutations:
+            # seeded defect (retired 0.4.0 pattern): blind-copy the permit effect + tag with the captured
+            # digest string, WITHOUT consuming the handle. Handles stay UNCONSUMED -> detected as a kill.
+            ledger.append(dict(e, applied_via_handle=h._proof_digest))
+            continue
+        if ti not in caps:
+            cap = h.consume()          # ONE-SHOT consume of the captured handle
+            if cap is None:
+                return None            # handle already consumed this execution -> fail closed
+            caps[ti] = cap
+        cap = caps[ti]
+        if cap["canonical_target_id"] != h.canonical_target_id:
+            return None                # capability/target coherence failure -> fail closed
+        atom = dict(e)
+        atom["applied_via_handle"] = cap["applied_via_handle"]   # from the CONSUMED handle, not the effect
+        ledger.append(atom)
     return ledger
 
 
@@ -255,19 +323,23 @@ class MockExecutor(object):
                         st.permits.reject_no_effect(permit_id)
                         return _reject(st, "D7_over_limit", mutations)
 
-        # ---- Finding 2: the effect ledger CONSUMES the captured target handle (never a blind copy of
-        #      authorized_effect_set). A missing/malformed captured handle => rejected_no_effect. ----
-        applied = _apply_through_handles(actual, bound_targets)
+        # ---- Finding 2 (round-3): the effect ledger is GENERATED by CONSUMING the captured target
+        #      HANDLE (a distinct one-shot capability), never a blind copy of authorized_effect_set tagged
+        #      with a digest. A missing/malformed/already-consumed handle => rejected_no_effect. ----
+        handles = capture_target_handles(bound_targets)
+        applied = apply_effects_through_handles(actual, handles, mutations)
         if applied is None:
             st.permits.reject_no_effect(permit_id)
             return _reject(st, "D4_handle_unavailable", mutations)
+        consumed_handles = [i for i, h in handles.items() if h.consumed]
 
         # ---- consume (claimed -> consumed) atomically with effect_started. ----
         st.permits.consume(permit_id)
         status = {"predicate_kind": "executor_status", "result_code": "ok", "exit_code": 0,
                   "subject": {"canonical_action_digest": permit["canonical_action_digest"],
                               "task_id": permit["task_id"]}}
-        return ExecResult(True, applied, consumed_permit_id=permit_id, status=status)
+        return ExecResult(True, applied, consumed_permit_id=permit_id, status=status,
+                          consumed_handles=consumed_handles)
 
 
 # ---------------------------------------------------------------------------

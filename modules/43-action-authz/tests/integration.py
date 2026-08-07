@@ -238,6 +238,94 @@ def run(check):
     v090_exact_adapter = bool(v090_a07 and v090_carriers and inert_all
                               and pv_id.grant_snapshot_ref == gref_pkt)
 
+    # ===== i41 round-3 Finding 5: the LOSSLESS context_packet/0.2 seam ===========================
+    # The i40 adapter preserved only a subset, so two materially different authentic packets could
+    # collapse into the same trusted representation. adapter_090.adapt_packet_lossless preserves the
+    # COMPLETE packet (canonical bytes + an identity digest over the whole packet), so changing ANY field
+    # is detected; the packet round-trips byte-identically; the ONLY overlay is non_execution. We run BOTH
+    # generations -- authentic 0.7.0 (x4) AND 0.9.0 (benign routed + adversarial routed_adv + flat) --
+    # through THIS exact seam.
+    def _perturb(v):
+        if isinstance(v, bool):
+            return not v
+        if isinstance(v, str):
+            return v + "_MUT"
+        if isinstance(v, int):
+            return v + 1
+        if isinstance(v, list):
+            return list(v) + ["__MUT__"]
+        if isinstance(v, dict):
+            return dict(v, __mut__=1)
+        return "__MUT__"
+
+    def _mut_copy(pkt, path):
+        cp = json.loads(json.dumps(pkt))
+        node = cp
+        for k in path[:-1]:
+            node = node[k]
+        node[path[-1]] = _perturb(node[path[-1]])
+        return cp
+
+    all_authentic = [p for _n, p in reals] + [routed, routed_adv, flat]
+    lossless_ok = True
+    for pkt in all_authentic:
+        try:
+            pp = adapter_090.adapt_packet_lossless(pkt)
+        except adapter_090.LosslessError:
+            lossless_ok = False
+            continue
+        # round-trip byte-identity: the preserved representation re-derives the packet exactly.
+        if pp.complete != pkt or canon.canonical_bytes(pp.complete) != pp.canonical:
+            lossless_ok = False
+        if pp.view.packet_id != pkt["packet_id"] or pp.packet_id != pkt["packet_id"]:
+            lossless_ok = False
+    check.ok("lossless seam: every authentic 0.7.0+0.9.0 packet round-trips byte-identically (%d packets)"
+             % len(all_authentic), lossless_ok)
+
+    # PER-IDENTITY-FIELD MUTATION: changing ANY identity-covered field alters the preserved identity
+    # digest (or fails closed). The FIVE probes the reviewer proved inert in i40 are now DETECTED.
+    base_digest = adapter_090.adapt_packet_lossless(routed).identity_digest
+    per_field_ok = True
+    for f in adapter_090._IDENTITY_CORE:
+        mp = _mut_copy(routed, ["identity", f])
+        try:
+            if adapter_090.adapt_packet_lossless(mp).identity_digest == base_digest:
+                per_field_ok = False
+        except adapter_090.LosslessError:
+            pass  # fail-closed is an acceptable detection (per the exact-closure requirement)
+    named_probes = (["identity", "compiler_version"], ["identity", "selection_policy"],
+                    ["retrieval_provenance"], ["evidence", "current_state_refs"], ["selection", "stages"])
+    probes_detected = True
+    for path in named_probes:
+        mp = _mut_copy(routed, path)
+        try:
+            if adapter_090.adapt_packet_lossless(mp).identity_digest == base_digest:
+                probes_detected = False
+        except adapter_090.LosslessError:
+            pass
+    check.ok("lossless seam: mutating ANY identity-covered field alters the preserved identity digest",
+             per_field_ok)
+    check.ok("lossless seam: the 5 i40-inert probes (compiler_version/selection_policy/"
+             "retrieval_provenance/evidence.current_state_refs/selection.stages) are now DETECTED",
+             probes_detected)
+
+    # OVERLAY-ONLY: the test-only authority overlay changes ONLY non_execution (never the preserved packet
+    # bytes / identity digest); the derived view's non_execution flips.
+    pp_t = adapter_090.adapt_packet_lossless(routed, non_execution_overlay=True)
+    pp_f = adapter_090.adapt_packet_lossless(routed, non_execution_overlay=False)
+    overlay_only = (pp_t.identity_digest == pp_f.identity_digest and pp_t.canonical == pp_f.canonical
+                    and pp_t.view.non_execution is True and pp_f.view.non_execution is False)
+    check.ok("lossless seam: the overlay alters ONLY non_execution (identity digest + bytes unchanged)",
+             overlay_only)
+
+    # the 0.9.0 routed generation's extra identity carriers (routing_plan_digest/routing_policy) are present.
+    routed_carriers = adapter_090.require_routed(routed) and adapter_090.require_routed(routed_adv)
+    check.ok("lossless seam: 0.9.0 routed identity carriers (routing_plan_digest/routing_policy) preserved",
+             routed_carriers)
+
+    v090_lossless_adapter = bool(lossless_ok and per_field_ok and probes_detected and overlay_only
+                                 and routed_carriers)
+
     # ===== positive permit path via the TEST-ONLY mock packet + the same-code non_execution=true deny ==
     st, prop = harness.build_baseline()
     dp = authorize(harness.prop_bytes(prop), st, mutations=frozenset())
@@ -254,4 +342,5 @@ def run(check):
             "v090_test_only_permit": bool(d_ok.outcome == "PERMIT"),
             "v090_adversarial_identical": bool(d_adv.cad == d_ok.cad and d_adv.outcome == d_ok.outcome),
             "v090_exact_adapter": v090_exact_adapter, "v090_a07_exercised": bool(v090_a07),
+            "v090_lossless_adapter": v090_lossless_adapter,
             "results": results}

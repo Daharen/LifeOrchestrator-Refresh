@@ -291,8 +291,8 @@ grant epoch / grant currentness / MATCHED-grant revocation / policy epoch / poli
 revocation / approval EXPIRY / manifest disappearance / installed-artifact drift / health drift /
 permit-store epoch / packet currentness / packet non_execution / target identity drift). Every row:
 `accepted==false AND state_diff==[] AND permit_state==rejected_no_effect (TERMINAL) AND a 2nd attempt
-rejected`. The effect ledger CONSUMES the captured target handle (`_apply_through_handles`: each applied
-atom carries `applied_via_handle == resolution_proof_digest`), never a blind `authorized_effect_set` copy;
+rejected`. The effect ledger CONSUMES the captured target handle (round-3 upgrade below: a distinct
+one-shot `TargetHandle` via `apply_effects_through_handles`), never a blind `authorized_effect_set` copy;
 target mutation tested BOTH before and after claim.
 
 **Finding 3 -- role matrix over ALL 15 frozen sinks (`tests/role_matrix.py`, `monitor.py`).** Adds the two
@@ -331,6 +331,53 @@ rendered-bytes / order / delimiter deltas -- defense-in-depth; Boundary C stays 
 **Finding 7 -- complete runnable review tree + empty-dir self-verify (`tests/selfverify.py`,
 `run_suite.REVIEW_PACK_FILES`).** run_suite verifies pack completeness (every required file present).
 `selfverify.py` copies the COMPLETE tree into an EMPTY temp dir, runs the documented command there, and
-requires exit 0 + the full suite result + all 149 oracle rows + identical source/fixture digests + a
+requires exit 0 + the full suite result + all 150 oracle rows + identical source/fixture digests + a
 BYTE-IDENTICAL report MANIFEST (`bundle_digest`); the transcript is committed at
 `tests/report/self_verify.json` (deliberately NOT part of the byte-compared bundle).
+
+## i41 round-3 ratification closures (0.4.0 -> 0.5.0; research/2026-08-06-i40-p01gate-round3-redteam.md, D-0113)
+
+The round-3 ratification review returned **FAIL** with 5 findings (F3/F6 accepted closed). F7 (complete
+pack transport) is ORCHESTRATOR-owned at fold. These are the 4 WORKER-SIDE exact closures; each carries a
+machine-readable `round3_closure_built.{f1_write_once_binding, f2_consumed_target_handle,
+f4_toplevel_grantview, f5_lossless_adapter}` flag alongside the (unchanged, still-true) i39
+`exact_closure_built` finding_1..7. **M2-D holds: `p0_1_gate_status` stays `incomplete`; the round-4
+re-review PASS is the only ratification path.** No frozen contract field was reopened (none needed it).
+
+**Round-3 F1 -- WRITE-ONCE immutable completion binding (`stores.PermitStore`).** `record_completion_binding`
+is WRITE-ONCE per `permit_id`: ANY second recording attempt -- even one carrying an identical value --
+raises `WriteOnceError` (fail closed), so the `NO_COMPLETION_CONTRACT` sentinel or the original binding can
+NEVER be overwritten after issuance. The stored representation is PRIVATE CANONICAL BYTES (immutable);
+`completion_binding()` returns a DEFENSIVE COPY (mutating it cannot reach the store). The review's reproduced
+5-step overwrite sequence now fails at step 3 (the re-record). Vectors (`tests/completion_binding.py`):
+sentinel-overwrite after contract insertion, valid-binding overwrite with a replacement contract,
+getter-mutation, duplicate-identical recording.
+
+**Round-3 F2 -- CONSUMED `TargetHandle` on the effect path (`action_authz/boundary.py`).** The captured
+target is a DISTINCT trusted one-shot capability object (`TargetHandle`), not a digest string. The
+effect-applicator API (`apply_effects_through_handles`) REQUIRES that object; the effect ledger is GENERATED
+from the handle's `consume()` result (which supplies `applied_via_handle`), never from
+`permit["authorized_effect_set"]`. Handles are one-shot / observably consumed (`ExecResult.consumed_handles`;
+a second consume fails closed). The retired 0.4.0 blind-copy+digest-tag behavior is the MANDATORY killed
+mutant **M-E37** (mutation kill matrix now **68/68**; oracle `Boundary-D3:D4_handle_consumed` asserts
+observable consumption).
+
+**Round-3 F4 -- OPERATIONAL top-level GrantView enforcement (`stores.GrantSnapshot.match`,
+`_grant_view_wellformed`).** The pinned CLOSED top-level GrantView field set + exact operational types are
+validated BEFORE matching; a grant with an unknown / missing / mistyped / malformed top-level field is
+untrustable and EXCLUDED (fail closed) -- closing the hole where the descriptive `GRANT_VIEW` pin and the
+operational matcher diverged (the reviewer's arbitrary unknown top-level key now denies). The operational
+validator is pinned AS DATA (`stores.GRANT_VIEW_TOPLEVEL`, digest `cd136af2...`), its closed field set ==
+the descriptive `GRANT_VIEW` pin, and it is exercised by unknown/missing/mistyped/malformed golden vectors
+(`tests/views_golden.py`) + the decidable `M-GV01` skip-defect. The limit-intersection algebra + the
+limits[]-ENTRY checks (`_limits_wellformed`) are UNCHANGED.
+
+**Round-3 F5 -- LOSSLESS context_packet/0.2 adapter (`tests/adapter_090.py`).** `adapt_packet_lossless`
+preserves the COMPLETE packet as canonical bytes plus a validated derived view: `identity_digest` is the
+SHA-256 over the whole packet's canonical bytes, so changing ANY field is detected; the packet round-trips
+byte-identically. All identity-covered CORE fields (+ top-level regions) are validated (fail closed). The
+five carriers the reviewer proved inert in i40 (`identity.compiler_version`, `identity.selection_policy`,
+`retrieval_provenance`, `evidence.current_state_refs`, selection-stage content) now alter the preserved
+identity; per-identity-field mutation + round-trip properties run over BOTH authentic 0.7.0 (x4) and 0.9.0
+(benign + adversarial + flat) packets (`tests/integration.py`). The overlay alters ONLY `non_execution`
+(the preserved bytes / identity digest are unchanged).

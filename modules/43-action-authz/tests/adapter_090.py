@@ -22,7 +22,121 @@ DESIGN-ONLY; nothing here is action-capable. Trusted stores whose ids/digests AG
 stand in for the ACTIVATION-gating production grant/policy/manifest storage.
 """
 
+import json
+
 from action_authz import canon, stores as S
+
+
+# ===========================================================================================
+# i41 round-3 Finding 5: the LOSSLESS context_packet/0.2 seam.
+#
+# The i40 adapter preserved only a SELECTED subset, so two materially different authentic packets could
+# collapse into the same trusted representation (the reviewer proved changes to identity.compiler_version,
+# identity.selection_policy, retrieval_provenance, evidence.current_state_refs, and selection-stage content
+# each produced IDENTICAL adapter output). This seam instead preserves the COMPLETE packet as canonical
+# bytes PLUS a validated derived view: `identity_digest` is the SHA-256 over the complete packet's
+# canonical bytes, so changing ANY packet field (identity-covered or otherwise) changes it; the packet
+# round-trips byte-identically. The ONLY test-only authority overlay is `non_execution` -- it changes the
+# DERIVED view only, never the preserved packet bytes / identity digest.
+#
+# The identity-covered CORE below is present in BOTH the 0.7.0 and 0.9.0 authentic generations and is
+# VALIDATED on every packet (missing any => fail closed). 0.9.0-only carriers (routing_plan_digest /
+# routing_policy) are additionally asserted by require_routed() where present. Preservation is by whole-
+# packet canonical bytes, so NOTHING is lost regardless of generation.
+
+_IDENTITY_CORE = (
+    "task_id", "compiler_version", "corpus_version", "control_plane_grant_snapshot_ref",
+    "selection_policy", "classifier_policy", "query_class", "temporal_intent", "namespace_closure",
+    "working_state_version", "retrieval_plan_digest", "consumer_profile", "selected_record_version_ids",
+    "budget", "omission_manifest_digest", "allowed_namespaces",
+)
+# the top-level regions the packet-identity coherence covers (control plane / working memory / evidence /
+# retrieval provenance / routing+selection trace / disposition / omission + transport accounting); present
+# in both generations. Missing any => fail closed.
+_TOPLEVEL_CORE = (
+    "schema", "packet_id", "non_execution", "identity", "task_input", "control_plane", "working_memory",
+    "evidence", "retrieval_provenance", "evaluation_hooks", "selection", "disposition",
+    "omission_manifest", "transport_accounting", "consumer_profile",
+)
+# 0.9.0-only identity carriers (routed generation) -- asserted preserved where the packet is a routed 0.9.0.
+_IDENTITY_ROUTED = ("routing_plan_digest", "routing_policy")
+
+
+class LosslessError(Exception):
+    """The lossless context_packet/0.2 seam rejected a packet (fail closed). `.reason` is a stable code."""
+
+    def __init__(self, reason, detail=""):
+        super().__init__("%s: %s" % (reason, detail) if detail else reason)
+        self.reason = reason
+
+
+class PreservedPacket(object):
+    """The COMPLETE authentic packet preserved as canonical bytes + a validated derived view (Finding 5).
+
+    * `canonical` -- canonical bytes of the COMPLETE packet (round-trips byte-identically).
+    * `identity_digest` -- SHA-256 over `canonical`; changing ANY packet field changes it.
+    * `complete` -- a fresh deep copy re-parsed from `canonical` (round-trip proof; == the input packet).
+    * `view` -- the trusted PacketView the monitor consumes (the ONLY overlay is non_execution).
+    * `meta` -- the full A08/A31 packet_meta with the complete carriers preserved as DATA.
+    """
+
+    __slots__ = ("packet_id", "canonical", "identity_digest", "complete", "view", "meta")
+
+    def __init__(self, packet_id, canonical, identity_digest, complete, view, meta):
+        self.packet_id = packet_id
+        self.canonical = canonical
+        self.identity_digest = identity_digest
+        self.complete = complete
+        self.view = view
+        self.meta = meta
+
+
+def _validate_lossless(pkt):
+    """Validate the identity-covered CORE + top-level regions + internal coherence (Finding 5). Fail
+    closed (LosslessError) on any missing/mistyped field so a malformed packet is never silently accepted."""
+    if not isinstance(pkt, dict) or pkt.get("schema") != "lifeorch.context_packet/0.2":
+        raise LosslessError("not_context_packet")
+    for f in _TOPLEVEL_CORE:
+        if f not in pkt:
+            raise LosslessError("toplevel_missing", f)
+    if not isinstance(pkt.get("packet_id"), str):
+        raise LosslessError("packet_id_type")
+    if not isinstance(pkt.get("non_execution"), bool):
+        raise LosslessError("non_execution_type")
+    ident = pkt.get("identity")
+    if not isinstance(ident, dict):
+        raise LosslessError("identity_type")
+    for f in _IDENTITY_CORE:
+        if f not in ident:
+            raise LosslessError("identity_field_missing", f)
+    if not isinstance(pkt.get("task_input"), dict):
+        raise LosslessError("task_input_type")
+    # coherence: the derived-view identity fields the monitor consumes must be self-consistent.
+    if not isinstance(ident.get("task_id"), str):
+        raise LosslessError("task_id_type")
+    ti = pkt["task_input"]
+    if "allowed_namespaces" in ti and not isinstance(ti["allowed_namespaces"], list):
+        raise LosslessError("allowed_namespaces_type")
+
+
+def adapt_packet_lossless(pkt, non_execution_overlay=None):
+    """EXACT, LOSSLESS context_packet/0.2 -> PreservedPacket. Validates all identity-covered core fields +
+    coherence (fail closed), preserves the COMPLETE packet as canonical bytes + identity digest, and
+    derives the trusted view (whose ONLY overlay is non_execution). Round-trips byte-identically."""
+    _validate_lossless(pkt)
+    canonical = canon.canonical_bytes(pkt)              # COMPLETE packet (integer-only; no floats)
+    identity_digest = canon.sha256_hex(canonical)       # changing ANY field changes this
+    complete = json.loads(canonical.decode("utf-8"))    # round-trip deep copy (== pkt)
+    view = adapt_packet_view(pkt, non_execution_overlay=non_execution_overlay)
+    meta = full_meta(pkt)
+    return PreservedPacket(pkt["packet_id"], canonical, identity_digest, complete, view, meta)
+
+
+def require_routed(pkt):
+    """Assert the 0.9.0 routed generation's extra identity carriers are present (validated + preserved
+    where the packet is a routed 0.9.0). Returns True iff all are present."""
+    ident = pkt.get("identity", {}) or {}
+    return all(f in ident for f in _IDENTITY_ROUTED)
 
 
 def adapt_packet_view(pkt, non_execution_overlay=None):

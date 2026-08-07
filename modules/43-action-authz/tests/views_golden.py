@@ -81,6 +81,9 @@ GRANT_MATCH_ALGORITHM = {
     "frozen_intersection_rule": "MIN (UNCHANGED from the freeze; this is its implementation)",
 }
 GRANT_MATCH_ALGORITHM_DIGEST = "ff5f66bdf9fd3f14a233637fad0e34543a8a95120857a3383fb4eb809dfdeac8"
+# i41 round-3 Finding 4 -- the OPERATIONAL top-level GrantView validator (stores.GRANT_VIEW_TOPLEVEL)
+# pinned by canonical digest: the validator BEHAVIOR is encoded as data, not only the descriptive spec.
+GRANT_VIEW_TOPLEVEL_DIGEST = "cd136af292fbd1206bcb578ef4904bc2f3c2d7d52e9576185b0cb26cc6b105e4"
 NOW = 1_700_000_000_000
 
 
@@ -209,6 +212,63 @@ def run(check):
        canon.digest_of(GRANT_MATCH_ALGORITHM) == GRANT_MATCH_ALGORITHM_DIGEST,
        "got=%s" % canon.digest_of(GRANT_MATCH_ALGORITHM))
 
+    # (1c) i41 round-3 Finding 4 -- OPERATIONAL top-level GrantView enforcement. The i40 matcher validated
+    # only the closed shape of entries INSIDE limits[]; the top-level grant object was never validated, so
+    # an arbitrary unknown top-level field on an otherwise-valid grant still MATCHED (the reviewer's probe).
+    # The pinned CLOSED top-level field set + exact operational types are now enforced BEFORE matching.
+    def _match_mut(grants, ca, muts, scopes=("fs.write",)):
+        gs = S.GrantSnapshot("gsref", grants=[dict(g) for g in grants])
+        _m, ok, _l = gs.match(ca, NOW, {"required_permission_scopes": list(scopes)}, mutations=muts)
+        return ok
+
+    # PIN the operational validator: its closed field set == the descriptive GRANT_VIEW pin, AND the
+    # validator DATA is pinned by canonical digest (behavior encoded as data + vectors, not only a descriptor).
+    _op_covers = set(S.GRANT_VIEW_TOPLEVEL["closed_fields"].keys()) == set(GRANT_VIEW["fields"].keys())
+    _op_pinned = canon.digest_of(S.GRANT_VIEW_TOPLEVEL) == GRANT_VIEW_TOPLEVEL_DIGEST
+    ck("F4.R3 operational GrantView closed-field set == the descriptive GRANT_VIEW pin", _op_covers)
+    ck("F4.R3 operational GrantView validator pinned by canonical digest", _op_pinned,
+       "got=%s" % canon.digest_of(S.GRANT_VIEW_TOPLEVEL))
+
+    # the reviewer's exact probe: an arbitrary unknown top-level field on an otherwise-valid grant.
+    g_unknown_top = _grant()
+    g_unknown_top["surprise_unknown_top_level"] = "accepted"
+    r4_unknown = _match([g_unknown_top], _ca()) is False
+    ck("F4.R3 unknown top-level grant field -> fail closed -> deny (the reviewer's probe)", r4_unknown)
+
+    # DECIDABLE: the SAME probe MATCHES under M-GV01 (validation skipped) and DENIES on the reference.
+    r4_decidable = (_match_mut([g_unknown_top], _ca(), frozenset(["M-GV01"])) is True
+                    and _match_mut([g_unknown_top], _ca(), frozenset()) is False)
+    ck("F4.R3 top-level validation is load-bearing: unknown-field probe matches ONLY under M-GV01", r4_decidable)
+
+    # missing required top-level field.
+    g_missing = _grant()
+    del g_missing["scopes"]
+    r4_missing = _match([g_missing], _ca()) is False
+    ck("F4.R3 missing required top-level grant field -> fail closed -> deny", r4_missing)
+
+    # mistyped top-level fields (wrong JSON type).
+    r4_mistyped = (_match([_grant({"risk_ceiling": "2"})], _ca()) is False
+                   and _match([_grant({"validity_from": "0"})], _ca()) is False
+                   and _match([_grant({"max_quantity": [1, 2]})], _ca()) is False
+                   and _match([_grant({"allowed_target_ids": "not-a-list"})], _ca()) is False)
+    ck("F4.R3 mistyped top-level fields (risk_ceiling/validity_from/max_quantity/allowed_target_ids) -> deny",
+       r4_mistyped)
+
+    # malformed top-level values (right type, out of domain).
+    r4_malformed = (_match([_grant({"risk_ceiling": 9})], _ca()) is False
+                    and _match([_grant({"externality_max": "cosmic"})], _ca()) is False
+                    and _match([_grant({"approval_mode": "whenever"})], _ca()) is False
+                    and _match([_grant({"max_quantity": {"fs.write": -1}})], _ca()) is False)
+    ck("F4.R3 malformed top-level values (risk_ceiling/externality_max/approval_mode/max_quantity) -> deny",
+       r4_malformed)
+
+    # a fully well-formed grant still MATCHES (the validator does NOT over-reject).
+    r4_wellformed = _match([_grant()], _ca()) is True
+    ck("F4.R3 a fully well-formed top-level grant still matches (no over-rejection)", r4_wellformed)
+
+    round3_f4 = bool(_op_covers and _op_pinned and r4_unknown and r4_decidable and r4_missing
+                     and r4_mistyped and r4_malformed and r4_wellformed)
+
     # (2) PolicyView golden: escalate for public/irreversible; never weaken. -----------------------
     pv = S.PolicyView("p")
     r_pub, a_pub, _s, dz = pv.apply({"derived_effect_set": [_e(ext="public_external")]}, 1, "none", "sb")
@@ -262,4 +322,4 @@ def run(check):
     ck("ValidatorView golden: MIN_COMPLETION_SCOPE == the pinned validator_view spec",
        {k: sorted(v) for k, v in MIN_COMPLETION_SCOPE.items()} == VALIDATOR_VIEW["fields"]["min_completion_scope"])
 
-    return {"view_digests": VIEW_DIGESTS}
+    return {"view_digests": VIEW_DIGESTS, "round3_f4_toplevel_grantview": round3_f4}
