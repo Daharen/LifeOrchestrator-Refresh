@@ -29,22 +29,21 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
   lever shipped i39 (D-0108; hpr ~2x; guaranteed+packet recall stay 1e6).
   Arc detail: the index; per-module state: `MODULE_ROADMAP.md`.
 - **P0-1 action-authorization gate (#43): `build_status=build_complete | p0_1_gate_status=INCOMPLETE |
-  activation_status=prohibited` — round-3 CLOSED, ROUND-4 PENDING.** The deny-by-default
+  activation_status=prohibited` — ROUND-4 returned FAIL: F1/F7 CLOSED, 3 seam findings (D-0116).** The deny-by-default
   monitor + injection suite is BUILT to the FROZEN `ACTION_AUTHORIZATION_CONTRACT.md` (D-0103); **#43 0.5.0
-  (`107c925`, i41) builds the 7 D-0109 + 4 round-3 (D-0113) exact closures to the letter** — F1 write-once
-  immutable completion binding; F2 consumed one-shot TargetHandle (blind-copy+tag = killed mutant M-E37); F5
-  lossless context_packet/0.2 adapter (the 5 i40-inert probes detected; round-trip equivalence); F4 operational
-  top-level GrantView closed-set enforcement. Verified x2 byte-identical: behavioral 352/352, mutations 68/68, fuzzer 400/0,
-  oracle 150 not_run=0-GATING, role 30/30, completion 17/17, views 48/48, empty-dir self-verify TRUE
-  (bundle `ab831c85`). A06 denies every authentic
+  (`107c925`, i41) builds the 7 D-0109 + 4 round-3 (D-0113) exact closures to the letter** — the F1/F2/F5/F4 exact-closure blocks built (write-once binding;
+  consumed TargetHandle + M-E37; lossless adapter; top-level GrantView). Verified x2 byte-identical (352/352; mutations 68/68;
+  oracle 150 not_run=0; empty-dir self-verify TRUE; bundle `ab831c85`). A06 denies every authentic
   packet; `non_execution:true` holds. Over-claimed twice (D-0107/D-0109), never since (M2-D): the
-  module EMITS `incomplete` + `exact_closure_built` 7/7 + `round3_closure_built` 4/4. **The ROUND-4 pack
-  `678163b1` is COURIERED** — GENERATED from run_suite's own required-file manifest and THE PACK ITSELF
-  extracted+run from an EMPTY DIR pre-courier (the D-0113 F7 rule, first firing). s7 stays walked-back until
-  its PASS ratifies, naming the pack id.
+  module EMITS `incomplete` + `exact_closure_built` 7/7 + `round3_closure_built` 4/4. **ROUND-4 (pack `678163b1`) FOLDED (D-0116): FAIL — F1 + F7
+  CLOSED** (the manifest-derived pack ran CLEAN for the reviewer — the D-0113 F7 rule PROVEN); **3 SUITE-BUILD
+  findings -> the #43 0.6.0 unit**: F5 `build_trusted` must consume `adapt_packet_lossless` (real-seam
+  losslessness); F4 grant validation BEFORE the A11 read (the KeyError path dies); F2 ledger atoms FROM the
+  handle-bound applicator result (+ the consume-but-discard successor mutant). Digest:
+  `research/2026-08-07-i41-p01gate-round4-redteam.md`. s7 stays walked-back.
 - **i41 CLOSED (D-0114/15, plan `fo-41-35be4fdc`):** D-0114 model tiering (Sonnet 5 High default lanes; Fable
   = the orchestrator seat; fanout RETAINED) + M2-A SCOPED (-> the i42 solo build wave) + #43 **0.5.0**
-  (`107c925`, worker-shipped clean; the 4 round-3 closures); fold green; the round-4 pack couriered.
+  (`107c925`, worker-shipped clean; the 4 round-3 closures); fold green; post-close the round-4 answer FOLDED: FAIL, F1/F7 closed, 3 findings (D-0116).
 - **FROZEN / deferred (D-0080):** durable-supervisor / warm-pool hardening (D-0079 GATE-NO stands; classic
   detached-warm is the trusted default); generator upgrades; `video.interpret` + live composition; deep
   real-time perception (arch 27-49); broad training.
@@ -368,24 +367,24 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ## Next expected action
 
-**i41 CLOSED (D-0115): #43 0.5.0 shipped + independently verified (M2-D held); the ROUND-4 ratification pack
-`678163b1` is COURIERED** (manifest-derived; empty-dir pre-verified; Nicholas pastes the answer between the two
-markers in the `.answer.md` return file).
+**i41 CLOSED + the round-4 answer FOLDED (D-0115/D-0116): FAIL — F1/F7 closed, 3 seam findings remain; s7 stays
+`incomplete`.**
 
-**NEXT = i42:** unit-0 = **the M2-A doc-gate BUILD** (HARD deadline the i42 close; SINGLE-WORKER core-infra
-wave; governing spec `research/2026-08-07-i41-m2a-doc-gate-scope.md`; recommended model Sonnet 5 High,
-elevate on first failure — D-0114). Unit-1 (as it returns) = **fold the round-4 answer**: read-return
-`-ExpectPackId 678163b1` -> digest to research/ -> PASS ratifies contract s7 NAMING the pack id (M2-D); FAIL ->
-findings = the next #43 lane. Candidates: #40 beam-width; Widget 05/06/07 live-GUI confirms (Nicholas); M2-C
-(after M2-A); the 220a806 stray-commit untrack (Nicholas ruling). Menu: **`FANOUT_ORCHESTRATOR_HANDOFF.md`**
-section 4. Mandate-02 countdown: i42 -> 42/5.
+**NEXT = i42** (orchestrator session on **Opus 4.8 Extra** — the D-0116 seat rule): unit-0 = **the M2-A doc-gate
+BUILD** (HARD deadline the i42 close; spec `research/2026-08-07-i41-m2a-doc-gate-scope.md`; Sonnet 5 High,
+elevate on first failure). Unit-1 = **#43 0.5.0 -> 0.6.0: the 3 round-4 exact closures** (digest = SPEC; Opus
+4.8 Extra — 5th ratification round). The gate build touches ops/ + .git hooks only (NOT executor code) — the
+i42 orchestrator rules at its s1 check whether the s8 solo-core-infra clamp applies (2-lane wave) or 0.6.0
+waits for i43. Then round-5: re-pack with the pack-paths/pack-verify tooling, numbers FROM report.json.
+Candidates: #40 beam-width; Widget 05/06/07 confirms (Nicholas); M2-C (after M2-A); the 220a806 untrack ruling.
+Menu: **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4. Mandate-02 countdown: i42 -> 42/5.
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades;
 `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-07 — i41 CLOSED (D-0114/D-0115): model tiering adopted (s12/D-0114) + M2-A scoped
-(build = i42 solo wave) + #43 0.5.0 round-3 closures shipped + independently verified (M2-D held, gate stays
-`incomplete`) + the round-4 pack `678163b1` couriered (manifest-derived, empty-dir pre-verified). NEXT = i42.
+**Last updated:** 2026-08-07 — i41 CLOSED (D-0114/15) + the round-4 fold (D-0116): #43 0.5.0 shipped +
+independently verified; the manifest-derived pack rule PROVEN (F7 closed, F1 closed); round-4 FAIL — 3 seam
+findings -> the 0.6.0 unit; orchestrator seat -> Opus 4.8 Extra (D-0114 amended). NEXT = i42.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

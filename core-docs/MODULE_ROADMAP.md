@@ -323,8 +323,8 @@ deny-by-default action-authorization reference monitor (A01-A36 + Boundary A-D +
 suite, built to the FROZEN `ACTION_AUTHORIZATION_CONTRACT.md`. DESIGN-ONLY: `non_execution:true` holds; A06
 denies every authentic packet; `activation_status=prohibited`. **Taxonomy: `build_complete /
 p0_1_gate_status=incomplete` — 0.5.0 (i41, `107c925`) builds the 7 D-0109 + 4 round-3 (D-0113) exact closures;
-per mandate-02 M2-D, s7 ratifies ONLY on the round-4 review PASS (pack `678163b1` couriered, manifest-derived +
-empty-dir pre-verified).**
+per mandate-02 M2-D, s7 ratifies ONLY on a ratification-review PASS; round-4 (pack `678163b1`) returned FAIL --
+F1/F7 CLOSED (the manifest-derived pack rule proven), 3 seam findings -> the 0.6.0 unit (D-0116).**
 **Follow-ons (activation-gating, staged):** real Windows permit-store IPC/ACL/CAS + crash recovery; per-tool
 reparse/ADS/junction profiles; production store formats; freshness relaxation; the real
 `non_execution=false` transition; timing-channel hardening; rollback.

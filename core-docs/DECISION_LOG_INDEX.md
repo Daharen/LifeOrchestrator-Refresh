@@ -138,5 +138,6 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0111 | 2026-08-06 | locked | i40 wave open (2-lane CPU): #43 the 7 exact closures (no pass claim -- M2-D) + #37 PB-5 reconcile |
 | D-0112 | 2026-08-06 | locked | i40 close: #43 0.4.0 exact closures (orchestrator-recovered ship; gate stays incomplete) + #37 0.8.1 (PB-5 closed); round-3 pack couriered |
 | D-0113 | 2026-08-06 | locked | i40 round-3 review FAIL -- s7 not ratified; 5 suite-build findings -> the i41 #43 unit; no walk-back (M2-D) |
-| D-0114 | 2026-08-07 | provisional | i41 worker model tiering: Sonnet 5 High default lanes + elevation triggers (#43 stays Opus); Fable = orchestrator seat/inline; fanout retained |
+| D-0114 | 2026-08-07 | provisional | i41 worker model tiering: Sonnet 5 High default lanes + elevation triggers (#43 stays Opus); Fable = orchestrator seat/inline; fanout retained [seat clause amended by D-0116] |
 | D-0115 | 2026-08-07 | locked | i41 close: #43 0.5.0 round-3 closures shipped + independently verified (M2-D held); round-4 pack couriered (manifest-derived, empty-dir pre-verified); next = i42 M2-A build |
+| D-0116 | 2026-08-07 | locked | i41 round-4 review FAIL -- s7 not ratified; F1/F7 closed (the manifest-pack rule proven); 3 seam findings -> the #43 0.6.0 unit; orchestrator seat -> Opus 4.8 Extra [amends the D-0114 seat clause] |
