@@ -318,12 +318,13 @@ U3'): immutable versioned snapshots + CAS on parent_state_version (stale fails c
 head + fork/close/archive/promote + task_id+namespace isolation; search rejects `record_kind=working`.
 **Follow-ons:** #21 consumer wiring; promote-to-durable flows; retention policy.
 
-**43 `action.authz`** — **In progress 0.3.0 -> 0.4.0** (i37→i40; D-0103/104/106/107/108/109/111). The P0-1
+**43 `action.authz`** — **In progress 0.4.0 -> 0.5.0 SHIPPED** (i37→i41; D-0103/104/106/107/109/111/113/115). The P0-1
 deny-by-default action-authorization reference monitor (A01-A36 + Boundary A-D + U-properties) + injection
 suite, built to the FROZEN `ACTION_AUTHORIZATION_CONTRACT.md`. DESIGN-ONLY: `non_execution:true` holds; A06
 denies every authentic packet; `activation_status=prohibited`. **Taxonomy: `build_complete /
-p0_1_gate_status=incomplete` — the pass was over-claimed twice (D-0107, D-0109); i40 Lane A builds the 7
-exact closures; per mandate-02 M2-D, s7 re-ratification requires the independent as-built review PASS.**
+p0_1_gate_status=incomplete` — 0.5.0 (i41, `107c925`) builds the 7 D-0109 + 4 round-3 (D-0113) exact closures;
+per mandate-02 M2-D, s7 ratifies ONLY on the round-4 review PASS (pack `678163b1` couriered, manifest-derived +
+empty-dir pre-verified).**
 **Follow-ons (activation-gating, staged):** real Windows permit-store IPC/ACL/CAS + crash recovery; per-tool
 reparse/ADS/junction profiles; production store formats; freshness relaxation; the real
 `non_execution=false` transition; timing-channel hardening; rollback.

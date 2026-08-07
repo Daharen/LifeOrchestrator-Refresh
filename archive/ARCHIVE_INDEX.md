@@ -104,3 +104,5 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 - `handoffs/2026-08-06-FANOUT_ORCHESTRATOR_HANDOFF-i40-close.md` | the pre-i40-close live handoff (47,286 B, 197% of budget; i39-era TL;DR/menus) | DOC_PROTOCOL s5 snapshot before the i40 close rewrite (slimmed under the 24 KB budget) | 2026-08-06 | D-0112
 - `fanout-agents/i40-FANOUT_AGENT_002.md` | the used i40 Lane B brief (M37-RECONCILE-i40; #37 0.8.1, PB-5) | DOC_PROTOCOL s6 used-brief archive at the i40 close | 2026-08-06 | D-0112
 - `fanout-agents/i40-FANOUT_AGENT_003.md` | the used i40 Lane A brief (P01-EXACT-CLOSURE-43-i40; #43 0.4.0 exact closures) | DOC_PROTOCOL s6 used-brief archive at the i40 close | 2026-08-06 | D-0112
+- `handoffs/2026-08-07-FANOUT_ORCHESTRATOR_HANDOFF-i41-close.md` | the pre-i41-close live handoff (23,931 B; i40-close TL;DR + the new s12 model tiering) | DOC_PROTOCOL s5 snapshot before the i41 close rewrite | 2026-08-07 | D-0115
+- `fanout-agents/i41-FANOUT_AGENT_003.md` | the used i41 Lane A brief (P01-R3-CLOSURE-43-i41; #43 0.5.0 round-3 closures; report-back filled) | DOC_PROTOCOL s6 used-brief archive at the i41 close | 2026-08-07 | D-0115
