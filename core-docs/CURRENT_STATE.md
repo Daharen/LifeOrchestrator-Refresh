@@ -29,7 +29,7 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
   lever shipped i39 (D-0108; hpr ~2x; guaranteed+packet recall stay 1e6).
   Arc detail: the index; per-module state: `MODULE_ROADMAP.md`.
 - **P0-1 action-authorization gate (#43): `build_status=build_complete | p0_1_gate_status=PASS | activation_status=prohibited`.** #43 0.6.0 (`10d0d1e`, i42) is a RATIFIED DESIGN pass -- the ROUND-5 independent review returned PASS -> s7 `p0_1_gate_status=pass` (D-0118, M2-D, pack `6bb613ea`; the 5-round arc 7->7->5->3->0 closed; F5/F4/F2 seam detail in D-0116/18). Verified x2 byte-identical (364/364; bundle `3b5d62f4`); A06 denies every authentic packet; `non_execution:true` holds. **Activation stays PROHIBITED** -- a design pass, NOT an activation grant.
-- **i45 CLOSED (D-0122, plan `fo-45-b17a531e`; single CODING lane):** SHIPPED NEW **widgets/08 Live-Run Audit Pathway (LRAP)** -- the audit program's phenomenological TOP surface (P9; `a88e177` + fix pass `6028b9c`), a read-only replay of a #40 compile as ONE chronological plain-language INTENT/INPUT/OUTPUT/RECONCILE narrative. Independently re-verified 87/0/0 -Live (five-fixture machine classify 0 FP/FN); leveled Nicholas accept (buttons + improvement/foundation PASS; whole-system + complete inclusion NOT YET). Prior close i44 = D-0121 (AUDIT_PIPELINE promotion).
+- **i45 CLOSED (D-0122, plan `fo-45-b17a531e`; single CODING lane):** SHIPPED NEW **widgets/08 Live-Run Audit Pathway (LRAP)** -- the audit program's phenomenological TOP surface (P9; `a88e177` + fix pass `6028b9c`), a read-only replay of a #40 compile as ONE chronological plain-language INTENT/INPUT/OUTPUT/RECONCILE narrative. Independently re-verified 87/0/0 -Live (five-fixture machine classify 0 FP/FN); leveled Nicholas accept (buttons + improvement/foundation PASS; whole-system + complete inclusion NOT YET).
 - **FROZEN / deferred (D-0080):** durable-supervisor / warm-pool hardening (D-0079 GATE-NO stands; classic
   detached-warm is the trusted default); generator upgrades; `video.interpret` + live composition; deep
   real-time perception (arch 27-49); broad training.
@@ -136,7 +136,7 @@ registry facts: `TOOL_MODEL_REGISTRY.md`. Roster (all MVP-complete unless noted)
 - **Widgets (native + `launch.bat`, D-0038):** 01 Local Agent Console · 02 Module Launcher · 03 Verification
   Console (durable verdicts, D-0065) · 04 Fan-out Wave Dashboard (live-GUI confirm DONE) · 05 Provenance Map
   (audit tier A1) · 06 Compile Trace Console (audit A1) · 07 Audit Timeline+Tournament (audit A2) · 08 Live-Run Audit Pathway (LRAP, i45). Widgets
-  05/06/07 live-GUI confirms DONE (i43, D-0120; expert-forensic descend target); Widget 08 (LRAP v1) SHIPPED + verified 87/0/0 + leveled-accepted i45 (D-0122): increment PASS, whole-system + complete inclusion NOT YET.
+  05/06/07 live-GUI confirms DONE (i43, D-0120; expert-forensic descend target); Widget 08 (LRAP v1) SHIPPED + verified 87/0/0 + human-confirmed on its BUILT steps (D-0122/D-0123); whole widget NOT complete -- raw-prompt front step + live ride-along named.
 
 **Phase A complete** (0-25 + 00.1; #26 deferred); generator track complete; **Phase B Widgets 01-08 shipped;
 Phase C video spine front half built; memory subsystem #35-#43 built, Tier-1 accepted.**
@@ -341,9 +341,9 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 - **`-Profile max` 9B arg-gen returns non-JSON** (`arg_parse_failed`) — floor is the reliable path (D-0046).
 - **The executor file-lock crash root cause was never reproduced** — self-healed, not explained.
 - **Widget 03 `model.gateway` GPU live-GUI pass still open** (since D-0060).
-- **Audit surface -- LRAP v1 shipped, whole-system audit NOT YET (D-0122):** Widget 08 (LRAP v1) makes the
-  ASSEMBLY side (steps 1-6) of a replayed #40 compile legible + leveled-accepted i45; the OUTPUT side +
-  instruction<->output reconciliation + ride-along PAUSE + possession are the deferred OUT set = next increment (`core-docs/AUDIT_PIPELINE.md`).
+- **Audit surface -- LRAP v1 human-confirmed on BUILT steps, whole widget NOT complete (D-0122/D-0123):** Widget 08 makes the
+  ASSEMBLY side (steps 1-6) of a replayed #40 compile legible (Nicholas PASSES the built steps); NOT complete -- gaps:
+  raw-prompt FRONT step (step-1 INPUT P2->real, upstream) + live ride-along (audit-tag launch + per-step pause) + output-side reconciliation = next (`core-docs/AUDIT_PIPELINE.md`).
 - **Portability:** `$PwshPath` defaults across ~15 model-bound entrypoints; core-infra (00.1 + `ops/*.bat`);
   interpreter paths #15/#16; model-bound F: literals — each its own follow-on wave (D-0069).
 - **Generator upgrades (D-0068 leads):** image Z-Image-Turbo Q8 (needs stable-diffusion.cpp), music ACE-Step,
@@ -363,5 +363,5 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ---
 
-**Last updated:** 2026-08-08 -- i45 CLOSED (D-0122): NEW widgets/08 Live-Run Audit Pathway (LRAP) shipped + independently verified 87/0/0 + leveled Nicholas accept (increment PASS; whole-system audit NOT YET). NEXT = i46.
+**Last updated:** 2026-08-08 -- i45 CLOSED (D-0122): NEW widgets/08 Live-Run Audit Pathway (LRAP) shipped + independently verified 87/0/0 + Nicholas accept: built steps PASS his walk, whole widget INCOMPLETE (raw-prompt front step + live ride-along named, D-0123). NEXT = i46.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*
