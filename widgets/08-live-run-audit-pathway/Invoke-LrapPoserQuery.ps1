@@ -52,11 +52,17 @@ try {
     [void]$msgs.Add([ordered]@{ role = 'system'; content = [string]$req.system })
     foreach ($t in @($req.messages)) { [void]$msgs.Add([ordered]@{ role = [string]$t.role; content = [string]$t.content }) }
 
+    # qwen3.5-9b is a REASONING model that does NOT honor /no_think here (it emits a <think> block regardless and
+    # puts it in reasoning_content, leaving `content` empty). Observed: at 1280 tokens it hits finish_reason=length
+    # still inside the think block -> empty content. So give it enough budget to FINISH thinking AND emit the answer
+    # (floor 4096; it usually stops well before). no_think stays on (harmless; helps if a future build honors it).
+    $maxTok = [Math]::Max([int]$req.max_tokens, 4096)
     $inputs = [ordered]@{
         model       = [string]$req.model
         messages    = $msgs.ToArray()
-        max_tokens  = [int]$req.max_tokens
+        max_tokens  = $maxTok
         temperature = 0
+        no_think    = $true
         warm        = $true       # reuse the resident 9B if the pool has it (else a cold ~60-90s load)
         gpu_lease   = 'auto'      # non-blocking acquire; proceed-with-warning if contended (never blocks other GPU work)
     }
@@ -101,7 +107,7 @@ try {
 
     $text = ([string]$text).Trim()
     if ([string]::IsNullOrEmpty($text)) {
-        _AnswerFail -Id $reqId -Message ('the local model returned no content (finish_reason=' + $finish + '). The 9B needs >= ~1024 output tokens; try again or open the raw trace.')
+        _AnswerFail -Id $reqId -Message ('the local model produced only reasoning and no answer (finish_reason=' + $finish + ', ' + $maxTok + ' tok). Try again, or open the raw trace for this step.')
     }
     else {
         [void](Write-LrapPoserAnswer -RuntimeDir $RuntimeDir -RequestId $reqId -Ok:$true -Text $text -FinishReason $finish)

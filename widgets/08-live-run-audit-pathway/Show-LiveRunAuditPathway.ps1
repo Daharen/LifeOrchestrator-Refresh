@@ -453,14 +453,27 @@ function Launch-LrapPoserWorker {
     $s = $script:LState
     $worker = Join-Path $s.widgetRoot 'Invoke-LrapPoserQuery.ps1'
     $pwsh = (Get-Process -Id $PID).Path; if ([string]::IsNullOrWhiteSpace($pwsh)) { $pwsh = 'pwsh' }
+    $a = @('-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', $worker, '-RequestPath', $RequestPath)
+    if ($s.poserGateway) { $a += @('-GatewayPath', $s.poserGateway) }
     if ($s.poserSync) {
-        $a = @('-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', $worker, '-RequestPath', $RequestPath, '-PwshPath', $pwsh)
-        if ($s.poserGateway) { $a += @('-GatewayPath', $s.poserGateway) }
+        $a += @('-PwshPath', $pwsh)
         & $pwsh @a | Out-Null
+        return
     }
-    else {
-        $a = @('-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', $worker, '-RequestPath', $RequestPath)
-        [void](Start-Process -FilePath $pwsh -ArgumentList $a -WindowStyle Hidden)
+    # DETACHED: native ProcessStartInfo (UseShellExecute=false, CreateNoWindow) -- reliable from the STA WinForms
+    # event thread, where Start-Process -WindowStyle Hidden did NOT actually launch the worker (the live-click bug).
+    # Fail-silent: a launch throw writes an ok=false answer so the pop-up surfaces it instead of hanging on "asking".
+    try {
+        $psi = [System.Diagnostics.ProcessStartInfo]::new()
+        $psi.FileName = $pwsh
+        foreach ($arg in $a) { [void]$psi.ArgumentList.Add([string]$arg) }
+        $psi.UseShellExecute = $false
+        $psi.CreateNoWindow = $true
+        $psi.WorkingDirectory = [string]$s.widgetRoot
+        [void][System.Diagnostics.Process]::Start($psi)
+    }
+    catch {
+        try { [void](Write-LrapPoserAnswer -RuntimeDir (Get-LrapPoserRuntimeDir) -RequestId $s.poser.pendingReqId -Ok:$false -ErrorText ('could not launch the query worker: ' + $_.Exception.Message)) } catch { }
     }
 }
 
@@ -475,9 +488,9 @@ function Invoke-LrapPoserAsk {
     $req = New-LrapPoserRequest -RuntimeDir $p.runtimeDir -Bundle $bundle -Question $Question -PriorTurns $p.modelTurns -RequestId $reqId
     $p.pendingReqId = $reqId; $p.pendingAnswer = $req.answer_path
     $p.pendingQ = if ([string]::IsNullOrWhiteSpace($Question)) { 'Explain this element: what is it, and what did the agent actually do here?' } else { $Question }
-    $p.deadlineTicks = [long]([System.DateTime]::UtcNow.AddSeconds(180).Ticks)
+    $p.deadlineTicks = [long]([System.DateTime]::UtcNow.AddSeconds(300).Ticks)
     $p.sendBtn.Enabled = $false
-    $p.statusLabel.Text = 'asking the local 9B... (a cold model can take ~1-2 min; the window stays usable)'
+    $p.statusLabel.Text = 'asking the local 9B... (it reasons first, so ~1-3 min; the window stays usable)'
     Launch-LrapPoserWorker -RequestPath $req.request_path
     $p.timer.Start()
 }
@@ -623,21 +636,33 @@ if ($SelfTest) {
         # round-trips through the REAL worker + a MOCK gateway (no GPU) to an advisory answer; writes stay under
         # runtime\poser\ (the widget itself makes no model call). This is the click-path the cloud gate can't reach.
         try {
-            $s.poserSync = $true
             $s.poserGateway = Join-Path $s.widgetRoot (Join-Path 'tests' 'mock-poser-gateway.ps1')
             $s.selectedStep = 4
+            # (a) SYNC path: pure build + ingest (deterministic)
+            $s.poserSync = $true
             Open-LrapPoserPopup -ElementId 'step:4'
             [System.Windows.Forms.Application]::DoEvents()
             $comboCount = [int]$s.poser.combo.Items.Count
-            On-LrapPoserTick   # the sync worker already wrote the answer; ingest it deterministically
+            On-LrapPoserTick
             [System.Windows.Forms.Application]::DoEvents()
-            $convoText = [string]$s.poser.convo.Text
-            $answered = ($convoText -match 'local 9B' -and $convoText -match 'explanation of the instrument')
+            $syncAnswered = (([string]$s.poser.convo.Text) -match 'explanation of the instrument')
+            # (b) DETACHED path: the REAL live-click spawn (ProcessStartInfo) with the mock gateway -- the path the
+            # live GUI uses. Poll (DoEvents + tick) until the detached worker writes the answer. This is what a
+            # sync-only self-test missed (the live-click "asking..." hang).
+            $s.poserSync = $false
+            $s.poser.convo.Clear(); $s.poser.modelTurns = @()
+            Invoke-LrapPoserAsk -Question ''
+            $detAnswered = $false
+            for ($i = 0; $i -lt 100; $i++) {
+                [System.Windows.Forms.Application]::DoEvents(); On-LrapPoserTick
+                if (([string]$s.poser.convo.Text) -match 'explanation of the instrument') { $detAnswered = $true; break }
+                Start-Sleep -Milliseconds 200
+            }
             $poserDir = Join-Path (Get-LrapPoserRuntimeDir) 'poser'
             $wroteUnderRuntime = (Test-Path -LiteralPath $poserDir)
             try { $s.poser.timer.Stop(); $s.poser.form.Hide() } catch { }
-            if (($comboCount -eq 31) -and $answered -and $wroteUnderRuntime) { Write-Output 'SELFTEST_POSER_OK' }
-            else { Write-Output ("SELFTEST_POSER_FAIL: combo=$comboCount answered=$answered underRt=$wroteUnderRuntime") }
+            if (($comboCount -eq 31) -and $syncAnswered -and $detAnswered -and $wroteUnderRuntime) { Write-Output 'SELFTEST_POSER_OK' }
+            else { Write-Output ("SELFTEST_POSER_FAIL: combo=$comboCount sync=$syncAnswered detached=$detAnswered underRt=$wroteUnderRuntime") }
         }
         catch { Write-Output ('SELFTEST_POSER_FAIL: ' + $_.Exception.Message) }
         finally { $s.poserSync = $false; $s.poserGateway = '' }

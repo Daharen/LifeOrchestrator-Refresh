@@ -285,7 +285,7 @@ Ok "poser: worker (mock gateway) writes ok=true answer with the completion" ($nu
 $reqE = New-LrapPoserRequest -RuntimeDir $rt -Bundle $bd -Question 'MOCK_EMPTY please' -RequestId 'testq2'
 & $PwshPath -NoProfile -File $worker -RequestPath $reqE.request_path -GatewayPath $mockGw -PwshPath $PwshPath | Out-Null
 $ansE = Read-LrapPoserAnswer -AnswerPath $reqE.answer_path
-Ok "poser: empty model output -> fail-silent ok=false answer (no hang)" ($null -ne $ansE -and -not $ansE.ok -and ([string]$ansE.error) -match 'no content')
+Ok "poser: empty model output -> fail-silent ok=false answer (no hang)" ($null -ne $ansE -and -not $ansE.ok -and ([string]$ansE.error) -match 'no answer')
 # fail-silent: gateway crash (no artifact) -> ok=false
 $reqF = New-LrapPoserRequest -RuntimeDir $rt -Bundle $bd -Question 'MOCK_FAIL now' -RequestId 'testq3'
 & $PwshPath -NoProfile -File $worker -RequestPath $reqF.request_path -GatewayPath $mockGw -PwshPath $PwshPath | Out-Null
