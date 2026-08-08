@@ -238,11 +238,14 @@ def authorize(proposal_bytes, st, side_effect_policy_ref=None, mutations=frozens
 
     # ---- A11 effective namespace = intersection(request, grants) via the ONE ns_permitted. ----
     request_ns = set(gs.request_namespaces) if gs.request_namespaces else set(pv.allowed_namespaces or [pv.namespace])
-    eff_ns = canon.effective_namespaces(request_ns, gs.grant_namespaces(), mutations)
+    # Finding 4 (round-4): grant_namespaces() routes through the shared VALIDATED-grant iterator, so this
+    # A11 read cannot dereference a raw grant field before validation (a malformed grant is excluded and
+    # fails closed to constant DENY at A11_empty_namespace, never an uncaught KeyError).
+    eff_ns = canon.effective_namespaces(request_ns, gs.grant_namespaces(mutations), mutations)
     if _rc_launder(pmeta, "control_plane", mutations):
         # R1-ROLE-1 defect: a diagnostic/working carrier widens the effective namespace (control-plane
         # authority). The reference NEVER lets a carrier touch the ns intersection.
-        eff_ns = set(eff_ns) | set(gs.grant_namespaces())
+        eff_ns = set(eff_ns) | set(gs.grant_namespaces(mutations))
     if not eff_ns:
         return _deny(st, "A11_empty_namespace", mutations)
 

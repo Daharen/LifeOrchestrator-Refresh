@@ -13,7 +13,7 @@ tool prose can never satisfy it. `indeterminate` is incomplete.
 
 from . import canon
 from .monitor import PermitRef, authorize
-from .stores import NO_COMPLETION_CONTRACT
+from .stores import NO_COMPLETION_CONTRACT, PROFILES
 
 
 class MockCoordinator(object):
@@ -53,14 +53,29 @@ def _reject(st, reason, mutations):
     return ExecResult(False, [], reason=reason)
 
 
+def handle_consumption_proof(canonical_target_id, capture_proof_digest):
+    """i41 round-4 Finding 2: the one-shot CONSUMPTION proof a TargetHandle yields when it is applied.
+
+    It is a FRESH derivation over the captured resolution proof + the handle's canonical target -- it is
+    NOT the raw captured `resolution_proof_digest`. Therefore an effect atom whose `applied_via_handle`
+    equals the raw captured digest (or whose `canonical_target_id` is absent) was NOT produced by
+    CONSUMING this handle through the applicator: it decisively distinguishes the genuine handle-bound
+    applicator result from a blind copy of `authorized_effect_set` that merely reads the digest off the
+    handle (the round-4 successor mutant M-E38)."""
+    return canon.sha256_hex(canon.canonical_bytes(
+        {"applied_capability_of": canonical_target_id, "capture_proof": capture_proof_digest}))
+
+
 class TargetHandle(object):
-    """i41 round-3 Finding 2: a DISTINCT trusted capability object standing in for a captured OS target
-    handle. It wraps the target's stable canonical identity + the unforgeable `resolution_proof_digest`
-    captured at resolution, and is ONE-SHOT: `consume()` yields the applicator binding exactly once and
-    marks the handle observably consumed; any later consume fails closed (None). A digest STRING is NOT a
-    TargetHandle -- the effect-applicator API REQUIRES this object, so a blind copy of
-    authorized_effect_set tagged with a digest string cannot produce a valid ledger. Real Windows
-    handle/reparse behavior stays ACTIVATION-gating; this models the logical consumption."""
+    """i41 round-3 Finding 2 + round-4 Finding 2: a DISTINCT trusted capability object standing in for a
+    captured OS target handle. It wraps the target's stable canonical identity + the unforgeable
+    `resolution_proof_digest` captured at resolution, and is ONE-SHOT: `consume()` yields the applicator
+    binding exactly once and marks the handle observably consumed; any later consume fails closed (None).
+    A digest STRING is NOT a TargetHandle -- the effect-applicator API REQUIRES this object, so a blind
+    copy of authorized_effect_set tagged with a digest string cannot produce a valid ledger. The binding
+    consume() returns carries a FRESH one-shot CONSUMPTION proof (handle_consumption_proof), NOT the raw
+    captured digest, so the applied ledger's provenance is un-forgeable by reading handle attributes.
+    Real Windows handle/reparse behavior stays ACTIVATION-gating; this models the logical consumption."""
 
     __slots__ = ("target_index", "canonical_target_id", "_proof_digest", "_consumed")
 
@@ -76,14 +91,17 @@ class TargetHandle(object):
         return self._consumed
 
     def consume(self):
-        """One-shot: return the capability binding (the consumed handle's canonical target + its
-        applied_via_handle proof) exactly once, marking the handle observably consumed; a second attempt
-        fails closed (None)."""
+        """One-shot: return the capability binding (the consumed handle's canonical target + its one-shot
+        `applied_via_handle` CONSUMPTION proof) exactly once, marking the handle observably consumed; a
+        second attempt fails closed (None). The `applied_via_handle` proof is a FRESH derivation
+        (handle_consumption_proof), never the raw captured digest -- so an atom NOT produced by consuming
+        this handle is detectable (round-4 Finding 2)."""
         if self._consumed:
             return None
         self._consumed = True
         return {"canonical_target_id": self.canonical_target_id,
-                "applied_via_handle": self._proof_digest}
+                "applied_via_handle": handle_consumption_proof(self.canonical_target_id, self._proof_digest),
+                "capture_proof": self._proof_digest}
 
 
 def capture_target_handles(bound_targets):
@@ -99,29 +117,36 @@ def capture_target_handles(bound_targets):
     return handles
 
 
-def apply_effects_through_handles(effects, handles, mutations=frozenset()):
-    """i41 round-3 Finding 2: GENERATE the effect ledger by CONSUMING the captured TargetHandle for each
-    effect's target -- NEVER by copying authorized_effect_set and tagging it. Each atom's
-    `applied_via_handle` is supplied by the handle's one-shot `consume()` result (not read off the permit
-    effect), and the atom is bound to the consumed handle's canonical target. The handle for a given
-    target is consumed exactly once per execution (multiple effects on one target share that single
-    consumption). Returns the applied ledger, or None if any effect's handle is missing or already
-    consumed within this execution (fail closed => rejected_no_effect => no state diff).
+def apply_effects_through_handles(operation_effects, handles, mutations=frozenset()):
+    """i41 round-3 Finding 2 + round-4 Finding 2: the mock effect applicator. It CONSUMES the captured
+    one-shot TargetHandle for each prospective effect's target TOGETHER WITH that effect's operation-
+    derived semantics (`operation_effects` -- the effects the installed manifest classifier derives from
+    the operation's canonical arguments; NEVER `permit['authorized_effect_set']`), and ITSELF RETURNS the
+    actual applied effect atom(s). Each returned atom's applied IDENTITY -- its `canonical_target_id` AND
+    its `applied_via_handle` one-shot CONSUMPTION proof -- comes from the handle's `consume()` RESULT (a
+    fresh derivation, not the raw captured digest), so the ledger genuinely ORIGINATES at the consumed
+    capability. `permit['authorized_effect_set']` is NOT a source template here; the executor separately
+    BOUNDS the returned atoms against it (D7). The handle for a given target is consumed exactly once per
+    execution (multiple effects on one target share that single consumption). Returns the applied ledger,
+    or None if any effect's handle is missing / already-consumed this execution (fail closed =>
+    rejected_no_effect => no state diff).
 
-    MANDATORY killed mutant M-E37 reproduces the RETIRED 0.4.0 behavior: a BLIND copy of the permit
-    effect tagged with the captured digest WITHOUT consuming the handle -- leaving every handle
-    UNCONSUMED, which the suite/oracle detects (the effect ledger is no longer produced by consuming a
-    trusted capability)."""
+    MANDATORY killed mutants:
+      * M-E37 -- the RETIRED 0.4.0 pattern: a BLIND copy of the supplied effect tagged with the RAW
+        captured digest WITHOUT consuming the handle (handles stay UNCONSUMED; no canonical_target_id).
+      * M-E38 (executor-side) -- consume the handle but DISCARD this applicator result and blind-copy
+        authorized_effect_set (raw captured digest, no consumption proof). Both are detected because the
+        genuine atom carries the consumed handle's canonical_target_id + the one-shot consumption proof."""
     ledger = []
     caps = {}  # target_index -> the cap yielded by the single consumption of that handle this execution
-    for e in effects:
+    for e in operation_effects:
         ti = e.get("target_index", 0)
         h = handles.get(ti)
         if h is None:
             return None
         if "M-E37" in mutations:
-            # seeded defect (retired 0.4.0 pattern): blind-copy the permit effect + tag with the captured
-            # digest string, WITHOUT consuming the handle. Handles stay UNCONSUMED -> detected as a kill.
+            # seeded defect (retired 0.4.0 pattern): blind-copy the supplied effect + tag with the RAW
+            # captured digest, WITHOUT consuming the handle. Handles stay UNCONSUMED -> detected as a kill.
             ledger.append(dict(e, applied_via_handle=h._proof_digest))
             continue
         if ti not in caps:
@@ -132,10 +157,61 @@ def apply_effects_through_handles(effects, handles, mutations=frozenset()):
         cap = caps[ti]
         if cap["canonical_target_id"] != h.canonical_target_id:
             return None                # capability/target coherence failure -> fail closed
+        # MANUFACTURE the applied atom: the operation-derived effect params PLUS the applied identity from
+        # the CONSUMED handle (canonical_target_id + the one-shot consumption proof) -- both from consume().
         atom = dict(e)
-        atom["applied_via_handle"] = cap["applied_via_handle"]   # from the CONSUMED handle, not the effect
+        atom["canonical_target_id"] = cap["canonical_target_id"]     # from the CONSUMED handle
+        atom["applied_via_handle"] = cap["applied_via_handle"]       # one-shot consumption proof (not raw)
         ledger.append(atom)
     return ledger
+
+
+def derive_operation_effects(st, permit, bound_targets, mutations=frozenset()):
+    """i41 round-4 Finding 2: PRODUCE the prospective effect atoms from the OPERATION'S canonical
+    semantics -- the installed manifest effect-classifier PROFILE (the SAME one the monitor ran at A19)
+    over the permit's canonical arguments + the (re-resolved/bound) targets -- NOT from
+    `permit['authorized_effect_set']`. This is what the applicator applies; the executor then uses
+    authorized_effect_set only as the authorization BOUND. Returns the produced effects, or None if the
+    operation's manifest/classifier is unavailable (fail closed)."""
+    man = st.manifests.lookup(permit["tool_id"], mutations)
+    if man is None:
+        return None
+    opman = None
+    for o in man["operations"]:
+        if o["operation"] == permit["operation"]:
+            opman = o
+            break
+    if opman is None:
+        return None
+    classifier = PROFILES.get(opman["effect_classifier"]["profile_id"])
+    if classifier is None:
+        return None
+    return classifier(permit["operation"], permit.get("canonical_arguments", {}), bound_targets, opman, mutations)
+
+
+def _effects_within_bound(applied, authorized, limits):
+    """i41 round-4 Finding 2: the authorization BOUND. Every applied atom must be AUTHORIZED by
+    permit['authorized_effect_set'] -- a matching {effect_class, target_index} authorized atom whose
+    quantity is >= the applied quantity -- AND within the permit's effective limits[]. Returns False
+    (fail closed) if any atom is unauthorized or over-limit. authorized_effect_set is the COMPARISON bound
+    here, NEVER the source template used to manufacture the ledger."""
+    lim_by_class = {}
+    for l in limits:
+        lid = l.get("limit_id")
+        if lid is not None:
+            mv = l.get("max_value", 1 << 62)
+            lim_by_class[lid] = min(mv, lim_by_class.get(lid, mv))
+    for e in applied:
+        cls = e.get("effect_class")
+        ti = e.get("target_index", 0)
+        q = e.get("quantity", 0)
+        covered = any(a.get("effect_class") == cls and a.get("target_index", 0) == ti
+                      and q <= a.get("quantity", -1) for a in authorized)
+        if not covered:
+            return False
+        if cls in lim_by_class and q > lim_by_class[cls]:
+            return False
+    return True
 
 
 class MockExecutor(object):
@@ -307,30 +383,46 @@ class MockExecutor(object):
             st.permits.reject_no_effect(permit_id)
             return _reject(st, "preflight_failed", mutations)
 
-        # ---- D7: forbid any undeclared / over-limit effect. ----
-        actual = list(permit["authorized_effect_set"])
+        # ---- Finding 2 (round-4): the PROSPECTIVE effect set is PRODUCED from the OPERATION's canonical
+        #      semantics (the installed manifest classifier over the permit's canonical arguments + bound
+        #      targets), NEVER copied from permit['authorized_effect_set']. authorized_effect_set is the
+        #      authorization BOUND/COMPARISON, applied below against the applicator's RETURNED result. ----
+        authorized = list(permit["authorized_effect_set"])
+        produced = derive_operation_effects(st, permit, bound_targets, mutations)
+        if produced is None:
+            st.permits.reject_no_effect(permit_id)
+            return _reject(st, "D4_no_operation_effects", mutations)
+        prospective = list(produced)
         if extra_effects is not None:
             if "M-E30" in mutations:
-                actual = actual + list(extra_effects)      # permit an undeclared/over-limit effect
+                prospective = prospective + list(extra_effects)   # permit an undeclared/over-limit effect
             else:
                 st.permits.reject_no_effect(permit_id)
                 return _reject(st, "D7_undeclared_effect", mutations)
-        # limit check
-        for e in actual:
-            for lim in permit["limits"]:
-                if lim.get("limit_id") == e["effect_class"] and e["quantity"] > lim.get("max_value", 1 << 62):
-                    if "M-E30" not in mutations:
-                        st.permits.reject_no_effect(permit_id)
-                        return _reject(st, "D7_over_limit", mutations)
 
-        # ---- Finding 2 (round-3): the effect ledger is GENERATED by CONSUMING the captured target
-        #      HANDLE (a distinct one-shot capability), never a blind copy of authorized_effect_set tagged
-        #      with a digest. A missing/malformed/already-consumed handle => rejected_no_effect. ----
+        # ---- Finding 2 (round-3+4): the effect ledger is the handle-bound APPLICATOR RESULT -- each atom
+        #      is MANUFACTURED by CONSUMING the captured one-shot TargetHandle together with the operation-
+        #      derived effect semantics, never a blind copy of authorized_effect_set tagged with a digest.
+        #      A missing/malformed/already-consumed handle => rejected_no_effect. ----
         handles = capture_target_handles(bound_targets)
-        applied = apply_effects_through_handles(actual, handles, mutations)
+        applied = apply_effects_through_handles(prospective, handles, mutations)
         if applied is None:
             st.permits.reject_no_effect(permit_id)
             return _reject(st, "D4_handle_unavailable", mutations)
+        if "M-E38" in mutations:
+            # round-4 successor mutant: consume the handle (the applicator already did) but DISCARD the
+            # applicator RESULT and blind-copy authorized_effect_set, reading the RAW captured digest off
+            # each handle (no one-shot consumption proof, no canonical_target_id from the cap). The ledger
+            # provenance oracle / sec_e38 decisively KILL this (its atoms did not originate at the applicator).
+            applied = [dict(e, applied_via_handle=(handles[e.get("target_index", 0)]._proof_digest
+                       if handles.get(e.get("target_index", 0)) is not None else "")) for e in authorized]
+
+        # ---- D7: authorization BOUND/COMPARISON against the RETURNED applicator result: every applied
+        #      atom must be authorized by permit['authorized_effect_set'] (matching class+target, quantity
+        #      within) AND within the permit's effective limits. M-E30 seeds the bound bypass. ----
+        if "M-E30" not in mutations and not _effects_within_bound(applied, authorized, permit["limits"]):
+            st.permits.reject_no_effect(permit_id)
+            return _reject(st, "D7_over_limit", mutations)
         consumed_handles = [i for i, h in handles.items() if h.consumed]
 
         # ---- consume (claimed -> consumed) atomically with effect_started. ----

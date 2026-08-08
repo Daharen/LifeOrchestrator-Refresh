@@ -269,6 +269,76 @@ def run(check):
     round3_f4 = bool(_op_covers and _op_pinned and r4_unknown and r4_decidable and r4_missing
                      and r4_mistyped and r4_malformed and r4_wellformed)
 
+    # (1d) i41 round-4 Finding 4 -- END-TO-END authorize() DENY vectors (NOT just direct match() calls).
+    # The round-4 blind spot: the F4 vectors above call GrantSnapshot.match() directly, exercising the
+    # validator INSIDE the matcher but never the earlier A11 grant_namespaces() read (the monitor calls
+    # grant_namespaces() at A11, BEFORE match()). grant_namespaces() now routes through the ONE shared
+    # validated-grant iterator, so a malformed grant fails closed to CONSTANT DENY at A11 -- never an
+    # uncaught KeyError. Each vector runs the FULL monitor on a TEST-ONLY non_execution=false packet (so
+    # execution REACHES A11) and requires: DENY + constant caller bytes + NO permit + NO exception + no
+    # reachable state diff.
+    from tests import harness as _h
+    from action_authz.monitor import authorize as _authz, PermitRef
+    from action_authz.boundary import MockExecutor as _Exec
+
+    def _e2e_deny(corrupt):
+        st, prop = _h.build_baseline()
+        corrupt(st.grants["grant_snap_1"].grants[0])
+        try:
+            d = _authz(_h.prop_bytes(prop), st, mutations=frozenset())
+        except Exception:                       # a raw-field dereference before validation would RAISE
+            return {"ok": False, "raised": True}
+        # no permit issued + constant caller bytes + the executor can produce no state diff (no permit).
+        r = _Exec(st).execute(PermitRef("permit_ghost", id(st.permits)))
+        ok = (d.outcome == "DENY" and d.caller_bytes == S.CONSTANT_DENIAL_BYTES
+              and len(st.permits._permits) == 0 and r.state_diff == [])
+        return {"ok": ok, "raised": False, "reason": d.reason_code}
+
+    def _del(field):
+        return lambda g: g.pop(field, None)
+
+    def _set(field, val):
+        return lambda g: g.__setitem__(field, val)
+
+    def _add_unknown(g):
+        g["surprise_unknown_top_level"] = "accepted"
+
+    _e2e_cases = [
+        ("unknown top-level grant field", _add_unknown),
+        ("missing grant_id (the A11 KeyError probe)", _del("grant_id")),
+        ("missing action_namespace (the A11 KeyError probe)", _del("action_namespace")),
+        ("mistyped risk_ceiling (str)", _set("risk_ceiling", "2")),
+        ("mistyped allowed_target_ids (not a list)", _set("allowed_target_ids", "nope")),
+        ("malformed max_quantity (negative)", _set("max_quantity", {"fs.write": -1})),
+        ("malformed externality_max (out of domain)", _set("externality_max", "cosmic")),
+    ]
+    f4_e2e_all = True
+    for name, corrupt in _e2e_cases:
+        res = _e2e_deny(corrupt)
+        ck("F4.R4 end-to-end authorize(): %s -> constant DENY, no permit, no exception, no state diff" % name,
+           res["ok"], "raised=%s reason=%s" % (res.get("raised"), res.get("reason")))
+        if not res["ok"]:
+            f4_e2e_all = False
+
+    # DECIDABLE + load-bearing at A11: under M-GV01 the shared validated-grant iterator SKIPS validation, so
+    # a grant MISSING grant_id makes the A11 grant_namespaces() read dereference a raw field -> it RAISES;
+    # the reference (validated) path instead fails closed to constant DENY. This proves the pre-validation is
+    # what closes the A11 KeyError path (the round-4 defect), not an incidental later check.
+    def _raises_under(muts):
+        st, prop = _h.build_baseline()
+        st.grants["grant_snap_1"].grants[0].pop("grant_id", None)
+        try:
+            _authz(_h.prop_bytes(prop), st, mutations=muts)
+            return False
+        except Exception:
+            return True
+    f4_a11_loadbearing = (_raises_under(frozenset(["M-GV01"])) is True
+                          and _raises_under(frozenset()) is False)
+    ck("F4.R4 A11 pre-validation is load-bearing: a missing-grant_id grant raises ONLY under M-GV01 "
+       "(the reference fails closed to constant DENY at A11)", f4_a11_loadbearing)
+
+    round4_f4 = bool(f4_e2e_all and f4_a11_loadbearing)
+
     # (2) PolicyView golden: escalate for public/irreversible; never weaken. -----------------------
     pv = S.PolicyView("p")
     r_pub, a_pub, _s, dz = pv.apply({"derived_effect_set": [_e(ext="public_external")]}, 1, "none", "sb")
@@ -322,4 +392,5 @@ def run(check):
     ck("ValidatorView golden: MIN_COMPLETION_SCOPE == the pinned validator_view spec",
        {k: sorted(v) for k, v in MIN_COMPLETION_SCOPE.items()} == VALIDATOR_VIEW["fields"]["min_completion_scope"])
 
-    return {"view_digests": VIEW_DIGESTS, "round3_f4_toplevel_grantview": round3_f4}
+    return {"view_digests": VIEW_DIGESTS, "round3_f4_toplevel_grantview": round3_f4,
+            "round4_f4_prevalidation": round4_f4}

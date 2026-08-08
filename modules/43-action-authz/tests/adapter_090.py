@@ -127,8 +127,12 @@ def adapt_packet_lossless(pkt, non_execution_overlay=None):
     canonical = canon.canonical_bytes(pkt)              # COMPLETE packet (integer-only; no floats)
     identity_digest = canon.sha256_hex(canonical)       # changing ANY field changes this
     complete = json.loads(canonical.decode("utf-8"))    # round-trip deep copy (== pkt)
-    view = adapt_packet_view(pkt, non_execution_overlay=non_execution_overlay)
-    meta = full_meta(pkt)
+    # i41 round-4 Finding 5: derive the trusted view + meta ONLY from the PRESERVED / re-parsed packet
+    # (`complete`), so everything the monitor consumes flows from the preserved canonical bytes (not the
+    # raw input object). complete == pkt byte-for-byte, so the derived structures are unchanged for
+    # authentic packets; the point is provenance -- the view/meta are sourced from the preserved packet.
+    view = adapt_packet_view(complete, non_execution_overlay=non_execution_overlay)
+    meta = full_meta(complete)
     return PreservedPacket(pkt["packet_id"], canonical, identity_digest, complete, view, meta)
 
 
@@ -193,21 +197,38 @@ def full_meta(pkt):
 def build_trusted(pkt, non_execution_overlay=None, disposition=None):
     """Assemble a FULL trusted config CONSISTENT with the real 0.9.0 packet: corpus preserved (A07
     live), the GrantSnapshot registered under the packet's OWN grant-snapshot ref, the full carriers in
-    packet_meta. Returns (stores, proposal, packet_view). The action targets /u/<ns>/one.txt."""
-    ident = pkt.get("identity", {}) or {}
-    ti = pkt.get("task_input", {}) or {}
+    packet_meta. Returns (stores, proposal, packet_view). The action targets /u/<ns>/one.txt.
+
+    i41 round-4 Finding 5 (REAL-SEAM losslessness): the trusted construction path now BEGINS with
+    adapt_packet_lossless(); the PacketView AND packet_meta are derived ONLY from the preserved /
+    re-parsed packet; and the whole-packet canonical identity digest is BOUND into trusted state -- the
+    trusted PacketView's content_digest, the trusted packet_meta (`packet_identity_digest`), and
+    st.packet_identity -- so it CANNOT be discarded before consumption. Two materially different authentic
+    packets therefore cannot collapse into the same monitor-facing trusted representation (the round-4
+    defect: build_trusted() previously derived view/meta from the RAW packet and dropped the 5 probes)."""
+    pp = adapt_packet_lossless(pkt, non_execution_overlay=non_execution_overlay)
+    complete = pp.complete                                             # PRESERVED / re-parsed packet
+    ident = complete.get("identity", {}) or {}
+    ti = complete.get("task_input", {}) or {}
     ns = ti.get("namespace") or "nsa"
     gref = ident.get("control_plane_grant_snapshot_ref")
 
     st = S.Stores()
     st.current_corpus_version = ident.get("corpus_version")            # PRESERVE -> A07 EXERCISED
-    pv = adapt_packet_view(pkt, non_execution_overlay=non_execution_overlay)
+    pv = pp.view                                                       # derived ONLY from the preserved packet
+    # BIND the whole-packet canonical identity into the trusted PacketView (its content_digest is otherwise
+    # the subset digest): the monitor-facing trusted record is now DISTINGUISHABLE for ANY packet-field change.
+    pv.content_digest = pp.identity_digest
     st.packets.put(pv)
-    meta = full_meta(pkt)
+    meta = dict(pp.meta)                                               # derived ONLY from the preserved packet
+    meta["packet_identity_digest"] = pp.identity_digest               # BIND into the trusted packet metadata
     if disposition is not None:
         meta["disposition"] = disposition
         meta["retrieval_complete"] = (disposition == "answerable")
     st.packet_meta = {pv.packet_id: meta}
+    # RETAIN the whole-packet canonical identity in trusted state (cannot be discarded before consumption).
+    st.packet_identity = {pv.packet_id: pp.identity_digest}
+    st.preserved_packets = {pv.packet_id: pp}
     st.completion_contracts = {}
     st.attest.put("run_real", "d" * 64, pv.packet_id, model_supplied_provenance=False)
 
@@ -229,13 +250,13 @@ def build_trusted(pkt, non_execution_overlay=None, disposition=None):
     st.side_effect_policy_ref = "policy_090"
     prop = {
         "schema": "lifeorch.action_proposal/0.1", "proposal_id": "prop_real",
-        "task_id": ident.get("task_id"), "packet_id": pkt["packet_id"],
+        "task_id": ident.get("task_id"), "packet_id": complete["packet_id"],
         "tool_id": "fs.local", "operation": "fs.write",
         "arguments": {"path": "/u/%s/one.txt" % ns, "content": "x"},
         "evidence_refs": [], "claimed_effects": [],
         "model_provenance": {"model_run_id": "run_real", "adapter_id": "adapter.chat",
                              "adapter_version": 1, "consumer_profile_fingerprint": "c" * 64,
-                             "prompt_packet_id": pkt["packet_id"], "raw_output_hash": "d" * 64},
+                             "prompt_packet_id": complete["packet_id"], "raw_output_hash": "d" * 64},
     }
     return st, prop, pv
 

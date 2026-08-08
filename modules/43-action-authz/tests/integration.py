@@ -326,6 +326,55 @@ def run(check):
     v090_lossless_adapter = bool(lossless_ok and per_field_ok and probes_detected and overlay_only
                                  and routed_carriers)
 
+    # ===== i41 round-4 Finding 5: REAL-SEAM losslessness THROUGH build_trusted (NOT the sidecar) ======
+    # Round-4 review: adapt_packet_lossless() noticed mutations, but build_trusted() BYPASSED it and derived
+    # the PacketView + packet_meta from the RAW packet, so the MONITOR-FACING trusted representation
+    # collapsed the 5 probes. build_trusted() now BEGINS with adapt_packet_lossless() and BINDS the whole-
+    # packet identity into trusted state (the trusted PacketView.content_digest + packet_meta
+    # `packet_identity_digest` + st.packet_identity). We run the per-identity-field mutations AND the 5 named
+    # probes THROUGH build_trusted and require a DISTINGUISHABLE trusted representation (or fail-closed) --
+    # proving the monitor-facing trusted representation cannot collapse them.
+    st_base, _pb, pv_base = adapter_090.build_trusted(routed, non_execution_overlay=False)
+    base_bound_id = st_base.packet_meta[pv_base.packet_id].get("packet_identity_digest")
+    base_view_cd = pv_base.content_digest
+    whole_pkt_digest = adapter_090.adapt_packet_lossless(routed).identity_digest
+    realseam_bound = (base_bound_id == whole_pkt_digest and base_view_cd == whole_pkt_digest
+                      and st_base.packet_identity.get(pv_base.packet_id) == whole_pkt_digest)
+    check.ok("real-seam (build_trusted): the WHOLE-packet identity is BOUND into the trusted representation "
+             "(PacketView.content_digest + packet_meta + st.packet_identity)", realseam_bound)
+
+    def _trusted_identity(mp):
+        st_m, _pm, pv_m = adapter_090.build_trusted(mp, non_execution_overlay=False)
+        return (st_m.packet_meta[pv_m.packet_id].get("packet_identity_digest"), pv_m.content_digest)
+
+    realseam_probe_paths = ([["identity", f] for f in adapter_090._IDENTITY_CORE]
+                            + [["identity", "compiler_version"], ["identity", "selection_policy"],
+                               ["retrieval_provenance"], ["evidence", "current_state_refs"],
+                               ["selection", "stages"]])
+    realseam_distinct = True
+    for path in realseam_probe_paths:
+        mp = _mut_copy(routed, path)
+        try:
+            bound_id, view_cd = _trusted_identity(mp)
+            # DISTINGUISHABLE monitor-facing trusted representation (both bound meta id AND the PacketView).
+            if bound_id == base_bound_id or view_cd == base_view_cd:
+                realseam_distinct = False
+        except adapter_090.LosslessError:
+            pass   # fail-closed is an acceptable detection per the exact-closure requirement
+    check.ok("real-seam (build_trusted): per-field + the 5 named probes (compiler_version/selection_policy/"
+             "retrieval_provenance/evidence.current_state_refs/selection.stages) yield a DISTINGUISHABLE "
+             "trusted representation -- never a collapse at the monitor-facing seam", realseam_distinct)
+
+    # the round-4 defect reproduced-and-closed: two materially different authentic packets (routed vs a
+    # probe-mutated routed) do NOT collapse into the same trusted representation THROUGH build_trusted.
+    mp_probe = _mut_copy(routed, ["identity", "compiler_version"])
+    b2, v2 = _trusted_identity(mp_probe)
+    realseam_no_collapse = (b2 != base_bound_id and v2 != base_view_cd)
+    check.ok("real-seam (build_trusted): two materially different authentic packets do NOT collapse "
+             "(the exact round-4 defect is closed at the trusted seam)", realseam_no_collapse)
+
+    v090_realseam_lossless = bool(realseam_bound and realseam_distinct and realseam_no_collapse)
+
     # ===== positive permit path via the TEST-ONLY mock packet + the same-code non_execution=true deny ==
     st, prop = harness.build_baseline()
     dp = authorize(harness.prop_bytes(prop), st, mutations=frozenset())
@@ -343,4 +392,5 @@ def run(check):
             "v090_adversarial_identical": bool(d_adv.cad == d_ok.cad and d_adv.outcome == d_ok.outcome),
             "v090_exact_adapter": v090_exact_adapter, "v090_a07_exercised": bool(v090_a07),
             "v090_lossless_adapter": v090_lossless_adapter,
+            "v090_realseam_lossless": v090_realseam_lossless,
             "results": results}

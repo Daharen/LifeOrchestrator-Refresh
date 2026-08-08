@@ -519,8 +519,26 @@ class GrantSnapshot(object):
         self.revoked = set(revoked or [])
         self.request_namespaces = list(request_namespaces or [])
 
-    def grant_namespaces(self):
-        return {g["action_namespace"] for g in self.grants if g["grant_id"] not in self.revoked}
+    def _valid_grants(self, mutations=frozenset()):
+        """i41 round-4 Finding 4: the ONE shared VALIDATED-grant iterator used by BOTH grant_namespaces()
+        and match(). A grant is yielded ONLY after it passes the pinned CLOSED top-level GrantView
+        validation (_grant_view_wellformed), so NO raw grant field is EVER dereferenced before validation.
+        This closes the A11 grant_namespaces() KeyError path: a grant missing grant_id / action_namespace
+        (or unknown/mistyped/malformed top-level) is EXCLUDED here -- never dereferenced -- so the A11 read
+        fails closed to constant DENY instead of raising. M-GV01 is the decidable seeded defect that SKIPS
+        the validation (kept killable AND load-bearing at BOTH A11 and A26)."""
+        skip = "M-GV01" in mutations
+        for g in self.grants:
+            if skip or _grant_view_wellformed(g):
+                yield g
+
+    def grant_namespaces(self, mutations=frozenset()):
+        """A11: the effective action namespaces the VALIDATED grants authorize, via the ONE shared
+        validated-grant iterator. No raw grant field is dereferenced before validation, so a malformed
+        grant (missing/mistyped grant_id or action_namespace) is EXCLUDED and fails closed to constant
+        DENY -- never an uncaught KeyError (i41 round-4 Finding 4)."""
+        return {g["action_namespace"] for g in self._valid_grants(mutations)
+                if g["grant_id"] not in self.revoked}
 
     def match(self, ca, now_ms, opman, mutations=frozenset()):
         """CLOSED matcher result (Finding 4): a 3-tuple (matched_grant_ids sorted-unique, ok,
@@ -533,12 +551,12 @@ class GrantSnapshot(object):
         matched = []
         covered_scopes = set()
         eff_limits = {}                     # effect_class -> running MIN over matched grants
-        for g in self.grants:
-            # Finding 4: enforce the pinned CLOSED top-level GrantView BEFORE matching. A grant whose
-            # top-level shape diverges (unknown/missing/mistyped/malformed field) is untrustable and
-            # EXCLUDED (fail closed). M-GV01 is the decidable defect that skips this validation.
-            if "M-GV01" not in mutations and not _grant_view_wellformed(g):
-                continue
+        # Finding 4: iterate the ONE shared VALIDATED-grant iterator so the pinned CLOSED top-level
+        # GrantView validation runs BEFORE any raw grant field is dereferenced (same validation that now
+        # also protects the earlier A11 grant_namespaces() read). A grant whose top-level shape diverges
+        # (unknown/missing/mistyped/malformed field) is untrustable and EXCLUDED (fail closed). M-GV01 is
+        # the decidable defect that skips this validation (in the shared iterator).
+        for g in self._valid_grants(mutations):
             if g["grant_id"] in self.revoked:
                 continue
             if g["tool_id"] != ca["tool_id"]:

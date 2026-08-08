@@ -381,3 +381,64 @@ five carriers the reviewer proved inert in i40 (`identity.compiler_version`, `id
 identity; per-identity-field mutation + round-trip properties run over BOTH authentic 0.7.0 (x4) and 0.9.0
 (benign + adversarial + flat) packets (`tests/integration.py`). The overlay alters ONLY `non_execution`
 (the preserved bytes / identity digest are unchanged).
+
+## i42 round-4 ratification closures (0.5.0 -> 0.6.0; research/2026-08-07-i41-p01gate-round4-redteam.md, D-0116)
+
+The round-4 ratification review returned **FAIL** with 3 remaining SUITE-BUILD findings (convergence
+7 -> 7 -> 5 -> 3; **F1** and **F7** accepted CLOSED; F3/F6 + the accepted F4 limit-algebra and F2 post-claim
+portions REMAIN closed). These are the 3 WORKER-SIDE exact closures; each carries a machine-readable
+`round4_closure_built.{f5_realseam_lossless, f4_prevalidation, f2_ledger_provenance}` flag alongside the
+(unchanged, still-true) i39 `exact_closure_built` finding_1..7 and the D-0113 `round3_closure_built`
+f1/f2/f4/f5. **M2-D holds: `p0_1_gate_status` stays `incomplete`; the round-5 re-review PASS is the only
+ratification path.** No frozen contract field was reopened (the review confirmed none needed it).
+`tests/report/report.json` `as_built_counts` is the SINGLE SOURCE of the as-built suite counts (no hardcoded
+summary that can drift); the round-5 pack derives its numbers FROM report.json.
+
+**Round-4 F5 -- REAL-SEAM losslessness (`tests/adapter_090.py`).** `adapt_packet_lossless()` was already
+correct, but the ACTUAL trusted construction path `build_trusted()` BYPASSED it: it called
+`adapt_packet_view(pkt)` + `full_meta(pkt)` on the RAW packet and stored only those reduced structures, never
+obtaining/retaining the `PreservedPacket`, its canonical bytes, or its whole-packet identity digest -- so two
+materially different authentic packets still collapsed at the monitor-facing seam (the reviewer proved
+`identity.compiler_version`, `identity.selection_policy`, `retrieval_provenance`,
+`evidence.current_state_refs`, and `selection.stages` each yielded an identical `PacketView` / packet
+metadata / authorization outcome / CAD through `build_trusted`). CLOSURE: `build_trusted()` now BEGINS with
+`adapt_packet_lossless()`, derives the `PacketView` AND `packet_meta` ONLY from the preserved / re-parsed
+packet, and BINDS the whole-packet canonical identity digest into trusted state that cannot be discarded
+before consumption -- the trusted `PacketView.content_digest`, `packet_meta["packet_identity_digest"]`, and
+`st.packet_identity`. `adapt_packet_lossless()` itself now also derives its view/meta from the re-parsed
+`complete` packet (provenance flows from the preserved bytes). The per-field mutations AND the 5 named probes
+are re-run THROUGH the end-to-end `build_trusted` path and required to yield EITHER fail-closed OR a
+DISTINGUISHABLE trusted representation (different `PacketView.content_digest` AND `packet_meta` identity)
+(`tests/integration.py`). No `CONTEXT_PACKET_CONTRACT` field change is required.
+
+**Round-4 F4 -- grant PRE-VALIDATION before any operational read (`stores.GrantSnapshot`, `monitor.authorize`).**
+`_grant_view_wellformed()` and `match()` were correct, but `grant_namespaces()` dereferenced raw
+`g["action_namespace"]` / `g["grant_id"]` WITHOUT validation, and the monitor calls `grant_namespaces()` at
+**A11 -- BEFORE `match()`** -- so removing `grant_id` or `action_namespace` raised an uncaught `KeyError`
+instead of a deterministic constant DENY. CLOSURE: ONE shared validated-grant iterator
+(`GrantSnapshot._valid_grants`) now backs BOTH `grant_namespaces()` and `match()`; no raw grant field is
+dereferenced before the pinned CLOSED top-level GrantView validation. A grant that is unknown / missing
+grant_id / missing action_namespace / mistyped / malformed is EXCLUDED, so the A11 read fails closed to
+constant DENY (A11_empty_namespace). END-TO-END `authorize()` vectors (not just direct `match()` calls) assert
+CONSTANT DENY + no exception + no permit + no state diff; `M-GV01` remains the decidable skip-defect proving
+the A11 pre-validation is load-bearing (a missing-grant_id grant raises ONLY under M-GV01)
+(`tests/views_golden.py`). The validator pin (`GRANT_VIEW_TOPLEVEL`) + the accepted limit-intersection algebra
+are UNCHANGED.
+
+**Round-4 F2 -- HANDLE-BOUND ledger provenance (`action_authz/boundary.py`).** One-shot `TargetHandle`
+consumption was genuine (round-3, CLOSED), but the effect ledger still ORIGINATED from an
+`authorized_effect_set` copy: the executor began with `actual = list(permit["authorized_effect_set"])` and the
+applicator built each atom via `atom = dict(e)` from that supplied permit effect -- authorized-effect COPY +
+handle consumption, not an independently-produced result. A stronger successor defect (consume the handle,
+IGNORE `consume()`'s return, blind-copy the authorized effect, read the digest off the handle) still passed
+`sec_e37` / `Boundary-D3:D4_handle_consumed`. CLOSURE: the mock applicator now CONSUMES the `TargetHandle`
+TOGETHER WITH the operation's canonical semantics (`derive_operation_effects` runs the installed manifest
+effect-classifier over the permit's canonical arguments + bound targets -- NOT `authorized_effect_set`) and
+ITSELF RETURNS the effect atoms; each atom's applied identity -- `canonical_target_id` AND `applied_via_handle`
+-- comes from the handle's `consume()` RESULT, where `applied_via_handle` is a FRESH one-shot CONSUMPTION proof
+(`handle_consumption_proof`), NOT the raw captured digest. `permit["authorized_effect_set"]` is now the
+authorization BOUND/COMPARISON against the RETURNED result (`_effects_within_bound`), never the source
+template. The successor mutant -- consume the handle but DISCARD the applicator result and blind-copy
+`authorized_effect_set` (raw digest, no consumption proof, no `canonical_target_id`) -- is the MANDATORY killed
+mutant **M-E38** (mutation kill matrix now **69/69**; oracle `Boundary-D3:D4_ledger_provenance` +
+`sec_e38`). M-E37 (no-consume blind copy) stays killed; real OS handles remain activation-gating.

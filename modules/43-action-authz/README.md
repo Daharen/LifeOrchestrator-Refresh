@@ -1,6 +1,59 @@
 
 ---
 
+## i42 ROUND-4 CLOSURES (VERSION 0.6.0, worker P01-R4-CLOSURE-43-i42)
+
+The i41 build (0.5.0) emitted `p0_1_gate_status = incomplete` with 7/7 i39 + 4/4 round-3 closures (M2-D held).
+The couriered ROUND-4 ratification review (`research/2026-08-07-i41-p01gate-round4-redteam.md`, pack
+`678163b1`, D-0116) returned **FAIL** with 3 remaining SUITE-BUILD findings (convergence 7 -> 7 -> 5 -> 3; F1
+and F7 accepted CLOSED). The 3 WORKER-SIDE findings are built here (0.5.0 -> 0.6.0), to the letter of each
+"Exact closure required" block. Run: `python -X utf8 -B tests/run_suite.py` then
+`python -X utf8 -B tests/selfverify.py`. No frozen contract field was reopened (none needed it).
+
+**The gate-status rule (M2-D, D-0110 -- non-negotiable).** The worker does NOT claim pass. The taxonomy stays
+**build_status = build_complete | p0_1_gate_status = `incomplete` | activation_status = prohibited** in EVERY
+emitted artifact. The claim is carried by the NEW `round4_closure_built.{f5_realseam_lossless, f4_prevalidation,
+f2_ledger_provenance}` flags ALONGSIDE the (unchanged, still-true) i39 `exact_closure_built` finding_1..7 and
+the D-0113 `round3_closure_built` f1/f2/f4/f5; the orchestrator ratifies contract s7 ONLY when the independent
+round-5 re-review returns PASS. **`tests/report/report.json` `as_built_counts` is the SINGLE SOURCE of the
+as-built suite counts** (no hardcoded summary that can drift). This build: suite green + grown on TWO
+byte-identical runs (352 -> 364), 69/69 mandatory mutations killed (adds M-E38), 152 obligation rows
+(not_run=0), 30 role-sink kills; empty-dir self-verify VERIFIED=True.
+
+The 3 round-4 closures (round-4 review finding numbering):
+
+1. **F5 -- REAL-SEAM losslessness** (`tests/adapter_090.py`): `adapt_packet_lossless()` was correct, but the
+   actual trusted construction path `build_trusted()` BYPASSED it (it derived `PacketView` + `packet_meta`
+   from the RAW packet, so the 5 probes -- compiler_version, selection_policy, retrieval_provenance,
+   evidence.current_state_refs, selection.stages -- collapsed at the monitor-facing seam). `build_trusted()`
+   now BEGINS with `adapt_packet_lossless()`, derives view + meta ONLY from the preserved / re-parsed packet,
+   and BINDS the whole-packet canonical identity into trusted state (the trusted `PacketView.content_digest`,
+   `packet_meta["packet_identity_digest"]`, and `st.packet_identity`). The per-field mutations AND the 5 named
+   probes are re-run THROUGH `build_trusted` and required to yield a DISTINGUISHABLE trusted representation
+   (or fail-closed) -- two materially different authentic packets can no longer collapse (`tests/integration.py`).
+2. **F4 -- grant PRE-VALIDATION before any operational read** (`stores.GrantSnapshot`, `monitor.authorize`):
+   `grant_namespaces()` dereferenced raw `grant_id` / `action_namespace` at A11 BEFORE `match()`'s validation
+   (missing fields -> uncaught `KeyError`, not constant DENY). A ONE shared validated-grant iterator
+   (`_valid_grants`) now backs BOTH `grant_namespaces()` and `match()`; no raw grant field is dereferenced
+   before validation. END-TO-END `authorize()` vectors (unknown / missing grant_id / missing action_namespace /
+   mistyped / malformed) now yield CONSTANT DENY (A11_empty_namespace), no exception, no permit, no state diff;
+   `M-GV01` remains the decidable skip-defect proving the A11 pre-validation is load-bearing (`tests/views_golden.py`).
+   The validator pin + limit algebra are UNCHANGED.
+3. **F2 -- HANDLE-BOUND ledger provenance** (`action_authz/boundary.py`): the mock effect applicator now
+   CONSUMES the captured `TargetHandle` TOGETHER WITH the operation's canonical semantics (the installed
+   manifest classifier over the permit's canonical arguments, via `derive_operation_effects`) and ITSELF
+   RETURNS the effect atoms; each atom carries the consumed handle's `canonical_target_id` + a one-shot
+   CONSUMPTION proof (`handle_consumption_proof`, NOT the raw captured digest). `permit["authorized_effect_set"]`
+   is now the authorization BOUND/COMPARISON (`_effects_within_bound`), never the source template. The round-4
+   SUCCESSOR mutant -- consume the handle but DISCARD the applicator result and blind-copy
+   `authorized_effect_set` (raw digest) -- is the MANDATORY killed mutant **M-E38** (kill matrix 69/69; oracle
+   `Boundary-D3:D4_ledger_provenance`). M-E37 (no-consume blind copy) stays killed.
+
+Still staged to ACTIVATION (unchanged): Blockers 3/4/6/7 + the activation portions of 5/9. `non_execution:true`
+holds throughout; A06 denies every authentic packet; nothing is action-capable.
+
+---
+
 ## i41 ROUND-3 CLOSURES (VERSION 0.5.0, worker P01-R3-CLOSURE-43-i41)
 
 The i40 build (0.4.0) emitted `p0_1_gate_status = incomplete` with `exact_closure_built` 7/7 (M2-D held --

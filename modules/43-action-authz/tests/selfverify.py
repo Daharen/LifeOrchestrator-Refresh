@@ -11,8 +11,9 @@ runs the documented command `python3 tests/run_suite.py` THERE via subprocess, a
   * a BYTE-IDENTICAL report MANIFEST (bundle_digest) vs a canonical run in the source tree.
 
 Writes the transcript to tests/report/self_verify.json (deliberately NOT part of the byte-compared
-bundle, so it never perturbs the digest it attests). The pack is proven INDEPENDENTLY runnable: the
-308->334 result + 149 oracle rows + digests + the bundle manifest reproduce from nothing but the pack.
+bundle, so it never perturbs the digest it attests). The pack is proven INDEPENDENTLY runnable: the full
+suite result + every oracle row + digests + the bundle manifest reproduce from nothing but the pack (the
+as-built counts are the SINGLE-SOURCE report.json `as_built_counts`, never hardcoded here).
 
 DESIGN-ONLY; p0_1_gate_status stays `incomplete` (M2-D). This is the Finding-7 self-verification the
 worker commits inside the evidence bundle.
@@ -108,8 +109,9 @@ def main():
         "exact_closure_built_reproduced": tmp_report.get("exact_closure_built"),
         "documented_command": "python3 -X utf8 -B tests/run_suite.py",
         "note": "the review pack was extracted into an EMPTY temp dir and the documented command run; "
-                "the full suite + all oracle rows + source/fixture digests + the report MANIFEST "
-                "reproduced byte-identically. p0_1_gate_status stays incomplete (M2-D).",
+                "the full suite + every oracle row + source/fixture digests + the report MANIFEST "
+                "reproduced byte-identically (as-built counts: report.json as_built_counts, the single "
+                "source). p0_1_gate_status stays incomplete (M2-D).",
     }
     shutil.rmtree(tmp, ignore_errors=True)
 
