@@ -106,3 +106,6 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 - `fanout-agents/i40-FANOUT_AGENT_003.md` | the used i40 Lane A brief (P01-EXACT-CLOSURE-43-i40; #43 0.4.0 exact closures) | DOC_PROTOCOL s6 used-brief archive at the i40 close | 2026-08-06 | D-0112
 - `handoffs/2026-08-07-FANOUT_ORCHESTRATOR_HANDOFF-i41-close.md` | the pre-i41-close live handoff (23,931 B; i40-close TL;DR + the new s12 model tiering) | DOC_PROTOCOL s5 snapshot before the i41 close rewrite | 2026-08-07 | D-0115
 - `fanout-agents/i41-FANOUT_AGENT_003.md` | the used i41 Lane A brief (P01-R3-CLOSURE-43-i41; #43 0.5.0 round-3 closures; report-back filled) | DOC_PROTOCOL s6 used-brief archive at the i41 close | 2026-08-07 | D-0115
+| archive/handoffs/2026-08-08-FANOUT_ORCHESTRATOR_HANDOFF-i42.md | the outgoing i41-shaped handoff snapshotted at the i42 close | 2026-08-08 | D-0117 |
+| archive/fanout-agents/i42-M2A-DOCGATE.md | i42 Lane A brief (M2-A doc-gate) | 2026-08-08 | D-0117 |
+| archive/fanout-agents/i42-P01-R4-CLOSURE-43.md | i42 Lane B brief (#43 0.6.0 round-4 closures) | 2026-08-08 | D-0117 |

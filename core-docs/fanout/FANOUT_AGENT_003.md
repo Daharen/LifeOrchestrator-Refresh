@@ -5,14 +5,13 @@
 - **Status:** EMPTY
 - **Wave / iteration:** -- (fill at wave scoping; plan id `fo-<N>-<id>` once planned)
 - **Lane:** -- (convention: 001 GPU / 002 CPU / 003 coding)
-- **Recommended model (D-0114):** -- (state one at fill; default Sonnet 5 High, elevation triggers in handoff s12)
 - **Worker id / label:** --
 - **Module/area (exclusive):** --
 - **GPU:** false (set true ONLY if this is the wave single GPU worker)
 - **Docs:** `[]`
 
 ## Mission
-_EMPTY -- no unit assigned._ Fill from the candidate menu in `core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md` section 4 (i42: unit-0 = the M2-A doc-gate BUILD, solo core-infra wave, spec `research/2026-08-07-i41-m2a-doc-gate-scope.md`; unit-1 = fold the round-4 answer `678163b1`). Paste the `plan`-emitted worker prompt (or a tight summary + a pointer to the emitted copy when over the 8 KB budget); mirror it.
+_EMPTY -- no unit assigned._ Fill from the candidate menu in `core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md` section 4 (i43: the P0-1 gate arc is CLOSED (design pass, D-0118); candidates = the M2-C first increment (docs-into-memory design note), #40 beam-width, the widget 05/06/07 confirms). Paste the `plan`-emitted worker prompt (or a tight summary + a pointer when over the 8 KB budget); mirror it.
 
 ## Unit (the full worker prompt)
 _pending -- filled at wave scoping._

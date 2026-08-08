@@ -141,3 +141,5 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0114 | 2026-08-07 | provisional | i41 worker model tiering: Sonnet 5 High default lanes + elevation triggers (#43 stays Opus); Fable = orchestrator seat/inline; fanout retained [seat clause amended by D-0116] |
 | D-0115 | 2026-08-07 | locked | i41 close: #43 0.5.0 round-3 closures shipped + independently verified (M2-D held); round-4 pack couriered (manifest-derived, empty-dir pre-verified); next = i42 M2-A build |
 | D-0116 | 2026-08-07 | locked | i41 round-4 review FAIL -- s7 not ratified; F1/F7 closed (the manifest-pack rule proven); 3 seam findings -> the #43 0.6.0 unit; orchestrator seat -> Opus 4.8 Extra [amends the D-0114 seat clause] |
+| D-0117 | 2026-08-08 | locked | i42 close: M2-A doc-hygiene commit gate SHIPPED (hard deadline met) + #43 0.6.0 (3 round-4 closures, M2-D held); round-5 pack 6bb613ea couriered |
+| D-0118 | 2026-08-08 | locked | i42 round-5 ratification PASS: P0-1 = DESIGN PASS (p0_1_gate_status=pass, pack 6bb613ea); activation still prohibited; arc closes 7->7->5->3->0 |

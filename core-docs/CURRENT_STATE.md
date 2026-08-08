@@ -28,22 +28,8 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
   (i36, D-0102: 11/11 s10 criteria over a distinct 6-package foreign corpus at 100x leaf span). Fast-beam recall
   lever shipped i39 (D-0108; hpr ~2x; guaranteed+packet recall stay 1e6).
   Arc detail: the index; per-module state: `MODULE_ROADMAP.md`.
-- **P0-1 action-authorization gate (#43): `build_status=build_complete | p0_1_gate_status=INCOMPLETE |
-  activation_status=prohibited` — ROUND-4 returned FAIL: F1/F7 CLOSED, 3 seam findings (D-0116).** The deny-by-default
-  monitor + injection suite is BUILT to the FROZEN `ACTION_AUTHORIZATION_CONTRACT.md` (D-0103); **#43 0.5.0
-  (`107c925`, i41) builds the 7 D-0109 + 4 round-3 (D-0113) exact closures to the letter** — the F1/F2/F5/F4 exact-closure blocks built (write-once binding;
-  consumed TargetHandle + M-E37; lossless adapter; top-level GrantView). Verified x2 byte-identical (352/352; mutations 68/68;
-  oracle 150 not_run=0; empty-dir self-verify TRUE; bundle `ab831c85`). A06 denies every authentic
-  packet; `non_execution:true` holds. Over-claimed twice (D-0107/D-0109), never since (M2-D): the
-  module EMITS `incomplete` + `exact_closure_built` 7/7 + `round3_closure_built` 4/4. **ROUND-4 (pack `678163b1`) FOLDED (D-0116): FAIL — F1 + F7
-  CLOSED** (the manifest-derived pack ran CLEAN for the reviewer — the D-0113 F7 rule PROVEN); **3 SUITE-BUILD
-  findings -> the #43 0.6.0 unit**: F5 `build_trusted` must consume `adapt_packet_lossless` (real-seam
-  losslessness); F4 grant validation BEFORE the A11 read (the KeyError path dies); F2 ledger atoms FROM the
-  handle-bound applicator result (+ the consume-but-discard successor mutant). Digest:
-  `research/2026-08-07-i41-p01gate-round4-redteam.md`. s7 stays walked-back.
-- **i41 CLOSED (D-0114/15, plan `fo-41-35be4fdc`):** D-0114 model tiering (Sonnet 5 High default lanes; Fable
-  = the orchestrator seat; fanout RETAINED) + M2-A SCOPED (-> the i42 solo build wave) + #43 **0.5.0**
-  (`107c925`, worker-shipped clean; the 4 round-3 closures); fold green; post-close the round-4 answer FOLDED: FAIL, F1/F7 closed, 3 findings (D-0116).
+- **P0-1 action-authorization gate (#43): `build_status=build_complete | p0_1_gate_status=PASS | activation_status=prohibited` -- #43 0.6.0 (`10d0d1e`, i42) built the 3 ROUND-4 exact closures and the ROUND-5 independent review returned PASS -> s7 RATIFIED (D-0118; activation still prohibited).** The deny-by-default monitor + injection suite is BUILT to the FROZEN `ACTION_AUTHORIZATION_CONTRACT.md` (D-0103). i42 closed the 3 round-4 findings (D-0116): **F5** real-seam losslessness, **F4** grant pre-validation (the A11 KeyError path dies), **F2** handle-bound ledger provenance (mutant M-E38 killed). Verified x2 byte-identical (364/364; full counts in the tests table; empty-dir self-verify VERIFIED; bundle `3b5d62f4`). A06 denies every authentic packet; `non_execution:true` holds. Over-claimed twice (D-0107/D-0109), never since (M2-D): the module EMITS `incomplete` + `exact_closure_built` 7/7 + `round3_closure_built` 4/4 + `round4_closure_built` 3/3. **ROUND-5 review PASS (D-0118)** -- the independent reviewer re-ran the pack (364/364, VERIFIED:True), F5/F4/F2 closed, no frozen-contract reopen; **s7 RATIFIED to `p0_1_gate_status=pass`** (naming pack `6bb613ea`, M2-D); the 5-round arc (7->7->5->3->0) closes; activation stays `prohibited`. Digest: `research/2026-08-08-i42-p01gate-round5-ratification.md`.
+- **i42 CLOSED (D-0117, plan `fo-42-e5403d74`; 2-lane CPU coding wave):** Lane A SHIPPED **M2-A -- the fail-closed doc-hygiene commit gate** (`fd3da12`..`25bf2b3`; `ops/audit/doc-commit-gate.py` + a git pre-commit hook + a hook-presence assertion in `gen-doc-health.py`; 26/26 gate + 5/5 hook tests; a real REJECT+PASS firing logged; the mandate-02 M2-A HARD DEADLINE MET). Lane B SHIPPED **#43 0.6.0** (`10d0d1e`; the 3 round-4 closures; orchestrator-verified; M2-D held). The ROUND-5 review returned PASS -> s7 RATIFIED to `pass` (D-0118; the P0-1 gate arc closes). (i41 was D-0114/15/16.)
 - **FROZEN / deferred (D-0080):** durable-supervisor / warm-pool hardening (D-0079 GATE-NO stands; classic
   detached-warm is the trusted default); generator upgrades; `video.interpret` + live composition; deep
   real-time perception (arch 27-49); broad training.
@@ -257,9 +243,9 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 | #40 context.compiler | **0.9.0 (i38): working_memory hydrated from #42 (conjunctive ns fail-closed; state_version in identity; flat byte-identical to 0.8.0); 42/42 owned + full regression (322/322 + i35 32/32 + router 35/35 + i34 38/38)** | `52a0381` | 08-05 |
 | #41 skill.card | 0.2.0: 81/81 python + 85/85 -Live | `54c2e79` | 08-03 |
 | #42 working.memory | 0.1.0: 30/30 + 30/30 live + 14/14 pwsh | `601a2db` | 08-05 |
-| #43 action.authz | **0.5.0 (i41): the 4 round-3 exact closures (write-once binding; consumed TargetHandle + killed M-E37; lossless 0.2 adapter w/ per-identity-field mutation properties; operational top-level GrantView); suite x2 exit 0 byte-identical (behavioral 352/352, mutations 68/68, fuzzer 400/0, oracle 150 rows not_run=0-GATING, role 30/30, completion 17/17, views 48/48); empty-dir self-verify TRUE (ab831c85); taxonomy `incomplete` (M2-D). Round-4 pack 678163b1 couriered (manifest-derived + empty-dir pre-verified)** | `107c925` | 08-07 |
+| #43 action.authz | **0.6.0 (i42): the 3 round-4 exact closures (F5 real-seam losslessness via build_trusted+bound identity digest; F4 grant pre-validation shared iterator, the A11 KeyError path dies; F2 handle-bound ledger provenance, successor mutant M-E38 killed); suite x2 exit 0 byte-identical (364/364, mutations 69/69, fuzzer 400/0, oracle 152 not_run=0-GATING, role 30/30, completion 21/21, views 64/64); empty-dir self-verify VERIFIED (3b5d62f4); taxonomy flips to `pass` (D-0118 -- round-5 review PASS naming pack 6bb613ea; activation still prohibited)** | `10d0d1e` | 08-08 |
 | widgets/05 / 06 / 07 | 100/100+STA 8/8 · 85/85+98/98 -Live (STA 9/9) · 81 cloud + 93 -Live (STA 8/8) — live-GUI confirms OPEN | `3ad71d3`/`c912854`/`855c242` | 08-05..06 |
-| D-0077 cross-module folds | i34 smoke 38/38 · i36 Tier-1 acceptance 11/11 (`tier1_accepted=TRUE`) · i37 13/13 · i38 18/18 · i39 18/18 · i40 harness vs 0.4.0 exit 0 + i34 38/38 · **i41: fold-i39 harness vs 0.5.0 exit 0 + i34 38/38 + the independent #43 suite x2 byte-identical** | `runtime/smoke-i34.py`/`fold-i39.py` | 08-07 |
+| D-0077 cross-module folds | i34 smoke 38/38 · i36 Tier-1 11/11 (`tier1_accepted=TRUE`) · i38 18/18 · i39 18/18 · i40 vs 0.4.0 exit 0 · i41 fold-i39 vs 0.5.0 exit 0 · **i42: fold-i39 harness vs 0.6.0 exit 0 + i34 38/38 + the independent #43 suite x2 byte-identical (3b5d62f4)** | `runtime/smoke-i34.py`/`fold-i39.py` | 08-08 |
 
 ## Known failures / gotchas
 
@@ -367,24 +353,13 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ## Next expected action
 
-**i41 CLOSED + the round-4 answer FOLDED (D-0115/D-0116): FAIL — F1/F7 closed, 3 seam findings remain; s7 stays
-`incomplete`.**
+**i42 CLOSED (D-0117/D-0118): M2-A doc-gate SHIPPED (the mandate-02 hard deadline met) + #43 0.6.0 built + the ROUND-5 review returned PASS -> s7 RATIFIED to `p0_1_gate_status=pass` (D-0118, naming pack `6bb613ea`); activation stays `prohibited`.**
 
-**NEXT = i42** (orchestrator session on **Opus 4.8 Extra** — the D-0116 seat rule): unit-0 = **the M2-A doc-gate
-BUILD** (HARD deadline the i42 close; spec `research/2026-08-07-i41-m2a-doc-gate-scope.md`; Sonnet 5 High,
-elevate on first failure). Unit-1 = **#43 0.5.0 -> 0.6.0: the 3 round-4 exact closures** (digest = SPEC; Opus
-4.8 Extra — 5th ratification round). The gate build touches ops/ + .git hooks only (NOT executor code) — the
-i42 orchestrator rules at its s1 check whether the s8 solo-core-infra clamp applies (2-lane wave) or 0.6.0
-waits for i43. Then round-5: re-pack with the pack-paths/pack-verify tooling, numbers FROM report.json.
-Candidates: #40 beam-width; Widget 05/06/07 confirms (Nicholas); M2-C (after M2-A); the 220a806 untrack ruling.
-Menu: **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4. Mandate-02 countdown: i42 -> 42/5.
+**NEXT = i43** (orchestrator seat: Opus 4.8 Extra, D-0116): the P0-1 action-authorization gate arc is CLOSED (design pass, D-0118; activation stays `prohibited`). No forced unit. Candidates (frugality, D-0114): the M2-C first increment (docs-into-memory design note -- now unblocked since M2-A shipped; CURRENT_STATE at ~99% is the first re-layer candidate); the #40 beam-width follow-on; Widget 05/06/07 live-GUI confirms (Nicholas); the 220a806 stray-commit untrack ruling (Nicholas). Menu: **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4. Mandate-02 countdown: i43 -> 43/4.
 
-**Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades;
-`video.interpret` + live composition; deep real-time perception; broad training).
+**Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades; `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-07 — i41 CLOSED (D-0114/15) + the round-4 fold (D-0116): #43 0.5.0 shipped +
-independently verified; the manifest-derived pack rule PROVEN (F7 closed, F1 closed); round-4 FAIL — 3 seam
-findings -> the 0.6.0 unit; orchestrator seat -> Opus 4.8 Extra (D-0114 amended). NEXT = i42.
+**Last updated:** 2026-08-08 -- i42 CLOSED (D-0117): the M2-A doc-hygiene commit gate SHIPPED (the mandate-02 hard deadline met; 26/26 + 5/5, a real firing logged) + #43 0.6.0 built (the 3 round-4 closures, independently verified, M2-D held); the ROUND-5 independent review returned PASS -> s7 RATIFIED to `p0_1_gate_status=pass` (naming pack `6bb613ea`; activation still prohibited; the P0-1 arc closes). NEXT = i43.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

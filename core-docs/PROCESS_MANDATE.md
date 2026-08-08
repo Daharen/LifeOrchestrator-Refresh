@@ -3,8 +3,8 @@
 Machine-checkable header (an orchestrator reads these at session start):
 - `mandate_id: 02`
 - `opened_iteration: 40`
-- `current_iteration: 41`   (updated each orchestrator session)
-- `iterations_to_sunset: 6`   (COUNTDOWN -- at 0, state -> REPORT_DUE; s1)
+- `current_iteration: 42`   (updated each orchestrator session)
+- `iterations_to_sunset: 5`   (COUNTDOWN -- at 0, state -> REPORT_DUE; s1)
 - `sunset_iteration: 47`
 - `sealed_check_offset_iterations: 7`
 - `state: ACTIVE`   (ACTIVE | REPORT_DUE | SUNSET | RE-LICENSED)
@@ -38,15 +38,18 @@ self-reported gate result is a CANDIDATE; only the independent as-built review's
 
 Items (detail stays in PROCESS_BACKLOG rows + D-entries; this list is the mandate's scope):
 
-- **M2-A (PB-1 successor) -- BUILD the deterministic fail-closed doc-hygiene commit gate. DEADLINE: shipped by
-  the i42 close** (a hard target, not a prose trigger; slipping it requires a recorded reason at the s1 check).
-  Scope: wired into the executor doc-commit path; three parts per D-0094 -- density check, proportional budget,
-  re-layer trigger at the bounded-read threshold; reuse `ops/audit/gen-doc-health.py`'s budget parsing. The
-  monitor stays the dashboard; the gate is the pawl. First real firing logged = the acceptance evidence.
-- **M2-B (PB-3 successor) -- hold the hot docs under budget.** The i40 slim closes the acute debt; M2-A holds it
-  mechanically from i42. Between now and the gate landing, the s1 check records sizes (from the monitor log). Any
-  doc still over the ~40 KB bounded-read threshold after a competent slim gets a recorded RE-LAYER plan (M2-C
-  path), not another slim pass.
+- **M2-A (PB-1 successor) -- the deterministic fail-closed doc-hygiene commit gate. SHIPPED i42 (D-0117; the
+  HARD DEADLINE was MET).** `ops/audit/doc-commit-gate.py` (pure stdlib, fail-closed, staged-blob-measured) +
+  a git pre-commit hook (installed by `ops/install-doc-gate.bat`; presence/hash asserted by `gen-doc-health.py`)
+  + a `--files` commit-task invocation; the three D-0094 parts (accretion tripwires + proportional s2 budgets via
+  `parse_budgets()` + the re-layer trigger at the bounded-read threshold). ACCEPTANCE MET -- a real firing through
+  the executor path (REJECT the over-budget probe + report, then PASS the corrected commit) logged to
+  `ops/out/doc-gate-log.jsonl` (commits `fd3da12`..`25bf2b3`; gate tests 26/26 + hook-presence 5/5). The monitor
+  stays the dashboard; the gate is the pawl.
+- **M2-B (PB-3 successor) -- hold the hot docs under budget.** From i42 the M2-A gate holds this MECHANICALLY
+  (fail-closed at commit). i42 s1 sizes: all hot docs under budget; CURRENT_STATE the tightest at ~99% of its
+  34 KB cap -> the first M2-C re-layer candidate. Any doc over the ~40 KB bounded-read threshold gets a recorded
+  RE-LAYER plan (M2-C path), not another slim pass.
 - **M2-C -- docs-into-memory (the re-layer path, now unblocked).** Tier-1 accepted + #36 proven: onboard the docs
   corpus -- sharded history / cold layers become #36-retrievable records; hot docs keep only NOW + pointers.
   Scope ONE increment when a lane is spare (same non-displacing rule as PB-4); the first increment is a design
@@ -54,7 +57,7 @@ Items (detail stays in PROCESS_BACKLOG rows + D-entries; this list is the mandat
 - **M2-D -- verification-before-ratification (structural).** Any safety-gate status flip (p0_1_gate_status or
   successors) is ratified in its contract ONLY with the independent as-built review PASS in hand. The orchestrator
   session that ratifies names the review pack id in the D-entry. (i40 applies this to the P0-1 gate: s7 stays
-  walked-back until the re-review returns PASS.)
+  walked-back until the re-review returns PASS.) **RESULT (i42, D-0118): the round-5 re-review returned PASS -> s7 ratified to `p0_1_gate_status=pass` naming pack `6bb613ea`; the discipline caught 2 over-claims (D-0107/D-0109) then converged honestly (7->7->5->3->0) to an independently-verified pass -- strong metastability evidence.**
 - **M2-E -- PB-2 decision item (delegation seam).** Decide (Nicholas): are in-session cloud subagents inside the
   D-0051-as-amended boundary? If licensed AND >=3 recurring judgment-hygiene tasks still hold, build the seam per
   the PB-2 row (delegation-decision events per D-0101). If declined, PB-2 stays RESERVED with the boundary ruling

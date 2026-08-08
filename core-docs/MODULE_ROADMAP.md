@@ -318,7 +318,7 @@ U3'): immutable versioned snapshots + CAS on parent_state_version (stale fails c
 head + fork/close/archive/promote + task_id+namespace isolation; search rejects `record_kind=working`.
 **Follow-ons:** #21 consumer wiring; promote-to-durable flows; retention policy.
 
-**43 `action.authz`** — **In progress 0.4.0 -> 0.5.0 SHIPPED** (i37→i41; D-0103/104/106/107/109/111/113/115). The P0-1
+**43 `action.authz`** — **0.4.0 -> 0.6.0 SHIPPED; the P0-1 design gate is RATIFIED** (i37→i42; D-0103/104/106/107/109/111/113/115/116/117/118; the round-5 independent review returned PASS -> `p0_1_gate_status=pass`, activation still prohibited). The P0-1
 deny-by-default action-authorization reference monitor (A01-A36 + Boundary A-D + U-properties) + injection
 suite, built to the FROZEN `ACTION_AUTHORIZATION_CONTRACT.md`. DESIGN-ONLY: `non_execution:true` holds; A06
 denies every authentic packet; `activation_status=prohibited`. **Taxonomy: `build_complete /

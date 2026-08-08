@@ -11,7 +11,7 @@
 - **Docs:** `[]`
 
 ## Mission
-_EMPTY -- no unit assigned._ Fill from the candidate menu in `core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md` section 4 (i41: unit-0 = fold the round-3 ratification pack `5807bc3e`; unit-1 = scope the M2-A doc gate, deadline i42). Paste the `plan`-emitted worker prompt (or a tight summary + a pointer to the emitted copy when over the 8 KB budget); mirror it.
+_EMPTY -- no unit assigned._ Fill from the candidate menu in `core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md` section 4 (i43: the P0-1 gate arc is CLOSED (design pass, D-0118); candidates = the M2-C first increment (docs-into-memory design note), #40 beam-width, the widget 05/06/07 confirms). Paste the `plan`-emitted worker prompt (or a tight summary + a pointer when over the 8 KB budget); mirror it.
 
 ## Unit (the full worker prompt)
 _pending -- filled at wave scoping._

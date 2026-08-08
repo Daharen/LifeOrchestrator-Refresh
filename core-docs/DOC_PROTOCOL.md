@@ -35,6 +35,7 @@ describe NOW and stay ingestable whole; history is never deleted, it moves to la
 | SKILL_CONTRACT.md | the skill interface (versioned) | 12 KB |
 | MEMORY_CONTRACT.md | the Collective Agent memory/retrieval contract (versioned): record+provenance envelope, embedding 0.2, retriever 0.2, catalog/eval/privacy gates + A6 Tier-1 hierarchy build | 48 KB |
 | CONTEXT_PACKET_CONTRACT.md | the context-packet + selection contract (versioned): control/evidence separation, packet_disposition, consumer profile, the selection-policy library, packet identity/lineage + i34 hierarchy shortlist-and-descend | 37 KB |
+| ACTION_AUTHORIZATION_CONTRACT.md | the P0-1 action-authorization gate freeze (versioned): frozen registry, blocker disposition, build-vs-activation gate, the s7 ratification ledger | 38 KB |
 | MEMORY_ARCHITECTURE.md | the long-horizon memory design (governing doctrine): target + Tier-0 invariants + typed memory + bounded-fanout hierarchy + query-aware retrieval + consolidation + procedural promotion + reconstructability + T0-T3 roadmap | 30 KB |
 | MEMORY_BENCHMARK.md | the memory-quality + foreign-corpus validation architecture: corpora, independent mutation/withholding harness, executable + hidden ground truth, lifecycle measures | 14 KB |
 | ADAPTIVE_RESOURCE_GOVERNOR.md | governor design + measured truth | 22 KB |
@@ -48,7 +49,7 @@ D-entry naming the current-truth content that needs the room** -- never by silen
 
 **Over-budget action ("you bust it, you slim it"):** the session whose edit pushes a doc over budget slims
 it in that same session -- snapshot the pre-slim doc to `archive/doc-snapshots/<date>/`, compress history to
-D-refs, re-check size. Check sizes at every mirror: `wc -c core-docs/*.md` (device_bash) takes seconds.
+D-refs, re-check size. Check sizes at every mirror: `wc -c core-docs/*.md` (device_bash) takes seconds. **Mechanized i42 (D-0117):** the fail-closed `ops/audit/doc-commit-gate.py` pre-commit gate enforces these s2 budgets + the s3 accretion rules at commit time.
 
 ## 3. Accretion rules (hot docs)
 
