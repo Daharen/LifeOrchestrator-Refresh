@@ -45,6 +45,37 @@ $script:LState = @{
     showWhy      = $false
     showRaw      = $false
     suspend      = $false
+    lastError    = ''
+}
+
+# Event handlers are dedicated NAMED functions (the handler scriptblocks just call them, so no local-scope or
+# scriptblock-passing fragility) and each is FAIL-SOFT: any throw is recorded (lastError) + surfaced to the
+# status bar instead of raising an unhandled WinForms dialog. The SelfTest PerformClicks each one and asserts
+# lastError stays empty, so an interaction-layer defect fails the -Live gate rather than only hitting the user.
+function Set-LrapError { param([string]$Msg) $script:LState.lastError = $Msg; try { $script:LState.statusLabel.Text = 'error: ' + $Msg } catch { } }
+
+function On-LrapRefresh { try { Invoke-LrapRefresh; $script:LState.lastError = '' } catch { Set-LrapError $_.Exception.Message } }
+function On-LrapWhy { try { $script:LState.showWhy = -not $script:LState.showWhy; Render-LrapDetail; $script:LState.lastError = '' } catch { Set-LrapError $_.Exception.Message } }
+function On-LrapRaw { try { $script:LState.showRaw = -not $script:LState.showRaw; Render-LrapDetail; $script:LState.lastError = '' } catch { Set-LrapError $_.Exception.Message } }
+function On-LrapSelect {
+    try {
+        if ($script:LState.suspend) { return }
+        $idx = $script:LState.spineList.SelectedIndex
+        $tag = $null
+        if ($idx -ge 0 -and $idx -lt $script:LState.spineIndex.Count) { $tag = $script:LState.spineIndex[$idx] }
+        if ($null -ne $tag) { $script:LState.selectedStep = $tag; $script:LState.showWhy = $false; $script:LState.showRaw = $false; Render-LrapDetail }
+        $script:LState.lastError = ''
+    }
+    catch { Set-LrapError $_.Exception.Message }
+}
+function On-LrapBrowse {
+    try {
+        $dlg = [System.Windows.Forms.OpenFileDialog]::new()
+        $dlg.Filter = 'JSON artifacts (*.json)|*.json|All files (*.*)|*.*'
+        if ($dlg.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $script:LState.packetPath = $dlg.FileName; Invoke-LrapRefresh }
+        $script:LState.lastError = ''
+    }
+    catch { Set-LrapError $_.Exception.Message }
 }
 
 function Resolve-DefaultPacket {
@@ -110,13 +141,13 @@ function New-LrapForm {
     $browseBtn = [System.Windows.Forms.Button]::new()
     $browseBtn.Text = 'Browse...'; $browseBtn.Size = [System.Drawing.Size]::new(84, 24); $browseBtn.Location = [System.Drawing.Point]::new(900, 8)
     $refreshBtn = [System.Windows.Forms.Button]::new()
-    $refreshBtn.Text = 'Refresh'; $refreshBtn.Size = [System.Drawing.Size]::new(90, 24); $refreshBtn.Location = [System.Drawing.Point]::new(1000, 8)
+    $refreshBtn.Text = 'Reload'; $refreshBtn.Size = [System.Drawing.Size]::new(90, 24); $refreshBtn.Location = [System.Drawing.Point]::new(1000, 8)
     $toolbar.Controls.AddRange(@($lblPacket, $packetBox, $browseBtn, $refreshBtn))
     $toolbar.Add_Resize({ Update-LrapToolbarLayout }.GetNewClosure())
 
     # ===== header =====
     $headerBox = [System.Windows.Forms.RichTextBox]::new()
-    $headerBox.Dock = 'Top'; $headerBox.Height = 78; $headerBox.ReadOnly = $true
+    $headerBox.Dock = 'Top'; $headerBox.Height = 116; $headerBox.ReadOnly = $true; $headerBox.WordWrap = $true
     $headerBox.Font = $mono; $headerBox.BackColor = [System.Drawing.Color]::White; $headerBox.BorderStyle = 'None'
     $headerBox.Text = 'Loading...'
 
@@ -128,7 +159,12 @@ function New-LrapForm {
 
     $spineList = [System.Windows.Forms.ListBox]::new()
     $spineList.Dock = 'Fill'; $spineList.Font = $mono; $spineList.IntegralHeight = $false; $spineList.HorizontalScrollbar = $true
+    $spineHint = [System.Windows.Forms.Label]::new()
+    $spineHint.Dock = 'Top'; $spineHint.Height = 22; $spineHint.TextAlign = 'MiddleLeft'
+    $spineHint.Text = ' THE RUN, STEP BY STEP -- click a step to inspect its four lanes:'
+    $spineHint.Font = [System.Drawing.Font]::new('Segoe UI', 8.5, [System.Drawing.FontStyle]::Bold)
     $split.Panel1.Controls.Add($spineList)
+    $split.Panel1.Controls.Add($spineHint)
 
     $rightTop = [System.Windows.Forms.Panel]::new()
     $rightTop.Dock = 'Top'; $rightTop.Height = 34
@@ -152,24 +188,11 @@ function New-LrapForm {
     $s.headerBox = $headerBox; $s.spineList = $spineList; $s.detailList = $detailList; $s.statusLabel = $statusLabel
     $s.whyBtn = $whyBtn; $s.rawBtn = $rawBtn; $s.split = $split
 
-    $refreshBtn.Add_Click({ Invoke-LrapRefresh }.GetNewClosure())
-    $whyBtn.Add_Click({ $script:LState.showWhy = -not $script:LState.showWhy; Render-LrapDetail }.GetNewClosure())
-    $rawBtn.Add_Click({ $script:LState.showRaw = -not $script:LState.showRaw; Render-LrapDetail }.GetNewClosure())
-    $spineList.Add_SelectedIndexChanged({
-            if ($script:LState.suspend) { return }
-            $idx = $script:LState.spineList.SelectedIndex
-            $tag = $null
-            if ($idx -ge 0 -and $idx -lt $script:LState.spineList.Items.Count) { $tag = $script:LState.spineIndex[$idx] }
-            if ($null -ne $tag) { $script:LState.selectedStep = $tag; $script:LState.showWhy = $false; $script:LState.showRaw = $false; Render-LrapDetail }
-        }.GetNewClosure())
-    $browseBtn.Add_Click({
-            try {
-                $dlg = [System.Windows.Forms.OpenFileDialog]::new()
-                $dlg.Filter = 'JSON artifacts (*.json)|*.json|All files (*.*)|*.*'
-                if ($dlg.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $script:LState.packetPath = $dlg.FileName; Invoke-LrapRefresh }
-            }
-            catch { $script:LState.statusLabel.Text = 'browse failed: ' + $_.Exception.Message }
-        }.GetNewClosure())
+    $refreshBtn.Add_Click({ On-LrapRefresh }.GetNewClosure())
+    $whyBtn.Add_Click({ On-LrapWhy }.GetNewClosure())
+    $rawBtn.Add_Click({ On-LrapRaw }.GetNewClosure())
+    $spineList.Add_SelectedIndexChanged({ On-LrapSelect }.GetNewClosure())
+    $browseBtn.Add_Click({ On-LrapBrowse }.GetNewClosure())
     $form.Add_Shown({
             Update-LrapToolbarLayout
             try { $sp = $script:LState.split; $w = [int]$sp.Width; if ($w -gt 220) { $sp.SplitterDistance = [int]([Math]::Min(460, [Math]::Max(200, [int]($w * 0.36)))) } } catch { }
@@ -283,10 +306,12 @@ function Render-LrapModel {
     $s.packetBox.Text = [string]$s.model.source_path
     $s.suspend = $true
     Render-LrapSpine
-    $s.suspend = $false
-    # default selection: the inconsistent step if any, else step 1
+    # default selection: the inconsistent step if any, else step 1. Highlight the row (so the spine visibly
+    # reads as a selector) while suspended, then render its detail once.
     $target = 1
     if ($s.model.ok -and $s.model.overall.inconsistent_step -gt 0) { $target = $s.model.overall.inconsistent_step }
+    try { $s.spineList.SelectedIndex = ($target - 1) } catch { }
+    $s.suspend = $false
     $s.selectedStep = $target; $s.showWhy = $false; $s.showRaw = $false
     Render-LrapDetail
 }
@@ -374,6 +399,23 @@ if ($SelfTest) {
         Invoke-LrapRefresh
         [System.Windows.Forms.Application]::DoEvents()
         if ($s.spineList.Items.Count -ge 6) { Write-Output 'SELFTEST_REFRESH_OK' } else { Write-Output 'SELFTEST_REFRESH_FAIL' }
+
+        # INTERACT: drive the REAL event handlers (PerformClick + spine selection) -- the click-dispatch path the
+        # cloud gate cannot reach. Handlers are fail-soft (record lastError), so a throw is caught HERE (and by
+        # the user as a status line) instead of an unhandled WinForms dialog. This is the gate that would have
+        # caught the reported button errors.
+        $s.lastError = ''
+        $s.refreshBtn.PerformClick(); [System.Windows.Forms.Application]::DoEvents(); $eRef = [string]$s.lastError
+        $s.whyBtn.PerformClick(); [System.Windows.Forms.Application]::DoEvents(); $eWhy = [string]$s.lastError
+        $whyToggled = ([string]$s.whyBtn.Text -eq 'Hide why')
+        $s.rawBtn.PerformClick(); [System.Windows.Forms.Application]::DoEvents(); $eRaw = [string]$s.lastError
+        $dtRaw = ''; for ($i = 0; $i -lt $s.detailList.Items.Count; $i++) { $dtRaw += [string]$s.detailList.Items[$i] + "`n" }
+        $rawToggled = (([string]$s.rawBtn.Text -eq 'Hide raw trace') -and ($dtRaw -match 'RAW EXPERT TRACE'))
+        $eSel = ''
+        if ($s.spineList.Items.Count -ge 4) { $s.spineList.SelectedIndex = 3; [System.Windows.Forms.Application]::DoEvents(); $eSel = [string]$s.lastError }
+        $interactOk = ($eRef -eq '' -and $eWhy -eq '' -and $eRaw -eq '' -and $eSel -eq '' -and $whyToggled -and $rawToggled)
+        if ($interactOk) { Write-Output 'SELFTEST_INTERACT_OK' }
+        else { Write-Output ("SELFTEST_INTERACT_FAIL: refresh=[$eRef] why=[$eWhy] raw=[$eRaw] select=[$eSel] whyToggled=$whyToggled rawToggled=$rawToggled") }
 
         # READ-ONLY: fixtures tree byte-identical after render; write-guard refuses an outside-runtime target
         [System.Windows.Forms.Application]::DoEvents()

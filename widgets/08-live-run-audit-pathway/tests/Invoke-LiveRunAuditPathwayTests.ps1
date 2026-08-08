@@ -254,7 +254,7 @@ if ($Live) {
         Write-Host "  --- self-test child output ---"
         foreach ($ln in ($out -split "`r?`n")) { if ($ln.Trim()) { Write-Host "    $ln" } }
         foreach ($marker in 'SELFTEST_FORM_OK', 'SELFTEST_MODEL_OK', 'SELFTEST_PANES_OK', 'SELFTEST_RECONCILE_OK',
-            'SELFTEST_DESCEND_OK', 'SELFTEST_SANITIZE_OK', 'SELFTEST_REFRESH_OK', 'SELFTEST_READONLY_OK', 'SELFTEST_LAYOUT_OK') {
+            'SELFTEST_DESCEND_OK', 'SELFTEST_SANITIZE_OK', 'SELFTEST_REFRESH_OK', 'SELFTEST_INTERACT_OK', 'SELFTEST_READONLY_OK', 'SELFTEST_LAYOUT_OK') {
             Ok "live: self-test emitted $marker" ($out -match $marker)
         }
         Ok "live: self-test has no FAIL marker" (-not ($out -match 'SELFTEST_\w+_FAIL'))

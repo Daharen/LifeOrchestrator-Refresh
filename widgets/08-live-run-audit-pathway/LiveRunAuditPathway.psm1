@@ -700,6 +700,8 @@ function Format-LrapHeader {
     [void]$h.Add('LIVE-RUN AUDIT PATHWAY (widget 08)   packet_id=' + $Model.packet_id + '   ' + $flat)
     [void]$h.Add('schema=' + $Model.schema + '   compiler=' + $Model.compiler_version + '   non_execution=' + (Format-Bool $Model.non_execution) + '   disposition=' + $Model.disposition + '   diagnostics=' + $san)
     [void]$h.Add('VERDICT: ' + [string]$Model.overall.classification + '   (green = counts reconcile, a necessary-not-sufficient signal -- NOT a claim the run is correct)')
+    [void]$h.Add('source: ' + [string]$Model.source_path)
+    [void]$h.Add('This REPLAYS a completed #40 compile step-by-step (a replay of an artifact on disk, NOT a live stream). Default = the newest compile under modules/40-context-compiler/runtime/artifacts; Browse = pick another; Reload = re-read this one.   <-- click a step at the left to inspect its four lanes.')
     $summary = 'packet ' + $Model.packet_id + ' -- ' + [string]$Model.overall.classification
     return [pscustomobject]@{ header_lines = $h.ToArray(); summary_line = $summary }
 }
