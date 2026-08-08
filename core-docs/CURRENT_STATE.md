@@ -28,8 +28,8 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
   (i36, D-0102: 11/11 s10 criteria over a distinct 6-package foreign corpus at 100x leaf span). Fast-beam recall
   lever shipped i39 (D-0108; hpr ~2x; guaranteed+packet recall stay 1e6).
   Arc detail: the index; per-module state: `MODULE_ROADMAP.md`.
-- **P0-1 action-authorization gate (#43): `build_status=build_complete | p0_1_gate_status=PASS | activation_status=prohibited` -- #43 0.6.0 (`10d0d1e`, i42) built the 3 ROUND-4 exact closures and the ROUND-5 independent review returned PASS -> s7 RATIFIED (D-0118; activation still prohibited).** The deny-by-default monitor + injection suite is BUILT to the FROZEN `ACTION_AUTHORIZATION_CONTRACT.md` (D-0103). i42 closed the 3 round-4 findings (D-0116): **F5** real-seam losslessness, **F4** grant pre-validation (the A11 KeyError path dies), **F2** handle-bound ledger provenance (mutant M-E38 killed). Verified x2 byte-identical (364/364; full counts in the tests table; empty-dir self-verify VERIFIED; bundle `3b5d62f4`). A06 denies every authentic packet; `non_execution:true` holds. Over-claimed twice (D-0107/D-0109), never since (M2-D): the module EMITS `incomplete` + `exact_closure_built` 7/7 + `round3_closure_built` 4/4 + `round4_closure_built` 3/3. **ROUND-5 review PASS (D-0118)** -- the independent reviewer re-ran the pack (364/364, VERIFIED:True), F5/F4/F2 closed, no frozen-contract reopen; **s7 RATIFIED to `p0_1_gate_status=pass`** (naming pack `6bb613ea`, M2-D); the 5-round arc (7->7->5->3->0) closes; activation stays `prohibited`. Digest: `research/2026-08-08-i42-p01gate-round5-ratification.md`.
-- **i42 CLOSED (D-0117, plan `fo-42-e5403d74`; 2-lane CPU coding wave):** Lane A SHIPPED **M2-A -- the fail-closed doc-hygiene commit gate** (`fd3da12`..`25bf2b3`; `ops/audit/doc-commit-gate.py` + a git pre-commit hook + a hook-presence assertion in `gen-doc-health.py`; 26/26 gate + 5/5 hook tests; a real REJECT+PASS firing logged; the mandate-02 M2-A HARD DEADLINE MET). Lane B SHIPPED **#43 0.6.0** (`10d0d1e`; the 3 round-4 closures; orchestrator-verified; M2-D held). The ROUND-5 review returned PASS -> s7 RATIFIED to `pass` (D-0118; the P0-1 gate arc closes). (i41 was D-0114/15/16.)
+- **P0-1 action-authorization gate (#43): `build_status=build_complete | p0_1_gate_status=PASS | activation_status=prohibited`.** #43 0.6.0 (`10d0d1e`, i42) is a RATIFIED DESIGN pass -- the ROUND-5 independent review returned PASS -> s7 `p0_1_gate_status=pass` (D-0118, M2-D, pack `6bb613ea`; the 5-round arc 7->7->5->3->0 closed; F5/F4/F2 seam detail in D-0116/18). Verified x2 byte-identical (364/364; bundle `3b5d62f4`); A06 denies every authentic packet; `non_execution:true` holds. **Activation stays PROHIBITED** -- a design pass, NOT an activation grant.
+- **i45 CLOSED (D-0122, plan `fo-45-b17a531e`; single CODING lane):** SHIPPED NEW **widgets/08 Live-Run Audit Pathway (LRAP)** -- the audit program's phenomenological TOP surface (P9; `a88e177` + fix pass `6028b9c`), a read-only replay of a #40 compile as ONE chronological plain-language INTENT/INPUT/OUTPUT/RECONCILE narrative. Independently re-verified 87/0/0 -Live (five-fixture machine classify 0 FP/FN); leveled Nicholas accept (buttons + improvement/foundation PASS; whole-system + complete inclusion NOT YET). Prior close i44 = D-0121 (AUDIT_PIPELINE promotion).
 - **FROZEN / deferred (D-0080):** durable-supervisor / warm-pool hardening (D-0079 GATE-NO stands; classic
   detached-warm is the trusted default); generator upgrades; `video.interpret` + live composition; deep
   real-time perception (arch 27-49); broad training.
@@ -135,10 +135,10 @@ registry facts: `TOOL_MODEL_REGISTRY.md`. Roster (all MVP-complete unless noted)
 - **NOT built:** #26 agent.coding — designed + DEFERRED (D-0037; no safe code-exec substrate on this box).
 - **Widgets (native + `launch.bat`, D-0038):** 01 Local Agent Console · 02 Module Launcher · 03 Verification
   Console (durable verdicts, D-0065) · 04 Fan-out Wave Dashboard (live-GUI confirm DONE) · 05 Provenance Map
-  (audit tier A1) · 06 Compile Trace Console (audit A1) · 07 Audit Timeline+Tournament (audit A2). Widgets
-  05/06/07 live-GUI confirms DONE (i43, D-0120; expert-forensic -- see LRAP).
+  (audit tier A1) · 06 Compile Trace Console (audit A1) · 07 Audit Timeline+Tournament (audit A2) · 08 Live-Run Audit Pathway (LRAP, i45). Widgets
+  05/06/07 live-GUI confirms DONE (i43, D-0120; expert-forensic descend target); Widget 08 (LRAP v1) SHIPPED + verified 87/0/0 + leveled-accepted i45 (D-0122): increment PASS, whole-system + complete inclusion NOT YET.
 
-**Phase A complete** (0-25 + 00.1; #26 deferred); generator track complete; **Phase B Widgets 01-07 shipped;
+**Phase A complete** (0-25 + 00.1; #26 deferred); generator track complete; **Phase B Widgets 01-08 shipped;
 Phase C video spine front half built; memory subsystem #35-#43 built, Tier-1 accepted.**
 
 ## Installed dependencies (verified on this machine)
@@ -243,9 +243,10 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 | #40 context.compiler | **0.9.0 (i38): working_memory hydrated from #42 (conjunctive ns fail-closed; state_version in identity; flat byte-identical to 0.8.0); 42/42 owned + full regression (322/322 + i35 32/32 + router 35/35 + i34 38/38)** | `52a0381` | 08-05 |
 | #41 skill.card | 0.2.0: 81/81 python + 85/85 -Live | `54c2e79` | 08-03 |
 | #42 working.memory | 0.1.0: 30/30 + 30/30 live + 14/14 pwsh | `601a2db` | 08-05 |
-| #43 action.authz | **0.6.0 (i42): the 3 round-4 exact closures (F5 real-seam losslessness via build_trusted+bound identity digest; F4 grant pre-validation shared iterator, the A11 KeyError path dies; F2 handle-bound ledger provenance, successor mutant M-E38 killed); suite x2 exit 0 byte-identical (364/364, mutations 69/69, fuzzer 400/0, oracle 152 not_run=0-GATING, role 30/30, completion 21/21, views 64/64); empty-dir self-verify VERIFIED (3b5d62f4); taxonomy flips to `pass` (D-0118 -- round-5 review PASS naming pack 6bb613ea; activation still prohibited)** | `10d0d1e` | 08-08 |
+| #43 action.authz | **0.6.0 (i42): the 3 round-4 exact closures (F5/F4/F2 -- seam detail D-0116/18); suite x2 exit 0 byte-identical (364/364, mutations 69/69, fuzzer 400/0, oracle 152 not_run=0, role 30/30, completion 21/21, views 64/64); empty-dir self-verify VERIFIED (3b5d62f4); taxonomy=`pass` (D-0118 round-5 PASS, pack 6bb613ea; activation prohibited)** | `10d0d1e` | 08-08 |
 | widgets/05 / 06 / 07 | 100/100+STA 8/8 · 85/85+98/98 -Live (STA 9/9) · 81 cloud + 93 -Live (STA 8/8) — live-GUI confirm DONE i43 | `3ad71d3`/`c912854`/`855c242` | 08-05..08 |
-| D-0077 cross-module folds | i34 smoke 38/38 · i36 Tier-1 11/11 (`tier1_accepted=TRUE`) · i38 18/18 · i39 18/18 · i40 vs 0.4.0 exit 0 · i41 fold-i39 vs 0.5.0 exit 0 · **i42: fold-i39 harness vs 0.6.0 exit 0 + i34 38/38 + the independent #43 suite x2 byte-identical (3b5d62f4)** | `runtime/smoke-i34.py`/`fold-i39.py` | 08-08 |
+| widgets/08 LRAP | **87/0/0 -Live (i45): read-only replay pathway; every SELFTEST_*_OK (incl. RECONCILE/DESCEND/INTERACT/READONLY/LAYOUT); five-fixture machine classify 0 FP/FN (mis-route->s3, dropped->s4, wrong-record->s6, clean+quirk consistent); byte-identical re-render; read-only + i33 sanitization fail-closed; real #40 render; orchestrator INDEPENDENT re-verify** | `a88e177`/`6028b9c` | 08-08 |
+| D-0077 cross-module folds | i34 smoke 38/38 · i36 Tier-1 11/11 (`tier1_accepted=TRUE`) · i38/i39 18/18 · i40/i41 fold-i39 exit 0 · **i42: fold-i39 vs 0.6.0 exit 0 + i34 38/38 + the independent #43 suite x2 byte-identical (3b5d62f4); i45: widgets/08 pinned 06/07 adapter + cross-widget contract test green in the independent -Live 87/0/0** | `runtime/smoke-i34.py`/`fold-i39.py` | 08-08 |
 
 ## Known failures / gotchas
 
@@ -340,9 +341,9 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 - **`-Profile max` 9B arg-gen returns non-JSON** (`arg_parse_failed`) — floor is the reliable path (D-0046).
 - **The executor file-lock crash root cause was never reproduced** — self-healed, not explained.
 - **Widget 03 `model.gateway` GPU live-GUI pass still open** (since D-0060).
-- **Audit surface not yet phenomenologically auditable (D-0120):** Widgets 05/06/07 render correctly but
-  are expert-forensic + post-hoc; the Live-Run Audit Pathway (LRAP) is the audit program's next target
-  (now `core-docs/AUDIT_PIPELINE.md`; LRAP spec in research/).
+- **Audit surface -- LRAP v1 shipped, whole-system audit NOT YET (D-0122):** Widget 08 (LRAP v1) makes the
+  ASSEMBLY side (steps 1-6) of a replayed #40 compile legible + leveled-accepted i45; the OUTPUT side +
+  instruction<->output reconciliation + ride-along PAUSE + possession are the deferred OUT set = next increment (`core-docs/AUDIT_PIPELINE.md`).
 - **Portability:** `$PwshPath` defaults across ~15 model-bound entrypoints; core-infra (00.1 + `ops/*.bat`);
   interpreter paths #15/#16; model-bound F: literals — each its own follow-on wave (D-0069).
 - **Generator upgrades (D-0068 leads):** image Z-Image-Turbo Q8 (needs stable-diffusion.cpp), music ACE-Step,
@@ -354,13 +355,13 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ## Next expected action
 
-**i44 CLOSED (D-0121):** the AUDIT_PIPELINE target doc PROMOTED to `core-docs/AUDIT_PIPELINE.md` (P9 phenomenological legibility added; cadence `last_reviewed i43` / `review_due i47` / `next_increment LRAP`; registered in DOC_PROTOCOL s2 + s8 + the doc-gate; own budget 11->12 KB; source digest stubbed) + `_to_delete_w07/` untracked (Nicholas i43 ruling). Docs-only; no wave, no module code.
+**i45 CLOSED (D-0122):** SHIPPED NEW **widgets/08 Live-Run Audit Pathway (LRAP)** -- the audit program's phenomenological TOP surface (P9; `a88e177` + fix pass `6028b9c`; read-only replay of a #40 compile, assembly-side steps 1-6). Orchestrator INDEPENDENT re-verify 87/0/0 -Live (five-fixture machine classify 0 FP/FN). Leveled Nicholas accept: buttons + improvement/foundation PASS; whole-system + complete inclusion NOT YET.
 
-**NEXT = i45** (seat: Opus 4.8 Extra): design-first the LRAP -- its own design doc -> a frontier/subagent red-team (A3 pattern) -> a read-only build increment; the ride-along pause hook a separate gated increment. Deferred candidates: M2-C docs-into-memory note; #40 beam-width; PB-2 delegation seam. Menu: **`FANOUT_ORCHESTRATOR_HANDOFF.md`** s4. Mandate-02 countdown i45 -> 45/2. P0-1 activation stays FROZEN.
+**NEXT = i46** (seat: Opus 4.8 Extra): the audit program's next increment = the LRAP ride-along + OUTPUT side (A2.2 pause hook + captured output / instruction<->output reconciliation; possession/side-by-side) -- each design-first -> red-team-gated. Deferred candidates: M2-C docs-into-memory note; #40 beam-width; PB-2 delegation seam (unblocked D-0119). Menu: **`FANOUT_ORCHESTRATOR_HANDOFF.md`** s4. Mandate-02 countdown i45 -> 45/2 (i46 -> 46/1). P0-1 activation stays FROZEN.
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades; `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-08 -- i44 CLOSED (D-0121): the AUDIT_PIPELINE target doc promoted to `core-docs/AUDIT_PIPELINE.md` (P9 phenomenological legibility added; cadence i43/i47; next_increment LRAP) + `_to_delete_w07/` untracked. NEXT = i45.
+**Last updated:** 2026-08-08 -- i45 CLOSED (D-0122): NEW widgets/08 Live-Run Audit Pathway (LRAP) shipped + independently verified 87/0/0 + leveled Nicholas accept (increment PASS; whole-system audit NOT YET). NEXT = i46.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

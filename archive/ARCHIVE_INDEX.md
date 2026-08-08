@@ -111,3 +111,5 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 | archive/fanout-agents/i42-P01-R4-CLOSURE-43.md | i42 Lane B brief (#43 0.6.0 round-4 closures) | 2026-08-08 | D-0117 |
 | archive/handoffs/2026-08-08-FANOUT_ORCHESTRATOR_HANDOFF-i43-close.md | i43 handoff snapshot (pre-close) | 2026-08-08 | D-0120 |
 | archive/handoffs/2026-08-08-FANOUT_ORCHESTRATOR_HANDOFF-i44.md | the outgoing i43-shaped live handoff snapshotted at the i44 close | 2026-08-08 | D-0121 |
+| archive/handoffs/2026-08-08-FANOUT_ORCHESTRATOR_HANDOFF-i45.md | the outgoing i44-shaped live handoff snapshotted at the i45 close | 2026-08-08 | D-0122 |
+| archive/fanout-agents/i45-003.md | i45 CODING-lane brief (LRAP-WIDGET08-i45; NEW widgets/08 Live-Run Audit Pathway) | 2026-08-08 | D-0122 |

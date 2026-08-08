@@ -16,10 +16,10 @@ reconstruct intent without those chats. Do not slim section 2 below its ability 
 24 KB, REPLACE-don't-append per `DOC_PROTOCOL.md`; history to git + archive like every governing doc.
 
 **Cadence header (orchestrator maintains by replacement -- the PROCESS_MANDATE countdown pattern):**
-- `last_reviewed: i43` (the i43 LRAP finding D-0120 IS this doc's overdue review; promoted here i44 D-0121)
-- `review_due: i47` (= last_reviewed + 4; hard ceiling +5 = i48)
-- `current_tier: A1 + read-only A2 -- Widget 05 Provenance Map (i36) + Widget 06 Compile Trace Console (i38) + Widget 07 Audit Timeline+Tournament (i39) SHIPPED; all three human live-GUI CONFIRMED i43 (D-0120), judged expert-forensic + post-hoc, not phenomenological`
-- `next_increment: LRAP -- the Live-Run Audit Pathway (D-0120): pull A2 ride-along (s2.2) + A3 possession/side-by-side (s2.3/2.4) FORWARD; design-first (own doc) -> frontier/subagent red-team (A3 pattern) -> read-only build; the ride-along pause hook a SEPARATE gated increment; spec research/2026-08-08-i43-live-run-audit-pathway-design.md`
+- `last_reviewed: i45` (LRAP v1 / Widget 08 shipped + leveled-accepted i45 D-0122; the i43 finding D-0120 promoted this doc i44 D-0121)
+- `review_due: i49` (= last_reviewed + 4; hard ceiling +5 = i50)
+- `current_tier: A1 + read-only A2 + LRAP v1 -- Widgets 05/06/07 SHIPPED + live-GUI CONFIRMED i43 (expert-forensic descend target); NEW Widget 08 Live-Run Audit Pathway (assembly-side, steps 1-6, replay) SHIPPED + independently verified 87/0/0 (five-fixture 0 FP/FN) + leveled-accepted i45 D-0122: buttons + improvement/foundation PASS, whole-system/complete-inclusion NOT YET`
+- `next_increment: LRAP ride-along + OUTPUT side (D-0122): the deferred OUT set -- ride-along PAUSE/gateway hold hook (s2.2/A2.2) + captured model OUTPUT + instruction<->output reconciliation (the D-0120 half v1 does not yet deliver) + possession (2.3) + side-by-side (2.4); each a SEPARATE design-first -> red-team-gated unit; Widgets 05/06/07/08 stay the descend/replay base`
 
 ## 0. Purpose + the decoupling this buys
 

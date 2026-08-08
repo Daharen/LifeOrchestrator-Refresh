@@ -48,7 +48,7 @@ pre-consolidation full text → `archive/`. Per-module params/artifacts → `mod
 > 2080 Ti = build target, RTX PRO 6000 = horizon. Live status: `CURRENT_STATE.md`.
 
 **The per-module numbers are architectural positions, not a build sequence.** The full 0-49 spine lives in
-`ARCHITECTURE_MAP.md`. **Modules 0-34 + 00.1 + the memory subsystem #35-#43 are built; Widgets 01-07 are
+`ARCHITECTURE_MAP.md`. **Modules 0-34 + 00.1 + the memory subsystem #35-#43 are built; Widgets 01-08 are
 built.**
 
 **Phase A — utility & cost-offload Modules — COMPLETE except the deferred coding agent:** `logic.escalator`
@@ -57,7 +57,7 @@ built.**
 video LTX-Video/Wan2.1, audio Stable Audio; SD 3.5 fp16 tier shipped i17, D-0070; each further upgrade = a
 GPU-lane wave) · `agent.coding` DEFERRED (D-0037; see #26).
 
-**Phase B — Widget layer:** 01-07 shipped. Backlog: **Voice Console · Generator Studio · Document Workspace ·
+**Phase B — Widget layer:** 01-08 shipped. Backlog: **Voice Console · Generator Studio · Document Workspace ·
 System/Executor Monitor**. Full list in `widgets/README.md`.
 
 **Phase C — canonical spine:** video 19-22 front half BUILT (#32/#33/#34); `video.interpret` (pos 22) remains,
@@ -355,7 +355,18 @@ reparse/ADS/junction profiles; production store formats; freshness relaxation; t
   the phenomenological pathway Nicholas needs to audit a live run -> the **Live-Run Audit Pathway (LRAP)** is
   the audit program's reprioritized next target (`research/2026-08-08-i43-live-run-audit-pathway-design.md`;
   the unbuilt A2 ride-along pause [s2.2] + A3 possession/side-by-side [s2.3/2.4] are its core, pulled
-  forward; delegation possession still needs the local coordinator).
+  forward; delegation possession still needs the local coordinator). **LRAP v1 (Widget 08, assembly-side replay) SHIPPED i45 (D-0122); the ride-along + OUTPUT side is the next increment.**
+- **08 Live-Run Audit Pathway (LRAP)** — MVP complete (i45, D-0122, `a88e177`+`6028b9c`; audit phenomenological
+  TOP surface, P9). Read-only STA WinForms over a REPLAYED #40 compile: steps 1-6 (normalize/retrieve/route/
+  select/budget/packet) as ONE chronological plain-language INTENT/INPUT/OUTPUT/RECONCILE narrative; RECONCILE
+  re-expresses ONLY a substrate-computed set/count/arithmetic verdict (no semantic judgment, F1), collapsed on
+  first pass; the fixed per-step x per-lane HONESTY MAP renders every P2 cell as a visible "not emitted yet"
+  lane (never faked); a pinned 06/07 reader ADAPTER + cross-widget contract test (recompute EXCLUDED); plain-
+  language descend. Independently re-verified **87/0/0 -Live** (five-fixture machine classify 0 FP/FN).
+  **Leveled Nicholas accept (D-0122): buttons + plausible-improvement/foundation PASS; whole-system + complete
+  inclusion NOT YET** — v1 is assembly-side (input steps 1-6) only; the ride-along PAUSE hook + captured OUTPUT /
+  instruction<->output reconciliation + possession/side-by-side are the deferred OUT set = the audit program's
+  next increment. 05/06/07 are its expert-forensic descend target.
 - **Doc-Health Monitor (audit tier A0.5)** — SHIPPED (D-0101). `ops/audit/gen-doc-health.py` → color-coded
   size-vs-quota HTML + a jsonl log row per close; zero doc-upkeep; regenerated each wave close. Feeds the
   mandate-02 M2-A gate (the monitor detects; the gate will refuse).
