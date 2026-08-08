@@ -3,8 +3,8 @@
 Machine-checkable header (an orchestrator reads these at session start):
 - `mandate_id: 02`
 - `opened_iteration: 40`
-- `current_iteration: 42`   (updated each orchestrator session)
-- `iterations_to_sunset: 5`   (COUNTDOWN -- at 0, state -> REPORT_DUE; s1)
+- `current_iteration: 43`   (updated each orchestrator session)
+- `iterations_to_sunset: 4`   (COUNTDOWN -- at 0, state -> REPORT_DUE; s1)
 - `sunset_iteration: 47`
 - `sealed_check_offset_iterations: 7`
 - `state: ACTIVE`   (ACTIVE | REPORT_DUE | SUNSET | RE-LICENSED)

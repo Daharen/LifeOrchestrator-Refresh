@@ -144,3 +144,4 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0117 | 2026-08-08 | locked | i42 close: M2-A doc-hygiene commit gate SHIPPED (hard deadline met) + #43 0.6.0 (3 round-4 closures, M2-D held); round-5 pack 6bb613ea couriered |
 | D-0118 | 2026-08-08 | locked | i42 round-5 ratification PASS: P0-1 = DESIGN PASS (p0_1_gate_status=pass, pack 6bb613ea); activation still prohibited; arc closes 7->7->5->3->0 |
 | D-0119 | 2026-08-08 | locked | M2-E resolved (Nicholas): in-session cloud subagents PERMITTED inside the D-0051-as-amended boundary (frontier still human-couriered); PB-2 delegation seam unblocked |
+| D-0120 | 2026-08-08 | locked | i43: Widgets 05/06/07 live-GUI confirm PASS but audit surface not yet phenomenologically auditable -> Live-Run Audit Pathway reprioritized (P9 legibility) |

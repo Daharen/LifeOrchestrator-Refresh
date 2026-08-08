@@ -109,3 +109,4 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 | archive/handoffs/2026-08-08-FANOUT_ORCHESTRATOR_HANDOFF-i42.md | the outgoing i41-shaped handoff snapshotted at the i42 close | 2026-08-08 | D-0117 |
 | archive/fanout-agents/i42-M2A-DOCGATE.md | i42 Lane A brief (M2-A doc-gate) | 2026-08-08 | D-0117 |
 | archive/fanout-agents/i42-P01-R4-CLOSURE-43.md | i42 Lane B brief (#43 0.6.0 round-4 closures) | 2026-08-08 | D-0117 |
+| archive/handoffs/2026-08-08-FANOUT_ORCHESTRATOR_HANDOFF-i43-close.md | i43 handoff snapshot (pre-close) | 2026-08-08 | D-0120 |

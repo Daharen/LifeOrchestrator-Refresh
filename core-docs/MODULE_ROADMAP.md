@@ -342,17 +342,20 @@ reparse/ADS/junction profiles; production store formats; freshness relaxation; t
   confirm DONE (i15).
 - **05 Provenance Map** — MVP complete (i36, D-0101/D-0102, `3ad71d3`; audit tier A1). Read-only construction
   map joining canonical docs + git trailers + plans + verdicts (what exists / new-since / verification /
-  planned-but-unbuilt / over-budget flags). **Live-GUI confirm OPEN.**
+  planned-but-unbuilt / over-budget flags). **Live-GUI confirm DONE (i43, D-0120).**
 - **06 Compile Trace Console** — MVP complete (i38, D-0106, `c912854`; audit tier A1). Read-only renderer over
   compile/eval artifacts (4 packet regions + trust banners; selpol + R-1 router stage-traces; retrieval
   lineage; consumer_profile ledger; #42 state_version) + the compile-layer counterfactual runner (one varied
-  input, zero model calls). **Live-GUI confirm OPEN.**
+  input, zero model calls). **Live-GUI confirm DONE (i43, D-0120).**
 - **07 Audit Timeline + Tournament** — MVP complete (i39, D-0108, `855c242`; audit tier A2). The s2.6
   tool-selection TOURNAMENT pane (elimination rounds + per-stage counts/reason-codes over the R-1 stage-trace
   + eligibility/selpol; counts reconcile) + the s2.1 cross-context OMNISCIENT stitched TIMELINE (episodes +
   plans + #42 state_version chains + batons-when-present). Read-only; holds no lease. **Live-GUI confirm
-  OPEN.** A2/A3 follow-ons NOT built: ride-along pause (s2.2, design-first + red-team-gated); delegation
-  possession (s2.7, needs the local coordinator).
+  DONE (i43, D-0120).** **i43 finding (D-0120):** 05/06/07 render but are expert-forensic + post-hoc, not
+  the phenomenological pathway Nicholas needs to audit a live run -> the **Live-Run Audit Pathway (LRAP)** is
+  the audit program's reprioritized next target (`research/2026-08-08-i43-live-run-audit-pathway-design.md`;
+  the unbuilt A2 ride-along pause [s2.2] + A3 possession/side-by-side [s2.3/2.4] are its core, pulled
+  forward; delegation possession still needs the local coordinator).
 - **Doc-Health Monitor (audit tier A0.5)** — SHIPPED (D-0101). `ops/audit/gen-doc-health.py` → color-coded
   size-vs-quota HTML + a jsonl log row per close; zero doc-upkeep; regenerated each wave close. Feeds the
   mandate-02 M2-A gate (the monitor detects; the gate will refuse).

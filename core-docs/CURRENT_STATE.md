@@ -136,7 +136,7 @@ registry facts: `TOOL_MODEL_REGISTRY.md`. Roster (all MVP-complete unless noted)
 - **Widgets (native + `launch.bat`, D-0038):** 01 Local Agent Console · 02 Module Launcher · 03 Verification
   Console (durable verdicts, D-0065) · 04 Fan-out Wave Dashboard (live-GUI confirm DONE) · 05 Provenance Map
   (audit tier A1) · 06 Compile Trace Console (audit A1) · 07 Audit Timeline+Tournament (audit A2). Widgets
-  05/06/07 human live-GUI confirms OPEN (D-0064).
+  05/06/07 live-GUI confirms DONE (i43, D-0120; expert-forensic -- see LRAP).
 
 **Phase A complete** (0-25 + 00.1; #26 deferred); generator track complete; **Phase B Widgets 01-07 shipped;
 Phase C video spine front half built; memory subsystem #35-#43 built, Tier-1 accepted.**
@@ -244,7 +244,7 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 | #41 skill.card | 0.2.0: 81/81 python + 85/85 -Live | `54c2e79` | 08-03 |
 | #42 working.memory | 0.1.0: 30/30 + 30/30 live + 14/14 pwsh | `601a2db` | 08-05 |
 | #43 action.authz | **0.6.0 (i42): the 3 round-4 exact closures (F5 real-seam losslessness via build_trusted+bound identity digest; F4 grant pre-validation shared iterator, the A11 KeyError path dies; F2 handle-bound ledger provenance, successor mutant M-E38 killed); suite x2 exit 0 byte-identical (364/364, mutations 69/69, fuzzer 400/0, oracle 152 not_run=0-GATING, role 30/30, completion 21/21, views 64/64); empty-dir self-verify VERIFIED (3b5d62f4); taxonomy flips to `pass` (D-0118 -- round-5 review PASS naming pack 6bb613ea; activation still prohibited)** | `10d0d1e` | 08-08 |
-| widgets/05 / 06 / 07 | 100/100+STA 8/8 · 85/85+98/98 -Live (STA 9/9) · 81 cloud + 93 -Live (STA 8/8) — live-GUI confirms OPEN | `3ad71d3`/`c912854`/`855c242` | 08-05..06 |
+| widgets/05 / 06 / 07 | 100/100+STA 8/8 · 85/85+98/98 -Live (STA 9/9) · 81 cloud + 93 -Live (STA 8/8) — live-GUI confirm DONE i43 | `3ad71d3`/`c912854`/`855c242` | 08-05..08 |
 | D-0077 cross-module folds | i34 smoke 38/38 · i36 Tier-1 11/11 (`tier1_accepted=TRUE`) · i38 18/18 · i39 18/18 · i40 vs 0.4.0 exit 0 · i41 fold-i39 vs 0.5.0 exit 0 · **i42: fold-i39 harness vs 0.6.0 exit 0 + i34 38/38 + the independent #43 suite x2 byte-identical (3b5d62f4)** | `runtime/smoke-i34.py`/`fold-i39.py` | 08-08 |
 
 ## Known failures / gotchas
@@ -339,8 +339,10 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 - **`model.gateway` semantic confidence** — today a completeness heuristic, not semantic, not calibrated.
 - **`-Profile max` 9B arg-gen returns non-JSON** (`arg_parse_failed`) — floor is the reliable path (D-0046).
 - **The executor file-lock crash root cause was never reproduced** — self-healed, not explained.
-- **Widget 03 `model.gateway` GPU live-GUI pass still open** (since D-0060); Widget 05/06/07 live-GUI confirms
-  OPEN (D-0064).
+- **Widget 03 `model.gateway` GPU live-GUI pass still open** (since D-0060).
+- **Audit surface not yet phenomenologically auditable (i43, D-0120):** Widgets 05/06/07 render correctly but
+  are expert-forensic + post-hoc; the Live-Run Audit Pathway is the audit program's new target
+  (`research/2026-08-08-i43-live-run-audit-pathway-design.md`).
 - **Portability:** `$PwshPath` defaults across ~15 model-bound entrypoints; core-infra (00.1 + `ops/*.bat`);
   interpreter paths #15/#16; model-bound F: literals — each its own follow-on wave (D-0069).
 - **Generator upgrades (D-0068 leads):** image Z-Image-Turbo Q8 (needs stable-diffusion.cpp), music ACE-Step,
@@ -352,13 +354,13 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ## Next expected action
 
-**i42 CLOSED (D-0117/D-0118): M2-A doc-gate SHIPPED (the mandate-02 hard deadline met) + #43 0.6.0 built + the ROUND-5 review returned PASS -> s7 RATIFIED to `p0_1_gate_status=pass` (D-0118, naming pack `6bb613ea`); activation stays `prohibited`.**
+**i43 CLOSED (D-0120): Widgets 05/06/07 human live-GUI confirm = technical PASS (render real data correctly); BUT Nicholas judged the audit surface not yet phenomenologically auditable -> the Live-Run Audit Pathway (LRAP) becomes the audit program's next target (design spec `research/2026-08-08-i43-live-run-audit-pathway-design.md`; design only, no build). The D-0064 widget live-GUI confirms are CLOSED.**
 
-**NEXT = i43** (orchestrator seat: Opus 4.8 Extra, D-0116): the P0-1 action-authorization gate arc is CLOSED (design pass, D-0118; activation stays `prohibited`). No forced unit. Candidates (frugality, D-0114): the M2-C first increment (docs-into-memory design note -- now unblocked since M2-A shipped; CURRENT_STATE at ~99% is the first re-layer candidate); the #40 beam-width follow-on; Widget 05/06/07 live-GUI confirms (Nicholas); the 220a806 stray-commit untrack ruling (Nicholas). Menu: **`FANOUT_ORCHESTRATOR_HANDOFF.md`** section 4. Mandate-02 countdown: i43 -> 43/4.
+**NEXT = i44** (seat: Opus 4.8 Extra): design-first the LRAP (its own doc -> red-team -> a read-only build increment) OR a deferred candidate -- M2-C docs-into-memory note; #40 beam-width; promote AUDIT_PIPELINE to `core-docs/`; the `220a806` untrack (Nicholas). Menu: **`FANOUT_ORCHESTRATOR_HANDOFF.md`** s4. Mandate-02 countdown i44 -> 44/3.
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades; `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-08 -- i42 CLOSED (D-0117): the M2-A doc-hygiene commit gate SHIPPED (the mandate-02 hard deadline met; 26/26 + 5/5, a real firing logged) + #43 0.6.0 built (the 3 round-4 closures, independently verified, M2-D held); the ROUND-5 independent review returned PASS -> s7 RATIFIED to `p0_1_gate_status=pass` (naming pack `6bb613ea`; activation still prohibited; the P0-1 arc closes). NEXT = i43.
+**Last updated:** 2026-08-08 -- i43 CLOSED (D-0120): Widgets 05/06/07 human live-GUI confirm = technical PASS; Nicholas judged the audit surface not yet phenomenologically auditable -> the Live-Run Audit Pathway (LRAP) is the audit program's new target (design spec written; design only, no build). NEXT = i44.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*
