@@ -58,10 +58,10 @@ Items (detail stays in PROCESS_BACKLOG rows + D-entries; this list is the mandat
   successors) is ratified in its contract ONLY with the independent as-built review PASS in hand. The orchestrator
   session that ratifies names the review pack id in the D-entry. (i40 applies this to the P0-1 gate: s7 stays
   walked-back until the re-review returns PASS.) **RESULT (i42, D-0118): the round-5 re-review returned PASS -> s7 ratified to `p0_1_gate_status=pass` naming pack `6bb613ea`; the discipline caught 2 over-claims (D-0107/D-0109) then converged honestly (7->7->5->3->0) to an independently-verified pass -- strong metastability evidence.**
-- **M2-E -- PB-2 decision item (delegation seam).** Decide (Nicholas): are in-session cloud subagents inside the
-  D-0051-as-amended boundary? If licensed AND >=3 recurring judgment-hygiene tasks still hold, build the seam per
-  the PB-2 row (delegation-decision events per D-0101). If declined, PB-2 stays RESERVED with the boundary ruling
-  recorded. Until then PB-1's gate remains the guardrail.
+- **M2-E -- RESOLVED i42 (D-0119, Nicholas): in-session cloud subagents are PERMITTED** inside the
+  D-0051-as-amended boundary (frontier access stays human-couriered, D-0052). PB-2 (the delegation seam;
+  delegation-decision events per D-0101) is UNBLOCKED -- BUILD it when >=3 recurring judgment-hygiene tasks hold
+  AND a lane is spare (an i43+ candidate, non-displacing).
 
 ## 3. The sunset REPORT (MANDATORY at `sunset_iteration`; blocks new wave work until produced)
 A `research/<date>-process-mandate-02-report.md` stating, with measured evidence (not vibes):

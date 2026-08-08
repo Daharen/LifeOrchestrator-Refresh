@@ -37,7 +37,7 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
   into fresh Cowork sessions. Ledger + wave model: **`FANOUT_ORCHESTRATOR_HANDOFF.md`**.
 - **Boundary (D-0051, amended by D-0080):** the orchestrator never drives another *external/frontier* AI session
   (human-couriered only); a deterministic LOCAL coordinator IS authorized to spawn local contexts (Priority 10).
-  In-session cloud subagents = an OPEN Nicholas ruling (mandate 02 M2-E).
+  In-session cloud subagents are PERMITTED inside the boundary (D-0119); frontier access stays human-couriered.
 
 ## Adaptive Resource Governor (agent.local #21)
 
@@ -349,7 +349,6 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
   continuity for identity — decide (dense low-res tracking stream vs sparse keyframes) BEFORE freezing
   `video.interpret` (pos 22) / live-composition input contracts.
 - **Warm-pool default-ON gate:** see Known failures (D-0079 sequence).
-- **In-session cloud subagents vs the D-0051 boundary:** OPEN Nicholas ruling (mandate 02 M2-E).
 
 ## Next expected action
 
