@@ -136,7 +136,7 @@ registry facts: `TOOL_MODEL_REGISTRY.md`. Roster (all MVP-complete unless noted)
 - **Widgets (native + `launch.bat`, D-0038):** 01 Local Agent Console · 02 Module Launcher · 03 Verification
   Console (durable verdicts, D-0065) · 04 Fan-out Wave Dashboard (live-GUI confirm DONE) · 05 Provenance Map
   (audit tier A1) · 06 Compile Trace Console (audit A1) · 07 Audit Timeline+Tournament (audit A2) · 08 Live-Run Audit Pathway (LRAP, i45). Widgets
-  05/06/07 live-GUI confirms DONE (i43, D-0120; expert-forensic descend target); Widget 08 (LRAP v1) SHIPPED + machine-verified 87/0/0; NOT a phenomenological pass even on built cases -- Nicholas sees the flags but can't adopt the agent's role (D-0125); P9 open, possession/front-step/ride-along = next.
+  05/06/07 live-GUI confirms DONE (i43, D-0120; expert-forensic descend target); Widget 08 (LRAP v1) SHIPPED + machine-verified 87/0/0; NOT a phenomenological pass even on built cases -- Nicholas sees the flags but can't adopt the agent's role (D-0125); P9 open; next = the ungated poser (D-0126, delivers possession).
 
 **Phase A complete** (0-25 + 00.1; #26 deferred); generator track complete; **Phase B Widgets 01-08 shipped;
 Phase C video spine front half built; memory subsystem #35-#43 built, Tier-1 accepted.**
@@ -342,8 +342,8 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 - **The executor file-lock crash root cause was never reproduced** — self-healed, not explained.
 - **Widget 03 `model.gateway` GPU live-GUI pass still open** (since D-0060).
 - **Audit surface -- LRAP v1 legible but NOT phenomenological even on built cases (D-0125):** Widget 08 lets Nicholas
-  SEE the pipeline actions + machine inconsistency flags (steps 1-6) but NOT adopt the agent's role -- no initial prompt,
-  rationale/agent-view not surfaced (F1 verdict-only), possible opaque agent context -> P9 NOT met; possession + raw-prompt front step + ride-along = next (`core-docs/AUDIT_PIPELINE.md`).
+  SEE the pipeline actions + machine flags (steps 1-6) but NOT adopt the agent's role -- no initial prompt, rationale/
+  agent-view not surfaced (F1 verdict-only) -> P9 NOT met; next = the UNGATED poser (D-0126) + front step + ride-along (`core-docs/AUDIT_PIPELINE.md`).
 - **Portability:** `$PwshPath` defaults across ~15 model-bound entrypoints; core-infra (00.1 + `ops/*.bat`);
   interpreter paths #15/#16; model-bound F: literals — each its own follow-on wave (D-0069).
 - **Generator upgrades (D-0068 leads):** image Z-Image-Turbo Q8 (needs stable-diffusion.cpp), music ACE-Step,
@@ -363,5 +363,5 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ---
 
-**Last updated:** 2026-08-08 -- i45 CLOSED (D-0122): NEW widgets/08 Live-Run Audit Pathway (LRAP) shipped + independently verified 87/0/0 + Nicholas: LRAP v1 machine-verified but NOT a phenomenological pass even on built cases -- can't adopt the agent's role (D-0125); P9 gate open. NEXT = i46.
+**Last updated:** 2026-08-08 -- i45 CLOSED (D-0122): NEW widgets/08 Live-Run Audit Pathway (LRAP) shipped + independently verified 87/0/0 + Nicholas: LRAP v1 machine-verified but NOT a phenomenological pass even on built cases -- can't adopt the agent's role (D-0125); P9 open; next = ungated poser (D-0126), i46.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*
