@@ -126,13 +126,13 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0100 | 2026-08-05 | locked | i35 CLOSED: consumer wiring (#40 0.7.0 hierarchy_port + #37 0.7.0 rehearsal harness); D-0077 fold passed; tier1 -> i36; P0-1 red-team NO-GO w/o a deny-by-default monitor |
 
 | D-0101 | 2026-08-05 | provisional | Adopt the couriered audit-surface / interpretability program (staged A0-A5; R-1 stage-trace binds the router; Widgets 05/06/07 = audit-tier vehicles) |
-| D-0102 | 2026-08-05 | locked | i36 CLOSED: TIER-1 ACCEPTED -- 11/11 s10 over a hash-verified foreign corpus at 100x leaf span; project tier1_accepted TRUE (descend fast-beam lossy; #36-flat fallback preserves recall) |
-| D-0103 | 2026-08-05 | provisional | i37 open: action-authorization contract FROZEN as the P0-1 design target (design-only; non_execution holds; s9 blockers 1-14 = activation-gating) + safety+router wave scoped (NEW #43 P0-1 suite MVP + #40 query router R-1 born-instrumented, plan fo-37-9995475a) + a parallel frontier freeze red-team. |
+| D-0102 | 2026-08-05 | locked | i36 CLOSED: TIER-1 ACCEPTED (11/11 s10 over a hash-verified foreign corpus, 100x leaf span; tier1_accepted TRUE; fast-beam lossy, #36-flat fallback) |
+| D-0103 | 2026-08-05 | provisional | i37 open: action-authz contract FROZEN = P0-1 design target (non_execution holds; s9 blockers 1-14 activation-gating) + safety+router wave (#43 P0-1 MVP + #40 R-1 router) + frontier freeze red-team |
 | D-0104 | 2026-08-05 | locked | i37 CLOSED: safety+router wave (#40 0.8.0 ROUTER + NEW #43 action.authz P0-1 suite MVP 192/192); D-0077 fold 13/13 + i34 38/38; freeze red-team GO-WITH-AMENDMENTS (7 i38 amendments) |
-| D-0105 | 2026-08-06 | provisional | i38 open: scope P0-1 FULL-GATE (#43: 7 s6 amendments + full corpus/fuzzer/M-* kill matrix) + #40<->#42 wm wiring + NEW Widget 06 (3-lane CPU, plan fo-38-2b1efe73); countdown 37->38; PB-4 triggered |
+| D-0105 | 2026-08-06 | provisional | i38 open: scope P0-1 FULL-GATE (#43: 7 s6 amendments + corpus/fuzzer/M-* matrix) + #40<->#42 wm wiring + NEW Widget 06 (fo-38-2b1efe73); countdown 37->38; PB-4 |
 | D-0106 | 2026-08-06 | provisional | i38 close: P0-1 FULL gate (#43 0.2.0 204/204, D-0077 fold 18/18) + #40 0.9.0 wm-hydration + NEW Widget 06 SHIPPED; s7 ratifies pass + pins test-views; as-built re-review couriered [pass later walked back, D-0107] |
 | D-0107 | 2026-08-06 | provisional | i38 frontier fold: P0-1 AS-BUILT re-review FAIL -> p0_1_gate_status WALKED BACK to incomplete (over-claimed vs s6; build_complete + activation-prohibited UNCHANGED); 7 items -> i39 unit-0 |
-| D-0108 | 2026-08-06 | locked | i39 `fo-39-df2e3a67`: P0-1 -> HONEST pass (#43 0.3.0 `8f01a15`, 7 D-0107 findings closed, 308/308, fold 18/18) + #36 0.7.0 fast-beam + NEW widgets/07 (A2); #37 re-pin = PB-5 lane; re-review couriered (b2b1e5fb) [walked back again, D-0109] |
+| D-0108 | 2026-08-06 | locked | i39: P0-1 -> HONEST pass (#43 0.3.0, 7 D-0107 findings closed, 308/308, fold 18/18) + #36 0.7.0 fast-beam + NEW widgets/07; #37 re-pin = PB-5; re-review couriered [walked back again, D-0109] |
 | D-0109 | 2026-08-06 | locked | i39 as-built re-review FAIL -- pass walked back to incomplete AGAIN; 7 findings -> i40 unit-0 [supersedes the D-0108 pass claim] |
 | D-0110 | 2026-08-06 | locked | i40 sunset: mandate-01 report verdict NO -> mandate 02 LICENSED (sunset i47; M2-A deadline i42; M2-D verify-before-ratify structural; M2-E open) |
 | D-0111 | 2026-08-06 | locked | i40 wave open (2-lane CPU): #43 the 7 exact closures (no pass claim -- M2-D) + #37 PB-5 reconcile |
@@ -140,7 +140,7 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0113 | 2026-08-06 | locked | i40 round-3 review FAIL -- s7 not ratified; 5 suite-build findings -> the i41 #43 unit; no walk-back (M2-D) |
 | D-0114 | 2026-08-07 | provisional | i41 worker model tiering: Sonnet 5 High default lanes + elevation triggers (#43 stays Opus); Fable = orchestrator seat/inline; fanout retained [seat clause amended by D-0116] |
 | D-0115 | 2026-08-07 | locked | i41 close: #43 0.5.0 round-3 closures shipped + independently verified (M2-D held); round-4 pack couriered (manifest-derived, empty-dir pre-verified); next = i42 M2-A build |
-| D-0116 | 2026-08-07 | locked | i41 round-4 review FAIL -- s7 not ratified; F1/F7 closed (the manifest-pack rule proven); 3 seam findings -> the #43 0.6.0 unit; orchestrator seat -> Opus 4.8 Extra [amends the D-0114 seat clause] |
+| D-0116 | 2026-08-07 | locked | i41 round-4 review FAIL -- s7 not ratified; F1/F7 closed (manifest-pack rule proven); 3 seam findings -> #43 0.6.0; orchestrator seat -> Opus 4.8 Extra [amends D-0114] |
 | D-0117 | 2026-08-08 | locked | i42 close: M2-A doc-hygiene commit gate SHIPPED (hard deadline met) + #43 0.6.0 (3 round-4 closures, M2-D held); round-5 pack 6bb613ea couriered |
 | D-0118 | 2026-08-08 | locked | i42 round-5 ratification PASS: P0-1 = DESIGN PASS (p0_1_gate_status=pass, pack 6bb613ea); activation still prohibited; arc closes 7->7->5->3->0 |
 | D-0119 | 2026-08-08 | locked | M2-E resolved (Nicholas): in-session cloud subagents PERMITTED inside the D-0051-as-amended boundary (frontier still human-couriered); PB-2 delegation seam unblocked |
@@ -148,4 +148,5 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0121 | 2026-08-08 | locked | i44: AUDIT_PIPELINE promoted to core-docs/ (P9 legibility added; cadence i43/i47); _to_delete_w07 untracked |
 | D-0122 | 2026-08-08 | locked | i45 close: LRAP / Widget 08 (audit phenomenological top surface, D-0120 P9) shipped (`a88e177`+`6028b9c`) + independently re-verified 87/0/0 (five-fixture 0 FP/FN); Nicholas leveled accept -- increment PASS, whole-system/complete-inclusion NOT YET (output loop + ride-along = next); mandate 45/2 |
 | D-0123 | 2026-08-08 | locked | i45 addendum: LRAP human confirm PASSES the built assembly-side steps; Nicholas deems the whole widget INCOMPLETE -- gaps: no raw-prompt front step (step-1 INPUT P2->real, upstream) + no live ride-along (audit-tag launch + per-step pause/unpause); both + output-side = next increment |
-| D-0124 | 2026-08-08 | locked | i45 acceptance finalized: D-0064 five-fixture human walk = SCORED PASS on the built LRAP pathway; i45 = technical + human PASS (whole widget incomplete, D-0123) |
+| D-0124 | 2026-08-08 | locked | i45 acceptance finalized: D-0064 five-fixture human walk = SCORED PASS on the built LRAP pathway; i45 = technical + human PASS (whole widget incomplete, D-0123) [corrected by D-0125] |
+| D-0125 | 2026-08-08 | provisional | i45 acceptance CORRECTED (Nicholas): LRAP v1 NOT phenomenological even on built scope -- flag-visibility only, can't adopt the agent's role (no initial prompt; rationale/agent-view hidden); P9 open; possession = next [corrects D-0124] |
