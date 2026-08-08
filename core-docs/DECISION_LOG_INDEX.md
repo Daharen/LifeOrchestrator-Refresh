@@ -145,3 +145,4 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0118 | 2026-08-08 | locked | i42 round-5 ratification PASS: P0-1 = DESIGN PASS (p0_1_gate_status=pass, pack 6bb613ea); activation still prohibited; arc closes 7->7->5->3->0 |
 | D-0119 | 2026-08-08 | locked | M2-E resolved (Nicholas): in-session cloud subagents PERMITTED inside the D-0051-as-amended boundary (frontier still human-couriered); PB-2 delegation seam unblocked |
 | D-0120 | 2026-08-08 | locked | i43: Widgets 05/06/07 live-GUI confirm PASS but audit surface not yet phenomenologically auditable -> Live-Run Audit Pathway reprioritized (P9 legibility) |
+| D-0121 | 2026-08-08 | locked | i44: AUDIT_PIPELINE promoted to core-docs/ (P9 legibility added; cadence i43/i47); _to_delete_w07 untracked |

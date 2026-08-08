@@ -340,9 +340,9 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 - **`-Profile max` 9B arg-gen returns non-JSON** (`arg_parse_failed`) — floor is the reliable path (D-0046).
 - **The executor file-lock crash root cause was never reproduced** — self-healed, not explained.
 - **Widget 03 `model.gateway` GPU live-GUI pass still open** (since D-0060).
-- **Audit surface not yet phenomenologically auditable (i43, D-0120):** Widgets 05/06/07 render correctly but
-  are expert-forensic + post-hoc; the Live-Run Audit Pathway is the audit program's new target
-  (`research/2026-08-08-i43-live-run-audit-pathway-design.md`).
+- **Audit surface not yet phenomenologically auditable (D-0120):** Widgets 05/06/07 render correctly but
+  are expert-forensic + post-hoc; the Live-Run Audit Pathway (LRAP) is the audit program's next target
+  (now `core-docs/AUDIT_PIPELINE.md`; LRAP spec in research/).
 - **Portability:** `$PwshPath` defaults across ~15 model-bound entrypoints; core-infra (00.1 + `ops/*.bat`);
   interpreter paths #15/#16; model-bound F: literals — each its own follow-on wave (D-0069).
 - **Generator upgrades (D-0068 leads):** image Z-Image-Turbo Q8 (needs stable-diffusion.cpp), music ACE-Step,
@@ -354,13 +354,13 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ## Next expected action
 
-**i43 CLOSED (D-0120): Widgets 05/06/07 human live-GUI confirm = technical PASS (render real data correctly); BUT Nicholas judged the audit surface not yet phenomenologically auditable -> the Live-Run Audit Pathway (LRAP) becomes the audit program's next target (design spec `research/2026-08-08-i43-live-run-audit-pathway-design.md`; design only, no build). The D-0064 widget live-GUI confirms are CLOSED.**
+**i44 CLOSED (D-0121):** the AUDIT_PIPELINE target doc PROMOTED to `core-docs/AUDIT_PIPELINE.md` (P9 phenomenological legibility added; cadence `last_reviewed i43` / `review_due i47` / `next_increment LRAP`; registered in DOC_PROTOCOL s2 + s8 + the doc-gate; own budget 11->12 KB; source digest stubbed) + `_to_delete_w07/` untracked (Nicholas i43 ruling). Docs-only; no wave, no module code.
 
-**NEXT = i44** (seat: Opus 4.8 Extra): design-first the LRAP (its own doc -> red-team -> a read-only build increment) OR a deferred candidate -- M2-C docs-into-memory note; #40 beam-width; promote AUDIT_PIPELINE to `core-docs/`; the `220a806` untrack (Nicholas). Menu: **`FANOUT_ORCHESTRATOR_HANDOFF.md`** s4. Mandate-02 countdown i44 -> 44/3.
+**NEXT = i45** (seat: Opus 4.8 Extra): design-first the LRAP -- its own design doc -> a frontier/subagent red-team (A3 pattern) -> a read-only build increment; the ride-along pause hook a separate gated increment. Deferred candidates: M2-C docs-into-memory note; #40 beam-width; PB-2 delegation seam. Menu: **`FANOUT_ORCHESTRATOR_HANDOFF.md`** s4. Mandate-02 countdown i45 -> 45/2. P0-1 activation stays FROZEN.
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades; `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-08 -- i43 CLOSED (D-0120): Widgets 05/06/07 human live-GUI confirm = technical PASS; Nicholas judged the audit surface not yet phenomenologically auditable -> the Live-Run Audit Pathway (LRAP) is the audit program's new target (design spec written; design only, no build). NEXT = i44.
+**Last updated:** 2026-08-08 -- i44 CLOSED (D-0121): the AUDIT_PIPELINE target doc promoted to `core-docs/AUDIT_PIPELINE.md` (P9 phenomenological legibility added; cadence i43/i47; next_increment LRAP) + `_to_delete_w07/` untracked. NEXT = i45.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*
