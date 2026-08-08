@@ -61,6 +61,25 @@ live run with captured output (a later, gated increment). Steps 7-8 (gate / veri
 end-to-end run exists, and stitching `#43`/`#37` would imply a causal run that never happened. A flat
 (no-router) compile renders step 3 as **not applicable** (visible, not hidden).
 
+## The interpretability poser - "Ask (local 9B)" (D-0126)
+
+A **"?" per element**: press **Ask (local 9B)** (right panel) and a modeless chat opens seeded with the
+selected element's **context bundle** - the authored INTENT (what the step should do), the ACTUAL input/output,
+and the RECONCILE verdict + named identities, projected in plain language from the already-built model. Pick any
+element (the overall verdict, a step, or a lane) from the dropdown; ask follow-ups. The 9B **explains the
+instrument and the recorded facts** - it is told **not** to judge whether the run is *correct* (that is yours),
+and a green verdict never means "correct". It is **advisory**: you verify it.
+
+It ships **ungated** (D-0126: Nicholas is the red team; it is pure information, writes nothing, must not impede
+functionality). The **information-only invariant** is what makes it ungate-able: the widget only **reads** the
+model + **writes request/answer files under `runtime\poser\`** (guarded) and **spawns the query worker
+DETACHED** - so the widget process itself **never calls a model and never holds a lease** (it stays as read-only
+as v1). The 9B call is made **out-of-band** by `Invoke-LrapPoserQuery.ps1`, which rides the existing
+`model.gateway` (#7) / `res.lease` (#29) path (the gateway owns the gpu lease for the one call). **Fail-silent:**
+a query that errors, returns nothing, or times out lands an "explanation unavailable" note and leaves the audit
+surface untouched. Any change that lets the poser tag / verify / mutate anything **breaches the invariant and
+re-opens the gating question** - do not make it silently.
+
 ## Files
 
 - `Show-LiveRunAuditPathway.ps1` - the thin STA WinForms shell (UI only).
@@ -68,9 +87,15 @@ end-to-end run exists, and stitching `#43`/`#37` would imply a causal run that n
   verdict-backed RECONCILE, the plain-language descend, the INTENT catalog). Unit-tested in the cloud.
 - `LrapReaderAdapter.psm1` - the pinned, contract-tested reader adapter over Widgets 06/07 (the recompute
   entrypoints are excluded; a cross-widget contract test fails closed on 06/07 shape drift).
+- `LrapPoser.psm1` - the poser core (D-0126): per-element context bundle + prompt + the runtime-guarded
+  request/answer file protocol. Pure, WinForms-free, cloud-tested; calls no model.
+- `Invoke-LrapPoserQuery.ps1` - the out-of-band poser worker: the ONE `model.gateway` (#7) call on the resident
+  9B, fail-silent. The widget spawns it detached; it never runs in the widget process.
 - `launch.bat` - double-click launcher (`pwsh -NoProfile -STA`).
-- `tests/Invoke-LiveRunAuditPathwayTests.ps1` - dual-mode test harness (cloud gate 73/0/3; `-Live` adds the
-  WinForms self-test on Windows).
+- `tests/Invoke-LiveRunAuditPathwayTests.ps1` - dual-mode test harness (cloud gate **104/0/3** on Linux;
+  `-Live` on Windows adds the WinForms self-test + the poser pop-up round-trip -> **119/0/0**).
+- `tests/mock-poser-gateway.ps1` - a deterministic stand-in for the #7 gateway so the poser worker is driven
+  end-to-end (incl. the empty-output + crash fail-silent branches) on the cloud gate with no GPU.
 - `tests/fixtures/` - five committed `#40` fixtures (`clean_routed`, `defect_mis_route`,
   `defect_dropped_candidate`, `defect_wrong_record`, `quirk_flat`) + `mint-fixtures.ps1` (their provenance).
 
@@ -82,7 +107,9 @@ pwsh -NoProfile -STA -File Show-LiveRunAuditPathway.ps1 -SelfTest
 
 Builds, drives, and disposes the form off-screen over the committed fixtures and prints
 `SELFTEST_FORM_OK`, `SELFTEST_MODEL_OK`, `SELFTEST_PANES_OK`, `SELFTEST_RECONCILE_OK`, `SELFTEST_DESCEND_OK`,
-`SELFTEST_SANITIZE_OK`, `SELFTEST_REFRESH_OK`, `SELFTEST_READONLY_OK`, `SELFTEST_LAYOUT_OK`.
+`SELFTEST_SANITIZE_OK`, `SELFTEST_REFRESH_OK`, `SELFTEST_INTERACT_OK`, `SELFTEST_READONLY_OK`,
+`SELFTEST_POSER_OK` (the "?" pop-up builds + an Ask round-trips through a mock gateway, no GPU),
+`SELFTEST_LAYOUT_OK`.
 
 ## Acceptance
 

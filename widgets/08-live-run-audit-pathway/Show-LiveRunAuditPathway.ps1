@@ -31,6 +31,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 Import-Module (Join-Path $PSScriptRoot 'LiveRunAuditPathway.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'LrapPoser.psm1') -Force
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -46,6 +47,9 @@ $script:LState = @{
     showRaw      = $false
     suspend      = $false
     lastError    = ''
+    poser        = $null       # the modeless "?" pop-up chat state (built on first Ask)
+    poserSync    = $false      # -SelfTest: run the worker synchronously (with a mock gateway) instead of detached
+    poserGateway = ''          # -SelfTest: mock-gateway path handed to the worker (empty => the real #7 gateway)
 }
 
 # Event handlers are dedicated NAMED functions (the handler scriptblocks just call them, so no local-scope or
@@ -73,6 +77,17 @@ function On-LrapBrowse {
         $dlg = [System.Windows.Forms.OpenFileDialog]::new()
         $dlg.Filter = 'JSON artifacts (*.json)|*.json|All files (*.*)|*.*'
         if ($dlg.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $script:LState.packetPath = $dlg.FileName; Invoke-LrapRefresh }
+        $script:LState.lastError = ''
+    }
+    catch { Set-LrapError $_.Exception.Message }
+}
+function On-LrapAsk {
+    # Open the "?" pop-up seeded on the CURRENTLY SELECTED step (the operator can re-target any element in the
+    # pop-up's dropdown). Fail-soft like every other handler.
+    try {
+        $sel = $script:LState.selectedStep
+        $elementId = if ($sel -is [int] -or ($sel -match '^\d+$')) { 'step:' + [int]$sel } else { 'header' }
+        Open-LrapPoserPopup -ElementId $elementId
         $script:LState.lastError = ''
     }
     catch { Set-LrapError $_.Exception.Message }
@@ -172,7 +187,9 @@ function New-LrapForm {
     $whyBtn.Text = 'Show why (reconcile detail)'; $whyBtn.Size = [System.Drawing.Size]::new(210, 26); $whyBtn.Location = [System.Drawing.Point]::new(6, 4)
     $rawBtn = [System.Windows.Forms.Button]::new()
     $rawBtn.Text = 'Show raw trace'; $rawBtn.Size = [System.Drawing.Size]::new(140, 26); $rawBtn.Location = [System.Drawing.Point]::new(224, 4)
-    $rightTop.Controls.AddRange(@($whyBtn, $rawBtn))
+    $askBtn = [System.Windows.Forms.Button]::new()
+    $askBtn.Text = 'Ask (local 9B)  ?'; $askBtn.Size = [System.Drawing.Size]::new(160, 26); $askBtn.Location = [System.Drawing.Point]::new(372, 4)
+    $rightTop.Controls.AddRange(@($whyBtn, $rawBtn, $askBtn))
     $detailList = [System.Windows.Forms.ListBox]::new()
     $detailList.Dock = 'Fill'; $detailList.Font = $mono; $detailList.IntegralHeight = $false; $detailList.HorizontalScrollbar = $true
     $split.Panel2.Controls.Add($detailList)
@@ -186,11 +203,12 @@ function New-LrapForm {
     $s = $script:LState
     $s.form = $form; $s.toolbar = $toolbar; $s.packetBox = $packetBox; $s.browseBtn = $browseBtn; $s.refreshBtn = $refreshBtn
     $s.headerBox = $headerBox; $s.spineList = $spineList; $s.detailList = $detailList; $s.statusLabel = $statusLabel
-    $s.whyBtn = $whyBtn; $s.rawBtn = $rawBtn; $s.split = $split
+    $s.whyBtn = $whyBtn; $s.rawBtn = $rawBtn; $s.askBtn = $askBtn; $s.split = $split
 
     $refreshBtn.Add_Click({ On-LrapRefresh }.GetNewClosure())
     $whyBtn.Add_Click({ On-LrapWhy }.GetNewClosure())
     $rawBtn.Add_Click({ On-LrapRaw }.GetNewClosure())
+    $askBtn.Add_Click({ On-LrapAsk }.GetNewClosure())
     $spineList.Add_SelectedIndexChanged({ On-LrapSelect }.GetNewClosure())
     $browseBtn.Add_Click({ On-LrapBrowse }.GetNewClosure())
     $form.Add_Shown({
@@ -319,6 +337,182 @@ function Render-LrapModel {
 function Initialize-LrapView { Render-LrapModel }
 function Invoke-LrapRefresh { Render-LrapModel }
 
+# ============================================================================
+#  the interpretability POSER "?" pop-up (D-0126) -- a modeless chat seeded with the selected element's
+#  context bundle. The widget stays READ-ONLY: it only writes request/answer files under runtime\poser\ (guarded
+#  by LrapPoser) and SPAWNS the query worker DETACHED, so this UI process never calls a model or holds a lease.
+#  Fail-silent: a worker that never answers times out to "explanation unavailable"; the main window is unaffected.
+# ============================================================================
+
+function Get-LrapPoserRuntimeDir {
+    $p = Resolve-LrapPaths -WidgetRoot $script:LState.widgetRoot -RepoRoot $script:LState.repoRoot
+    return $p.RuntimeDir
+}
+
+function Append-LrapPoserConvo {
+    param([string]$Role, [string]$Text)
+    $c = $script:LState.poser.convo
+    $prefix = switch ($Role) { 'you' { '>> you:  ' } 'model' { '-- local 9B:  ' } default { '   ' } }
+    $c.AppendText($prefix + $Text + "`r`n`r`n")
+    $c.SelectionStart = $c.TextLength; $c.ScrollToCaret()
+}
+
+function Build-LrapPoserPopup {
+    $s = $script:LState
+    if ($null -ne $s.poser -and $null -ne $s.poser.form -and -not $s.poser.form.IsDisposed) { return }
+    $mono = [System.Drawing.Font]::new('Consolas', 9.5)
+    $f = [System.Windows.Forms.Form]::new()
+    $f.Text = 'Ask the local 9B about this element  (advisory -- it explains, you judge)'
+    $f.Size = [System.Drawing.Size]::new(780, 600)
+    $f.MinimumSize = [System.Drawing.Size]::new(520, 360)
+    $f.StartPosition = 'CenterParent'
+
+    $top = [System.Windows.Forms.Panel]::new(); $top.Dock = 'Top'; $top.Height = 34
+    $lbl = [System.Windows.Forms.Label]::new(); $lbl.Text = 'Element:'; $lbl.Location = [System.Drawing.Point]::new(8, 9); $lbl.AutoSize = $true
+    $combo = [System.Windows.Forms.ComboBox]::new(); $combo.DropDownStyle = 'DropDownList'
+    $combo.Location = [System.Drawing.Point]::new(70, 6); $combo.Width = 680; $combo.Font = $mono; $combo.Anchor = 'Top,Left,Right'
+    $top.Controls.AddRange(@($lbl, $combo))
+
+    $bottom = [System.Windows.Forms.Panel]::new(); $bottom.Dock = 'Bottom'; $bottom.Height = 74
+    $input = [System.Windows.Forms.TextBox]::new(); $input.Location = [System.Drawing.Point]::new(8, 8); $input.Width = 636; $input.Font = $mono; $input.Anchor = 'Top,Left,Right'
+    $sendBtn = [System.Windows.Forms.Button]::new(); $sendBtn.Text = 'Ask'; $sendBtn.Size = [System.Drawing.Size]::new(108, 26); $sendBtn.Location = [System.Drawing.Point]::new(652, 7); $sendBtn.Anchor = 'Top,Right'
+    $statusLabel = [System.Windows.Forms.Label]::new(); $statusLabel.Location = [System.Drawing.Point]::new(8, 42); $statusLabel.AutoSize = $true
+    $statusLabel.Text = 'The local 9B explains this element from the audit surface only. It is advisory -- you make the call.'
+    $bottom.Controls.AddRange(@($input, $sendBtn, $statusLabel))
+
+    $convo = [System.Windows.Forms.RichTextBox]::new(); $convo.Dock = 'Fill'; $convo.ReadOnly = $true; $convo.WordWrap = $true
+    $convo.Font = $mono; $convo.BackColor = [System.Drawing.Color]::White
+
+    $f.Controls.Add($convo); $f.Controls.Add($top); $f.Controls.Add($bottom)
+    $f.AcceptButton = $sendBtn
+
+    $timer = [System.Windows.Forms.Timer]::new(); $timer.Interval = 600
+
+    $s.poser = @{
+        form = $f; combo = $combo; convo = $convo; input = $input; sendBtn = $sendBtn; statusLabel = $statusLabel; timer = $timer
+        elements = @(); elementIds = @(); modelTurns = @(); runtimeDir = ''
+        pendingReqId = ''; pendingAnswer = ''; pendingQ = ''; deadlineTicks = [long]0; seq = 0; suspendCombo = $false
+    }
+
+    $combo.Add_SelectedIndexChanged({ On-LrapPoserElementChanged }.GetNewClosure())
+    $sendBtn.Add_Click({ On-LrapPoserSend }.GetNewClosure())
+    $timer.Add_Tick({ On-LrapPoserTick }.GetNewClosure())
+    $f.Add_FormClosing({ param($sender, $e) try { $e.Cancel = $true; $script:LState.poser.timer.Stop(); $sender.Hide() } catch { } }.GetNewClosure())
+}
+
+function Set-LrapPoserComboElements {
+    $s = $script:LState; $p = $s.poser
+    $els = @(Get-LrapPoserElements -Model $s.model)
+    $p.elements = $els
+    $p.elementIds = @($els | ForEach-Object { [string]$_.element_id })
+    $p.suspendCombo = $true
+    $p.combo.Items.Clear()
+    foreach ($e in $els) { [void]$p.combo.Items.Add([string]$e.label) }
+    $p.suspendCombo = $false
+}
+
+function Open-LrapPoserPopup {
+    param([string]$ElementId)
+    $s = $script:LState
+    if ($null -eq $s.model -or -not $s.model.ok) { Set-LrapError 'no run loaded to ask about'; return }
+    Build-LrapPoserPopup
+    $p = $s.poser
+    $p.runtimeDir = Get-LrapPoserRuntimeDir
+    Set-LrapPoserComboElements
+    $idx = [array]::IndexOf($p.elementIds, $ElementId); if ($idx -lt 0) { $idx = 0 }
+    $p.suspendCombo = $true; $p.combo.SelectedIndex = $idx; $p.suspendCombo = $false
+    $p.convo.Clear(); $p.modelTurns = @()
+    try { [void]$p.form.Show($s.form) } catch { [void]$p.form.Show() }
+    $p.form.BringToFront()
+    Invoke-LrapPoserAsk -Question ''
+}
+
+function On-LrapPoserElementChanged {
+    try {
+        $p = $script:LState.poser
+        if ($null -eq $p -or $p.suspendCombo) { return }
+        $p.convo.Clear(); $p.modelTurns = @()
+        Invoke-LrapPoserAsk -Question ''
+    }
+    catch { try { $script:LState.poser.statusLabel.Text = 'error: ' + $_.Exception.Message } catch { } }
+}
+
+function On-LrapPoserSend {
+    try {
+        $p = $script:LState.poser
+        $q = [string]$p.input.Text
+        if ([string]::IsNullOrWhiteSpace($q)) { return }
+        $p.input.Clear()
+        Invoke-LrapPoserAsk -Question $q
+    }
+    catch { try { $script:LState.poser.statusLabel.Text = 'error: ' + $_.Exception.Message } catch { } }
+}
+
+function Launch-LrapPoserWorker {
+    param([string]$RequestPath)
+    $s = $script:LState
+    $worker = Join-Path $s.widgetRoot 'Invoke-LrapPoserQuery.ps1'
+    $pwsh = (Get-Process -Id $PID).Path; if ([string]::IsNullOrWhiteSpace($pwsh)) { $pwsh = 'pwsh' }
+    if ($s.poserSync) {
+        $a = @('-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', $worker, '-RequestPath', $RequestPath, '-PwshPath', $pwsh)
+        if ($s.poserGateway) { $a += @('-GatewayPath', $s.poserGateway) }
+        & $pwsh @a | Out-Null
+    }
+    else {
+        $a = @('-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', $worker, '-RequestPath', $RequestPath)
+        [void](Start-Process -FilePath $pwsh -ArgumentList $a -WindowStyle Hidden)
+    }
+}
+
+function Invoke-LrapPoserAsk {
+    param([string]$Question)
+    $s = $script:LState; $p = $s.poser
+    $eid = if ($p.combo.SelectedIndex -ge 0 -and $p.combo.SelectedIndex -lt $p.elementIds.Count) { [string]$p.elementIds[$p.combo.SelectedIndex] } else { 'header' }
+    $bundle = Get-LrapPoserBundle -Model $s.model -ElementId $eid
+    if ([string]::IsNullOrWhiteSpace($Question)) { Append-LrapPoserConvo 'you' '(explain this element)' } else { Append-LrapPoserConvo 'you' $Question }
+    $p.seq++
+    $reqId = 'ui-' + [string]$p.seq + '-' + $eid.Replace(':', '_')
+    $req = New-LrapPoserRequest -RuntimeDir $p.runtimeDir -Bundle $bundle -Question $Question -PriorTurns $p.modelTurns -RequestId $reqId
+    $p.pendingReqId = $reqId; $p.pendingAnswer = $req.answer_path
+    $p.pendingQ = if ([string]::IsNullOrWhiteSpace($Question)) { 'Explain this element: what is it, and what did the agent actually do here?' } else { $Question }
+    $p.deadlineTicks = [long]([System.DateTime]::UtcNow.AddSeconds(180).Ticks)
+    $p.sendBtn.Enabled = $false
+    $p.statusLabel.Text = 'asking the local 9B... (a cold model can take ~1-2 min; the window stays usable)'
+    Launch-LrapPoserWorker -RequestPath $req.request_path
+    $p.timer.Start()
+}
+
+function On-LrapPoserTick {
+    try {
+        $p = $script:LState.poser
+        if ($null -eq $p -or [string]::IsNullOrEmpty($p.pendingAnswer)) { if ($null -ne $p) { $p.timer.Stop() }; return }
+        $ans = Read-LrapPoserAnswer -AnswerPath $p.pendingAnswer
+        if ($null -ne $ans) {
+            $p.timer.Stop()
+            if ($ans.ok) {
+                Append-LrapPoserConvo 'model' ([string]$ans.text)
+                $p.modelTurns = @($p.modelTurns) + @(
+                    [pscustomobject]@{ role = 'user'; content = [string]$p.pendingQ },
+                    [pscustomobject]@{ role = 'assistant'; content = [string]$ans.text })
+                $p.statusLabel.Text = 'answered -- advisory, you judge. Ask a follow-up, or pick another element.'
+            }
+            else {
+                Append-LrapPoserConvo 'model' ('[explanation unavailable: ' + [string]$ans.error + ']')
+                $p.statusLabel.Text = 'explanation unavailable (the local model returned nothing usable). You can still open the raw trace.'
+            }
+            $p.pendingAnswer = ''; $p.pendingReqId = ''; $p.sendBtn.Enabled = $true
+            return
+        }
+        if ([System.DateTime]::UtcNow.Ticks -gt $p.deadlineTicks) {
+            $p.timer.Stop()
+            Append-LrapPoserConvo 'model' '[explanation unavailable: the local model did not answer in time -- it may still be loading. Try again.]'
+            $p.statusLabel.Text = 'timed out (fail-silent). The audit surface is unaffected.'
+            $p.pendingAnswer = ''; $p.sendBtn.Enabled = $true
+        }
+    }
+    catch { try { $script:LState.poser.timer.Stop() } catch { } }
+}
+
 # ----- entry -----
 $form = New-LrapForm
 
@@ -424,6 +618,29 @@ if ($SelfTest) {
         $guardOk = $false
         try { [void](Assert-UnderRuntime -Target ([System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), 'lrap-evil.json')) -RuntimeDir $paths.RuntimeDir) } catch { $guardOk = $true }
         if (($sigBefore -eq $sigAfter) -and $guardOk) { Write-Output 'SELFTEST_READONLY_OK' } else { Write-Output ("SELFTEST_READONLY_FAIL: untouched=" + ($sigBefore -eq $sigAfter) + " guard=$guardOk") }
+
+        # POSER (D-0126): the "?" pop-up builds off-screen; the element dropdown lists all 31 elements; an Ask
+        # round-trips through the REAL worker + a MOCK gateway (no GPU) to an advisory answer; writes stay under
+        # runtime\poser\ (the widget itself makes no model call). This is the click-path the cloud gate can't reach.
+        try {
+            $s.poserSync = $true
+            $s.poserGateway = Join-Path $s.widgetRoot (Join-Path 'tests' 'mock-poser-gateway.ps1')
+            $s.selectedStep = 4
+            Open-LrapPoserPopup -ElementId 'step:4'
+            [System.Windows.Forms.Application]::DoEvents()
+            $comboCount = [int]$s.poser.combo.Items.Count
+            On-LrapPoserTick   # the sync worker already wrote the answer; ingest it deterministically
+            [System.Windows.Forms.Application]::DoEvents()
+            $convoText = [string]$s.poser.convo.Text
+            $answered = ($convoText -match 'local 9B' -and $convoText -match 'explanation of the instrument')
+            $poserDir = Join-Path (Get-LrapPoserRuntimeDir) 'poser'
+            $wroteUnderRuntime = (Test-Path -LiteralPath $poserDir)
+            try { $s.poser.timer.Stop(); $s.poser.form.Hide() } catch { }
+            if (($comboCount -eq 31) -and $answered -and $wroteUnderRuntime) { Write-Output 'SELFTEST_POSER_OK' }
+            else { Write-Output ("SELFTEST_POSER_FAIL: combo=$comboCount answered=$answered underRt=$wroteUnderRuntime") }
+        }
+        catch { Write-Output ('SELFTEST_POSER_FAIL: ' + $_.Exception.Message) }
+        finally { $s.poserSync = $false; $s.poserGateway = '' }
 
         # LAYOUT: Browse + Refresh sit FULLY inside the toolbar after layout
         Update-LrapToolbarLayout

@@ -74,7 +74,8 @@ s1/s3/s4/s6/s9. NO recompute; pinned identities only.
 
 ## Test plan
 
-Dual-mode `tests/Invoke-LiveRunAuditPathwayTests.ps1` -- cloud gate **73/0/3** (Linux, over five committed REAL
+Dual-mode `tests/Invoke-LiveRunAuditPathwayTests.ps1` -- cloud gate **104/0/3** (Linux; **-Live** on Windows adds
+the WinForms self-test + the poser pop-up round-trip -> **119/0/0**) (over five committed REAL
 fixtures minted from the shipped 06/07 routed + flat #40 seeds): the reader adapter + the cross-widget contract
 test (drift fails closed; recompute excluded); the honesty map (all 24 cells fixed; every P2 cell a VISIBLE
 lane); verdict-backed RECONCILE (named substrate identities; a corrupted count caught; forbidden judgments
@@ -101,6 +102,22 @@ controls (false-positives + false-negatives scored separately). All three defect
 existing reconciliation (no smuggled judgment). **This human live-GUI confirm (D-0064) is the ACCEPTANCE GATE**
 -- the widget ships SelfTest-green + cloud-green with the confirm FLAGGED PENDING; the ship is not blocked on
 it. Each found breakpoint is a candidate `#37` fixture (AUDIT_PIPELINE 3.5).
+
+## Poser increment (D-0126, ungated -- built after i45)
+
+The interpretability POSER adds a per-element **"?"** ("Ask (local 9B)") that opens a modeless chat seeded with
+the element's **context bundle** (INTENT + ACTUAL input/output + RECONCILE, a pure projection of `Get-LrapModel`)
+and lets Nicholas ask follow-ups; the local 9B **explains the instrument + recorded facts** and is forbidden to
+judge whether the run is correct (the F1/P9 line). It ships **UNGATED** (D-0126: pure information; Nicholas is
+the red team; writes nothing; must not impede functionality). The read-only posture is **preserved**: the widget
+only reads the model + writes request/answer files under `runtime\poser\` (guarded) and spawns the query worker
+**DETACHED**; the widget process makes **no model call and holds no lease**. The one model call is out-of-band in
+`Invoke-LrapPoserQuery.ps1` over `model.gateway` (#7) / `res.lease` (#29). **Fail-silent** on any error/empty/
+timeout. Files: `LrapPoser.psm1` (pure core), `Invoke-LrapPoserQuery.ps1` (worker), `tests/mock-poser-gateway.ps1`
+(the no-GPU test stand-in); `Show-*.ps1` gains the "?" + pop-up + `SELFTEST_POSER_OK`. The **information-only
+invariant** is the ungate-ability condition -- any change that lets the poser tag/verify/mutate re-opens the gate.
+It delivers the D-0125 possession/rationale gap from the ergonomic end; the raw-prompt FRONT step + LIVE
+ride-along + OUTPUT-side reconciliation still follow.
 
 ## Follow-ons (not this session)
 

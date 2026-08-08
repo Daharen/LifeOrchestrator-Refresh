@@ -83,7 +83,10 @@ $toParse = @(
     (Join-Path $widgetRoot 'LiveRunAuditPathway.psm1'),
     (Join-Path $widgetRoot 'LrapReaderAdapter.psm1'),
     (Join-Path $widgetRoot 'Show-LiveRunAuditPathway.ps1'),
+    (Join-Path $widgetRoot 'LrapPoser.psm1'),
+    (Join-Path $widgetRoot 'Invoke-LrapPoserQuery.ps1'),
     (Join-Path $here 'Invoke-LiveRunAuditPathwayTests.ps1'),
+    (Join-Path $here 'mock-poser-gateway.ps1'),
     (Join-Path $fx 'mint-fixtures.ps1'))
 foreach ($f in $toParse) {
     $errs = $null; $toks = $null
@@ -237,6 +240,59 @@ Ok "sanitize: an injected cross-ns key is FLAGGED (fail-closed)" (-not $sanBad.s
 $em = Get-LrapModel -PacketPath (Join-Path $fx 'nope.json')
 Ok "graceful: missing packet -> ok=false, well-formed (P2 backlog + intent review still present)" ((-not $em.ok) -and @($em.p2_backlog).Count -ge 1 -and $null -ne $em.intent_review)
 
+# 14. POSER (D-0126) -- the interpretability "?": elements, bundle, prompt, protocol, worker (mock gateway, no GPU)
+Import-Module (Join-Path $widgetRoot 'LrapPoser.psm1') -Force
+foreach ($fn in 'Get-LrapPoserElements', 'Get-LrapPoserBundle', 'Get-LrapPoserPrompt', 'Get-LrapPoserSystemPrompt',
+    'New-LrapPoserRequest', 'Read-LrapPoserRequest', 'Write-LrapPoserAnswer', 'Read-LrapPoserAnswer', 'Get-LrapPoserInfo') {
+    Ok "poser: function exists: $fn" ([bool](Get-Command $fn -ErrorAction SilentlyContinue))
+}
+$pm = Get-LrapModel -PacketPath $fDropped
+$els = @(Get-LrapPoserElements -Model $pm)
+Ok "poser: elements = header + 6 steps + 24 lanes = 31" ($els.Count -eq 31 -and $els[0].element_id -eq 'header' -and @($els | Where-Object { $_.kind -eq 'lane' }).Count -eq 24)
+# every element yields a well-formed, non-empty bundle AND building writes nothing
+$sigPB = Get-TreeSig $fx
+$bundleAllOk = $true
+foreach ($e in $els) { $b = Get-LrapPoserBundle -Model $pm -ElementId $e.element_id; if (-not $b.ok -or [string]::IsNullOrWhiteSpace([string]$b.context_text)) { $bundleAllOk = $false } }
+Ok "poser: all 31 elements bundle to a non-empty context block" $bundleAllOk
+Ok "poser: bundle building writes NOTHING to the fixtures tree (read-only)" ((Get-TreeSig $fx) -eq $sigPB)
+# the dropped-candidate reconcile bundle NAMES the offender + carries intent+actual+reconcile together (possession); never asserts correctness
+$bd = Get-LrapPoserBundle -Model $pm -ElementId 'step:4:reconcile'
+Ok "poser: step-4 bundle names the offending unexplained drop + omit_reason" ($bd.context_text -match 'occ_dropped_orphan' -and $bd.context_text -match 'omit_reason')
+Ok "poser: bundle carries INTENT + ACTUAL input/output + RECONCILE together (D-0125 possession)" ($bd.context_text -match 'SUPPOSED TO DO' -and $bd.context_text -match 'ACTUAL INPUT' -and $bd.context_text -match 'ACTUAL OUTPUT' -and $bd.context_text -match 'RECONCILE')
+Ok "poser: bundle never asserts correctness (green != correct reminder present)" ($bd.context_text -match 'never a claim the run is correct' -or $bd.context_text -match 'NOT a judgment of correctness')
+# graceful: header bundles even on a failed load; an unknown element id -> ok=false (no throw)
+$bh = Get-LrapPoserBundle -Model (Get-LrapModel -PacketPath (Join-Path $fx 'nope.json')) -ElementId 'header'
+Ok "poser: header bundles even when the model failed to load" ($bh.ok -and $bh.context_text -match 'FAILED to load')
+$bu = Get-LrapPoserBundle -Model $pm -ElementId 'step:9:bogus'
+Ok "poser: an unknown element id -> ok=false, well-formed (no throw)" (-not $bu.ok)
+# the prompt: system guardrail forbids judging correctness; user turn carries the context + question
+$pr = Get-LrapPoserPrompt -Bundle $bd -Question 'why was that record dropped?'
+Ok "poser: system prompt forbids judging whether the run is CORRECT (F1/P9 line)" ($pr.system -match 'judge whether the run was correct')
+Ok "poser: prompt user turn carries the context block + the operator question" (([string](@($pr.messages)[-1].content)) -match 'occ_dropped_orphan' -and ([string](@($pr.messages)[-1].content)) -match 'why was that record dropped')
+# the request/answer protocol is RUNTIME-GUARDED
+$rt = New-TempDir 'lrap-poser-rt'
+try { [void](Write-LrapPoserAnswer -RuntimeDir $rt -RequestId (Join-Path (Join-Path '..' '..') 'escape') -Ok:$true -Text 'x'); Ok "poser: answer write-guard refuses escaping runtime" $false 'no throw' }
+catch { Ok "poser: answer write-guard refuses escaping runtime" $true }
+$reqInfo = New-LrapPoserRequest -RuntimeDir $rt -Bundle $bd -Question 'explain' -RequestId 'testq1'
+Ok "poser: request written under runtime\poser (guarded)" ((Test-Path $reqInfo.request_path) -and $reqInfo.request_path -like (Join-Path $rt '*'))
+# the WORKER end-to-end against the MOCK gateway (no GPU): ok=true with text
+$worker = Join-Path $widgetRoot 'Invoke-LrapPoserQuery.ps1'
+$mockGw = Join-Path $here 'mock-poser-gateway.ps1'
+& $PwshPath -NoProfile -File $worker -RequestPath $reqInfo.request_path -GatewayPath $mockGw -PwshPath $PwshPath | Out-Null
+$ans = Read-LrapPoserAnswer -AnswerPath $reqInfo.answer_path
+Ok "poser: worker (mock gateway) writes ok=true answer with the completion" ($null -ne $ans -and $ans.ok -and ([string]$ans.text) -match 'explanation of the instrument')
+# fail-silent: empty model output -> ok=false (no hang)
+$reqE = New-LrapPoserRequest -RuntimeDir $rt -Bundle $bd -Question 'MOCK_EMPTY please' -RequestId 'testq2'
+& $PwshPath -NoProfile -File $worker -RequestPath $reqE.request_path -GatewayPath $mockGw -PwshPath $PwshPath | Out-Null
+$ansE = Read-LrapPoserAnswer -AnswerPath $reqE.answer_path
+Ok "poser: empty model output -> fail-silent ok=false answer (no hang)" ($null -ne $ansE -and -not $ansE.ok -and ([string]$ansE.error) -match 'no content')
+# fail-silent: gateway crash (no artifact) -> ok=false
+$reqF = New-LrapPoserRequest -RuntimeDir $rt -Bundle $bd -Question 'MOCK_FAIL now' -RequestId 'testq3'
+& $PwshPath -NoProfile -File $worker -RequestPath $reqF.request_path -GatewayPath $mockGw -PwshPath $PwshPath | Out-Null
+$ansF = Read-LrapPoserAnswer -AnswerPath $reqF.answer_path
+Ok "poser: a gateway crash (no artifact) -> fail-silent ok=false answer" ($null -ne $ansF -and -not $ansF.ok)
+Ok "poser: the whole poser path left the fixtures tree byte-identical (read-only)" ((Get-TreeSig $fx) -eq $sigPB)
+
 # ---------- LIVE (Windows) ----------
 if ($Live) {
     if (-not $IsWindows) {
@@ -254,7 +310,7 @@ if ($Live) {
         Write-Host "  --- self-test child output ---"
         foreach ($ln in ($out -split "`r?`n")) { if ($ln.Trim()) { Write-Host "    $ln" } }
         foreach ($marker in 'SELFTEST_FORM_OK', 'SELFTEST_MODEL_OK', 'SELFTEST_PANES_OK', 'SELFTEST_RECONCILE_OK',
-            'SELFTEST_DESCEND_OK', 'SELFTEST_SANITIZE_OK', 'SELFTEST_REFRESH_OK', 'SELFTEST_INTERACT_OK', 'SELFTEST_READONLY_OK', 'SELFTEST_LAYOUT_OK') {
+            'SELFTEST_DESCEND_OK', 'SELFTEST_SANITIZE_OK', 'SELFTEST_REFRESH_OK', 'SELFTEST_INTERACT_OK', 'SELFTEST_READONLY_OK', 'SELFTEST_POSER_OK', 'SELFTEST_LAYOUT_OK') {
             Ok "live: self-test emitted $marker" ($out -match $marker)
         }
         Ok "live: self-test has no FAIL marker" (-not ($out -match 'SELFTEST_\w+_FAIL'))
