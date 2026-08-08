@@ -1,0 +1,4 @@
+# The widget's private scratch: reserved (defense-in-depth) for a FUTURE persisted "last walked" marker. The
+# pathway is STRICTLY READ-ONLY over the repo; this dir is the ONLY thing it could ever write, it is never
+# shipped, and the render path today writes NOTHING.
+runtime/
