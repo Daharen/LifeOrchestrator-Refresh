@@ -1892,3 +1892,14 @@ alternatives · consequences · affects · state (provisional | locked) · revis
 - **Consequences:** the poser now works end-to-end live. next_increment UNCHANGED (raw-prompt FRONT step + LIVE ride-along + OUTPUT-side reconciliation); no current_tier change (CURRENT_STATE/handoff already read "poser SHIPPED"). mandate-02 countdown unchanged (45/2).
 - **Affects:** DECISION_LOG_INDEX (row). Corrects the D-0127 "exercised live" claim.
 - **State:** locked.
+
+## D-0129 -- LRAP poser LIVE NO-OP: ROOT CAUSE found + fixed (the dotnet-tool apphost pwsh trap); D-0128's "spawn fixed" was itself premature. widgets/08 `da8a05e`
+
+- **Date:** 2026-08-09
+- **Decision (root cause + fix):** every real click hung on "asking..." because the query WORKER never ran. Root cause (found via added `_launch`/`_worker` breadcrumbs, NOT guessed): `launch.bat` runs pwsh via the dotnet-tool APPHOST shim (`%USERPROFILE%\.dotnet\tools\pwsh.exe`), so the widget process's host image is `dotnet.exe`; the widget resolved its spawn pwsh from `(Get-Process -Id $PID).Path` = `dotnet.exe` and spawned `dotnet.exe -File Invoke-LrapPoserQuery.ps1` -- a NO-OP (dotnet.exe is not pwsh): no worker, no -gw dir, no answer. The mock self-test passed only because it ran under the real `.store` pwsh.exe; D-0128's ProcessStartInfo change did NOT fix this (the pwsh PATH, not the spawn API, was wrong).
+- **Fix (`da8a05e`):** `Resolve-LrapPwsh` now searches for a REAL `pwsh.exe` (`Get-Command pwsh -All` + Program Files / LocalAppData), prefers a self-contained `.store` / Program Files exe, and NEVER uses the `dotnet.exe` apphost host or a WindowsApps alias; the real pwsh is threaded to the worker via `-PwshPath` (both paths); the worker guards its OWN gateway spawn (rejects a non-pwsh host). Best-effort breadcrumbs + a Start-Process fallback added.
+- **Correction of D-0128:** D-0128 said the SPAWN defect was fixed (ProcessStartInfo) -- it was NOT; only the 4096-token CONTENT fix from D-0128 stands. The spawn is fixed HERE.
+- **Verified (headless, on the box):** `Resolve-LrapPwsh` returns the real `.store` pwsh.exe; a worker spawned through it calls the gateway with real pwsh and returns ok=true (mock); the real 9B returns a grounded answer at 4096 (D-0128); `-Live` 119/0/0 unchanged. **LIVE-CLICK confirmation** (Nicholas re-launches + clicks Ask -> a real 9B answer in the pop-up) is PENDING.
+- **Lesson:** three "fixed/verified" claims (D-0127, D-0128, here) ran ahead of the real environment. A mock proves the GLUE; the box proves the INTEGRATION; only the human's click proves the WHOLE path. next_increment UNCHANGED (front step + ride-along + output side).
+- **Affects:** DECISION_LOG_INDEX (row). Corrects D-0128 (spawn).
+- **State:** locked.

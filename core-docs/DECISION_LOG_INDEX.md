@@ -119,7 +119,7 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0094 | 2026-08-04 | provisional | Adopt a sunsetting PROCESS_MANDATE (time-boxed, self-deleting, mandatory sunset report) + a blind sealed-check regression test for process health. |
 | D-0095 | 2026-08-04 | provisional | Frontier red-team (159e9cb5): NO-GO on i32 as-written (envelope-only namespace; candidate-dependent supersession); open i33 namespace-closure hardening. |
 | D-0096 | 2026-08-04 | locked | i33 p1: MEMORY_CONTRACT A5 + CPC re-amend Tier-0 seams (ns-closure + supersession-hardening + working-state store + classifier split) + mandate sunset countdown |
-| D-0097 | 2026-08-04 | locked | i33 CLOSED: ns-closure + supersession re-conformance shipped (#36 0.4.0 / #37 selpol 1.2.0 + eval 0.5 / #40 0.5.0; ONE ns_permitted); D-0077 mixed-ns fold PASSED (0); Tier-0 seams DONE -> i34 Tier 1 |
+| D-0097 | 2026-08-04 | locked | i33 CLOSED: ns-closure + supersession re-conformance shipped (#36/#37/#40; ONE ns_permitted); D-0077 mixed-ns fold PASSED; Tier-0 seams DONE -> i34 Tier 1 |
 | D-0098 | 2026-08-04 | locked | i34 Tier-1 hierarchy design red-team NO-GO-as-drafted -> A6/i34 PART-1 redraft (safe-pruning + retrieval-completeness + CAS-staleness + authz + ns-homogeneity + identity; split -> i35) |
 | D-0099 | 2026-08-05 | locked | i34 CLOSED: Tier-1 bounded-fanout hierarchy shipped + D-0077 fold PASSED; per-task working-memory store parallel; Tier-1 acceptance gated on the ~200MB rehearsal |
 
@@ -127,12 +127,12 @@ labels; full detail is in `DECISION_LOG.md`.
 
 | D-0101 | 2026-08-05 | provisional | Adopt the couriered audit-surface / interpretability program (staged A0-A5; R-1 stage-trace binds the router; Widgets 05/06/07 = audit-tier vehicles) |
 | D-0102 | 2026-08-05 | locked | i36 CLOSED: TIER-1 ACCEPTED (11/11 s10 over a hash-verified foreign corpus, 100x leaf span; tier1_accepted TRUE; fast-beam lossy, #36-flat fallback) |
-| D-0103 | 2026-08-05 | provisional | i37 open: action-authz contract FROZEN = P0-1 design target (non_execution holds; s9 blockers 1-14 activation-gating) + safety+router wave (#43 P0-1 MVP + #40 R-1 router) + frontier freeze red-team |
+| D-0103 | 2026-08-05 | provisional | i37 open: action-authz contract FROZEN = P0-1 target (non_execution holds; blockers 1-14 activation-gating) + safety+router wave (#43 + #40 R-1) + frontier red-team |
 | D-0104 | 2026-08-05 | locked | i37 CLOSED: safety+router wave (#40 0.8.0 ROUTER + NEW #43 action.authz P0-1 suite MVP 192/192); D-0077 fold 13/13 + i34 38/38; freeze red-team GO-WITH-AMENDMENTS (7 i38 amendments) |
 | D-0105 | 2026-08-06 | provisional | i38 open: scope P0-1 FULL-GATE (#43: 7 s6 amendments + corpus/fuzzer/M-* matrix) + #40<->#42 wm wiring + NEW Widget 06 (fo-38-2b1efe73); countdown 37->38; PB-4 |
-| D-0106 | 2026-08-06 | provisional | i38 close: P0-1 FULL gate (#43 0.2.0 204/204, D-0077 fold 18/18) + #40 0.9.0 wm-hydration + NEW Widget 06 SHIPPED; s7 ratifies pass + pins test-views [pass later walked back, D-0107] |
-| D-0107 | 2026-08-06 | provisional | i38 frontier fold: P0-1 AS-BUILT re-review FAIL -> p0_1_gate_status WALKED BACK to incomplete (over-claimed vs s6; build_complete + activation-prohibited UNCHANGED); 7 items -> i39 unit-0 |
-| D-0108 | 2026-08-06 | locked | i39: P0-1 -> HONEST pass (#43 0.3.0, 7 D-0107 findings closed, 308/308, fold 18/18) + #36 0.7.0 fast-beam + NEW widgets/07; #37 re-pin = PB-5; re-review couriered [walked back again, D-0109] |
+| D-0106 | 2026-08-06 | provisional | i38 close: P0-1 FULL gate (#43 0.2.0 204/204, fold 18/18) + #40 0.9.0 wm-hydration + Widget 06 SHIPPED; s7 ratifies pass [pass later walked back, D-0107] |
+| D-0107 | 2026-08-06 | provisional | i38 frontier fold: P0-1 AS-BUILT re-review FAIL -> p0_1_gate_status WALKED BACK to incomplete (over-claimed vs s6); 7 items -> i39 unit-0 |
+| D-0108 | 2026-08-06 | locked | i39: P0-1 -> HONEST pass (#43 0.3.0, 7 findings closed, 308/308, fold 18/18) + #36 0.7.0 + NEW widgets/07; #37 re-pin = PB-5 [walked back again, D-0109] |
 | D-0109 | 2026-08-06 | locked | i39 as-built re-review FAIL -- pass walked back to incomplete AGAIN; 7 findings -> i40 unit-0 [supersedes the D-0108 pass claim] |
 | D-0110 | 2026-08-06 | locked | i40 sunset: mandate-01 report verdict NO -> mandate 02 LICENSED (sunset i47; M2-A deadline i42; M2-D verify-before-ratify structural; M2-E open) |
 | D-0111 | 2026-08-06 | locked | i40 wave open (2-lane CPU): #43 the 7 exact closures (no pass claim -- M2-D) + #37 PB-5 reconcile |
@@ -153,3 +153,4 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0126 | 2026-08-08 | provisional | interpretability POSER decision (Nicholas): UNGATED read-only info-only '?' -> local-9B explain; info-only invariant = ungate-able [built D-0127, live-fixed D-0128] |
 | D-0127 | 2026-08-08 | locked | LRAP POSER SHIPPED (D-0126): widgets/08 `9f99495` -- ungated, read-only + fail-silent; cloud 104/0/3 + Win -Live 119/0/0 [live-fixed D-0128] |
 | D-0128 | 2026-08-08 | locked | LRAP poser LIVE-CLICK FIX (D-0127): 2 defects the mock missed -- STA spawn didn't launch (-> ProcessStartInfo + detached self-test); 9B empty at 1280 (-> 4096 floor) `cc3dd81` |
+| D-0129 | 2026-08-09 | locked | LRAP poser live no-op ROOT CAUSE: widget host=dotnet.exe -> spawned dotnet.exe -File worker (no-op); fix: real pwsh + -PwshPath `da8a05e` [corrects D-0128 spawn] |
