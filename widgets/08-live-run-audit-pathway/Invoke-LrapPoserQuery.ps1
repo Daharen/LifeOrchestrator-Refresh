@@ -28,7 +28,14 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# best-effort breadcrumb so a spawn / import failure is diagnosable (the request's dir always exists). Never throws.
+$script:__wlog = ''
+try { $script:__wlog = Join-Path (Split-Path -Parent $RequestPath) '_worker.log' } catch { }
+function _WL([string]$m) { if ($script:__wlog) { try { Add-Content -LiteralPath $script:__wlog -Value ('[' + (Get-Date).ToString('HH:mm:ss') + '] ' + $m) -ErrorAction SilentlyContinue } catch { } } }
+_WL ("ENTER pid=$PID host=" + $(try { [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName } catch { '?' }))
+
 Import-Module (Join-Path $PSScriptRoot 'LrapPoser.psm1') -Force
+_WL 'imported LrapPoser'
 
 $reqId = ''
 if (-not $RuntimeDir) {
@@ -46,6 +53,7 @@ try {
     $req = Read-LrapPoserRequest -RequestPath $RequestPath
     $reqId = [string]$req.request_id
     if ([string]::IsNullOrWhiteSpace($reqId)) { throw 'request carried no request_id' }
+    _WL "read request reqId=$reqId"
 
     # compose the gateway messages = [system] + the pop-up turns
     $msgs = New-Object System.Collections.Generic.List[object]
@@ -82,11 +90,14 @@ try {
     if (-not (Test-Path -LiteralPath $gw)) { throw ("model gateway not found: " + $gw) }
 
     $pwsh = if ($PwshPath) { $PwshPath } elseif ($env:LIFEORCH_PWSH) { $env:LIFEORCH_PWSH } else { (Get-Process -Id $PID).Path }
-    if ([string]::IsNullOrWhiteSpace($pwsh)) { $pwsh = 'pwsh' }
+    # NEVER spawn the gateway with dotnet.exe / a non-pwsh host (the dotnet-tool apphost trap): fall back to PATH.
+    if ([string]::IsNullOrWhiteSpace($pwsh) -or ((Split-Path $pwsh -Leaf) -inotmatch '^pwsh(\.exe)?$')) { $pwsh = 'pwsh' }
+    _WL ("calling gateway=[$gw] pwsh=[$pwsh] maxtok=$maxTok")
 
     # THE ONE CALL. The gateway exits 0 whenever it wrote a valid envelope; it manages the gpu lease itself.
     $gwErr = Join-Path $gwDir 'gw.stderr.txt'
     & $pwsh -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $gw -InputsJson $inputsJson -ArtifactRoot $gwDir 2>$gwErr | Out-Null
+    _WL ("gateway call returned exit=$LASTEXITCODE")
 
     # read the completion: prefer output.txt (raw completion), fall back to the result.json envelope
     $text = ''
@@ -114,6 +125,7 @@ try {
     }
 }
 catch {
+    _WL ('CATCH: ' + [string]$_.Exception.Message)
     _AnswerFail -Id $reqId -Message ('poser query failed: ' + [string]$_.Exception.Message)
 }
 

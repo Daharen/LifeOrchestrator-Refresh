@@ -448,21 +448,38 @@ function On-LrapPoserSend {
     catch { try { $script:LState.poser.statusLabel.Text = 'error: ' + $_.Exception.Message } catch { } }
 }
 
+function Resolve-LrapPwsh {
+    # Return a REAL pwsh.exe to spawn the worker with. CRITICAL: do NOT use (Get-Process -Id $PID).Path /
+    # MainModule -- for a `dotnet tool` pwsh (this box) the host image is `dotnet.exe` (an apphost), and spawning
+    # `dotnet.exe -File worker.ps1` silently does nothing (that was the live-click no-op). Also skip a WindowsApps
+    # execution-alias stub (a 0-byte reparse point CreateProcess can't launch). Search real pwsh.exe files and
+    # PREFER a self-contained one (a `.store` exe or Program Files) over the tools shim.
+    $cands = New-Object System.Collections.Generic.List[string]
+    foreach ($src in @(Get-Command pwsh -All -CommandType Application -ErrorAction SilentlyContinue | ForEach-Object { $_.Source })) { if ($src) { [void]$cands.Add([string]$src) } }
+    foreach ($p in @((Join-Path $env:ProgramFiles 'PowerShell\7\pwsh.exe'), "$env:LOCALAPPDATA\Microsoft\powershell\pwsh.exe")) { [void]$cands.Add($p) }
+    $ok = @($cands | Where-Object { $_ -and ((Split-Path $_ -Leaf) -ieq 'pwsh.exe') -and ($_ -notmatch 'WindowsApps') -and (Test-Path -LiteralPath $_) })
+    $pref = @($ok | Where-Object { ($_ -match '\\\.store\\') -or ($_ -match 'Program Files') }) | Select-Object -First 1
+    if ($pref) { return $pref }
+    if ($ok.Count -gt 0) { return $ok[0] }
+    return 'pwsh'
+}
+
 function Launch-LrapPoserWorker {
     param([string]$RequestPath)
     $s = $script:LState
     $worker = Join-Path $s.widgetRoot 'Invoke-LrapPoserQuery.ps1'
-    $pwsh = (Get-Process -Id $PID).Path; if ([string]::IsNullOrWhiteSpace($pwsh)) { $pwsh = 'pwsh' }
-    $a = @('-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', $worker, '-RequestPath', $RequestPath)
+    $log = Join-Path (Split-Path -Parent $RequestPath) '_launch.log'
+    $plog = { param($m) try { Add-Content -LiteralPath $log -Value ('[' + (Get-Date).ToString('HH:mm:ss') + '] ' + $m) -ErrorAction SilentlyContinue } catch { } }
+    $pwsh = Resolve-LrapPwsh
+    $a = @('-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', $worker, '-RequestPath', $RequestPath, '-PwshPath', $pwsh)
     if ($s.poserGateway) { $a += @('-GatewayPath', $s.poserGateway) }
     if ($s.poserSync) {
-        $a += @('-PwshPath', $pwsh)
         & $pwsh @a | Out-Null
         return
     }
-    # DETACHED: native ProcessStartInfo (UseShellExecute=false, CreateNoWindow) -- reliable from the STA WinForms
-    # event thread, where Start-Process -WindowStyle Hidden did NOT actually launch the worker (the live-click bug).
-    # Fail-silent: a launch throw writes an ok=false answer so the pop-up surfaces it instead of hanging on "asking".
+    & $plog ("launch worker=[$worker] pwsh=[$pwsh]")
+    $launched = $false
+    # (1) native ProcessStartInfo (UseShellExecute=false, CreateNoWindow)
     try {
         $psi = [System.Diagnostics.ProcessStartInfo]::new()
         $psi.FileName = $pwsh
@@ -470,10 +487,19 @@ function Launch-LrapPoserWorker {
         $psi.UseShellExecute = $false
         $psi.CreateNoWindow = $true
         $psi.WorkingDirectory = [string]$s.widgetRoot
-        [void][System.Diagnostics.Process]::Start($psi)
+        $proc = [System.Diagnostics.Process]::Start($psi)
+        $launched = ($null -ne $proc)
+        & $plog ('PSI started pid=' + $(if ($proc) { $proc.Id } else { 'null' }))
     }
-    catch {
-        try { [void](Write-LrapPoserAnswer -RuntimeDir (Get-LrapPoserRuntimeDir) -RequestId $s.poser.pendingReqId -Ok:$false -ErrorText ('could not launch the query worker: ' + $_.Exception.Message)) } catch { }
+    catch { & $plog ('PSI THREW: ' + $_.Exception.GetType().Name + ' ' + $_.Exception.Message) }
+    # (2) fallback: Start-Process (ShellExecute) -- handles an alias the native path can't
+    if (-not $launched) {
+        try { [void](Start-Process -FilePath $pwsh -ArgumentList $a -WindowStyle Hidden -PassThru); $launched = $true; & $plog 'Start-Process fallback OK' }
+        catch { & $plog ('Start-Process THREW: ' + $_.Exception.Message) }
+    }
+    if (-not $launched) {
+        & $plog 'ALL LAUNCH PATHS FAILED'
+        try { [void](Write-LrapPoserAnswer -RuntimeDir (Get-LrapPoserRuntimeDir) -RequestId $s.poser.pendingReqId -Ok:$false -ErrorText 'could not launch the query worker (see runtime\poser\_launch.log)') } catch { }
     }
 }
 
