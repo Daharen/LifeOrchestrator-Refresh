@@ -357,11 +357,11 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 **i46 CLOSED (D-0130/D-0131):** the PCB shipped -- NEW modules/44 `project.map` 0.1.0 (map + claims folded + BOOT_PACKET rendered) ALONGSIDE the untouched legacy handoff; the I47 evaluation packet is FROZEN (EVAL_SHA `0bcb5e7`).
 
-**NEXT = i47** (seat: Opus 4.8 Extra): (1) the mandate-02 SUNSET REPORT first (blocks wave work; PROCESS_MANDATE s1/s3); (2) the legacy-vs-PCB side-by-side dry run per **`modules/44-project-map/eval/I47_EVAL_PACKET.md`** (MANIFEST-verify, Nicholas picks T1/T2/T3, dispatches A/B/C1/C2); (3) apply the packet s7 verdict rules -> GO / CONDITIONAL / NO-GO for i48 migration. Post-gate menu: AUDIT_PIPELINE next_increment (front step + ride-along + output side); M2-C first increment (advanced by the PCB design s6; FO-3); #40 beam-width. Mandate-02 countdown i46 -> 46/1. P0-1 activation stays FROZEN.
+**NEXT = i47** (seat: Opus 4.8 Extra): (1) DONE: mandate 02 SUNSET -- verdict YES, SEALED_CHECK_47 armed (open i>=54), report in research/ (D-0132); (2) the legacy-vs-PCB side-by-side dry run per **`modules/44-project-map/eval/I47_EVAL_PACKET.md`** (MANIFEST-verify, Nicholas picks T1/T2/T3, dispatches A/B/C1/C2); (3) apply the packet s7 verdict rules -> GO / CONDITIONAL / NO-GO for i48 migration. Post-gate menu: AUDIT_PIPELINE next_increment (front step + ride-along + output side); M2-C first increment (PCB design s6; FO-3); #40 beam-width. P0-1 activation stays FROZEN.
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades; `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-11 -- i46 CLOSED (D-0130/D-0131): the Project Comprehension Bootstrap (modules/44 project.map 0.1.0) shipped + independently verified + folded (claims 0-findings; BOOT_PACKET rendered); the I47 legacy-vs-PCB migration-gate packet FROZEN (EVAL_SHA 0bcb5e7); i47 owes the mandate-02 sunset report first.
+**Last updated:** 2026-08-11 -- i46 CLOSED (D-0130/D-0131): the Project Comprehension Bootstrap (modules/44 project.map 0.1.0) shipped + independently verified + folded (claims 0-findings; BOOT_PACKET rendered); the I47 legacy-vs-PCB migration-gate packet FROZEN (EVAL_SHA 0bcb5e7); i47: mandate 02 SUNSET, verdict YES, sealed check armed (D-0132).
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

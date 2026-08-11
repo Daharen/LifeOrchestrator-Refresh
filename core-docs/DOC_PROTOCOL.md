@@ -27,7 +27,7 @@ describe NOW and stay ingestable whole; history is never deleted, it moves to la
 | DECISION_LOG_INDEX.md | one compressed routing row per decision (id, date, state, one-line label; see its header rules) | 20 KB |
 | MODULE_ROADMAP.md | build order, per-module status, deferred follow-ons, portability backlog | 37 KB |
 | PROCESS_BACKLOG.md | cross-cutting process / tooling / doc-hygiene backlog (router; per-module follow-ons stay in MODULE_ROADMAP) | 8 KB |
-| PROCESS_MANDATE.md | the live SUNSETTING process-hygiene mandate (mandate 02; self-deletes at its sunset_iteration after a report) | 12 KB |
+| SEALED_CHECK_47.md | sealed metastability predicates (D-0132; evaluate at i>=54 then archive; a new mandate exists only if re-licensed) | 4 KB |
 | TOOL_MODEL_REGISTRY.md | tool/model/hardware/storage registry (lookup, not story) | 43 KB |
 | REVIEW_QUEUE.md | queue schema, conventions, producer/consumer table, open design flags | 15 KB |
 | PROJECT_DIRECTION.md | doctrine (stable) | 9 KB |

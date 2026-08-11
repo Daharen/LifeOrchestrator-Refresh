@@ -3,11 +3,11 @@
 Machine-checkable header (an orchestrator reads these at session start):
 - `mandate_id: 02`
 - `opened_iteration: 40`
-- `current_iteration: 46`   (updated each orchestrator session)
-- `iterations_to_sunset: 1`   (COUNTDOWN -- at 0, state -> REPORT_DUE; s1)
+- `current_iteration: 47`   (updated each orchestrator session)
+- `iterations_to_sunset: 0`   (COUNTDOWN -- at 0, state -> REPORT_DUE; s1)
 - `sunset_iteration: 47`
 - `sealed_check_offset_iterations: 7`
-- `state: ACTIVE`   (ACTIVE | REPORT_DUE | SUNSET | RE-LICENSED)
+- `state: SUNSET`   (ACTIVE | REPORT_DUE | SUNSET | RE-LICENSED)
 - `governs:` M2-A..M2-E below (PROCESS_BACKLOG PB-1/PB-2/PB-3 successors + the s2 principles)
 - `licensed_by:` Nicholas, i40 (D-0110); predecessor: mandate 01 (i32-i40, report
   `research/2026-08-06-process-mandate-01-report.md`, verdict NO -> re-licensed per s3.4)

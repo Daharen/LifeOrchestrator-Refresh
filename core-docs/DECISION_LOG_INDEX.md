@@ -121,15 +121,15 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0096 | 2026-08-04 | locked | i33 p1: MEMORY_CONTRACT A5 + CPC re-amend Tier-0 seams (ns-closure + supersession-hardening + working-state store + classifier split) + mandate sunset countdown |
 | D-0097 | 2026-08-04 | locked | i33 CLOSED: ns-closure + supersession re-conformance shipped (#36/#37/#40; ONE ns_permitted); D-0077 mixed-ns fold PASSED; Tier-0 seams DONE -> i34 Tier 1 |
 | D-0098 | 2026-08-04 | locked | i34 Tier-1 hierarchy design red-team NO-GO-as-drafted -> A6/i34 PART-1 redraft (split -> i35) |
-| D-0099 | 2026-08-05 | locked | i34 CLOSED: Tier-1 bounded-fanout hierarchy shipped + D-0077 fold PASSED; per-task working-memory store parallel; Tier-1 acceptance gated on the ~200MB rehearsal |
+| D-0099 | 2026-08-05 | locked | i34 CLOSED: Tier-1 bounded-fanout hierarchy shipped + fold passed; acceptance gated on the rehearsal |
 
-| D-0100 | 2026-08-05 | locked | i35 CLOSED: consumer wiring (#40 0.7.0 hierarchy_port + #37 0.7.0 rehearsal harness); D-0077 fold passed; tier1 -> i36; P0-1 red-team NO-GO w/o a deny-by-default monitor |
+| D-0100 | 2026-08-05 | locked | i35 CLOSED: consumer wiring + rehearsal harness; tier1 -> i36; P0-1 red-team NO-GO w/o deny-by-default |
 
 | D-0101 | 2026-08-05 | provisional | Adopt the couriered audit-surface / interpretability program (staged A0-A5; R-1 stage-trace binds the router; Widgets 05/06/07 = audit-tier vehicles) |
 | D-0102 | 2026-08-05 | locked | i36 CLOSED: TIER-1 ACCEPTED (11/11 s10 over a hash-verified foreign corpus, 100x leaf span; tier1_accepted TRUE; fast-beam lossy, #36-flat fallback) |
 | D-0103 | 2026-08-05 | provisional | i37 open: action-authz contract FROZEN = P0-1 target (non_execution holds; blockers 1-14 activation-gating) + safety+router wave (#43 + #40 R-1) + frontier red-team |
 | D-0104 | 2026-08-05 | locked | i37 CLOSED: #40 0.8.0 router + NEW #43 P0-1 suite MVP; folds green; freeze red-team GO-WITH-AMENDMENTS |
-| D-0105 | 2026-08-06 | provisional | i38 open: scope P0-1 FULL-GATE (#43: 7 s6 amendments + corpus/fuzzer/M-* matrix) + #40<->#42 wm wiring + NEW Widget 06 (fo-38-2b1efe73); countdown 37->38; PB-4 |
+| D-0105 | 2026-08-06 | provisional | i38 open: scope P0-1 FULL-GATE + wm wiring + NEW Widget 06; PB-4 |
 | D-0106 | 2026-08-06 | provisional | i38 close: P0-1 FULL gate (#43 0.2.0 204/204, fold 18/18) + #40 0.9.0 wm-hydration + Widget 06 SHIPPED; s7 ratifies pass [pass later walked back, D-0107] |
 | D-0107 | 2026-08-06 | provisional | i38 frontier fold: P0-1 AS-BUILT re-review FAIL -> p0_1_gate_status WALKED BACK to incomplete (over-claimed vs s6); 7 items -> i39 unit-0 |
 | D-0108 | 2026-08-06 | locked | i39: P0-1 -> HONEST pass (#43 0.3.0, 7 findings closed, 308/308, fold 18/18) + #36 0.7.0 + NEW widgets/07; #37 re-pin = PB-5 [walked back again, D-0109] |
@@ -139,7 +139,7 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0112 | 2026-08-06 | locked | i40 close: #43 0.4.0 exact closures (orchestrator-recovered ship; gate stays incomplete) + #37 0.8.1 (PB-5 closed); round-3 pack couriered |
 | D-0113 | 2026-08-06 | locked | i40 round-3 review FAIL -- s7 not ratified; 5 suite-build findings -> the i41 #43 unit; no walk-back (M2-D) |
 | D-0114 | 2026-08-07 | provisional | i41 worker model tiering: Sonnet 5 High default lanes + elevation triggers; fanout retained [seat clause amended by D-0116] |
-| D-0115 | 2026-08-07 | locked | i41 close: #43 0.5.0 round-3 closures shipped + independently verified (M2-D held); round-4 pack couriered (manifest-derived, empty-dir pre-verified); next = i42 M2-A build |
+| D-0115 | 2026-08-07 | locked | i41 close: #43 round-3 closures shipped + independently verified; round-4 pack couriered; next = i42 M2-A |
 | D-0116 | 2026-08-07 | locked | i41 round-4 review FAIL -- s7 not ratified; F1/F7 closed (manifest-pack rule proven); 3 seam findings -> #43 0.6.0; orchestrator seat -> Opus 4.8 Extra [amends D-0114] |
 | D-0117 | 2026-08-08 | locked | i42 close: M2-A doc-hygiene commit gate SHIPPED (hard deadline met) + #43 0.6.0 (3 round-4 closures, M2-D held); round-5 pack 6bb613ea couriered |
 | D-0118 | 2026-08-08 | locked | i42 round-5 ratification PASS: P0-1 = DESIGN PASS (p0_1_gate_status=pass, pack 6bb613ea); activation still prohibited; arc closes 7->7->5->3->0 |
@@ -156,3 +156,4 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0129 | 2026-08-09 | locked | LRAP poser live no-op ROOT CAUSE: widget host=dotnet.exe -> spawned dotnet.exe -File worker (no-op); fix: real pwsh + -PwshPath `da8a05e` [corrects D-0128 spawn] |
 | D-0130 | 2026-08-11 | locked | i46 DIRECTIVE-HIJACK: PCB design FROZEN -- namespaces + 5 planes + NEW modules/44 project.map + claims-only judgment + the i47 gate packet; 2 red-teams folded |
 | D-0131 | 2026-08-11 | locked | i46 CLOSED: PCB shipped -- modules/44 0.1.0 (recovered ship + 2 fold-fixes); claims folded 0-findings; packet rendered; I47 FROZEN |
+| D-0132 | 2026-08-11 | locked | mandate 02 SUNSET: report delivered, verdict YES (reverses 01's NO) -> SEALED_CHECK_47 armed (open i>=54); live doc deleted; no mandate 03 |
