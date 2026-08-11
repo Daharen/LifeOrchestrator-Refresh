@@ -127,7 +127,7 @@ labels; full detail is in `DECISION_LOG.md`.
 
 | D-0101 | 2026-08-05 | provisional | Adopt the couriered audit-surface / interpretability program (staged A0-A5; R-1 stage-trace binds the router; Widgets 05/06/07 = audit-tier vehicles) |
 | D-0102 | 2026-08-05 | locked | i36 CLOSED: TIER-1 ACCEPTED (11/11 s10 over a hash-verified foreign corpus, 100x leaf span; tier1_accepted TRUE; fast-beam lossy, #36-flat fallback) |
-| D-0103 | 2026-08-05 | provisional | i37 open: action-authz contract FROZEN = P0-1 target (non_execution holds; blockers 1-14 activation-gating) + safety+router wave (#43 + #40 R-1) + frontier red-team |
+| D-0103 | 2026-08-05 | provisional | i37 open: action-authz contract FROZEN = P0-1 target (non_execution holds) + the safety+router wave |
 | D-0104 | 2026-08-05 | locked | i37 CLOSED: #40 0.8.0 router + NEW #43 P0-1 suite MVP; folds green; freeze red-team GO-WITH-AMENDMENTS |
 | D-0105 | 2026-08-06 | provisional | i38 open: scope P0-1 FULL-GATE + wm wiring + NEW Widget 06; PB-4 |
 | D-0106 | 2026-08-06 | provisional | i38 close: P0-1 FULL gate (#43 0.2.0 204/204, fold 18/18) + #40 0.9.0 wm-hydration + Widget 06 SHIPPED; s7 ratifies pass [pass later walked back, D-0107] |
@@ -140,7 +140,7 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0113 | 2026-08-06 | locked | i40 round-3 review FAIL -- s7 not ratified; 5 suite-build findings -> the i41 #43 unit; no walk-back (M2-D) |
 | D-0114 | 2026-08-07 | provisional | i41 worker model tiering: Sonnet 5 High default lanes + elevation triggers; fanout retained [seat clause amended by D-0116] |
 | D-0115 | 2026-08-07 | locked | i41 close: #43 round-3 closures shipped + independently verified; round-4 pack couriered; next = i42 M2-A |
-| D-0116 | 2026-08-07 | locked | i41 round-4 review FAIL -- s7 not ratified; F1/F7 closed (manifest-pack rule proven); 3 seam findings -> #43 0.6.0; orchestrator seat -> Opus 4.8 Extra [amends D-0114] |
+| D-0116 | 2026-08-07 | locked | i41 round-4 review FAIL -- s7 not ratified; 3 seam findings -> #43; orchestrator seat -> Opus 4.8 Extra [amends D-0114] |
 | D-0117 | 2026-08-08 | locked | i42 close: M2-A doc-hygiene commit gate SHIPPED (hard deadline met) + #43 0.6.0 (3 round-4 closures, M2-D held); round-5 pack 6bb613ea couriered |
 | D-0118 | 2026-08-08 | locked | i42 round-5 ratification PASS: P0-1 = DESIGN PASS (p0_1_gate_status=pass, pack 6bb613ea); activation still prohibited; arc closes 7->7->5->3->0 |
 | D-0119 | 2026-08-08 | locked | M2-E resolved (Nicholas): in-session cloud subagents PERMITTED inside the D-0051-as-amended boundary (frontier still human-couriered); PB-2 delegation seam unblocked |
@@ -157,3 +157,4 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0130 | 2026-08-11 | locked | i46 DIRECTIVE-HIJACK: PCB design FROZEN -- namespaces + 5 planes + NEW modules/44 project.map + claims-only judgment + the i47 gate packet; 2 red-teams folded |
 | D-0131 | 2026-08-11 | locked | i46 CLOSED: PCB shipped -- modules/44 0.1.0 (recovered ship + 2 fold-fixes); claims folded 0-findings; packet rendered; I47 FROZEN |
 | D-0132 | 2026-08-11 | locked | mandate 02 SUNSET: report delivered, verdict YES (reverses 01's NO) -> SEALED_CHECK_47 armed (open i>=54); live doc deleted; no mandate 03 |
+| D-0133 | 2026-08-11 | locked | i47 PCB migration gate = CONDITIONAL: quality PASS (floors clear, swap-stable) but efficiency VOID (mechanism-not-exercised) -> 3 bounded i48 CD units; legacy stays default |

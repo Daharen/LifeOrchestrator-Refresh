@@ -355,13 +355,13 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ## Next expected action
 
-**i46 CLOSED (D-0130/D-0131):** the PCB shipped -- NEW modules/44 `project.map` 0.1.0 (map + claims folded + BOOT_PACKET rendered) ALONGSIDE the untouched legacy handoff; the I47 evaluation packet is FROZEN (EVAL_SHA `0bcb5e7`).
+**i47 CLOSED (D-0132/D-0133):** mandate 02 SUNSET (verdict YES; SEALED_CHECK_47 open i>=54) + the frozen legacy-vs-PCB migration gate RUN blind end-to-end (T1; one B re-run after a wrong-grant void) -> **CONDITIONAL**.
 
-**NEXT = i47** (seat: Opus 4.8 Extra): (1) DONE: mandate 02 SUNSET -- verdict YES, SEALED_CHECK_47 armed (open i>=54), report in research/ (D-0132); (2) the legacy-vs-PCB side-by-side dry run per **`modules/44-project-map/eval/I47_EVAL_PACKET.md`** (MANIFEST-verify, Nicholas picks T1/T2/T3, dispatches A/B/C1/C2); (3) apply the packet s7 verdict rules -> GO / CONDITIONAL / NO-GO for i48 migration. Post-gate menu: AUDIT_PIPELINE next_increment (front step + ride-along + output side); M2-C first increment (PCB design s6; FO-3); #40 beam-width. P0-1 activation stays FROZEN.
+**NEXT = i48**: the migration gate returned **CONDITIONAL (D-0133; `modules/44-project-map/eval/results/I47_RESULTS.md`)** -- quality PASS, efficiency VOID; the LEGACY handoff STAYS the default bootstrap. Menu: the 3 bounded CD units (CD-1 boot-surface wave-mechanics; CD-2 efficiency re-check; CD-3 #44 query-surface) -> the CONDITIONAL re-check; or AUDIT_PIPELINE next_increment (front step + ride-along + output side; review_due i49); M2-C first increment (FO-3); #40 beam-width. P0-1 activation stays FROZEN.
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades; `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-11 -- i46 CLOSED (D-0130/D-0131): the Project Comprehension Bootstrap (modules/44 project.map 0.1.0) shipped + independently verified + folded (claims 0-findings; BOOT_PACKET rendered); the I47 legacy-vs-PCB migration-gate packet FROZEN (EVAL_SHA 0bcb5e7); i47: mandate 02 SUNSET, verdict YES, sealed check armed (D-0132).
+**Last updated:** 2026-08-11 -- i47 CLOSED: mandate 02 SUNSET (YES; SEALED_CHECK_47 armed, D-0132) + the migration gate run blind end-to-end -> CONDITIONAL (D-0133): legacy stays default; CD-1/2/3 queued for i48.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

@@ -117,3 +117,4 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 | archive/fanout-agents/i46-002.md | i46 CPU-lane brief (PCB-CLAIMS-i46; the system-map claims layer) | 2026-08-11 | D-0131 |
 | archive/fanout-agents/i46-003.md | i46 CODING-lane brief (PCB-BUILD-i46; NEW modules/44 project.map) | 2026-08-11 | D-0131 |
 | archive/mandates/mandate-02-i40-i47.md | mandate 02 (opened i40, D-0110) at its i47 sunset: report delivered (research/2026-08-11-process-mandate-02-report.md), verdict YES, SEALED_CHECK_47 armed | 2026-08-11 | D-0132 |
+| archive/handoffs/2026-08-11-FANOUT_ORCHESTRATOR_HANDOFF-i47.md | the outgoing i46-shaped live handoff snapshotted at the i47 close | 2026-08-11 | D-0133 |
