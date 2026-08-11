@@ -1,0 +1,23 @@
+{
+ "items": [
+  {
+   "display_name": "Skill contract",
+   "id": "contract:skill-contract",
+   "ns": "contract",
+   "one_line": "The skill interface contract governing modules in the fixture.",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DOC_PROTOCOL.md",
+     "sha256": "2e8587d959c4c9e2aab39d7c59307100b65004d0496a95795ba5995803ef0dbd"
+    }
+   ]
+  }
+ ],
+ "kind": "entities",
+ "schema": "lifeorch.project_map/0.1"
+}

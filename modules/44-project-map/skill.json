@@ -1,0 +1,45 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "project.map",
+  "name": "Project Comprehension Bootstrap (deterministic system-map + boot-packet)",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "The Life Orchestrator's Project Comprehension Bootstrap (PCB) mechanism (i46, arch position 44). A stdlib-only Python 3.10-compatible worker (project_map.py) + pwsh 7.4.6 entrypoint that deterministically HARVESTS mechanical repo facts (module/widget dirs + skill.json manifest fields, core-doc list + LF-normalized sizes + DOC_PROTOCOL s2 budgets via the IMPORTED parse_budgets(), the s2 owner rows, DECISION_LOG_INDEX ids, the PROCESS_MANDATE machine header, the ARCHITECTURE_MAP arch spine, and git HEAD/dirty as inputs), VALIDATES the canonical map state (schema/grammar/enums, global id uniqueness, referential integrity, per-FIELD provenance coverage, derived-field authorship ban, harvest/claims conflict, coverage fail-closed both ways HARVEST_ORPHAN+ENTITY_UNBACKED, per-field staleness with load-bearing + >20% stale-budget gates, overlay invariants, skeleton gates), idempotently INGESTS evidence-pointed agent CLAIMS via a staged-tree atomic swap, and RENDERS bounded progressive-disclosure views (BOOT_PACKET <=20000 bytes HARD with per-section budgets + a recorded degradation ladder + ?/~ uncertainty/stale markers, L0 system map, L1 capability cards, ALIASES) only from validated state. Ops: harvest, validate, ingest-claims, render, verify, query, reaffirm, fmt, selftest. Schema lifeorch.project_map/0.1: closed namespaces (module:/widget:/plane:/arch: number-only/contract:/doc:/store:/decision:/mandate:/pb:/iteration:/wave:/ops:/future:), per-field provenance, DERIVED load_bearing + member-of edges. Canonical bytes: LF, UTF-8, no BOM, sorted keys + explicitly sorted arrays; all sha256 over CRLF->LF-normalized bytes; KB=1000. Logical refusals are SKILL_CONTRACT v0.2 envelopes (exit 0, status:error, a machine error.code from the closed table); nonzero exit = crash only. READ-ONLY over the repo outside its own map/, generated/, runtime/, fixtures/. CPU-only, no model, no network -> determinism=deterministic, confidence=null, empty model_provenance. parallel_safe:false (ingest/render write shared map/ + generated/ state). Non-goals (NOT built here): the real overlay (orchestrator authors it at fold); any claims content (a parallel lane owns claims/); eval/ (orchestrator-owned); any #36 write path; any core-doc edit; any query beyond the closed set.",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "Invoke-ProjectMap.ps1",
+    "args_spec": "Named params: -Action harvest|validate|ingest-claims|render|verify|query|reaffirm|fmt|selftest|report; -Repo <root>; -Map <map dir> (default <skill>/map); -Harvest <harvest.json>; -Out <dir>; -Claims <file>; -Q <query expr>; -Entity <id>; -Fields <csv>; -By <who>; -AtCommit <sha>; -PathsFile <file>; -Check; -Draft; -NoHarvest; -Override <reason>; -RepoState Skeleton|Folded (test smoke). The entrypoint captures git rev-parse HEAD + git status --porcelain and passes --at-commit/--dirty to the worker (dirty excludes modules/44-project-map/ itself). OR the generic -InputsJson '<json object>' (named params override matching keys). Optional -ArtifactRoot, -InvocationId.",
+    "inputs_json_supported": true
+  },
+  "inputs": [
+    {"name": "action", "type": "string", "required": false, "default": "validate", "description": "harvest|validate|ingest-claims|render|verify|query|reaffirm|fmt|selftest."},
+    {"name": "repo", "type": "string", "required": false, "description": "harvest: repo root to read (READ-ONLY)."},
+    {"name": "map", "type": "string", "required": false, "description": "map/ directory (canonical state); defaults to <skill>/map."},
+    {"name": "harvest", "type": "string", "required": false, "description": "path to a harvest.json produced by the harvest op (required by validate/render/verify on the real map)."},
+    {"name": "out", "type": "string", "required": false, "description": "render: output directory (generated/ non-draft, or a runtime/ dir with --draft)."},
+    {"name": "claims", "type": "string", "required": false, "description": "ingest-claims: path to a map_claims/0.1 file."},
+    {"name": "q", "type": "string", "required": false, "description": "query: one of the closed query expressions (see SCHEMA_NOTES)."},
+    {"name": "check", "type": "bool", "required": false, "default": false, "description": "render: re-render to a temp dir and byte-compare vs the committed out dir (drift gate)."},
+    {"name": "draft", "type": "bool", "required": false, "default": false, "description": "render: draft render (permitted ONLY with --out under runtime/); stamps DRAFT-STALE + status:error."}
+  ],
+  "outputs": {
+    "result_shape": "object",
+    "description": "envelope.result is op-specific. harvest: {at_commit, dirty, counts{modules,widgets,core_docs,arch,decision_ids}, modules[], widgets[], core_docs[], doc_owner_rows[], decision_ids[], mandate{}, arch[], inventory{path:sha256}}. validate/verify: {ok, error_count, findings[{code,where,message}], stale[], coverage{orphans[],unbacked[]}, would_render_refuse}. ingest-claims: {merged, entities_upserted, edges_upserted, conflicts[]}. render: {out, files[{name,bytes,sha256}], boot_packet_bytes, ladder[], stale_count, degraded}. query: closed per-query result. fmt: {ok, nonconforming[]}. selftest: SELFTEST_*_OK lines in diagnostics. Refusals: status:error + error.code from the closed table (SCHEMA_INVALID ID_GRAMMAR UNKNOWN_NS UNKNOWN_EDGE_TYPE DUP_ID DUP_EDGE DANGLING_REF MISSING_PROVENANCE FIELD_UNCOVERED CLAIM_RESTATES_HARVEST CONFLICT_HARVEST CONFLICT_CLAIMS DERIVED_FIELD_AUTHORED HARVEST_ORPHAN ENTITY_UNBACKED STALE_LOAD_BEARING STALE_BUDGET OVERLAY_MANDATE_DRIFT OVERLAY_PROHIBITIONS_EMPTY OVERLAY_DANGLING SKELETON_UNRESOLVED SKELETON_LOAD_BEARING DIRTY_TREE DRAFT_RENDER PACKET_OVER_BUDGET GENERATED_DRIFT FMT_NONCANONICAL UNSUPPORTED_QUERY PARSE_ROW_FAILED)."
+  },
+  "requirements": {
+    "executables": ["pwsh>=7.4", "python>=3.10 (stdlib json/hashlib/re/importlib only)"],
+    "models": [],
+    "libraries": [],
+    "cpu": "any", "gpu": "none", "memory_mb": 256,
+    "network": false, "filesystem": "read-write", "audio": false, "screen": false, "camera": false
+  },
+  "artifacts": {"root": "runtime/artifacts/<invocation_id>/"},
+  "side_effects": "writes only modules/44-project-map/{map,generated,runtime} (READ-ONLY elsewhere; ingest stages under runtime/ and atomic-swaps map/)",
+  "timeout": {"default_seconds": 300, "on_timeout": "kill_tree_and_report"},
+  "batch": false,
+  "streaming": false,
+  "parallel_safe": false,
+  "example_invocation_file": "examples/example-invocation.md",
+  "example_result_file": "examples/example-result.json"
+}

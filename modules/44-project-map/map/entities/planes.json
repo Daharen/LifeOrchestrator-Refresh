@@ -1,0 +1,91 @@
+{
+ "items": [
+  {
+   "display_name": "Authority plane",
+   "id": "plane:authority",
+   "ns": "plane",
+   "one_line": "The Authority plane (D-0080 Collective-Agent planes).",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "display_name": "Capability plane",
+   "id": "plane:capability",
+   "ns": "plane",
+   "one_line": "The Capability plane (D-0080 Collective-Agent planes).",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "display_name": "Intelligence plane",
+   "id": "plane:intelligence",
+   "ns": "plane",
+   "one_line": "The Intelligence plane (D-0080 Collective-Agent planes).",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "display_name": "Memory plane",
+   "id": "plane:memory",
+   "ns": "plane",
+   "one_line": "The Memory plane (D-0080 Collective-Agent planes).",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "display_name": "Observability plane",
+   "id": "plane:observability",
+   "ns": "plane",
+   "one_line": "The Observability plane (D-0080 Collective-Agent planes).",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  }
+ ],
+ "kind": "entities",
+ "schema": "lifeorch.project_map/0.1"
+}

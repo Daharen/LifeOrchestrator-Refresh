@@ -1,0 +1,1264 @@
+{
+ "items": [
+  {
+   "aliases": [
+    "#00.1"
+   ],
+   "display_name": "#00.1 exec-watchdog",
+   "id": "module:00.1/exec-watchdog",
+   "ns": "module",
+   "one_line": "Harvest-seeded module 00.1-exec-watchdog (awaiting claims).",
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "modules/00.1-exec-watchdog/README.md",
+     "sha256": "56aad7f70a8e7dfa1e8da3c7fcc6948d5c9dd584235240aa96b923040bbb29d6"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "#00"
+   ],
+   "display_name": "#00 bootstrap-executor",
+   "id": "module:00/bootstrap-executor",
+   "ns": "module",
+   "one_line": "Harvest-seeded module 00-bootstrap-executor (awaiting claims).",
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "modules/00-bootstrap-executor/README.md",
+     "sha256": "ae430b7aa1ef47bcaea83e13d357b9c412f8473b07eb715dfac58295b35beaf0"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "#01"
+   ],
+   "display_name": "#01 skill-bootstrap",
+   "id": "module:01/skill-bootstrap",
+   "ns": "module",
+   "one_line": "Harvest-seeded module 01-skill-bootstrap (awaiting claims).",
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "modules/01-skill-bootstrap/README.md",
+     "sha256": "2ff30f0e8c05e8ccefda098cff21b4d7ec47c3f3e74aef512517327e9bcffaed"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "#02"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#02 fs.observer",
+   "id": "module:02/fs.observer",
+   "ns": "module",
+   "one_line": "List, search, and index a directory tree deterministically (depth-bounded, with metadata) without screenshots; emits a markdown tree and a JSON index.",
+   "parallel_safe": true,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/02-fs-observer/skill.json",
+     "sha256": "850127f4a2a404178fd2194d97fa13ee267e96547f32a79da208d0e30683f9e6"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#03"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#03 proc.observer",
+   "id": "module:03/proc.observer",
+   "ns": "module",
+   "one_line": "Snapshot running processes and top-level windows (pids, titles, paths, positions/size, minimized/maximized, the foreground window) via structured OS queries \u2014 n",
+   "parallel_safe": true,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/03-proc-observer/skill.json",
+     "sha256": "a0ad11943eabe784ea2bbd5b262fe466638beba72ec08fab084c461c2d13846b"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#04"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#04 uia.inspector",
+   "id": "module:04/uia.inspector",
+   "ns": "module",
+   "one_line": "Read the UI Automation accessible control tree of a target window (or the desktop): per-element control type, name, automation id, class, bounds, supported patt",
+   "parallel_safe": true,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/04-uia-inspector/skill.json",
+     "sha256": "fa276dbdb4e5cdfb1329c9528422ac830d946bc9644b7c1dc101e73564d40203"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#05"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#05 uia.actor",
+   "id": "module:05/uia.actor",
+   "ns": "module",
+   "one_line": "Perform ONE UI Automation control-pattern action (invoke/toggle/select/expand/collapse/setvalue/focus) on a single element located by automation id, name, contr",
+   "parallel_safe": false,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/05-uia-actor/skill.json",
+     "sha256": "b964fe2e7ec36c45853e473b22e5f4a72f943c6b773c9798837e38c52eef3e70"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#06"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#06 capture.screen",
+   "id": "module:06/capture.screen",
+   "ns": "module",
+   "one_line": "Capture a monitor, a top-level window (by hwnd/pid/title), an application's main window (by process name), or an explicit screen rectangle to a PNG (or JPG) ima",
+   "parallel_safe": true,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/06-capture-screen/skill.json",
+     "sha256": "5419f1b72d834dc8a4f7c92e635e5b863bfadc9307b01bf053063a15c458e052"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#07"
+   ],
+   "determinism": "mixed",
+   "display_name": "#07 model.gateway",
+   "id": "module:07/model.gateway",
+   "ns": "module",
+   "one_line": "A common interface for local and frontier agents to run local models on this machine.",
+   "parallel_safe": false,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/07-model-gateway/skill.json",
+     "sha256": "c995b96f424eea0ddf31f183c9f847ef484a30d2d3c29dd8e90a8d368ab67f60"
+    }
+   ],
+   "version": "0.6.0"
+  },
+  {
+   "aliases": [
+    "#08"
+   ],
+   "determinism": "mixed",
+   "display_name": "#08 classify.batch",
+   "id": "module:08/classify.batch",
+   "ns": "module",
+   "one_line": "Batch categorize / label / extract over a list of text items using a weak local model, via model.gateway (Module 7).",
+   "parallel_safe": false,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/08-classify-batch/skill.json",
+     "sha256": "210d0d9d3887716eb9d80936e84c66aac3de1c740ee6bcb4c299db0c8b16ec9f"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#09"
+   ],
+   "determinism": "mixed",
+   "display_name": "#09 review.processor",
+   "id": "module:09/review.processor",
+   "ns": "module",
+   "one_line": "Drain review_queue.jsonl by adjudicating flagged items one at a time with a STRONGER local model via model.gateway (default tier mid = Qwen2.5-3B; strong = 27B)",
+   "parallel_safe": false,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/09-review-processor/skill.json",
+     "sha256": "c16ff8291abd7cc1f2c1b467143b0b81622dc49509d4749f8063631cb4295a73"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#10"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#10 audio.ingest",
+   "id": "module:10/audio.ingest",
+   "ns": "module",
+   "one_line": "Normalize and convert a single audio (or media) file to a requested format, sample rate, channel count, sample format, and optional loudness normalization, by w",
+   "parallel_safe": true,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/10-audio-ingest/skill.json",
+     "sha256": "85a84c8eabb9eace11c45fbc0ca00a9e83256b85da1887d423c581c28e2171e9"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#11"
+   ],
+   "determinism": "mixed",
+   "display_name": "#11 speech.stt",
+   "id": "module:11/speech.stt",
+   "ns": "module",
+   "one_line": "Transcribe one audio/media file into timestamped text segments with per-segment and overall confidence, by wrapping the whisper.cpp whisper-cli.",
+   "parallel_safe": false,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/11-speech-stt/skill.json",
+     "sha256": "d45615183d695596eae070648c52e3a39b563465574db241cca92b3328d90f47"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#12"
+   ],
+   "determinism": "mixed",
+   "display_name": "#12 speech.tts",
+   "id": "module:12/speech.tts",
+   "ns": "module",
+   "one_line": "Synthesize speech audio from text using the Qwen3-TTS CustomVoice models (transformers / the qwen_tts package) under the speech venv.",
+   "parallel_safe": false,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/12-speech-tts/skill.json",
+     "sha256": "433137a3010b60ab0c93a5d77db9e9779b0cac17be12e73bc2d27a2ef1facb45"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#13"
+   ],
+   "determinism": "mixed",
+   "display_name": "#13 voice.live",
+   "id": "module:13/voice.live",
+   "ns": "module",
+   "one_line": "Compose a local voice turn from one input audio file: speech.stt transcribes it (whisper segmentation = utterance/voice-activity detection), model.gateway answe",
+   "parallel_safe": false,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/13-voice-live/skill.json",
+     "sha256": "a34f47060ca8292fb30af9fe39ca1c482aef329e1169c2725a613cc95e6bb059"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#14"
+   ],
+   "determinism": "mixed",
+   "display_name": "#14 ocr.layout",
+   "id": "module:14/ocr.layout",
+   "ns": "module",
+   "one_line": "Recognize the text in one image and return it with per-word pixel bounding boxes and lines in reading order, by driving the system Windows.Media.Ocr engine insi",
+   "parallel_safe": true,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/14-ocr-layout/skill.json",
+     "sha256": "47bab568d006f1aa53f1aa14cf551e7cbe057baed505069811865962f50f929e"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#15"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#15 image.util",
+   "id": "module:15/image.util",
+   "ns": "module",
+   "one_line": "Deterministic image plumbing for one image: probe metadata (dims/format/mode/has_alpha/dpi/EXIF-lite), content + perceptual hashes (sha256 + pHash + dHash), res",
+   "parallel_safe": true,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/15-image-util/skill.json",
+     "sha256": "4222934f1bd201533203bb7e5d70dcea8e690b6725220096310f10757b24abe5"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#16"
+   ],
+   "determinism": "mixed",
+   "display_name": "#16 detect.objects",
+   "id": "module:16/detect.objects",
+   "ns": "module",
+   "one_line": "Detect objects in one image and return each as {class, class_id, score, box{x,y,width,height}} with a REAL per-detection confidence (YOLOX objectness * class pr",
+   "parallel_safe": true,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/16-detect-objects/skill.json",
+     "sha256": "0db84fb5938acff7717c2c7fdc2bf27bed890f149db0504e2a6fc55d4758bbf8"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#17"
+   ],
+   "determinism": "mixed",
+   "display_name": "#17 image.interpret",
+   "id": "module:17/image.interpret",
+   "ns": "module",
+   "one_line": "Interpret one image with a local vision-language model and return a free-text interpretation (caption / detailed description / answer to a question / screen sum",
+   "parallel_safe": false,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/17-image-interpret/skill.json",
+     "sha256": "b93eb8998c829334b309424fce457f89a0dca03743a6fac3fa8b69102dcf9dae"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#18"
+   ],
+   "determinism": "mixed",
+   "display_name": "#18 image.index",
+   "id": "module:18/image.index",
+   "ns": "module",
+   "one_line": "Fuse the image/document perception block (14-17) into one per-image record for a single image: image.util (#15) ALWAYS provides metadata + sha256/pHash/dHash (t",
+   "parallel_safe": false,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/18-image-index/skill.json",
+     "sha256": "27b1c2a2155223b5ad45dc7cf141b507a2ef562378efe7817b85beb5161303d3"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#19"
+   ],
+   "determinism": "mixed",
+   "display_name": "#19 logic.escalator",
+   "id": "module:19/logic.escalator",
+   "ns": "module",
+   "one_line": "Run an escalating ladder of local model tiers (tiny 0.5B -> weak 1.5B -> mid 3B -> strong 27B, all via model.gateway) over a batch of tasks.",
+   "parallel_safe": false,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/19-logic-escalator/skill.json",
+     "sha256": "9e3f9225f65e4aabdaaf5408addb8819baf50a56c18e1296549ed45abcbff057"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#20"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#20 doc.io",
+   "id": "module:20/doc.io",
+   "ns": "module",
+   "one_line": "Read, write, edit, and append UTF-8 text documents on the local machine (one operation per invocation), with atomic writes, EOL preservation, sha256 reporting, ",
+   "parallel_safe": false,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/20-doc-io/skill.json",
+     "sha256": "8b4378954475bdf7bc4a628fe0f00cb771c0e5f2e742ff5d6f758b100aaf4908"
+    }
+   ],
+   "version": "0.2.0"
+  },
+  {
+   "aliases": [
+    "#21"
+   ],
+   "determinism": "mixed",
+   "display_name": "#21 agent.local",
+   "id": "module:21/agent.local",
+   "ns": "module",
+   "one_line": "A bounded, ReAct-style LOCAL agent loop: given a natural-language goal it decides which Module (tool) to call, generates that tool's arguments, invokes it, obse",
+   "parallel_safe": false,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/21-agent-local/skill.json",
+     "sha256": "dbf4d447eda6cd389742cac2da1e40d4d2212c228111292ee328de58b010a59c"
+    }
+   ],
+   "version": "0.2.0"
+  },
+  {
+   "aliases": [
+    "#22"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#22 gen.audio",
+   "id": "module:22/gen.audio",
+   "ns": "module",
+   "one_line": "Generate a single synthetic audio signal from a compact specification by wrapping ffmpeg lavfi sources.",
+   "parallel_safe": true,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/22-gen-audio/skill.json",
+     "sha256": "014a60b7e6f3da679edd287c05a4f2b860ac33f54ab625ec7427934be86197a6"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#23"
+   ],
+   "determinism": "mixed",
+   "display_name": "#23 gen.image",
+   "id": "module:23/gen.image",
+   "ns": "module",
+   "one_line": "Generate one image from a text prompt with a local Stable Diffusion pipeline.",
+   "parallel_safe": false,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/23-gen-image/skill.json",
+     "sha256": "e00de98e42dab111f33860a9de0c5db587d630e220521c54626025e56054b0a0"
+    }
+   ],
+   "version": "0.2.0"
+  },
+  {
+   "aliases": [
+    "#24"
+   ],
+   "determinism": "mixed",
+   "display_name": "#24 gen.music",
+   "id": "module:24/gen.music",
+   "ns": "module",
+   "one_line": "Generate one short piece of instrumental music from a text prompt with a local MusicGen model.",
+   "parallel_safe": false,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/24-gen-music/skill.json",
+     "sha256": "ab60ab9ce5dfa5c8613a238777e6af3a31c68bcf2df44a1f133459711b2a365b"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#25"
+   ],
+   "determinism": "mixed",
+   "display_name": "#25 gen.video",
+   "id": "module:25/gen.video",
+   "ns": "module",
+   "one_line": "Generate one short silent video clip from a text prompt with a local AnimateDiff pipeline.",
+   "parallel_safe": false,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/25-gen-video/skill.json",
+     "sha256": "2c522d46fd4a97a11159cdf63010eafe1354de95735912e270cdac4b69df4cda"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#26"
+   ],
+   "display_name": "#26 agent-coding",
+   "id": "module:26/agent-coding",
+   "ns": "module",
+   "one_line": "Harvest-seeded module 26-agent-coding (awaiting claims).",
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "modules/26-agent-coding/WORK_ORDER.md",
+     "sha256": "13b5ac5059b94936c3a551339758d6e44678ec40e45b9786ea34b6de6f6bcefe"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "#27"
+   ],
+   "determinism": "mixed",
+   "display_name": "#27 route.tools",
+   "id": "module:27/route.tools",
+   "ns": "module",
+   "one_line": "Given a natural-language request and the attachable-tools registry, emit the minimal set of tool ids needed to carry it out, using a dedicated mid-tier router p",
+   "parallel_safe": false,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/27-route-tools/skill.json",
+     "sha256": "be32b1d3b2c581f04edf17b489c42dd1d3572e196746e4c6c8529d1b5c2a9cf6"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#28"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#28 fs.manage",
+   "id": "module:28/fs.manage",
+   "ns": "module",
+   "one_line": "Deterministic last-mile file placement: copy or move an existing file to a destination (a folder or a file path), or make a folder.",
+   "parallel_safe": false,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/28-fs-manage/skill.json",
+     "sha256": "39a2179be94044481f670ee5bb0a25ff3d828b3e9a00736589ce19041b88bd46"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#29"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#29 res.lease",
+   "id": "module:29/res.lease",
+   "ns": "module",
+   "one_line": "A filesystem lease/lock so several processes on this one machine arbitrate contended resources: acquire/release/renew/status/list/check/commit/fence-op a named ",
+   "parallel_safe": true,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/29-resource-lease/skill.json",
+     "sha256": "bf63824d0b0a0c59eada94f8e9b9a680bf426c40686bd938a60a943eab01ae5d"
+    }
+   ],
+   "version": "0.4.1"
+  },
+  {
+   "aliases": [
+    "#30"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#30 orchestrate.fanout",
+   "id": "module:30/orchestrate.fanout",
+   "ns": "module",
+   "one_line": "Deterministic scaffolding for N parallel worker Cowork sessions (D-0050/D-0051), built on res.lease #29.",
+   "parallel_safe": true,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/30-orchestrate-fanout/skill.json",
+     "sha256": "f4a43fa986e819ab41fbb824de9db288ec77d3c67fadbf7f1299808c344cd23d"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#31"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#31 frontier.bridge",
+   "id": "module:31/frontier.bridge",
+   "ns": "module",
+   "one_line": "Assemble a Claude-written prompt + selected local files into ONE copy-paste pack the user manually carries to their own external model session, plus read the pa",
+   "parallel_safe": true,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/31-frontier-bridge/skill.json",
+     "sha256": "074b6e081def4976d3919310f28780d36f927dd4afdb556b6dfad128ec82b09a"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#32"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#32 media.decompose",
+   "id": "module:32/media.decompose",
+   "ns": "module",
+   "one_line": "Decompose one video (or media) file into its constituent parts with ffmpeg/ffprobe.",
+   "parallel_safe": true,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/32-media-decompose/skill.json",
+     "sha256": "47e0014487158fd10a6a9f6d5170b0b4d906b3acbdbdf4a99c15684418eb8ff4"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#33"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#33 track.objects",
+   "id": "module:33/track.objects",
+   "ns": "module",
+   "one_line": "Associate per-frame object detections (the detect.objects #16 output shape: each detection {class, class_id, score, box{x,y,width,height}}) into stable identity",
+   "parallel_safe": true,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/33-track-objects/skill.json",
+     "sha256": "0564d9defc30dc58ac28c73f9b8acfdcee0eb30d65cb436503a72a2ad0a0f6b3"
+    }
+   ],
+   "version": "0.2.0"
+  },
+  {
+   "aliases": [
+    "#34"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#34 video.timeline",
+   "id": "module:34/video.timeline",
+   "ns": "module",
+   "one_line": "Fuse the per-source video artifacts of the Phase C spine -- media meta (#32), scenes (#32), the reviewed sample manifest, reviewed-schema identity tracks (#33 u",
+   "parallel_safe": true,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/34-video-timeline/skill.json",
+     "sha256": "3c2f1c0bbf8429e88c70bed2749ca49fa806246224244304e364b42b4d834330"
+    }
+   ],
+   "version": "0.1.1"
+  },
+  {
+   "aliases": [
+    "#35"
+   ],
+   "determinism": "mixed",
+   "display_name": "#35 embedding.local",
+   "id": "module:35/embedding.local",
+   "ns": "module",
+   "one_line": "Embed text (single or batch) into L2-normalized dense vectors that serve as SEMANTIC ADDRESSES for the Collective Agent memory substrate (governing sec 6.3).",
+   "parallel_safe": false,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/35-embedding-local/skill.json",
+     "sha256": "6b8df0242f5c3b25378d76d87a707345a4d1d629731ce98a567013580153b15b"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#36"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#36 artifact.search",
+   "id": "module:36/artifact.search",
+   "ns": "module",
+   "one_line": "The Collective Agent's authoritative catalog + memory-record substrate (D-0080 Wave 1/2, arch position 23), built to the FROZEN MEMORY_CONTRACT (D-0083).",
+   "parallel_safe": false,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/36-artifact-search/skill.json",
+     "sha256": "bf08baf3e20eff38cdafd2e25c5c39c7eb21542cd26fa3f8334ab5cf311940aa"
+    }
+   ],
+   "version": "0.7.0"
+  },
+  {
+   "aliases": [
+    "#37"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#37 retrieval.eval",
+   "id": "module:37/retrieval.eval",
+   "ns": "module",
+   "one_line": "SELECTION-POLICY + NAMESPACE-PREDICATE OWNER + eval harness.",
+   "parallel_safe": true,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/37-retrieval-eval/skill.json",
+     "sha256": "bcdc6589d2dd666722590a58809dd1b01335241340347457629cc676b9fe16e0"
+    }
+   ],
+   "version": "0.8.1"
+  },
+  {
+   "aliases": [
+    "#38"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#38 repo.intel",
+   "id": "module:38/repo.intel",
+   "ns": "module",
+   "one_line": "The Collective Agent's repository-intelligence PRODUCER (D-0080 Wave 2, arch position 38).",
+   "parallel_safe": true,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/38-repo-intel/skill.json",
+     "sha256": "35dd102521b98dc010af96353a5082ff2191b550a391c6f0d16d64ed5fb8153a"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#39"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#39 episode.record",
+   "id": "module:39/episode.record",
+   "ns": "module",
+   "one_line": "Wave 2 PRODUCER (D-0080/D-0083; conformed to MEMORY_CONTRACT Amendment A1 record-envelope v0.1.1, D-0085; directive 5.3/5.4/10).",
+   "parallel_safe": true,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/39-episode-memory/skill.json",
+     "sha256": "1e932efb392dc02953d8d741a68d72428451af15bf4071e658fc08f34cd31ec8"
+    }
+   ],
+   "version": "0.1.1"
+  },
+  {
+   "aliases": [
+    "#40"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#40 context.compile",
+   "id": "module:40/context.compile",
+   "ns": "module",
+   "one_line": "The Collective Agent's context-compilation centerpiece (D-0080 directive Priority 4 / section 8; arch position 40), conformed to core-docs/CONTEXT_PACKET_CONTRA",
+   "parallel_safe": true,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/40-context-compiler/skill.json",
+     "sha256": "597fe2898b9f05f6653ef729d021afd49f4a33a28c10892bf1bf3734f56a4bbc"
+    }
+   ],
+   "version": "0.9.0"
+  },
+  {
+   "aliases": [
+    "#41"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#41 skill.card",
+   "id": "module:41/skill.card",
+   "ns": "module",
+   "one_line": "The Collective Agent's skill-ACTIVATION substrate (D-0080 Wave 3, directive Priority 6 / section 9 'Skill card format').",
+   "parallel_safe": true,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/41-skill-card/skill.json",
+     "sha256": "4da24150b85954675d9a85a92818caa58d74502fe51f34374d9d832ebe971019"
+    }
+   ],
+   "version": "0.2.0"
+  },
+  {
+   "aliases": [
+    "#42"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#42 working.memory",
+   "id": "module:42/working.memory",
+   "ns": "module",
+   "one_line": "i34 Tier-1 build (D-0090/D-0096/D-0077): the per-task WORKING-MEMORY STORE that MEMORY_CONTRACT Amendment A5 (U3') fully specified and RESERVED but did not buil",
+   "parallel_safe": true,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/42-working-memory/skill.json",
+     "sha256": "22ac0746f878fd3a0ada98bee46f5d90b7781d7746ec7ae534097dc4372aada7"
+    }
+   ],
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#43"
+   ],
+   "display_name": "#43 action-authz",
+   "id": "module:43/action-authz",
+   "ns": "module",
+   "one_line": "Harvest-seeded module 43-action-authz (awaiting claims).",
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "modules/43-action-authz/README.md",
+     "sha256": "fd3f88d6b3f0bbba904a36e26d0a016d36e71b1c6b3f6ed88212e01a80086ae0"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "#44"
+   ],
+   "determinism": "deterministic",
+   "display_name": "#44 project.map",
+   "id": "module:44/project.map",
+   "ns": "module",
+   "one_line": "The Life Orchestrator's Project Comprehension Bootstrap (PCB) mechanism (i46, arch position 44).",
+   "parallel_safe": false,
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "determinism",
+      "one_line",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/44-project-map/skill.json",
+     "sha256": "01479163b623b412e4ed92db3f36a8f42194cb95c04381b993898f18e5cc5b47"
+    }
+   ],
+   "version": "0.1.0"
+  }
+ ],
+ "kind": "entities",
+ "schema": "lifeorch.project_map/0.1"
+}

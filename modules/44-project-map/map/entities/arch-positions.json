@@ -1,0 +1,1077 @@
+{
+ "items": [
+  {
+   "aliases": [
+    "pos 0"
+   ],
+   "display_name": "exec.bootstrap",
+   "id": "arch:0",
+   "ns": "arch",
+   "one_line": "Trusted High-Risk Bootstrap Executor. Deterministic. **BUILT.**",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 00.1"
+   ],
+   "display_name": "exec.watchdog",
+   "id": "arch:00.1",
+   "ns": "arch",
+   "one_line": "cooperative executor recovery. Deterministic. **BUILT.**",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 1"
+   ],
+   "display_name": "skill.bootstrap",
+   "id": "arch:1",
+   "ns": "arch",
+   "one_line": "skill contract + registry + generic wrapper. Deterministic. **BUILT (contract v0.2).**",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 10"
+   ],
+   "display_name": "audio.ingest",
+   "id": "arch:10",
+   "ns": "arch",
+   "one_line": "decode/resample/normalize/segment. Deterministic (ffmpeg). **BUILT.**",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 11"
+   ],
+   "display_name": "speech.stt",
+   "id": "arch:11",
+   "ns": "arch",
+   "one_line": "transcription + timestamps. whisper.cpp today; candidates Qwen3-ASR, + Silero VAD for segmentation. **BUILT.**",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 12"
+   ],
+   "display_name": "speech.tts",
+   "id": "arch:12",
+   "ns": "arch",
+   "one_line": "synthesis. Qwen3-TTS today; candidates Kokoro-82M, Piper, Silero TTS. **BUILT.**",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 13"
+   ],
+   "display_name": "voice.live",
+   "id": "arch:13",
+   "ns": "arch",
+   "one_line": "one voice turn (STT -> LLM -> TTS). Composition; + VAD for true live. **BUILT (file-driven).**",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 14"
+   ],
+   "display_name": "ocr.layout",
+   "id": "arch:14",
+   "ns": "arch",
+   "one_line": "OCR + word boxes + reading order. Windows.Media.Ocr today; candidates PP-OCRv5 / PaddleOCR-VL / PP-StructureV3, OmniParser V2 for screens. **BUILT.**",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 15"
+   ],
+   "display_name": "image.util",
+   "id": "arch:15",
+   "ns": "arch",
+   "one_line": "resize/crop/hash/tile/similarity/meta. Deterministic (Pillow); candidates DINOv2/3, VL-embeddings for semantic dedup. **BUILT.**",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 16"
+   ],
+   "display_name": "detect.objects",
+   "id": "arch:16",
+   "ns": "arch",
+   "one_line": "object boxes + real scores. YOLOX/ONNX today; candidates RTMDet, Grounding DINO, YOLO26/YOLOE-26, SAM 2 (masks). **BUILT.**",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 17"
+   ],
+   "display_name": "image.interpret",
+   "id": "arch:17",
+   "ns": "arch",
+   "one_line": "VLM caption/VQA/screen. Qwen2.5-VL-3B today; candidates Qwen3-VL, InternVL3.5, MiniCPM-V 4.5. **BUILT.**",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 18"
+   ],
+   "display_name": "image.index",
+   "id": "arch:18",
+   "ns": "arch",
+   "one_line": "fuse 14-17 into one per-image record. Composition. **BUILT.**",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 19"
+   ],
+   "display_name": "media.decompose",
+   "id": "arch:19",
+   "ns": "arch",
+   "one_line": "audio / subs / scene cuts / keyframes / clips / proxies. Deterministic (ffmpeg; optional embedded STT/OCR). **BUILT MVP i16 (D-0069) as `modules/32-media-decomp",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 2"
+   ],
+   "display_name": "fs.observer",
+   "id": "arch:2",
+   "ns": "arch",
+   "one_line": "filesystem inspect/search/index. Deterministic (optional summarizer: small Qwen3 / Granite 4.0). **BUILT.**",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 20"
+   ],
+   "display_name": "track.objects",
+   "id": "arch:20",
+   "ns": "arch",
+   "one_line": "identity across frames. SAM 2 + ByteTrack over a detector (16). **BUILT MVP i17 (D-0070) as `modules/33-track-objects`** \u2014 deterministic per-class greedy-IoU ba",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 21"
+   ],
+   "display_name": "video.timeline",
+   "id": "arch:21",
+   "ns": "arch",
+   "one_line": "fuse transcription + scenes + OCR + detections + tracks -> searchable timeline. Composition.",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 22"
+   ],
+   "display_name": "video.interpret",
+   "id": "arch:22",
+   "ns": "arch",
+   "one_line": "selective frames/clips -> VLM. Qwen3-VL / InternVL3.5 / MiniCPM-V; InternVideo for action features.",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 23"
+   ],
+   "display_name": "artifact.search",
+   "id": "arch:23",
+   "ns": "arch",
+   "one_line": "retrieval over all local-skill artifacts. Embeddings + reranker (Qwen3-Embedding/Reranker, BGE-M3, Granite Embedding). Owns the staged `embedding.qwen3-0p6b`.",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 24"
+   ],
+   "display_name": "route.tasks",
+   "id": "arch:24",
+   "ns": "arch",
+   "one_line": "model/tool task router by type/confidence/cost/time. Mostly deterministic policy + benchmarking; a small LLM for the fuzzy part. **The near-term Local Logic Esc",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 25"
+   ],
+   "display_name": "observe.broker",
+   "id": "arch:25",
+   "ns": "arch",
+   "one_line": "route one desktop-observation question across fs / proc / UIA / OCR / capture. Small LLM + deterministic policy.",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 26"
+   ],
+   "display_name": "skill.orchestrator",
+   "id": "arch:26",
+   "ns": "arch",
+   "one_line": "compose skills into workflows; scheduling / locking / retries / gates / state persistence are programmed. **Redefined by the real-time layer as the *slow delibe",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 27"
+   ],
+   "display_name": "Network knowledge & media acquisition",
+   "id": "arch:27",
+   "ns": "arch",
+   "one_line": "Network knowledge & media acquisition \u2014 deterministic fetch/provenance/parse; small LLM for query expansion + result ranking.",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 28"
+   ],
+   "display_name": "Hierarchical screen parser",
+   "id": "arch:28",
+   "ns": "arch",
+   "one_line": "Hierarchical screen parser \u2014 OmniParser V2 / ShowUI-2B / PP-OCRv5 + a VLM for unresolved regions.",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 29"
+   ],
+   "display_name": "Open-vocabulary grounding & segmentation",
+   "id": "arch:29",
+   "ns": "arch",
+   "one_line": "Open-vocabulary grounding & segmentation \u2014 Grounding DINO + SAM 2 + YOLOE-26 + a VLM.",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 3"
+   ],
+   "display_name": "proc.observer",
+   "id": "arch:3",
+   "ns": "arch",
+   "one_line": "process + window snapshot. Deterministic. **BUILT.**",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 30"
+   ],
+   "display_name": "Visual asset & instance registry",
+   "id": "arch:30",
+   "ns": "arch",
+   "one_line": "Visual asset & instance registry \u2014 DINOv2/3 + VL-embeddings + VL-reranker; persistent identities (custom registry).",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 31"
+   ],
+   "display_name": "Application ontology & schema learner",
+   "id": "arch:31",
+   "ns": "arch",
+   "one_line": "Application ontology & schema learner \u2014 VLM + LLM; the graph + evidence system is custom. *(least pre-solved)*",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 32"
+   ],
+   "display_name": "Active annotation & dataset builder",
+   "id": "arch:32",
+   "ns": "arch",
+   "one_line": "Active annotation & dataset builder \u2014 Grounding DINO + SAM 2 + DINOv2 + VLM; versioning / leakage / splits custom.",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 33"
+   ],
+   "display_name": "Specialist model training & distillation",
+   "id": "arch:33",
+   "ns": "arch",
+   "one_line": "Specialist model training & distillation \u2014 LoRA / QLoRA / teacher-student pipelines (RTMDet / YOLO / ShowUI / VLM / SAM 2).",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 34"
+   ],
+   "display_name": "Specialist evaluation & calibration gate",
+   "id": "arch:34",
+   "ns": "arch",
+   "one_line": "Specialist evaluation & calibration gate \u2014 deterministic metrics / calibration / held-out; optional VLM / DINO reviewers.",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 35"
+   ],
+   "display_name": "Temporal screen state graph",
+   "id": "arch:35",
+   "ns": "arch",
+   "one_line": "Temporal screen state graph \u2014 SAM 2 / ByteTrack / VL-embeddings; persistent identity + causality (custom). **Gains a fast mutable state layer (real-time).** *(l",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 36"
+   ],
+   "display_name": "Interaction trace reconstruction",
+   "id": "arch:36",
+   "ns": "arch",
+   "one_line": "Interaction trace reconstruction \u2014 UI-TARS-1.5-7B / ShowUI / CogAgent / VLM; temporal causal logic custom. *(least pre-solved)*",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 37"
+   ],
+   "display_name": "Active exploration & affordance learner",
+   "id": "arch:37",
+   "ns": "arch",
+   "one_line": "Active exploration & affordance learner \u2014 UI-TARS / ShowUI / CogAgent / VLM; exploration policy + safe experimentation custom. *(least pre-solved)*",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 38"
+   ],
+   "display_name": "Visual-only action executor",
+   "id": "arch:38",
+   "ns": "arch",
+   "one_line": "Visual-only action executor \u2014 UI-TARS / ShowUI / CogAgent / OmniParser; input injection + coordinate reconciliation deterministic.",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 39"
+   ],
+   "display_name": "Outcome verification, recovery & rollback",
+   "id": "arch:39",
+   "ns": "arch",
+   "one_line": "Outcome verification, recovery & rollback \u2014 VLM + UI-TARS / ShowUI; state-diff / retries / rollback custom. **Gains multi-timescale verification (real-time).**",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 4"
+   ],
+   "display_name": "uia.inspector",
+   "id": "arch:4",
+   "ns": "arch",
+   "one_line": "read-only UI Automation tree. Deterministic. **BUILT.**",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 40"
+   ],
+   "display_name": "Demonstration & procedure learner",
+   "id": "arch:40",
+   "ns": "arch",
+   "one_line": "Demonstration & procedure learner \u2014 ShowUI-Aloha / UI-TARS / VLM; durable verified procedures custom. *(least pre-solved)*",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 41"
+   ],
+   "display_name": "Screen-only diagnostic reasoner",
+   "id": "arch:41",
+   "ns": "arch",
+   "one_line": "Screen-only diagnostic reasoner \u2014 VLM 8B+ (Qwen3-VL / InternVL3.5) + strong LLM; evidence + diagnostic-test generation custom. *(least pre-solved)*",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 42"
+   ],
+   "display_name": "Retrospective screen forensics orchestrator",
+   "id": "arch:42",
+   "ns": "arch",
+   "one_line": "Retrospective screen forensics orchestrator \u2014 VLM + ASR + OmniParser + Grounding DINO + SAM 2 + DINO + embeddings; composition. *(least pre-solved)*",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 43"
+   ],
+   "display_name": "Opaque computer operator",
+   "id": "arch:43",
+   "ns": "arch",
+   "one_line": "Opaque computer operator \u2014 UI-TARS / ShowUI / CogAgent / OmniParser / VLM; the closed-loop operator is an engineered composite. *(least pre-solved)*",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 44"
+   ],
+   "display_name": "Synthetic screen & asset generator",
+   "id": "arch:44",
+   "ns": "arch",
+   "one_line": "Synthetic screen & asset generator \u2014 Qwen-Image / FLUX.1-schnell / Stable Diffusion XL (+ DreamBooth / LoRA as adaptation methods). **The near-term Image Genera",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 45"
+   ],
+   "display_name": "Real-Time Perception & Control Runtime",
+   "id": "arch:45",
+   "ns": "arch",
+   "one_line": "Real-Time Perception & Control Runtime \u2014 persistent async loops at different frequencies (capture, trackers, detectors, state, reactive policies, occasional pla",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 46"
+   ],
+   "display_name": "Event, Salience & Interrupt Broker",
+   "id": "arch:46",
+   "ns": "arch",
+   "one_line": "Event, Salience & Interrupt Broker \u2014 converts continuous change into *sparse meaningful events*; only above-threshold events interrupt higher layers (attention",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 47"
+   ],
+   "display_name": "Reactive Skill & Reflex Runtime",
+   "id": "arch:47",
+   "ns": "arch",
+   "one_line": "Reactive Skill & Reflex Runtime \u2014 very fast bounded policies (state machines, behavior trees, tiny classifiers / compact policies, controller scripts) \u2014 mostly",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 48"
+   ],
+   "display_name": "Skill Arbitration & Action Inhibition",
+   "id": "arch:48",
+   "ns": "arch",
+   "one_line": "Skill Arbitration & Action Inhibition \u2014 decides which policy owns each input channel, priorities, concurrency, inhibition, and when control returns to the plann",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 49"
+   ],
+   "display_name": "Predictive State & Short-Horizon World Model",
+   "id": "arch:49",
+   "ns": "arch",
+   "one_line": "Predictive State & Short-Horizon World Model \u2014 predicts near-future state changes to select behavior (world-model style, e.g. DreamerV3 lineage) \u2014 useful state,",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 5"
+   ],
+   "display_name": "uia.actor",
+   "id": "arch:5",
+   "ns": "arch",
+   "one_line": "UIA control-pattern actions. Deterministic. **BUILT.**",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 6"
+   ],
+   "display_name": "capture.screen",
+   "id": "arch:6",
+   "ns": "arch",
+   "one_line": "screenshot / region capture. Deterministic. **BUILT.**",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 7"
+   ],
+   "display_name": "model.gateway",
+   "id": "arch:7",
+   "ns": "arch",
+   "one_line": "hosts + normalizes every local model. Infra (no model of its own). **BUILT.**",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 8"
+   ],
+   "display_name": "classify.batch",
+   "id": "arch:8",
+   "ns": "arch",
+   "one_line": "batch classify / label / extract. Weak LLM (Qwen2.5/Qwen3 0.6-8B; + embedding + reranker). **BUILT.**",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "pos 9"
+   ],
+   "display_name": "review.processor",
+   "id": "arch:9",
+   "ns": "arch",
+   "one_line": "review-queue adjudication. Stronger LLM (Qwen3 8-30B-A3B / Granite 4.0 / Mistral Small 3.1). **BUILT.**",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  }
+ ],
+ "kind": "entities",
+ "schema": "lifeorch.project_map/0.1"
+}

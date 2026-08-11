@@ -1,0 +1,23 @@
+{
+ "items": [
+  {
+   "display_name": "Alpha store",
+   "id": "store:alpha-store",
+   "ns": "store",
+   "one_line": "Persistent store backing alpha/beta in the fixture.",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "decision:D-9001",
+     "sha256": null
+    }
+   ]
+  }
+ ],
+ "kind": "entities",
+ "schema": "lifeorch.project_map/0.1"
+}

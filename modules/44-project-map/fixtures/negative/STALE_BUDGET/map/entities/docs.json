@@ -1,0 +1,74 @@
+{
+ "items": [
+  {
+   "display_name": "ARCHITECTURE_MAP.md",
+   "id": "doc:core-docs/ARCHITECTURE_MAP.md",
+   "ns": "doc",
+   "one_line": "Core doc ARCHITECTURE_MAP.md (fixture).",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    }
+   ]
+  },
+  {
+   "display_name": "DECISION_LOG_INDEX.md",
+   "id": "doc:core-docs/DECISION_LOG_INDEX.md",
+   "ns": "doc",
+   "one_line": "Core doc DECISION_LOG_INDEX.md (fixture).",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    }
+   ]
+  },
+  {
+   "display_name": "DOC_PROTOCOL.md",
+   "id": "doc:core-docs/DOC_PROTOCOL.md",
+   "ns": "doc",
+   "one_line": "Core doc DOC_PROTOCOL.md (fixture).",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DOC_PROTOCOL.md",
+     "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    }
+   ]
+  },
+  {
+   "display_name": "PROCESS_MANDATE.md",
+   "id": "doc:core-docs/PROCESS_MANDATE.md",
+   "ns": "doc",
+   "one_line": "Core doc PROCESS_MANDATE.md (fixture).",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/PROCESS_MANDATE.md",
+     "sha256": "9c12b0d25cb9e9a688f143374ba1ac339efaf3c7d320d74a6404a939df02969f"
+    }
+   ]
+  }
+ ],
+ "kind": "entities",
+ "schema": "lifeorch.project_map/0.1"
+}

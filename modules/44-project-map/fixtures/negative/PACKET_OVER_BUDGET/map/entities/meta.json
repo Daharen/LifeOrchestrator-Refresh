@@ -1,0 +1,23 @@
+{
+ "items": [
+  {
+   "display_name": "D-9001",
+   "id": "decision:D-9001",
+   "ns": "decision",
+   "one_line": "doctrine.",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "x",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "decision:D-9001",
+     "sha256": null
+    }
+   ]
+  }
+ ],
+ "kind": "entities",
+ "schema": "lifeorch.project_map/0.1"
+}

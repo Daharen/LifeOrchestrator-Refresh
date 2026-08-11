@@ -1,0 +1,182 @@
+{
+ "items": [
+  {
+   "aliases": [
+    "#01-widget"
+   ],
+   "display_name": "local-agent-console",
+   "id": "widget:01/local-agent-console",
+   "ns": "widget",
+   "one_line": "Harvest-seeded widget 01-local-agent-console (awaiting claims).",
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "widgets/01-local-agent-console/README.md",
+     "sha256": "1e1d0651c2999d87c189392a26368faed1496d076a4abbca39feb5496b95ebd8"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "#02-widget"
+   ],
+   "display_name": "module-launcher",
+   "id": "widget:02/module-launcher",
+   "ns": "widget",
+   "one_line": "Harvest-seeded widget 02-module-launcher (awaiting claims).",
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "widgets/02-module-launcher/README.md",
+     "sha256": "d3dbd11db3670651af8deed125f6725714c4e1a338cc9357284862d7cf320be6"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "#03-widget"
+   ],
+   "display_name": "verification-console",
+   "id": "widget:03/verification-console",
+   "ns": "widget",
+   "one_line": "Harvest-seeded widget 03-verification-console (awaiting claims).",
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "widgets/03-verification-console/README.md",
+     "sha256": "5188d474a1806438467460495e560888922ba9293eab76d9819741c293a2fbcb"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "#04-widget"
+   ],
+   "display_name": "fanout-wave-dashboard",
+   "id": "widget:04/fanout-wave-dashboard",
+   "ns": "widget",
+   "one_line": "Harvest-seeded widget 04-fanout-wave-dashboard (awaiting claims).",
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "widgets/04-fanout-wave-dashboard/README.md",
+     "sha256": "34857a23589de3d5256c97fa75dcf1429847921cf5d86f43bf37b2943e3caafe"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "#05-widget"
+   ],
+   "display_name": "provenance-map",
+   "id": "widget:05/provenance-map",
+   "ns": "widget",
+   "one_line": "Harvest-seeded widget 05-provenance-map (awaiting claims).",
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "widgets/05-provenance-map/README.md",
+     "sha256": "3e32d6db020eba7d34d0868f3a094b90f2e592455b7208c20a000d27cf26bd7f"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "#06-widget"
+   ],
+   "display_name": "compile-trace-console",
+   "id": "widget:06/compile-trace-console",
+   "ns": "widget",
+   "one_line": "Harvest-seeded widget 06-compile-trace-console (awaiting claims).",
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "widgets/06-compile-trace-console/README.md",
+     "sha256": "c6670c3b0a3cbbd8edff10a329247e31aeb5d0c3735b5f4aeed5095dbe93fb5c"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "#07-widget"
+   ],
+   "display_name": "audit-timeline-tournament",
+   "id": "widget:07/audit-timeline-tournament",
+   "ns": "widget",
+   "one_line": "Harvest-seeded widget 07-audit-timeline-tournament (awaiting claims).",
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "widgets/07-audit-timeline-tournament/README.md",
+     "sha256": "dbc4b6b6b0e3d683a39599e00d7f1b850000559709d90137ff794077081d9dff"
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "#08-widget"
+   ],
+   "display_name": "live-run-audit-pathway",
+   "id": "widget:08/live-run-audit-pathway",
+   "ns": "widget",
+   "one_line": "Harvest-seeded widget 08-live-run-audit-pathway (awaiting claims).",
+   "skeleton": true,
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "aliases",
+      "one_line"
+     ],
+     "ref": "widgets/08-live-run-audit-pathway/README.md",
+     "sha256": "48ab8de6c1f8f197a98f734a05645d08b276676afdc66d9d244f44c1b8fdc7f9"
+    }
+   ]
+  }
+ ],
+ "kind": "entities",
+ "schema": "lifeorch.project_map/0.1"
+}

@@ -1,0 +1,41 @@
+{
+ "items": [
+  {
+   "display_name": "D-9001",
+   "doctrine": true,
+   "id": "decision:D-9001",
+   "ns": "decision",
+   "one_line": "Deterministic machinery owns structure; agents provide only judgment.",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "orchestrator-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "decision:D-9001",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "display_name": "D-9002",
+   "id": "decision:D-9002",
+   "ns": "decision",
+   "one_line": "P0-1 activation is prohibited until the gate is independently ratified.",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "orchestrator-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "decision:D-9002",
+     "sha256": null
+    }
+   ]
+  }
+ ],
+ "kind": "entities",
+ "schema": "lifeorch.project_map/0.1"
+}

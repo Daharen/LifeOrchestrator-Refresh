@@ -1,0 +1,32 @@
+{
+ "items": [
+  {
+   "aliases": [
+    "gamma-widget"
+   ],
+   "confidence": "established",
+   "display_name": "gamma",
+   "id": "widget:90/gamma",
+   "ns": "widget",
+   "one_line": "Gamma observability widget; audits beta and invokes alpha.",
+   "plane_primary": "observability",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "lane-B-i46",
+     "fields": [
+      "aliases",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "widgets/90-gamma/README.md",
+     "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    }
+   ],
+   "status": "mvp-complete"
+  }
+ ],
+ "kind": "entities",
+ "schema": "lifeorch.project_map/0.1"
+}

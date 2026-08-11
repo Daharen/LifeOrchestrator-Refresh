@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "lifeorch.map_claims/0.1",
+  "title": "project.map agent claims (evidence-pointed; documentation form)",
+  "type": "object",
+  "required": ["schema", "by", "at_commit", "entities", "relationships"],
+  "properties": {
+    "schema": {"const": "lifeorch.map_claims/0.1"},
+    "by": {"type": "string"},
+    "at_commit": {"type": "string"},
+    "entities": {"type": "array", "items": {"type": "object", "required": ["id", "sources"], "description": "partial entity record: id + claimed fields + sources[]; may NOT set load_bearing or member-of; unknowns -> confidence:uncertain + note"}},
+    "relationships": {"type": "array", "items": {"type": "object", "required": ["from","type","to","sources"]}}
+  }
+}

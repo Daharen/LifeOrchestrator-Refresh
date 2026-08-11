@@ -1,0 +1,23 @@
+{
+ "at_commit": "goldensha0000000000000000000000000000000",
+ "by": "lane-B-i46",
+ "entities": [
+  {
+   "id": "module:90/alpha.tool",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "lane-B-i46",
+     "fields": [
+      "version"
+     ],
+     "ref": "modules/90-alpha/skill.json",
+     "sha256": null
+    }
+   ],
+   "version": "0.1.0"
+  }
+ ],
+ "relationships": [],
+ "schema": "lifeorch.map_claims/0.1"
+}

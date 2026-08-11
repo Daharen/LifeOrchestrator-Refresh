@@ -1,0 +1,5 @@
+{"schema":"lifeorch.map_claims/0.1","by":"example","at_commit":"0000000000000000000000000000000000000000",
+ "entities":[{"id":"module:36/artifact.search","plane_primary":"memory","one_line":"SQLite+FTS5 typed-record memory substrate; Tier-1 hierarchy + fast-beam retrieval.",
+   "sources":[{"ref":"modules/36-artifact-search/README.md","sha256":null,"fields":["plane_primary","one_line"],"by":"example","at_commit":"0000000000000000000000000000000000000000000"}]}],
+ "relationships":[{"from":"module:40/context.compiler","type":"retrieves-from","to":"store:artifact-search-sqlite",
+   "sources":[{"ref":"decision:D-0100","sha256":null,"fields":["*"],"by":"example","at_commit":"0000000000000000000000000000000000000000"}]}]}

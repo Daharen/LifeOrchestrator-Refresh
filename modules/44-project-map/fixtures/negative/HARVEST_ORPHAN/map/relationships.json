@@ -1,0 +1,166 @@
+{
+ "items": [
+  {
+   "from": "contract:skill-contract",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "decision:D-9001",
+     "sha256": null
+    }
+   ],
+   "to": "module:90/alpha.tool",
+   "type": "governs"
+  },
+  {
+   "from": "contract:skill-contract",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "decision:D-9001",
+     "sha256": null
+    }
+   ],
+   "to": "module:91/beta.tool",
+   "type": "governs"
+  },
+  {
+   "from": "doc:core-docs/DOC_PROTOCOL.md",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "decision:D-9001",
+     "sha256": null
+    }
+   ],
+   "to": "module:90/alpha.tool",
+   "type": "documents"
+  },
+  {
+   "from": "module:90/alpha.tool",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "decision:D-9001",
+     "sha256": null
+    }
+   ],
+   "to": "module:91/beta.tool",
+   "type": "depends-on"
+  },
+  {
+   "from": "module:90/alpha.tool",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "decision:D-9001",
+     "sha256": null
+    }
+   ],
+   "to": "module:91/beta.tool",
+   "type": "invokes"
+  },
+  {
+   "from": "module:90/alpha.tool",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "decision:D-9001",
+     "sha256": null
+    }
+   ],
+   "to": "arch:23",
+   "type": "realizes"
+  },
+  {
+   "from": "module:90/alpha.tool",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "decision:D-9001",
+     "sha256": null
+    }
+   ],
+   "to": "store:alpha-store",
+   "type": "retrieves-from"
+  },
+  {
+   "from": "module:90/alpha.tool",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "decision:D-9001",
+     "sha256": null
+    }
+   ],
+   "to": "module:91/beta.tool",
+   "type": "verifies"
+  },
+  {
+   "from": "module:91/beta.tool",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "decision:D-9001",
+     "sha256": null
+    }
+   ],
+   "to": "store:alpha-store",
+   "type": "persists"
+  },
+  {
+   "from": "module:91/beta.tool",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "decision:D-9001",
+     "sha256": null
+    }
+   ],
+   "to": "arch:38",
+   "type": "realizes"
+  }
+ ],
+ "kind": "relationships",
+ "schema": "lifeorch.project_map/0.1"
+}

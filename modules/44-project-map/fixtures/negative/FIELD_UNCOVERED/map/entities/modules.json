@@ -1,0 +1,119 @@
+{
+ "items": [
+  {
+   "aliases": [
+    "#90"
+   ],
+   "audit_surfaces": [
+    "logs"
+   ],
+   "authority_docs": [
+    "contract:skill-contract"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "contract",
+     "ref": "contract:skill-contract"
+    },
+    {
+     "kind": "readme",
+     "ref": "modules/90-alpha/README.md"
+    }
+   ],
+   "determinism": "deterministic",
+   "display_name": "#90 alpha.tool",
+   "id": "module:90/alpha.tool",
+   "ns": "module",
+   "one_line": "Alpha capability tool; first-line deterministic worker in the fixture.",
+   "parallel_safe": true,
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "lane-B-i46",
+     "fields": [
+      "aliases",
+      "authority_docs",
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "modules/90-alpha/README.md",
+     "sha256": "82f63bd91cd4ab45c9f1a2a2faa719b3accfba55eb6ad101016e685feaac8d0a"
+    },
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "harvest_v1",
+     "fields": [
+      "determinism",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/90-alpha/skill.json",
+     "sha256": "b9fcf0d1d80f2475bfab703c4a412f2793026d8a42435daee0946b2791f52379"
+    }
+   ],
+   "status": "active",
+   "version": "0.1.0"
+  },
+  {
+   "aliases": [
+    "#91"
+   ],
+   "authority_docs": [
+    "contract:skill-contract"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "contract",
+     "ref": "contract:skill-contract"
+    },
+    {
+     "kind": "readme",
+     "ref": "modules/91-beta/README.md"
+    }
+   ],
+   "determinism": "deterministic",
+   "display_name": "#91 beta.tool",
+   "id": "module:91/beta.tool",
+   "ns": "module",
+   "one_line": "Beta memory substrate; persists and serves the alpha store.",
+   "parallel_safe": false,
+   "plane_primary": "memory",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "lane-B-i46",
+     "fields": [
+      "aliases",
+      "authority_docs",
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "modules/91-beta/README.md",
+     "sha256": "93bad37195219c842e7a90638d79d2f042742b3e6856a8f52cb3d0beb108748d"
+    },
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "harvest_v1",
+     "fields": [
+      "determinism",
+      "parallel_safe",
+      "version"
+     ],
+     "ref": "modules/91-beta/skill.json",
+     "sha256": "4fd048e2cd8e1ff91e39c452a0f9eb7a1177cfb951ea62a930e6537b3d30bd19"
+    }
+   ],
+   "status": "mvp-complete",
+   "version": "0.1.0"
+  }
+ ],
+ "kind": "entities",
+ "schema": "lifeorch.project_map/0.1"
+}

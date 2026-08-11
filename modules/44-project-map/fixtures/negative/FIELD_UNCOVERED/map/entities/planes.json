@@ -1,0 +1,91 @@
+{
+ "items": [
+  {
+   "display_name": "Authority plane",
+   "id": "plane:authority",
+   "ns": "plane",
+   "one_line": "Authority plane (D-0080 fixture doctrine).",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "68fde5a47b1a9b31d9ac5becaff647103b5ab42af180a243aa3b1c0bc350e43e"
+    }
+   ]
+  },
+  {
+   "display_name": "Capability plane",
+   "id": "plane:capability",
+   "ns": "plane",
+   "one_line": "Capability plane (D-0080 fixture doctrine).",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "68fde5a47b1a9b31d9ac5becaff647103b5ab42af180a243aa3b1c0bc350e43e"
+    }
+   ]
+  },
+  {
+   "display_name": "Intelligence plane",
+   "id": "plane:intelligence",
+   "ns": "plane",
+   "one_line": "Intelligence plane (D-0080 fixture doctrine).",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "68fde5a47b1a9b31d9ac5becaff647103b5ab42af180a243aa3b1c0bc350e43e"
+    }
+   ]
+  },
+  {
+   "display_name": "Memory plane",
+   "id": "plane:memory",
+   "ns": "plane",
+   "one_line": "Memory plane (D-0080 fixture doctrine).",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "68fde5a47b1a9b31d9ac5becaff647103b5ab42af180a243aa3b1c0bc350e43e"
+    }
+   ]
+  },
+  {
+   "display_name": "Observability plane",
+   "id": "plane:observability",
+   "ns": "plane",
+   "one_line": "Observability plane (D-0080 fixture doctrine).",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "68fde5a47b1a9b31d9ac5becaff647103b5ab42af180a243aa3b1c0bc350e43e"
+    }
+   ]
+  }
+ ],
+ "kind": "entities",
+ "schema": "lifeorch.project_map/0.1"
+}

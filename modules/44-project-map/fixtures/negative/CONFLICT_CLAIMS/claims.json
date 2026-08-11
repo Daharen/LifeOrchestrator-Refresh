@@ -1,0 +1,23 @@
+{
+ "at_commit": "goldensha0000000000000000000000000000000",
+ "by": "other-lane",
+ "entities": [
+  {
+   "id": "module:90/alpha.tool",
+   "one_line": "A different curated one_line.",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "other-lane",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "modules/90-alpha/README.md",
+     "sha256": null
+    }
+   ]
+  }
+ ],
+ "relationships": [],
+ "schema": "lifeorch.map_claims/0.1"
+}

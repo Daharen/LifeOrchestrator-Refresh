@@ -1,0 +1,91 @@
+{
+ "items": [
+  {
+   "display_name": "authority",
+   "id": "plane:authority",
+   "ns": "plane",
+   "one_line": "authority plane.",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "x",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "decision:D-9001",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "display_name": "capability",
+   "id": "plane:capability",
+   "ns": "plane",
+   "one_line": "capability plane.",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "x",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "decision:D-9001",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "display_name": "intelligence",
+   "id": "plane:intelligence",
+   "ns": "plane",
+   "one_line": "intelligence plane.",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "x",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "decision:D-9001",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "display_name": "memory",
+   "id": "plane:memory",
+   "ns": "plane",
+   "one_line": "memory plane.",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "x",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "decision:D-9001",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "display_name": "observability",
+   "id": "plane:observability",
+   "ns": "plane",
+   "one_line": "observability plane.",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "x",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "decision:D-9001",
+     "sha256": null
+    }
+   ]
+  }
+ ],
+ "kind": "entities",
+ "schema": "lifeorch.project_map/0.1"
+}

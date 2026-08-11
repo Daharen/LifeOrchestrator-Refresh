@@ -1,0 +1,380 @@
+{
+ "items": [
+  {
+   "display_name": "ACTION_AUTHORIZATION_CONTRACT.md",
+   "id": "doc:core-docs/ACTION_AUTHORIZATION_CONTRACT.md",
+   "ns": "doc",
+   "one_line": "ACTION_AUTHORIZATION_CONTRACT.md -- the P0-1 action-authorization gate freeze (versioned): frozen registry, blocker disposition, build-vs-activation gate, the s",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ACTION_AUTHORIZATION_CONTRACT.md",
+     "sha256": "c7598c45dbe23d5e6c4f1e36642e46dfebcf1dc8bd47a71ee00607d8f4d5fe22"
+    }
+   ]
+  },
+  {
+   "display_name": "ADAPTIVE_RESOURCE_GOVERNOR.md",
+   "id": "doc:core-docs/ADAPTIVE_RESOURCE_GOVERNOR.md",
+   "ns": "doc",
+   "one_line": "ADAPTIVE_RESOURCE_GOVERNOR.md -- governor design + measured truth",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ADAPTIVE_RESOURCE_GOVERNOR.md",
+     "sha256": "f9773656b56c591749cc292d4191b2bf2b5fc7420becfbe197415d330c44f306"
+    }
+   ]
+  },
+  {
+   "display_name": "ARCHITECTURE_MAP.md",
+   "id": "doc:core-docs/ARCHITECTURE_MAP.md",
+   "ns": "doc",
+   "one_line": "ARCHITECTURE_MAP.md -- long-horizon spine (stable)",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    }
+   ]
+  },
+  {
+   "display_name": "AUDIT_PIPELINE.md",
+   "id": "doc:core-docs/AUDIT_PIPELINE.md",
+   "ns": "doc",
+   "one_line": "AUDIT_PIPELINE.md -- the human-in-the-loop audit + interpretability program (governing target): staged A0-A5 tier ladder, P9 phenomenological legibility, cadenc",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/AUDIT_PIPELINE.md",
+     "sha256": "72601cd52918b3d979615cfaeaada3af9db68ce6f74129a5c59fe898caf9bf21"
+    }
+   ]
+  },
+  {
+   "display_name": "CONTEXT_PACKET_CONTRACT.md",
+   "id": "doc:core-docs/CONTEXT_PACKET_CONTRACT.md",
+   "ns": "doc",
+   "one_line": "CONTEXT_PACKET_CONTRACT.md -- the context-packet + selection contract (versioned): control/evidence separation, packet_disposition, consumer profile, the select",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/CONTEXT_PACKET_CONTRACT.md",
+     "sha256": "c07e2c7dc3974c86f0b6b3556c45e019f9c98b6e8c81b249fc8dda40dad3606d"
+    }
+   ]
+  },
+  {
+   "display_name": "CURRENT_STATE.md",
+   "id": "doc:core-docs/CURRENT_STATE.md",
+   "ns": "doc",
+   "one_line": "CURRENT_STATE.md -- reality NOW: phase, active work, box, deps, models, tests table, live gotchas",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/CURRENT_STATE.md",
+     "sha256": "8314aa2b80dba6ec2601228021e54e59f2f981cb18ba44aeb5e00d2ac24726be"
+    }
+   ]
+  },
+  {
+   "display_name": "DECISION_LOG.md",
+   "id": "doc:core-docs/DECISION_LOG.md",
+   "ns": "doc",
+   "one_line": "DECISION_LOG.md -- append-only rationale",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DECISION_LOG.md",
+     "sha256": "e208612a9bad4668dd37e8eb25bfb8732cc32c984ca14e7babd891bfa64b6dc1"
+    }
+   ]
+  },
+  {
+   "display_name": "DECISION_LOG_INDEX.md",
+   "id": "doc:core-docs/DECISION_LOG_INDEX.md",
+   "ns": "doc",
+   "one_line": "DECISION_LOG_INDEX.md -- one compressed routing row per decision (id, date, state, one-line label; see its header rules)",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": "50890fb6191e23a6a44ef16a20221258c815de02e7aa4859fc434cf5f3418bf5"
+    }
+   ]
+  },
+  {
+   "display_name": "DOC_PROTOCOL.md",
+   "id": "doc:core-docs/DOC_PROTOCOL.md",
+   "ns": "doc",
+   "one_line": "DOC_PROTOCOL.md -- this contract",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DOC_PROTOCOL.md",
+     "sha256": "64bc35902b185edb42e1eb4951f99542b88f48990ba0dc0bd27e6674792773a6"
+    }
+   ]
+  },
+  {
+   "display_name": "FANOUT_ORCHESTRATOR_HANDOFF.md",
+   "id": "doc:core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
+   "ns": "doc",
+   "one_line": "FANOUT_ORCHESTRATOR_HANDOFF.md -- THE one live handoff: orchestrator ops + current frontier",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
+     "sha256": "dcf3b692f65797143f8d39c9d06ad61782425c326ac514e778d0dc417a274786"
+    }
+   ]
+  },
+  {
+   "display_name": "MEMORY_ARCHITECTURE.md",
+   "id": "doc:core-docs/MEMORY_ARCHITECTURE.md",
+   "ns": "doc",
+   "one_line": "MEMORY_ARCHITECTURE.md -- the long-horizon memory design (governing doctrine): target + Tier-0 invariants + typed memory + bounded-fanout hierarchy + query-awar",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/MEMORY_ARCHITECTURE.md",
+     "sha256": "caf81d92aad3d1ffee7a4398a794bf38e58a22669955db696dd2f2bbc614859e"
+    }
+   ]
+  },
+  {
+   "display_name": "MEMORY_BENCHMARK.md",
+   "id": "doc:core-docs/MEMORY_BENCHMARK.md",
+   "ns": "doc",
+   "one_line": "MEMORY_BENCHMARK.md -- the memory-quality + foreign-corpus validation architecture: corpora, independent mutation/withholding harness, executable + hidden groun",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/MEMORY_BENCHMARK.md",
+     "sha256": "e903d99b60fcd6e0e6007002912f9004bc51c143bb663126255ac3116a80c145"
+    }
+   ]
+  },
+  {
+   "display_name": "MEMORY_CONTRACT.md",
+   "id": "doc:core-docs/MEMORY_CONTRACT.md",
+   "ns": "doc",
+   "one_line": "MEMORY_CONTRACT.md -- the Collective Agent memory/retrieval contract (versioned): record+provenance envelope, embedding 0.2, retriever 0.2, catalog/eval/privacy",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/MEMORY_CONTRACT.md",
+     "sha256": "90035c03b8b6ea1dbaa5c961cf347d1e39f2116aeeeb67ce8b666b31a026704a"
+    }
+   ]
+  },
+  {
+   "display_name": "MODULE_ROADMAP.md",
+   "id": "doc:core-docs/MODULE_ROADMAP.md",
+   "ns": "doc",
+   "one_line": "MODULE_ROADMAP.md -- build order, per-module status, deferred follow-ons, portability backlog",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "faf7104389f2f67f5dd5339443d3a1c71fb0065ae77718f9a500c6a20b144824"
+    }
+   ]
+  },
+  {
+   "display_name": "MODULE_WORK_ORDER_TEMPLATE.md",
+   "id": "doc:core-docs/MODULE_WORK_ORDER_TEMPLATE.md",
+   "ns": "doc",
+   "one_line": "MODULE_WORK_ORDER_TEMPLATE.md -- work-order template",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/MODULE_WORK_ORDER_TEMPLATE.md",
+     "sha256": "79b103c73630a379fe772508c5c6ffc7050dc856849c288f89d456c6a6b51610"
+    }
+   ]
+  },
+  {
+   "display_name": "PROCESS_BACKLOG.md",
+   "id": "doc:core-docs/PROCESS_BACKLOG.md",
+   "ns": "doc",
+   "one_line": "PROCESS_BACKLOG.md -- cross-cutting process / tooling / doc-hygiene backlog (router; per-module follow-ons stay in MODULE_ROADMAP)",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/PROCESS_BACKLOG.md",
+     "sha256": "4a09e92da12e316fd2798c2472e679f656fb76dc3ef9d1420ae480c118b07c57"
+    }
+   ]
+  },
+  {
+   "display_name": "PROCESS_MANDATE.md",
+   "id": "doc:core-docs/PROCESS_MANDATE.md",
+   "ns": "doc",
+   "one_line": "PROCESS_MANDATE.md -- the live SUNSETTING process-hygiene mandate (mandate 02; self-deletes at its sunset_iteration after a report)",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/PROCESS_MANDATE.md",
+     "sha256": "bba479dc6386472483f47fcae2c3c36bc267149e2508c0497b1ad58796167c0d"
+    }
+   ]
+  },
+  {
+   "display_name": "PROJECT_DIRECTION.md",
+   "id": "doc:core-docs/PROJECT_DIRECTION.md",
+   "ns": "doc",
+   "one_line": "PROJECT_DIRECTION.md -- doctrine (stable)",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/PROJECT_DIRECTION.md",
+     "sha256": "7019a596668a16ae94f1245cef1818c0e16a1ea2b03b5ba66a4fba92b9b629fb"
+    }
+   ]
+  },
+  {
+   "display_name": "REVIEW_QUEUE.md",
+   "id": "doc:core-docs/REVIEW_QUEUE.md",
+   "ns": "doc",
+   "one_line": "REVIEW_QUEUE.md -- queue schema, conventions, producer/consumer table, open design flags",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/REVIEW_QUEUE.md",
+     "sha256": "6432cdbccb50965597f942a6f3f324fca6ad0532a735401a7a3b347c6d1e9e94"
+    }
+   ]
+  },
+  {
+   "display_name": "SKILL_CONTRACT.md",
+   "id": "doc:core-docs/SKILL_CONTRACT.md",
+   "ns": "doc",
+   "one_line": "SKILL_CONTRACT.md -- the skill interface (versioned)",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/SKILL_CONTRACT.md",
+     "sha256": "598dc64feb7b4d9ec2a6296d7c2a17a5f456391fde771e6b17e852e83f99840e"
+    }
+   ]
+  },
+  {
+   "display_name": "START_HERE.md",
+   "id": "doc:core-docs/START_HERE.md",
+   "ns": "doc",
+   "one_line": "START_HERE.md -- routing: what to read, what you may modify, session checklist",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/START_HERE.md",
+     "sha256": "55972eaf40869de88e129f73ff68d7d2bb53c45d118f84c9c557aec9c5e95f61"
+    }
+   ]
+  },
+  {
+   "display_name": "TOOL_MODEL_REGISTRY.md",
+   "id": "doc:core-docs/TOOL_MODEL_REGISTRY.md",
+   "ns": "doc",
+   "one_line": "TOOL_MODEL_REGISTRY.md -- tool/model/hardware/storage registry (lookup, not story)",
+   "sources": [
+    {
+     "at_commit": "seed",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/TOOL_MODEL_REGISTRY.md",
+     "sha256": "785d8e76c41c68dfc2dce8dffcf4791f3dee9637e526746e30b011cf88ccd3cc"
+    }
+   ]
+  }
+ ],
+ "kind": "entities",
+ "schema": "lifeorch.project_map/0.1"
+}

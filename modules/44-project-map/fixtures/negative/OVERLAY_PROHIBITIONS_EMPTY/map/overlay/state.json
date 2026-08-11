@@ -1,0 +1,32 @@
+{
+ "at_commit": "goldensha0000000000000000000000000000000",
+ "boot_read": [
+  {
+   "kind": "contract",
+   "ref": "contract:skill-contract"
+  },
+  {
+   "kind": "decision",
+   "ref": "decision:D-9001"
+  }
+ ],
+ "frontier": {
+  "candidates": [],
+  "derived_from": "doc:core-docs/PROCESS_MANDATE.md",
+  "next_iteration": 47,
+  "summary": "i47 migration gate dry-run (fixture)."
+ },
+ "iteration": 46,
+ "mandate": {
+  "id": "02",
+  "state": "ACTIVE",
+  "sunset_iteration": "47"
+ },
+ "open_rulings": [],
+ "phase": {
+  "ref": "doc:core-docs/PROCESS_MANDATE.md",
+  "text": "i46 fixture close; PCB build."
+ },
+ "prohibitions": [],
+ "schema": "lifeorch.map_overlay/0.1"
+}

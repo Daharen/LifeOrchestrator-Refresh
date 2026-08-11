@@ -1,0 +1,30 @@
+{
+  "schema": "lifeorch.skill.manifest/0.1",
+  "skill_id": "beta.tool",
+  "name": "Beta",
+  "version": "0.1.0",
+  "contract_version": "0.2",
+  "purpose": "Beta does the first thing. It also does more later.",
+  "determinism": "deterministic",
+  "invocation": {
+    "method": "pwsh-file",
+    "entrypoint": "x.ps1"
+  },
+  "inputs": [
+    {
+      "name": "path",
+      "type": "string",
+      "required": true
+    }
+  ],
+  "outputs": {
+    "result_shape": "object"
+  },
+  "requirements": {
+    "executables": [
+      "pwsh>=7.4"
+    ],
+    "network": false
+  },
+  "parallel_safe": false
+}
