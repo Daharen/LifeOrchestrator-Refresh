@@ -1,0 +1,147 @@
+{
+ "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+ "by": "orchestrator-i48",
+ "entities": [
+  {
+   "confidence": "established",
+   "display_name": "SEALED_CHECK_47",
+   "id": "doc:core-docs/SEALED_CHECK_47.md",
+   "note": "Replaces the deleted core-docs/PROCESS_MANDATE.md as the process-layer control surface: NOT a live mandate -- a sealed one-shot check (open only at iteration >= 54). The archived mandate lives at archive/mandates/mandate-02-i40-i47.md (outside harvest scope by design).",
+   "ns": "doc",
+   "one_line": "SEALED metastability check armed at the i47 mandate-02 sunset (D-0132): 7 deterministic predicates + integrity hash; evaluate ONLY at i>=54, then archive.",
+   "plane_primary": "authority",
+   "skeleton": false,
+   "sources": [
+    {
+     "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+     "by": "orchestrator-i48",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "note"
+     ],
+     "ref": "core-docs/SEALED_CHECK_47.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+     "by": "orchestrator-i48",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DOC_PROTOCOL.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "D-0117",
+   "id": "decision:D-0117",
+   "ns": "decision",
+   "one_line": "i42 close: M2-A doc-hygiene commit gate SHIPPED (hard deadline met) + #43 0.6.0 (3 round-4 closures, M2-D held); round-5 pack couriered.",
+   "sources": [
+    {
+     "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+     "by": "orchestrator-i48",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "D-0134",
+   "id": "decision:D-0134",
+   "ns": "decision",
+   "one_line": "i47 addendum (Nicholas): i48 = CD path; seat Fable-until-settled (amends D-0116); poser live-click CONFIRMED (window-close defect); w07 + eval folder deleted.",
+   "sources": [
+    {
+     "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+     "by": "orchestrator-i48",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "D-0129",
+   "id": "decision:D-0129",
+   "ns": "decision",
+   "one_line": "LRAP poser live no-op root cause FIXED (dotnet apphost pwsh trap); live-click CONFIRMED i47 (D-0134; window-close defect -> next w08 touch).",
+   "sources": [
+    {
+     "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+     "by": "orchestrator-i48",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "D-0132",
+   "id": "decision:D-0132",
+   "ns": "decision",
+   "one_line": "i47: mandate 02 SUNSET -- report delivered, verdict YES (reverses 01's NO) -> SEALED_CHECK_47 armed (open i>=54); live doc deleted; no mandate 03.",
+   "sources": [
+    {
+     "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+     "by": "orchestrator-i48",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "D-0133",
+   "id": "decision:D-0133",
+   "ns": "decision",
+   "one_line": "i47 PCB migration gate = CONDITIONAL: quality PASS, efficiency VOID (mechanism-not-exercised) -> 3 bounded i48 CD units; legacy stays default.",
+   "sources": [
+    {
+     "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+     "by": "orchestrator-i48",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ]
+  }
+ ],
+ "relationships": [
+  {
+   "from": "decision:D-0117",
+   "sources": [
+    {
+     "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+     "by": "orchestrator-i48",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ],
+   "to": "ops:doc-commit-gate",
+   "type": "authorizes"
+  }
+ ],
+ "schema": "lifeorch.map_claims/0.1"
+}

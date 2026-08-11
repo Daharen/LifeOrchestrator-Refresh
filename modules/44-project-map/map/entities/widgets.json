@@ -32,6 +32,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -45,7 +49,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
     },
     {
      "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
@@ -57,6 +61,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -70,7 +78,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
     },
     {
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
@@ -80,6 +88,10 @@
      ],
      "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
      "reaffirmed": [
+      {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
@@ -103,6 +115,10 @@
       "one_line"
      ],
      "reaffirmed": [
+      {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
@@ -154,6 +170,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -167,7 +187,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
     },
     {
      "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
@@ -179,6 +199,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -192,7 +216,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
     },
     {
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
@@ -202,6 +226,10 @@
      ],
      "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
      "reaffirmed": [
+      {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
@@ -225,6 +253,10 @@
       "one_line"
      ],
      "reaffirmed": [
+      {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
@@ -280,6 +312,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -293,7 +329,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
     },
     {
      "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
@@ -305,6 +341,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -318,7 +358,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
     },
     {
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
@@ -328,6 +368,10 @@
      ],
      "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
      "reaffirmed": [
+      {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
@@ -351,6 +395,10 @@
       "one_line"
      ],
      "reaffirmed": [
+      {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
@@ -402,6 +450,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -415,7 +467,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
     },
     {
      "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
@@ -427,6 +479,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -440,7 +496,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
     },
     {
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
@@ -450,6 +506,10 @@
      ],
      "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
      "reaffirmed": [
+      {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
@@ -473,6 +533,10 @@
       "one_line"
      ],
      "reaffirmed": [
+      {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
@@ -524,6 +588,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -537,7 +605,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
     },
     {
      "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
@@ -549,6 +617,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -562,7 +634,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
     },
     {
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
@@ -572,6 +644,10 @@
      ],
      "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
      "reaffirmed": [
+      {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
@@ -595,6 +671,10 @@
       "one_line"
      ],
      "reaffirmed": [
+      {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
@@ -646,6 +726,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -659,7 +743,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
     },
     {
      "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
@@ -671,6 +755,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -684,7 +772,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
     },
     {
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
@@ -694,6 +782,10 @@
      ],
      "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
      "reaffirmed": [
+      {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
@@ -717,6 +809,10 @@
       "one_line"
      ],
      "reaffirmed": [
+      {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
@@ -768,6 +864,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -781,7 +881,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
     },
     {
      "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
@@ -793,6 +893,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -806,7 +910,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
     },
     {
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
@@ -816,6 +920,10 @@
      ],
      "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
      "reaffirmed": [
+      {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
@@ -839,6 +947,10 @@
       "one_line"
      ],
      "reaffirmed": [
+      {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
@@ -891,6 +1003,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -904,7 +1020,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
     },
     {
      "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
@@ -916,6 +1032,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -929,7 +1049,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
     },
     {
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
@@ -939,6 +1059,10 @@
      ],
      "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
      "reaffirmed": [
+      {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
@@ -962,6 +1086,10 @@
       "one_line"
      ],
      "reaffirmed": [
+      {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"

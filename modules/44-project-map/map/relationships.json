@@ -258,6 +258,22 @@
    "type": "documents"
   },
   {
+   "from": "decision:D-0117",
+   "sources": [
+    {
+     "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+     "by": "orchestrator-i48",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": "cd259bdc5adbf1efcf357115c23d74b1f877a2d715b7a87d08352c59a695be59"
+    }
+   ],
+   "to": "ops:doc-commit-gate",
+   "type": "authorizes"
+  },
+  {
    "from": "decision:D-0118",
    "sources": [
     {
@@ -546,22 +562,6 @@
    ],
    "to": "plane:memory",
    "type": "produces"
-  },
-  {
-   "from": "mandate:02",
-   "sources": [
-    {
-     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
-     "by": "lane-B-i46",
-     "fields": [
-      "*"
-     ],
-     "ref": "core-docs/PROCESS_MANDATE.md",
-     "sha256": "bba479dc6386472483f47fcae2c3c36bc267149e2508c0497b1ad58796167c0d"
-    }
-   ],
-   "to": "ops:doc-commit-gate",
-   "type": "authorizes"
   },
   {
    "from": "module:00.1/exec-watchdog",

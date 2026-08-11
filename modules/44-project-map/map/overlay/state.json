@@ -1,36 +1,83 @@
 {
- "schema": "lifeorch.map_overlay/0.1",
- "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
- "iteration": 46,
+ "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+ "boot_read": [
+  {
+   "kind": "other",
+   "ref": "core-docs/CURRENT_STATE.md"
+  },
+  {
+   "kind": "other",
+   "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md"
+  },
+  {
+   "kind": "other",
+   "ref": "core-docs/SEALED_CHECK_47.md"
+  },
+  {
+   "kind": "other",
+   "ref": "core-docs/START_HERE.md"
+  }
+ ],
+ "frontier": {
+  "candidates": [
+   {
+    "ref": "doc:core-docs/AUDIT_PIPELINE.md",
+    "text": "deferred (D-0134, not dropped): the LRAP completion set per next_increment; review_due i49; + the w08 explain-window-close defect on the next w08 touch"
+   },
+   {
+    "ref": "doc:core-docs/PROCESS_BACKLOG.md",
+    "text": "deferred (D-0134): M2-C/FO-3 docs-into-memory re-layer; PB-2 (trigger-gated)"
+   },
+   {
+    "ref": "module:40/context.compile",
+    "text": "deferred (D-0134): beam-WIDTH follow-on (the fast-beam residual scale lever)"
+   },
+   {
+    "ref": "module:44/project.map",
+    "text": "the CONDITIONAL re-check (CD-1 dry-run -> CD-2 efficiency A/B) -> on pass, the migration unit (PCB default; FO-2)"
+   }
+  ],
+  "derived_from": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md s4 at 24347fe1f8c8d2e07100c76754a0c54e414c41e8 (the frontier statement, same wording)",
+  "next_iteration": 49,
+  "summary": "Post-i48-fold: (1) the CD-1 acceptance dry-run -- a fresh PCB-booted PROBE-ONLY session answers K3/K4/TR2/TR3 pointer-cited with NO tree-handoff open (RT2-F9 un-triggered; consumes no pre-registered task); then (2) CD-2 -- the efficiency re-check under the frozen I47_EVAL_PACKET s7 mechanics at a NEW frozen SHA (fresh Nicholas task pick from unused T2/T3 at dispatch; A+B dry-runs; proxies orchestrator-computed; BOTH bars met un-voided = accept). A passed re-check LICENSES the migration unit (PCB default bootstrap; FO-2; DOC_PROTOCOL rows; legacy = fallback until a retirement gate)."
+ },
+ "iteration": 48,
+ "open_rulings": [
+  {
+   "ref": "decision:D-0134",
+   "text": "widgets/08 poser explain-window cannot be closed after the fact -- fix at the next w08 touch (a UI change: the D-0064 live-GUI confirm cycle applies)"
+  }
+ ],
  "phase": {
   "ref": "doc:core-docs/CURRENT_STATE.md",
-  "text": "Collective Agent build on cognitive virtual memory (D-0080); Tier-1 accepted; audit program mid-arc; PCB (module:44/project.map) shipped i46; i47 = the migration gate."
+  "text": "Collective Agent build on cognitive virtual memory (D-0080); Tier-1 accepted; mandate-02 SUNSET at i47 (verdict YES; SEALED_CHECK_47 armed, open i>=54); the i47 legacy-vs-PCB migration gate = CONDITIONAL (D-0133) -- legacy stays the default bootstrap; i48 shipped the CD-1/CD-3 closures (project.map 0.2.0) + the harvest mandate-absence fix."
  },
- "frontier": {
-  "next_iteration": 47,
-  "summary": "i47 = (1) the mandate-02 sunset REPORT (due BEFORE wave work; PROCESS_MANDATE s1/s3), then (2) the FROZEN legacy-vs-PCB side-by-side dry-run migration gate per modules/44-project-map/eval/I47_EVAL_PACKET.md; the blind verdict gates i48 migration (GO/CONDITIONAL/NO-GO).",
-  "derived_from": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md s4 at fea1fd92645bc25e2151b6594877f0763aa212dc (the frontier statement, same wording)",
-  "candidates": [
-   {"ref": "doc:core-docs/AUDIT_PIPELINE.md", "text": "post-gate: the LRAP completion set (raw-prompt front step + live ride-along + output side) per next_increment"},
-   {"ref": "mandate:02", "text": "M2-C docs-into-memory first increment (FO-3; design note shipped in the PCB design s6)"},
-   {"ref": "module:40/context.compile", "text": "beam-WIDTH follow-on (the fast-beam residual scale lever)"}
-  ]
- },
- "mandate": {"id": "02", "sunset_iteration": 47, "state": "ACTIVE"},
  "prohibitions": [
-  {"text": "P0-1 / action.authz ACTIVATION prohibited -- the ratified gate result is a DESIGN pass only; non_execution:true holds", "authority": "decision:D-0118", "status": "live"},
-  {"text": "No orchestrator-driven external/frontier AI sessions; frontier material is human-couriered; in-session cloud subagents ARE permitted", "authority": "decision:D-0119", "status": "live"},
-  {"text": "Warm-pool durable supervisor default-ON is GATE-NO; classic detached-warm stays the trusted default", "authority": "decision:D-0079", "status": "live"},
-  {"text": "FROZEN: generator upgrades, video.interpret + live composition, deep real-time perception, broad training", "authority": "decision:D-0080", "status": "live"}
+  {
+   "authority": "decision:D-0079",
+   "status": "live",
+   "text": "Warm-pool durable supervisor default-ON is GATE-NO; classic detached-warm stays the trusted default"
+  },
+  {
+   "authority": "decision:D-0080",
+   "status": "live",
+   "text": "FROZEN: generator upgrades, video.interpret + live composition, deep real-time perception, broad training"
+  },
+  {
+   "authority": "decision:D-0118",
+   "status": "live",
+   "text": "P0-1 / action.authz ACTIVATION prohibited -- the ratified gate result is a DESIGN pass only; non_execution:true holds"
+  },
+  {
+   "authority": "decision:D-0119",
+   "status": "live",
+   "text": "No orchestrator-driven external/frontier AI sessions; frontier material is human-couriered; in-session cloud subagents ARE permitted"
+  },
+  {
+   "authority": "decision:D-0132",
+   "status": "live",
+   "text": "SEALED_CHECK_47 stays SEALED -- evaluate ONLY at iteration >= 54, after any due report, BEFORE wave work"
+  }
  ],
- "open_rulings": [
-  {"text": "LRAP poser live-click confirm pending (Nicholas: ? -> Ask -> a real 9B answer)", "ref": "decision:D-0129"},
-  {"text": "_to_delete_w07/ disposition (the open i43 ruling; now gitignored, still on disk)", "ref": "decision:D-0120"}
- ],
- "boot_read": [
-  {"kind": "other", "ref": "core-docs/START_HERE.md"},
-  {"kind": "other", "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md"},
-  {"kind": "other", "ref": "core-docs/CURRENT_STATE.md"},
-  {"kind": "other", "ref": "core-docs/PROCESS_MANDATE.md"}
- ]
+ "schema": "lifeorch.map_overlay/0.1"
 }

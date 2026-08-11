@@ -69,6 +69,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+       "by": "orchestrator-i48"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -91,6 +95,10 @@
       "one_line"
      ],
      "reaffirmed": [
+      {
+       "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+       "by": "orchestrator-i48"
+      },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
@@ -125,6 +133,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+       "by": "orchestrator-i48"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -138,7 +150,7 @@
       }
      ],
      "ref": "core-docs/DOC_PROTOCOL.md",
-     "sha256": "6a69bb7f0a9edbfeeedc50214679bd7fd3855018e0d8f106089c932a362be07c"
+     "sha256": "b8763900f844e6493187ed22a21cd817598c88ca7a2f4d1f346e86b71739e759"
     },
     {
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
@@ -148,6 +160,10 @@
      ],
      "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
      "reaffirmed": [
+      {
+       "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+       "by": "orchestrator-i48"
+      },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
@@ -196,6 +212,14 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
+       "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+       "by": "orchestrator-i48"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -209,7 +233,7 @@
       }
      ],
      "ref": "core-docs/CURRENT_STATE.md",
-     "sha256": "3830b06cb55867881e22f4b90b07577c4b7c6e8bb418cc95dd6f84e38534c049"
+     "sha256": "23e65d6cbc432674c44a549919384bae3ef12ba928788a48a1b045f6d5be45ab"
     }
    ]
   },
@@ -227,6 +251,14 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
+       "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+       "by": "orchestrator-i48"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -240,7 +272,7 @@
       }
      ],
      "ref": "core-docs/DECISION_LOG.md",
-     "sha256": "5934250a01fc2541eb139a3ce2e65037ed1cf47ea3464888a886ddb659384730"
+     "sha256": "304060faca89e73074359825099184435a806016d2c7eecc4e56f030de013bfb"
     }
    ]
   },
@@ -258,6 +290,14 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
+       "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+       "by": "orchestrator-i48"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -271,7 +311,7 @@
       }
      ],
      "ref": "core-docs/DECISION_LOG_INDEX.md",
-     "sha256": "a30b53ded210412abd9a818b7eefd9b0c70b573f446f8b9dc97508b1e9562d66"
+     "sha256": "b2a2193f71bdc6f6c56fd8109e73376b8ab641ad241c4f3d59b64db89c78b555"
     }
    ]
   },
@@ -289,6 +329,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+       "by": "orchestrator-i48"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -302,7 +346,7 @@
       }
      ],
      "ref": "core-docs/DOC_PROTOCOL.md",
-     "sha256": "6a69bb7f0a9edbfeeedc50214679bd7fd3855018e0d8f106089c932a362be07c"
+     "sha256": "b8763900f844e6493187ed22a21cd817598c88ca7a2f4d1f346e86b71739e759"
     }
    ]
   },
@@ -320,6 +364,14 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
+       "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+       "by": "orchestrator-i48"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -333,7 +385,7 @@
       }
      ],
      "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
-     "sha256": "e5beb995c409815c2ca5a6e96bcf278e41f45bd17e4de6e3640bbb8f1dcce9df"
+     "sha256": "0f7e8fcbc91f8f6b95fe6dfac55df721150a2f566443f9733b6f420272978f07"
     }
    ]
   },
@@ -355,6 +407,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+       "by": "orchestrator-i48"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -368,7 +424,7 @@
       }
      ],
      "ref": "core-docs/DOC_PROTOCOL.md",
-     "sha256": "6a69bb7f0a9edbfeeedc50214679bd7fd3855018e0d8f106089c932a362be07c"
+     "sha256": "b8763900f844e6493187ed22a21cd817598c88ca7a2f4d1f346e86b71739e759"
     },
     {
      "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
@@ -379,6 +435,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+       "by": "orchestrator-i48"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -392,7 +452,7 @@
       }
      ],
      "ref": "core-docs/DOC_PROTOCOL.md",
-     "sha256": "6a69bb7f0a9edbfeeedc50214679bd7fd3855018e0d8f106089c932a362be07c"
+     "sha256": "b8763900f844e6493187ed22a21cd817598c88ca7a2f4d1f346e86b71739e759"
     },
     {
      "at_commit": "seed",
@@ -401,6 +461,10 @@
       "one_line"
      ],
      "reaffirmed": [
+      {
+       "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+       "by": "orchestrator-i48"
+      },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
@@ -424,6 +488,10 @@
       "one_line"
      ],
      "reaffirmed": [
+      {
+       "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+       "by": "orchestrator-i48"
+      },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
@@ -448,6 +516,10 @@
      ],
      "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
      "reaffirmed": [
+      {
+       "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+       "by": "orchestrator-i48"
+      },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
@@ -513,6 +585,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -526,7 +602,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
     }
    ]
   },
@@ -559,39 +635,14 @@
      "fields": [
       "one_line"
      ],
-     "ref": "core-docs/PROCESS_BACKLOG.md",
-     "sha256": "4a09e92da12e316fd2798c2472e679f656fb76dc3ef9d1420ae480c118b07c57"
-    }
-   ]
-  },
-  {
-   "display_name": "PROCESS_MANDATE.md",
-   "id": "doc:core-docs/PROCESS_MANDATE.md",
-   "ns": "doc",
-   "one_line": "PROCESS_MANDATE.md -- the live SUNSETTING process-hygiene mandate (mandate 02; self-deletes at its sunset_iteration after a report)",
-   "sources": [
-    {
-     "at_commit": "seed",
-     "by": "harvest_v1",
-     "fields": [
-      "one_line"
-     ],
      "reaffirmed": [
       {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
+       "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+       "by": "orchestrator-i48"
       }
      ],
-     "ref": "core-docs/PROCESS_MANDATE.md",
-     "sha256": "8b09cc20a3ecf8bd120e290dc781c79a82a674af7c994ef0074820bc63a9dfcf"
+     "ref": "core-docs/PROCESS_BACKLOG.md",
+     "sha256": "40a6024759ad7f6e51bbaa8a6bdb6adf6390f20f8af846acb0b0bb5232efa586"
     }
    ]
   },
@@ -626,6 +677,58 @@
      ],
      "ref": "core-docs/REVIEW_QUEUE.md",
      "sha256": "6432cdbccb50965597f942a6f3f324fca6ad0532a735401a7a3b347c6d1e9e94"
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "SEALED_CHECK_47",
+   "id": "doc:core-docs/SEALED_CHECK_47.md",
+   "note": "Replaces the deleted core-docs/PROCESS_MANDATE.md as the process-layer control surface: NOT a live mandate -- a sealed one-shot check (open only at iteration >= 54). The archived mandate lives at archive/mandates/mandate-02-i40-i47.md (outside harvest scope by design).",
+   "ns": "doc",
+   "one_line": "SEALED metastability check armed at the i47 mandate-02 sunset (D-0132): 7 deterministic predicates + integrity hash; evaluate ONLY at i>=54, then archive.",
+   "plane_primary": "authority",
+   "skeleton": false,
+   "sources": [
+    {
+     "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+     "by": "orchestrator-i48",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DOC_PROTOCOL.md",
+     "sha256": "b8763900f844e6493187ed22a21cd817598c88ca7a2f4d1f346e86b71739e759"
+    },
+    {
+     "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+     "by": "orchestrator-i48",
+     "fields": [
+      "note",
+      "one_line",
+      "plane_primary"
+     ],
+     "ref": "core-docs/SEALED_CHECK_47.md",
+     "sha256": "778ae66ec53375188c4662d8f25d49faeb972b4a3a2bb8a49e63f3fa65f2b499"
+    },
+    {
+     "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+     "by": "orchestrator-i48",
+     "fields": [
+      "note",
+      "one_line",
+      "plane_primary"
+     ],
+     "ref": "core-docs/SEALED_CHECK_47.md",
+     "sha256": "778ae66ec53375188c4662d8f25d49faeb972b4a3a2bb8a49e63f3fa65f2b499"
+    },
+    {
+     "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+     "by": "orchestrator-i48",
+     "fields": [
+      "*"
+     ],
+     "note": "override: D-0134 closed the D-0129 PENDING clause (live-click CONFIRMED); orchestrator fold re-claim per WO s9",
+     "ref": "doc:core-docs/SEALED_CHECK_47.md"
     }
    ]
   },

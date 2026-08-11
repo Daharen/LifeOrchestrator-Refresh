@@ -4,6 +4,207 @@
    "confidence": "established",
    "deeper": [
     {
+     "kind": "decision",
+     "ref": "decision:D-0077"
+    }
+   ],
+   "display_name": "Cross-module fold-smoke rule",
+   "id": "ops:boot-fold-smoke",
+   "ns": "ops",
+   "one_line": "D-0077: a schema producer+consumer pair split across parallel workers requires the orchestrator cross-module fold smoke before close.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "f1de00c759bf390e53e1870450c086163d1c8f1e",
+     "by": "cd-lane-i48",
+     "fields": [
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "modules/30-orchestrate-fanout/FANOUT_PROTOCOL.md",
+     "sha256": "863a9ca6575d58e07834602483743b04b254487f1a64aab56ea929683bef324b"
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "other",
+     "ref": "modules/30-orchestrate-fanout/FANOUT_PROTOCOL.md"
+    },
+    {
+     "kind": "readme",
+     "ref": "modules/29-resource-lease/README.md"
+    }
+   ],
+   "display_name": "Resource-lease acquisition order",
+   "id": "ops:boot-lease-order",
+   "ns": "ops",
+   "one_line": "Lease order: acquire gpu -> git -> doc and release in reverse; the single git lease serializes every commit across the wave.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "f1de00c759bf390e53e1870450c086163d1c8f1e",
+     "by": "cd-lane-i48",
+     "fields": [
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "modules/29-resource-lease/README.md",
+     "sha256": "442d593fde5148e9f192f0a3104692c4de0e3037d8a51f86110c8ec86a38f1c1"
+    },
+    {
+     "at_commit": "f1de00c759bf390e53e1870450c086163d1c8f1e",
+     "by": "cd-lane-i48",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "modules/30-orchestrate-fanout/FANOUT_PROTOCOL.md",
+     "sha256": "863a9ca6575d58e07834602483743b04b254487f1a64aab56ea929683bef324b"
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "decision",
+     "ref": "decision:D-0055"
+    },
+    {
+     "kind": "decision",
+     "ref": "decision:D-0056"
+    }
+   ],
+   "display_name": "Detached-server orphan discipline",
+   "id": "ops:boot-orphan-discipline",
+   "ns": "ops",
+   "one_line": "Orphan discipline: launch persistent llama-servers DETACHED and reap them before finalize; assert 0 UNMANAGED orphans every wave.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "f1de00c759bf390e53e1870450c086163d1c8f1e",
+     "by": "cd-lane-i48",
+     "fields": [
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      }
+     ],
+     "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
+     "sha256": "0f7e8fcbc91f8f6b95fe6dfac55df721150a2f566443f9733b6f420272978f07"
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "decision",
+     "ref": "decision:D-0072"
+    },
+    {
+     "kind": "decision",
+     "ref": "decision:D-0117"
+    },
+    {
+     "kind": "other",
+     "ref": "modules/00-bootstrap-executor/exec-job.sh"
+    }
+   ],
+   "display_name": "Fail-closed ship + native-git HEAD verify",
+   "id": "ops:boot-ship-verify",
+   "ns": "ops",
+   "one_line": "Ship via dev.ship (sha256 + AST + tests, FAIL-CLOSED, named files only); VERIFY the real HEAD with NATIVE git; never git add -A.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "f1de00c759bf390e53e1870450c086163d1c8f1e",
+     "by": "cd-lane-i48",
+     "fields": [
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "modules/00-bootstrap-executor/Invoke-DevShip.ps1",
+     "sha256": "7e11560402815d0d194619dea4e6cd176f3ecf0562a56403e379dbe0676fd39d"
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "other",
+     "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md#s4"
+    },
+    {
+     "kind": "other",
+     "ref": "modules/30-orchestrate-fanout/FANOUT_PROTOCOL.md"
+    }
+   ],
+   "display_name": "Wave concurrency clamps",
+   "id": "ops:boot-wave-clamps",
+   "ns": "ops",
+   "one_line": "Wave clamps: <=1 GPU worker HARD; 1 GPU + 2 CPU => MaxParallel 3; workers run docs:[]; only the GPU lane edits models.json.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "f1de00c759bf390e53e1870450c086163d1c8f1e",
+     "by": "cd-lane-i48",
+     "fields": [
+      "one_line"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      }
+     ],
+     "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
+     "sha256": "0f7e8fcbc91f8f6b95fe6dfac55df721150a2f566443f9733b6f420272978f07"
+    },
+    {
+     "at_commit": "f1de00c759bf390e53e1870450c086163d1c8f1e",
+     "by": "cd-lane-i48",
+     "fields": [
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      }
+     ],
+     "ref": "modules/30-orchestrate-fanout/FANOUT_PROTOCOL.md",
+     "sha256": "863a9ca6575d58e07834602483743b04b254487f1a64aab56ea929683bef324b"
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
      "kind": "other",
      "ref": "ops/audit/doc-commit-gate.py"
     },
@@ -30,8 +231,14 @@
       "one_line",
       "status"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+       "by": "orchestrator-i48"
+      }
+     ],
      "ref": "core-docs/PROCESS_BACKLOG.md",
-     "sha256": "4a09e92da12e316fd2798c2472e679f656fb76dc3ef9d1420ae480c118b07c57"
+     "sha256": "40a6024759ad7f6e51bbaa8a6bdb6adf6390f20f8af846acb0b0bb5232efa586"
     },
     {
      "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
@@ -39,14 +246,26 @@
      "fields": [
       "skeleton"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+       "by": "orchestrator-i48"
+      }
+     ],
      "ref": "core-docs/PROCESS_BACKLOG.md",
-     "sha256": "4a09e92da12e316fd2798c2472e679f656fb76dc3ef9d1420ae480c118b07c57"
+     "sha256": "40a6024759ad7f6e51bbaa8a6bdb6adf6390f20f8af846acb0b0bb5232efa586"
     },
     {
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
      "by": "harvest_v1",
      "fields": [
       "*"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
+       "by": "orchestrator-i48"
+      }
      ],
      "ref": "ops/audit/doc-commit-gate.py",
      "sha256": "75efd2b147dca7feedc752c5bbb1728c26dce0b9d850e35144a0de7946776d11"
@@ -82,6 +301,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -95,7 +318,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
     },
     {
      "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
@@ -105,6 +328,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -118,7 +345,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
     },
     {
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
@@ -127,6 +354,10 @@
       "*"
      ],
      "reaffirmed": [
+      {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
@@ -175,6 +406,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -188,7 +423,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
     },
     {
      "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
@@ -198,6 +433,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -211,7 +450,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
     },
     {
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
@@ -220,6 +459,10 @@
       "*"
      ],
      "reaffirmed": [
+      {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
@@ -267,6 +510,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -280,7 +527,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
     },
     {
      "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
@@ -292,6 +539,10 @@
      ],
      "reaffirmed": [
       {
+       "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+       "by": "orchestrator-i48-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -305,7 +556,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
     }
    ],
    "status": "in-progress"
