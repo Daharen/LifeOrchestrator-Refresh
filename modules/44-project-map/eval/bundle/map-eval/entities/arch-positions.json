@@ -16,11 +16,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:0"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -67,11 +67,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:00.1"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -118,11 +118,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:1"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -169,11 +169,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:10"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -220,11 +220,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:11"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -271,11 +271,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:12"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -322,11 +322,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:13"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -373,11 +373,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:14"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -424,11 +424,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:15"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -475,11 +475,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:16"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -526,11 +526,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:17"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -577,11 +577,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:18"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -628,25 +628,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:19"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -679,22 +665,8 @@
      "fields": [
       "status"
      ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "faf7104389f2f67f5dd5339443d3a1c71fb0065ae77718f9a500c6a20b144824"
     }
    ],
    "status": "mvp-complete"
@@ -715,11 +687,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:2"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -766,25 +738,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:20"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -817,22 +775,8 @@
      "fields": [
       "status"
      ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "faf7104389f2f67f5dd5339443d3a1c71fb0065ae77718f9a500c6a20b144824"
     }
    ],
    "status": "mvp-complete"
@@ -854,25 +798,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:21"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -905,22 +835,8 @@
      "fields": [
       "status"
      ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "faf7104389f2f67f5dd5339443d3a1c71fb0065ae77718f9a500c6a20b144824"
     }
    ],
    "status": "mvp-complete"
@@ -941,11 +857,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:22"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -992,25 +908,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:23"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -1043,22 +945,8 @@
      "fields": [
       "status"
      ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "faf7104389f2f67f5dd5339443d3a1c71fb0065ae77718f9a500c6a20b144824"
     }
    ],
    "status": "mvp-complete"
@@ -1080,25 +968,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:24"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -1131,22 +1005,8 @@
      "fields": [
       "status"
      ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "faf7104389f2f67f5dd5339443d3a1c71fb0065ae77718f9a500c6a20b144824"
     }
    ],
    "status": "in-progress"
@@ -1167,11 +1027,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:25"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -1219,25 +1079,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:26"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -1270,22 +1116,8 @@
      "fields": [
       "status"
      ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "faf7104389f2f67f5dd5339443d3a1c71fb0065ae77718f9a500c6a20b144824"
     }
    ],
    "status": "in-progress"
@@ -1306,11 +1138,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:27"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -1357,11 +1189,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:28"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -1408,11 +1240,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:29"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -1459,11 +1291,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:3"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -1510,11 +1342,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:30"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -1561,11 +1393,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:31"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -1612,11 +1444,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:32"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -1663,11 +1495,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:33"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -1714,11 +1546,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:34"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -1765,11 +1597,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:35"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -1816,11 +1648,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:36"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -1867,11 +1699,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:37"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -1918,11 +1750,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:38"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -1969,11 +1801,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:39"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -2020,11 +1852,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:4"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -2071,11 +1903,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:40"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -2122,11 +1954,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:41"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -2173,11 +2005,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:42"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -2224,11 +2056,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:43"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -2275,11 +2107,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:44"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -2326,11 +2158,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:45"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -2377,11 +2209,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:46"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -2428,11 +2260,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:47"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -2479,11 +2311,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:48"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -2530,11 +2362,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:49"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -2581,11 +2413,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:5"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -2632,11 +2464,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:6"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -2683,11 +2515,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:7"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -2734,11 +2566,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:8"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",
@@ -2785,11 +2617,11 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "arch:9"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "aliases",

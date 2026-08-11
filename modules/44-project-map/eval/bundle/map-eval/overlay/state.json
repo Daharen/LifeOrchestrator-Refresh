@@ -1,0 +1,83 @@
+{
+ "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
+ "boot_read": [
+  {
+   "kind": "other",
+   "ref": "core-docs/START_HERE.md"
+  },
+  {
+   "kind": "other",
+   "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md"
+  },
+  {
+   "kind": "other",
+   "ref": "core-docs/CURRENT_STATE.md"
+  },
+  {
+   "kind": "other",
+   "ref": "core-docs/PROCESS_MANDATE.md"
+  }
+ ],
+ "frontier": {
+  "candidates": [
+   {
+    "ref": "doc:core-docs/AUDIT_PIPELINE.md",
+    "text": "the LRAP ride-along / OUTPUT increment [front-runner]"
+   },
+   {
+    "ref": "mandate:02",
+    "text": "M2-C first increment (docs-into-memory design note)"
+   },
+   {
+    "ref": "module:40/context.compile",
+    "text": "the #40 beam-WIDTH fast-beam follow-on"
+   }
+  ],
+  "derived_from": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md s4 at 0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c (verbatim first-paragraph extract, whitespace-normalized, by fold_eval_bundle.py)",
+  "next_iteration": 46,
+  "summary": "**The P0-1 gate arc is CLOSED (design pass, D-0118; activation PROHIBITED). i45 SHIPPED LRAP v1 -- NEW `widgets/08` Live-Run Audit Pathway (D-0122; read-only replay of a #40 compile, assembly-side steps 1-6; independently verified 87/0/0; leveled Nicholas accept -- increment PASS, whole-system audit"
+ },
+ "iteration": 45,
+ "mandate": {
+  "id": "02",
+  "state": "ACTIVE",
+  "sunset_iteration": 47
+ },
+ "open_rulings": [
+  {
+   "ref": "decision:D-0129",
+   "text": "LRAP poser live-click confirm pending (Nicholas: ? -> Ask -> a real 9B answer)"
+  },
+  {
+   "ref": "decision:D-0120",
+   "text": "_to_delete_w07/ disposition (the open i43 ruling)"
+  }
+ ],
+ "phase": {
+  "ref": "doc:core-docs/CURRENT_STATE.md",
+  "text": "Collective Agent build on cognitive virtual memory (D-0080); Tier-1 accepted; audit program mid-arc (LRAP shipped i45; poser arc D-0126..D-0129)."
+ },
+ "prohibitions": [
+  {
+   "authority": "decision:D-0118",
+   "status": "live",
+   "text": "P0-1 / action.authz ACTIVATION prohibited -- the ratified gate result is a DESIGN pass only; non_execution:true holds"
+  },
+  {
+   "authority": "decision:D-0119",
+   "status": "live",
+   "text": "No orchestrator-driven external/frontier AI sessions; frontier material is human-couriered; in-session cloud subagents ARE permitted"
+  },
+  {
+   "authority": "decision:D-0079",
+   "status": "live",
+   "text": "Warm-pool durable supervisor default-ON is GATE-NO; classic detached-warm stays the trusted default"
+  },
+  {
+   "authority": "decision:D-0080",
+   "status": "live",
+   "text": "FROZEN: generator upgrades, video.interpret + live composition, deep real-time perception, broad training"
+  }
+ ],
+ "schema": "lifeorch.map_overlay/0.1"
+}

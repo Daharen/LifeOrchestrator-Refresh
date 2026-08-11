@@ -1,5 +1,282 @@
 {
- "items": [],
+ "items": [
+  {
+   "confidence": "established",
+   "display_name": "Artifact-Search SQLite Catalog",
+   "id": "store:artifact-search-sqlite",
+   "ns": "store",
+   "one_line": "The SQLite+FTS5 catalog artifact.search (#36) owns: typed-record envelope, Tier-1 hierarchy nodes, fast-beam shortlist/descend ranking.",
+   "plane_primary": "memory",
+   "skeleton": false,
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "plane_primary",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "Decision Log",
+   "id": "store:decision-log",
+   "ns": "store",
+   "one_line": "DECISION_LOG.md (append-only rationale) + DECISION_LOG_INDEX.md (one routing row per decision) -- the project's locked-decision record.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/DOC_PROTOCOL.md",
+     "sha256": "6a69bb7f0a9edbfeeedc50214679bd7fd3855018e0d8f106089c932a362be07c"
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "Episode & Failure Record Store",
+   "id": "store:episode-store",
+   "ns": "store",
+   "one_line": "The episode.record (#39) episode+failure record store (structural per-stage detail; failure-signature seam).",
+   "plane_primary": "memory",
+   "skeleton": false,
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "plane_primary",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "Lease Directory",
+   "id": "store:lease-dir",
+   "ns": "store",
+   "one_line": "modules/29-resource-lease/runtime/leases/: the filesystem TTL lease directory (gpu/git/doc:<path>) res.lease (#29) owns.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
+     "sha256": "e5beb995c409815c2ca5a6e96bcf278e41f45bd17e4de6e3640bbb8f1dcce9df"
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "Model Registry (models.json)",
+   "id": "store:model-registry",
+   "ns": "store",
+   "one_line": "models.json under model.gateway (#7): the machine-specific registry of staged local models/quants/engine builds/tiers.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/CURRENT_STATE.md",
+     "sha256": "3830b06cb55867881e22f4b90b07577c4b7c6e8bb418cc95dd6f84e38534c049"
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "Fan-out Plans Directory",
+   "id": "store:plans-dir",
+   "ns": "store",
+   "one_line": "modules/30-orchestrate-fanout/runtime/plans/<plan_id>/: the per-wave plan/worker/report directory orchestrate.fanout (#30) owns.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
+     "sha256": "e5beb995c409815c2ca5a6e96bcf278e41f45bd17e4de6e3640bbb8f1dcce9df"
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "Review Queue (jsonl)",
+   "id": "store:review-queue-jsonl",
+   "ns": "store",
+   "one_line": "The append-only jsonl review queue classify.batch (#8) produces and review.processor (#9) drains + rewrites in place.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    }
+   ]
+  }
+ ],
  "kind": "entities",
  "schema": "lifeorch.project_map/0.1"
 }

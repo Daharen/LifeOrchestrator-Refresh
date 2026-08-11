@@ -7,7 +7,7 @@
    "one_line": "ACTION_AUTHORIZATION_CONTRACT.md -- the P0-1 action-authorization gate freeze (versioned): frozen registry, blocker disposition, build-vs-activation gate, the s",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
@@ -24,7 +24,7 @@
    "one_line": "ADAPTIVE_RESOURCE_GOVERNOR.md -- governor design + measured truth",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
@@ -41,7 +41,7 @@
    "one_line": "ARCHITECTURE_MAP.md -- long-horizon spine (stable)",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
@@ -62,24 +62,10 @@
    "skeleton": false,
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
-     ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
      ],
      "ref": "core-docs/AUDIT_PIPELINE.md",
      "sha256": "72601cd52918b3d979615cfaeaada3af9db68ce6f74129a5c59fe898caf9bf21"
@@ -89,20 +75,6 @@
      "by": "lane-B-i46",
      "fields": [
       "one_line"
-     ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
      ],
      "ref": "core-docs/AUDIT_PIPELINE.md",
      "sha256": "72601cd52918b3d979615cfaeaada3af9db68ce6f74129a5c59fe898caf9bf21"
@@ -123,22 +95,8 @@
      "fields": [
       "one_line"
      ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
      "ref": "core-docs/DOC_PROTOCOL.md",
-     "sha256": "6a69bb7f0a9edbfeeedc50214679bd7fd3855018e0d8f106089c932a362be07c"
+     "sha256": "64bc35902b185edb42e1eb4951f99542b88f48990ba0dc0bd27e6674792773a6"
     },
     {
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
@@ -146,21 +104,7 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "doc:core-docs/AUDIT_PIPELINE.md"
     }
    ]
@@ -172,7 +116,7 @@
    "one_line": "CONTEXT_PACKET_CONTRACT.md -- the context-packet + selection contract (versioned): control/evidence separation, packet_disposition, consumer profile, the select",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
@@ -189,27 +133,13 @@
    "one_line": "CURRENT_STATE.md -- reality NOW: phase, active work, box, deps, models, tests table, live gotchas",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
      ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
      "ref": "core-docs/CURRENT_STATE.md",
-     "sha256": "3830b06cb55867881e22f4b90b07577c4b7c6e8bb418cc95dd6f84e38534c049"
+     "sha256": "8314aa2b80dba6ec2601228021e54e59f2f981cb18ba44aeb5e00d2ac24726be"
     }
    ]
   },
@@ -220,27 +150,13 @@
    "one_line": "DECISION_LOG.md -- append-only rationale",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
      ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
      "ref": "core-docs/DECISION_LOG.md",
-     "sha256": "5934250a01fc2541eb139a3ce2e65037ed1cf47ea3464888a886ddb659384730"
+     "sha256": "3f35bca7ed95b2d22037b6c83995b1753feab5edd5018ed89d04bc682d7f75f1"
     }
    ]
   },
@@ -251,27 +167,13 @@
    "one_line": "DECISION_LOG_INDEX.md -- one compressed routing row per decision (id, date, state, one-line label; see its header rules)",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
      ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
      "ref": "core-docs/DECISION_LOG_INDEX.md",
-     "sha256": "a30b53ded210412abd9a818b7eefd9b0c70b573f446f8b9dc97508b1e9562d66"
+     "sha256": "81d528a63f8ba7e8fce37e5069f35f3187f1144caefc5061c001666612645df6"
     }
    ]
   },
@@ -282,27 +184,13 @@
    "one_line": "DOC_PROTOCOL.md -- this contract",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
      ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
      "ref": "core-docs/DOC_PROTOCOL.md",
-     "sha256": "6a69bb7f0a9edbfeeedc50214679bd7fd3855018e0d8f106089c932a362be07c"
+     "sha256": "64bc35902b185edb42e1eb4951f99542b88f48990ba0dc0bd27e6674792773a6"
     }
    ]
   },
@@ -313,27 +201,13 @@
    "one_line": "FANOUT_ORCHESTRATOR_HANDOFF.md -- THE one live handoff: orchestrator ops + current frontier",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
      ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
      "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
-     "sha256": "e5beb995c409815c2ca5a6e96bcf278e41f45bd17e4de6e3640bbb8f1dcce9df"
+     "sha256": "dcf3b692f65797143f8d39c9d06ad61782425c326ac514e778d0dc417a274786"
     }
    ]
   },
@@ -353,22 +227,8 @@
      "fields": [
       "one_line"
      ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
      "ref": "core-docs/DOC_PROTOCOL.md",
-     "sha256": "6a69bb7f0a9edbfeeedc50214679bd7fd3855018e0d8f106089c932a362be07c"
+     "sha256": "64bc35902b185edb42e1eb4951f99542b88f48990ba0dc0bd27e6674792773a6"
     },
     {
      "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
@@ -377,42 +237,14 @@
       "plane_primary",
       "skeleton"
      ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
      "ref": "core-docs/DOC_PROTOCOL.md",
-     "sha256": "6a69bb7f0a9edbfeeedc50214679bd7fd3855018e0d8f106089c932a362be07c"
+     "sha256": "64bc35902b185edb42e1eb4951f99542b88f48990ba0dc0bd27e6674792773a6"
     },
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
-     ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
      ],
      "ref": "core-docs/MEMORY_ARCHITECTURE.md",
      "sha256": "caf81d92aad3d1ffee7a4398a794bf38e58a22669955db696dd2f2bbc614859e"
@@ -422,20 +254,6 @@
      "by": "lane-B-i46",
      "fields": [
       "one_line"
-     ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
      ],
      "ref": "core-docs/MEMORY_ARCHITECTURE.md",
      "sha256": "caf81d92aad3d1ffee7a4398a794bf38e58a22669955db696dd2f2bbc614859e"
@@ -446,21 +264,7 @@
      "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "doc:core-docs/MEMORY_ARCHITECTURE.md"
     }
    ]
@@ -472,7 +276,7 @@
    "one_line": "MEMORY_BENCHMARK.md -- the memory-quality + foreign-corpus validation architecture: corpora, independent mutation/withholding harness, executable + hidden groun",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
@@ -489,7 +293,7 @@
    "one_line": "MEMORY_CONTRACT.md -- the Collective Agent memory/retrieval contract (versioned): record+provenance envelope, embedding 0.2, retriever 0.2, catalog/eval/privacy",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
@@ -506,27 +310,13 @@
    "one_line": "MODULE_ROADMAP.md -- build order, per-module status, deferred follow-ons, portability backlog",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
      ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "faf7104389f2f67f5dd5339443d3a1c71fb0065ae77718f9a500c6a20b144824"
     }
    ]
   },
@@ -537,7 +327,7 @@
    "one_line": "MODULE_WORK_ORDER_TEMPLATE.md -- work-order template",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
@@ -554,7 +344,7 @@
    "one_line": "PROCESS_BACKLOG.md -- cross-cutting process / tooling / doc-hygiene backlog (router; per-module follow-ons stay in MODULE_ROADMAP)",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
@@ -571,27 +361,13 @@
    "one_line": "PROCESS_MANDATE.md -- the live SUNSETTING process-hygiene mandate (mandate 02; self-deletes at its sunset_iteration after a report)",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
      ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
      "ref": "core-docs/PROCESS_MANDATE.md",
-     "sha256": "8b09cc20a3ecf8bd120e290dc781c79a82a674af7c994ef0074820bc63a9dfcf"
+     "sha256": "bba479dc6386472483f47fcae2c3c36bc267149e2508c0497b1ad58796167c0d"
     }
    ]
   },
@@ -602,7 +378,7 @@
    "one_line": "PROJECT_DIRECTION.md -- doctrine (stable)",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
@@ -619,7 +395,7 @@
    "one_line": "REVIEW_QUEUE.md -- queue schema, conventions, producer/consumer table, open design flags",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
@@ -636,7 +412,7 @@
    "one_line": "SKILL_CONTRACT.md -- the skill interface (versioned)",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
@@ -653,7 +429,7 @@
    "one_line": "START_HERE.md -- routing: what to read, what you may modify, session checklist",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
@@ -670,7 +446,7 @@
    "one_line": "TOOL_MODEL_REGISTRY.md -- tool/model/hardware/storage registry (lookup, not story)",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"

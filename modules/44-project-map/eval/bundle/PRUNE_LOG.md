@@ -1,0 +1,48 @@
+# i47 eval-bundle construction log (fold_eval_bundle.py @ EVAL_SHA 0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c)
+
+- harvest-eval counts: {"arch": 51, "core_docs": 22, "decision_ids": 129, "doc_owner_rows": 24, "modules": 45, "widgets": 8}
+- PRUNE(att 1): MISSING_PROVENANCE iteration:i46 path source 'core-docs/research/2026-08-11-i46-pcb-design.md' missing sha256 (required for path refs)
+- PRUNE(att 1): MISSING_PROVENANCE module:29/res.lease path source 'core-docs/research/2026-08-11-i46-pcb-design.md' missing sha256 (required for path refs)
+- PRUNE(att 1): MISSING_PROVENANCE module:30/orchestrate.fanout path source 'core-docs/research/2026-08-11-i46-pcb-design.md' missing sha256 (required for path refs)
+- PRUNE(att 1): MISSING_PROVENANCE module:40/context.compile path source 'core-docs/research/2026-08-11-i46-pcb-design.md' missing sha256 (required for path refs)
+- PRUNE(att 1): MISSING_PROVENANCE module:43/action-authz path source 'core-docs/research/2026-08-11-i46-pcb-design.md' missing sha256 (required for path refs)
+- PRUNE(att 1): MISSING_PROVENANCE module:44/project.map path source 'modules/44-project-map/WORK_ORDER.md' missing sha256 (required for path refs)
+- PRUNE(att 1): DANGLING_REF ops:exec-job source ref 'module:00/exec.bootstrap' does not resolve to an entity
+- PRUNE(att 1): MISSING_PROVENANCE plane:authority path source 'core-docs/research/2026-08-11-i46-pcb-design.md' missing sha256 (required for path refs)
+- PRUNE(att 1): MISSING_PROVENANCE plane:capability path source 'core-docs/research/2026-08-11-i46-pcb-design.md' missing sha256 (required for path refs)
+- PRUNE(att 1): MISSING_PROVENANCE plane:intelligence path source 'core-docs/research/2026-08-11-i46-pcb-design.md' missing sha256 (required for path refs)
+- PRUNE(att 1): MISSING_PROVENANCE plane:memory path source 'core-docs/research/2026-08-11-i46-pcb-design.md' missing sha256 (required for path refs)
+- PRUNE(att 1): MISSING_PROVENANCE plane:observability path source 'core-docs/research/2026-08-11-i46-pcb-design.md' missing sha256 (required for path refs)
+- PRUNE(att 1): ENTITY_UNBACKED iteration:i46 path source 'core-docs/research/2026-08-11-i46-pcb-design.md' no longer exists in the tree
+- PRUNE(att 1): ENTITY_UNBACKED module:29/res.lease path source 'core-docs/research/2026-08-11-i46-pcb-design.md' no longer exists in the tree
+- PRUNE(att 1): ENTITY_UNBACKED module:30/orchestrate.fanout path source 'core-docs/research/2026-08-11-i46-pcb-design.md' no longer exists in the tree
+- PRUNE(att 1): ENTITY_UNBACKED module:40/context.compile path source 'core-docs/research/2026-08-11-i46-pcb-design.md' no longer exists in the tree
+- PRUNE(att 1): ENTITY_UNBACKED module:43/action-authz path source 'core-docs/research/2026-08-11-i46-pcb-design.md' no longer exists in the tree
+- PRUNE(att 1): ENTITY_UNBACKED module:44/project.map path source 'modules/44-project-map/WORK_ORDER.md' no longer exists in the tree
+- PRUNE(att 1): ENTITY_UNBACKED plane:authority path source 'core-docs/research/2026-08-11-i46-pcb-design.md' no longer exists in the tree
+- PRUNE(att 1): ENTITY_UNBACKED plane:capability path source 'core-docs/research/2026-08-11-i46-pcb-design.md' no longer exists in the tree
+- PRUNE(att 1): ENTITY_UNBACKED plane:intelligence path source 'core-docs/research/2026-08-11-i46-pcb-design.md' no longer exists in the tree
+- PRUNE(att 1): ENTITY_UNBACKED plane:memory path source 'core-docs/research/2026-08-11-i46-pcb-design.md' no longer exists in the tree
+- PRUNE(att 1): ENTITY_UNBACKED plane:observability path source 'core-docs/research/2026-08-11-i46-pcb-design.md' no longer exists in the tree
+- DROP-ENTITY iteration:i46 (no sources left)
+- DROP-SOURCE module:29/res.lease: ['core-docs/research/2026-08-11-i46-pcb-design.md']
+- DROP-SOURCE module:30/orchestrate.fanout: ['core-docs/research/2026-08-11-i46-pcb-design.md']
+- DROP-SOURCE module:40/context.compile: ['core-docs/research/2026-08-11-i46-pcb-design.md']
+- DROP-SOURCE module:43/action-authz: ['core-docs/research/2026-08-11-i46-pcb-design.md']
+- DROP-ENTITY module:44/project.map (no sources left)
+- DROP-SOURCE ops:exec-job: ['module:00/exec.bootstrap']
+- DROP-SOURCE plane:authority: ['core-docs/research/2026-08-11-i46-pcb-design.md']
+- DROP-SOURCE plane:capability: ['core-docs/research/2026-08-11-i46-pcb-design.md']
+- DROP-SOURCE plane:intelligence: ['core-docs/research/2026-08-11-i46-pcb-design.md']
+- DROP-SOURCE plane:memory: ['core-docs/research/2026-08-11-i46-pcb-design.md']
+- DROP-SOURCE plane:observability: ['core-docs/research/2026-08-11-i46-pcb-design.md']
+- after prune: entities 143 -> 141, edges 98 -> 97
+- PRUNE(att 2): FIELD_UNCOVERED ops:exec-job claimed field 'deeper' not covered by a source
+- PRUNE(att 2): FIELD_UNCOVERED ops:exec-job claimed field 'plane_primary' not covered by a source
+- DROP-FIELD ops:exec-job.deeper
+- RESOURCE ops:exec-job.plane_primary -> ARCHITECTURE_MAP.md (required field; true at EVAL_SHA)
+- after prune: entities 141 -> 141, edges 97 -> 97
+- ingest attempt 3: OK {"conflicts": [], "edges_upserted": 97, "entities_upserted": 141, "merged": true}
+- overlay-meta ingest (eval): OK
+- eval validate: 0 findings
+- eval render: OK {"boot_packet_bytes": 12711, "degraded": false, "files": [{"bytes": 5757, "name": "ALIASES.md", "sha256": "2484dcbba0a367e653e501134cd42af273d87924aed911c60026495fa4d5db27"}, {"bytes": 12945, "name": "BOOT_PACKET.md", "sha256": "a9a9bceedb38922c0e2f74d13f04124e6c536b5bc785009d3ab4e82f5abaf35d"}, {"bytes": 7127, "name": "L0_SYSTEM_MAP.md", "sha256": "e7ee9a70dfa88b7ce122de88100ac317ab7d9f67d457fda9

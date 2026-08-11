@@ -171,7 +171,7 @@
       "*"
      ],
      "ref": "core-docs/DECISION_LOG_INDEX.md",
-     "sha256": "50890fb6191e23a6a44ef16a20221258c815de02e7aa4859fc434cf5f3418bf5"
+     "sha256": "81d528a63f8ba7e8fce37e5069f35f3187f1144caefc5061c001666612645df6"
     }
    ],
    "to": "widget:01/local-agent-console",
@@ -187,7 +187,7 @@
       "*"
      ],
      "ref": "core-docs/DECISION_LOG_INDEX.md",
-     "sha256": "50890fb6191e23a6a44ef16a20221258c815de02e7aa4859fc434cf5f3418bf5"
+     "sha256": "81d528a63f8ba7e8fce37e5069f35f3187f1144caefc5061c001666612645df6"
     }
    ],
    "to": "module:34/video.timeline",
@@ -219,7 +219,7 @@
       "*"
      ],
      "ref": "core-docs/DECISION_LOG_INDEX.md",
-     "sha256": "50890fb6191e23a6a44ef16a20221258c815de02e7aa4859fc434cf5f3418bf5"
+     "sha256": "81d528a63f8ba7e8fce37e5069f35f3187f1144caefc5061c001666612645df6"
     }
    ],
    "to": "doc:core-docs/MEMORY_ARCHITECTURE.md",
@@ -235,7 +235,7 @@
       "*"
      ],
      "ref": "core-docs/DECISION_LOG_INDEX.md",
-     "sha256": "50890fb6191e23a6a44ef16a20221258c815de02e7aa4859fc434cf5f3418bf5"
+     "sha256": "81d528a63f8ba7e8fce37e5069f35f3187f1144caefc5061c001666612645df6"
     }
    ],
    "to": "module:36/artifact.search",
@@ -251,7 +251,7 @@
       "*"
      ],
      "ref": "core-docs/DECISION_LOG_INDEX.md",
-     "sha256": "50890fb6191e23a6a44ef16a20221258c815de02e7aa4859fc434cf5f3418bf5"
+     "sha256": "81d528a63f8ba7e8fce37e5069f35f3187f1144caefc5061c001666612645df6"
     }
    ],
    "to": "contract:action-authorization",
@@ -267,7 +267,7 @@
       "*"
      ],
      "ref": "core-docs/DECISION_LOG_INDEX.md",
-     "sha256": "50890fb6191e23a6a44ef16a20221258c815de02e7aa4859fc434cf5f3418bf5"
+     "sha256": "81d528a63f8ba7e8fce37e5069f35f3187f1144caefc5061c001666612645df6"
     }
    ],
    "to": "module:43/action-authz",
@@ -283,7 +283,7 @@
       "*"
      ],
      "ref": "core-docs/DECISION_LOG_INDEX.md",
-     "sha256": "50890fb6191e23a6a44ef16a20221258c815de02e7aa4859fc434cf5f3418bf5"
+     "sha256": "81d528a63f8ba7e8fce37e5069f35f3187f1144caefc5061c001666612645df6"
     }
    ],
    "to": "widget:08/live-run-audit-pathway",
@@ -299,7 +299,7 @@
       "*"
      ],
      "ref": "core-docs/DECISION_LOG_INDEX.md",
-     "sha256": "50890fb6191e23a6a44ef16a20221258c815de02e7aa4859fc434cf5f3418bf5"
+     "sha256": "81d528a63f8ba7e8fce37e5069f35f3187f1144caefc5061c001666612645df6"
     }
    ],
    "to": "widget:08/live-run-audit-pathway",
@@ -316,7 +316,7 @@
       "*"
      ],
      "ref": "core-docs/research/2026-08-11-i46-pcb-design.md",
-     "sha256": "54808753d006158f562b6cf405725629e47d9b9f946137ee687a5c0b0e820f23"
+     "sha256": null
     }
    ],
    "to": "plane:observability",
@@ -529,23 +529,6 @@
    ],
    "to": "module:42/working.memory",
    "type": "governs"
-  },
-  {
-   "from": "iteration:i46",
-   "note": "loose but evidenced: i46's claims-authoring unit is what populates plane: entities in the first place.",
-   "sources": [
-    {
-     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
-     "by": "lane-B-i46",
-     "fields": [
-      "*"
-     ],
-     "ref": "core-docs/research/2026-08-11-i46-pcb-design.md",
-     "sha256": "54808753d006158f562b6cf405725629e47d9b9f946137ee687a5c0b0e820f23"
-    }
-   ],
-   "to": "plane:memory",
-   "type": "produces"
   },
   {
    "from": "mandate:02",

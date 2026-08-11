@@ -9,7 +9,7 @@
    "one_line": "Deterministic gates/leases/the deny-by-default action-authorization boundary deciding what may execute or commit (res.lease #29, action.authz #43, doc-commit",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
@@ -30,18 +30,9 @@
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
      "by": "lane-B-i46",
      "fields": [
-      "one_line"
-     ],
-     "ref": "core-docs/research/2026-08-11-i46-pcb-design.md",
-     "sha256": "54808753d006158f562b6cf405725629e47d9b9f946137ee687a5c0b0e820f23"
-    },
-    {
-     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
-     "by": "lane-B-i46",
-     "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "plane:authority"
     }
    ]
@@ -55,7 +46,7 @@
    "one_line": "The base local-skills toolset (perception, audio, image/video, generation, filesystem/UI control) plus the human-interface Widgets invoking it.",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
@@ -76,18 +67,9 @@
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
      "by": "lane-B-i46",
      "fields": [
-      "one_line"
-     ],
-     "ref": "core-docs/research/2026-08-11-i46-pcb-design.md",
-     "sha256": "54808753d006158f562b6cf405725629e47d9b9f946137ee687a5c0b0e820f23"
-    },
-    {
-     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
-     "by": "lane-B-i46",
-     "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "plane:capability"
     }
    ]
@@ -101,7 +83,7 @@
    "one_line": "Reasoning/routing/retrieval-judgment/skill-activation layers turning stored memory + a task into a plan/packet/answer; nests the Collective Agent's retrieval",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
@@ -122,18 +104,9 @@
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
      "by": "lane-B-i46",
      "fields": [
-      "one_line"
-     ],
-     "ref": "core-docs/research/2026-08-11-i46-pcb-design.md",
-     "sha256": "54808753d006158f562b6cf405725629e47d9b9f946137ee687a5c0b0e820f23"
-    },
-    {
-     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
-     "by": "lane-B-i46",
-     "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "plane:intelligence"
     }
    ]
@@ -147,7 +120,7 @@
    "one_line": "Durable external stores (SQLite artifact substrate, episodic/procedural/failure memory) that grow unbounded while working context stays bounded (D-0090).",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
@@ -168,18 +141,9 @@
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
      "by": "lane-B-i46",
      "fields": [
-      "one_line"
-     ],
-     "ref": "core-docs/research/2026-08-11-i46-pcb-design.md",
-     "sha256": "54808753d006158f562b6cf405725629e47d9b9f946137ee687a5c0b0e820f23"
-    },
-    {
-     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
-     "by": "lane-B-i46",
-     "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "plane:memory"
     }
    ]
@@ -193,7 +157,7 @@
    "one_line": "Human-in-the-loop audit + interpretability program (Widgets 05-08, gen-doc-health) keeping system behavior legible/verifiable without growing audit cost.",
    "sources": [
     {
-     "at_commit": "seed",
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
      "by": "harvest_v1",
      "fields": [
       "one_line"
@@ -214,18 +178,9 @@
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
      "by": "lane-B-i46",
      "fields": [
-      "one_line"
-     ],
-     "ref": "core-docs/research/2026-08-11-i46-pcb-design.md",
-     "sha256": "54808753d006158f562b6cf405725629e47d9b9f946137ee687a5c0b0e820f23"
-    },
-    {
-     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
-     "by": "lane-B-i46",
-     "fields": [
       "*"
      ],
-     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "note": "override: i47 eval bundle: same recorded override as the live fold (WO s3.3); claims re-stamped against the EVAL_SHA tree",
      "ref": "plane:observability"
     }
    ]

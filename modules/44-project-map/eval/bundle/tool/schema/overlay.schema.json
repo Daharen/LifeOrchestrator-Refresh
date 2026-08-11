@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "lifeorch.map_overlay/0.1",
+  "title": "project.map overlay (orchestrator-authored each close; documentation form)",
+  "type": "object",
+  "required": ["schema", "at_commit", "iteration"],
+  "properties": {
+    "schema": {"const": "lifeorch.map_overlay/0.1"},
+    "at_commit": {"type": "string"},
+    "iteration": {"type": "integer"},
+    "phase": {"type": "object", "properties": {"ref": {"type": "string"}, "text": {"type": "string", "maxLength": 160}}},
+    "frontier": {"type": "object", "properties": {"next_iteration": {"type": "integer"}, "summary": {"type": "string", "maxLength": 300, "description": "VERBATIM handoff-s4 extract"}, "derived_from": {"type": "string"}, "candidates": {"type": "array"}}},
+    "mandate": {"type": "object", "description": "cross-checked on INVARIANTS ONLY (id, sunset_iteration, state monotonic), RT1-F2", "properties": {"id": {}, "sunset_iteration": {}, "state": {"enum": ["ACTIVE","REPORT_DUE","SUNSET","RE-LICENSED"]}}},
+    "prohibitions": {"type": "array", "items": {"type": "object", "required": ["text","authority","status"], "properties": {"text": {"type": "string", "maxLength": 160}, "authority": {"type": "string", "pattern": "^decision:D-[0-9]{4}$"}, "status": {"const": "live"}}}},
+    "open_rulings": {"type": "array"},
+    "boot_read": {"type": "array", "items": {"type": "object", "properties": {"kind": {"type": "string"}, "ref": {"type": "string"}}}}
+  }
+}

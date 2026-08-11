@@ -56,16 +56,6 @@
   },
   {
    "confidence": "established",
-   "deeper": [
-    {
-     "kind": "other",
-     "ref": "modules/00-bootstrap-executor/exec-job.sh"
-    },
-    {
-     "kind": "readme",
-     "ref": "modules/00-bootstrap-executor/README.md"
-    }
-   ],
    "display_name": "Executor Job-Runner Client",
    "id": "ops:exec-job",
    "ns": "ops",
@@ -74,28 +64,23 @@
    "skeleton": false,
    "sources": [
     {
+     "at_commit": "0bcb5e7d9fdcd78a85cd4b646c9e2aca8190520c",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "plane_primary"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": "8577c4404b9a4223af64d08bf7199e60782fc92f70adaa8b1482f7de540e7914"
+    },
+    {
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
      "by": "lane-B-i46",
      "fields": [
       "one_line",
       "status"
      ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "faf7104389f2f67f5dd5339443d3a1c71fb0065ae77718f9a500c6a20b144824"
     },
     {
      "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
@@ -103,45 +88,8 @@
      "fields": [
       "skeleton"
      ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
-    },
-    {
-     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
-     "by": "harvest_v1",
-     "fields": [
-      "*"
-     ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
-     "ref": "module:00/bootstrap-executor",
-     "sha256": null
+     "sha256": "faf7104389f2f67f5dd5339443d3a1c71fb0065ae77718f9a500c6a20b144824"
     }
    ],
    "status": "mvp-complete"
@@ -173,22 +121,8 @@
       "one_line",
       "status"
      ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "faf7104389f2f67f5dd5339443d3a1c71fb0065ae77718f9a500c6a20b144824"
     },
     {
      "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
@@ -196,42 +130,14 @@
      "fields": [
       "skeleton"
      ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "faf7104389f2f67f5dd5339443d3a1c71fb0065ae77718f9a500c6a20b144824"
     },
     {
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
      "by": "harvest_v1",
      "fields": [
       "*"
-     ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
      ],
      "ref": "ops/audit/gen-doc-health.py",
      "sha256": "916aaffd47b00b20af0dcae0cb03d7c208982cdc2a7d26e7de4ec3262e82a7a4"
@@ -265,22 +171,8 @@
       "one_line",
       "status"
      ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "faf7104389f2f67f5dd5339443d3a1c71fb0065ae77718f9a500c6a20b144824"
     },
     {
      "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
@@ -290,22 +182,8 @@
       "plane_primary",
       "skeleton"
      ],
-     "reaffirmed": [
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      },
-      {
-       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
-       "by": "orchestrator-i46-close"
-      }
-     ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+     "sha256": "faf7104389f2f67f5dd5339443d3a1c71fb0065ae77718f9a500c6a20b144824"
     }
    ],
    "status": "in-progress"

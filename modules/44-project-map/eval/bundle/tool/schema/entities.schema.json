@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "lifeorch.project_map/0.1#entities",
+  "title": "project.map entities file (documentation form; normative validation is project_map.py::validate)",
+  "type": "object",
+  "required": ["schema", "kind", "items"],
+  "properties": {
+    "schema": {"const": "lifeorch.project_map/0.1"},
+    "kind": {"const": "entities"},
+    "items": {"type": "array", "items": {"$ref": "#/definitions/entity"}}
+  },
+  "definitions": {
+    "source": {
+      "type": "object",
+      "required": ["ref", "fields", "by"],
+      "properties": {
+        "ref": {"type": "string", "description": "repo path (optional #anchor) | decision:D-#### | contract:<name> | entity id"},
+        "sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$", "description": "REQUIRED for path refs (CRLF->LF-normalized); null for non-path refs"},
+        "fields": {"type": "array", "items": {"type": "string"}, "description": "the entity fields THIS source supports; [\"*\"] only for harvest"},
+        "by": {"type": "string", "enum-ish": "harvest_v1 | lane-B-i46 | orchestrator-i46 | ..."},
+        "at_commit": {"type": ["string", "null"]}
+      }
+    },
+    "entity": {
+      "type": "object",
+      "required": ["id", "ns", "display_name", "one_line", "sources"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z]+:[A-Za-z0-9._/-]+$"},
+        "ns": {"enum": ["module","widget","plane","arch","contract","doc","store","decision","mandate","pb","iteration","wave","ops","future"]},
+        "display_name": {"type": "string", "minLength": 1},
+        "one_line": {"type": "string", "maxLength": 160},
+        "sources": {"type": "array", "minItems": 1, "items": {"$ref": "#/definitions/source"}},
+        "plane_primary": {"enum": ["memory","intelligence","capability","authority","observability"]},
+        "planes_secondary": {"type": "array", "items": {"enum": ["memory","intelligence","capability","authority","observability"]}},
+        "status": {"enum": ["proposed","ready","in-progress","blocked","mvp-complete","active","design-only","frozen","deferred","deprecated","replaced"]},
+        "version": {"type": "string"}, "purpose": {"type": "string"},
+        "inputs": {"type": "array"}, "outputs": {}, "determinism": {"type": "string"},
+        "parallel_safe": {"type": "boolean"}, "requirements": {"type": "object"},
+        "state_owned": {"type": "array"}, "authority_level": {"type": "string"}, "audit_surfaces": {"type": "array"},
+        "aliases": {"type": "array", "items": {"type": "string"}},
+        "authority_docs": {"type": "array", "items": {"type": "string"}},
+        "deeper": {"type": "array", "items": {"type": "object", "required": ["kind","ref"],
+          "properties": {"kind": {"enum": ["readme","work-order","schema-notes","contract","decision","failure","research","test","trace","other"]}, "ref": {"type": "string"}}}},
+        "confidence": {"enum": ["established", "uncertain"]},
+        "note": {"type": "string"},
+        "skeleton": {"type": "boolean"}
+      },
+      "not": {"required": ["load_bearing"], "description": "load_bearing is DERIVED, never authored"}
+    }
+  }
+}

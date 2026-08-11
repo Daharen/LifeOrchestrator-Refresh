@@ -2,14 +2,69 @@
  "items": [
   {
    "aliases": [
-    "#00.1"
+    "#00.1",
+    "exec.watchdog"
    ],
-   "display_name": "#00.1 exec-watchdog",
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/00.1-exec-watchdog/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/00.1-exec-watchdog/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Executor Watchdog & Recovery",
    "id": "module:00.1/exec-watchdog",
    "ns": "module",
-   "one_line": "Harvest-seeded module 00.1-exec-watchdog (awaiting claims).",
-   "skeleton": true,
+   "one_line": "Cooperative, session-scoped restart/recovery for the executor; open when the executor hangs/crashes and you need auto-recovery semantics.",
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -20,18 +75,74 @@
      "ref": "modules/00.1-exec-watchdog/README.md",
      "sha256": "56aad7f70a8e7dfa1e8da3c7fcc6948d5c9dd584235240aa96b923040bbb29d6"
     }
-   ]
+   ],
+   "status": "mvp-complete"
   },
   {
    "aliases": [
-    "#00"
+    "#00",
+    "exec.bootstrap"
    ],
-   "display_name": "#00 bootstrap-executor",
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/00-bootstrap-executor/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/00-bootstrap-executor/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Bootstrap Executor",
    "id": "module:00/bootstrap-executor",
    "ns": "module",
-   "one_line": "Harvest-seeded module 00-bootstrap-executor (awaiting claims).",
-   "skeleton": true,
+   "one_line": "Trusted high-risk filesystem-queue task executor; every local module runs through it -- start here to understand how anything executes.",
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -42,18 +153,74 @@
      "ref": "modules/00-bootstrap-executor/README.md",
      "sha256": "ae430b7aa1ef47bcaea83e13d357b9c412f8473b07eb715dfac58295b35beaf0"
     }
-   ]
+   ],
+   "status": "mvp-complete"
   },
   {
    "aliases": [
-    "#01"
+    "#01",
+    "skill.bootstrap"
    ],
-   "display_name": "#01 skill-bootstrap",
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/01-skill-bootstrap/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/01-skill-bootstrap/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Skill Contract & Registry",
    "id": "module:01/skill-bootstrap",
    "ns": "module",
-   "one_line": "Harvest-seeded module 01-skill-bootstrap (awaiting claims).",
-   "skeleton": true,
+   "one_line": "Defines the skill manifest/envelope/wrapper every module implements; open this to understand what makes any module a \"skill\".",
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -64,20 +231,106 @@
      "ref": "modules/01-skill-bootstrap/README.md",
      "sha256": "2ff30f0e8c05e8ccefda098cff21b4d7ec47c3f3e74aef512517327e9bcffaed"
     }
-   ]
+   ],
+   "status": "mvp-complete"
   },
   {
    "aliases": [
     "#02"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/02-fs-observer/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/02-fs-observer/WORK_ORDER.md"
+    }
+   ],
    "determinism": "deterministic",
-   "display_name": "#02 fs.observer",
+   "display_name": "Filesystem Observer",
    "id": "module:02/fs.observer",
    "ns": "module",
-   "one_line": "List, search, and index a directory tree deterministically (depth-bounded, with metadata) without screenshots; emits a markdown tree and a JSON index.",
+   "one_line": "Deterministic filesystem inspect/search/index; open when an agent needs read-only visibility into files on this box.",
    "parallel_safe": true,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:02/fs.observer"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -88,24 +341,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/02-fs-observer/skill.json",
      "sha256": "850127f4a2a404178fd2194d97fa13ee267e96547f32a79da208d0e30683f9e6"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#03"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/03-proc-observer/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/03-proc-observer/WORK_ORDER.md"
+    }
+   ],
    "determinism": "deterministic",
-   "display_name": "#03 proc.observer",
+   "display_name": "Process Observer",
    "id": "module:03/proc.observer",
    "ns": "module",
-   "one_line": "Snapshot running processes and top-level windows (pids, titles, paths, positions/size, minimized/maximized, the foreground window) via structured OS queries \u2014 n",
+   "one_line": "Deterministic process + window snapshot; open when an agent needs to see what is running.",
    "parallel_safe": true,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:03/proc.observer"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -116,24 +469,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/03-proc-observer/skill.json",
      "sha256": "a0ad11943eabe784ea2bbd5b262fe466638beba72ec08fab084c461c2d13846b"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#04"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/04-uia-inspector/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/04-uia-inspector/WORK_ORDER.md"
+    }
+   ],
    "determinism": "deterministic",
-   "display_name": "#04 uia.inspector",
+   "display_name": "UIA Inspector",
    "id": "module:04/uia.inspector",
    "ns": "module",
-   "one_line": "Read the UI Automation accessible control tree of a target window (or the desktop): per-element control type, name, automation id, class, bounds, supported patt",
+   "one_line": "Read-only UI Automation tree walker; open before any UI-driving module to understand what it can see.",
    "parallel_safe": true,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:04/uia.inspector"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -144,24 +597,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/04-uia-inspector/skill.json",
      "sha256": "fa276dbdb4e5cdfb1329c9528422ac830d946bc9644b7c1dc101e73564d40203"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#05"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/05-uia-actor/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/05-uia-actor/WORK_ORDER.md"
+    }
+   ],
    "determinism": "deterministic",
-   "display_name": "#05 uia.actor",
+   "display_name": "UIA Actor",
    "id": "module:05/uia.actor",
    "ns": "module",
-   "one_line": "Perform ONE UI Automation control-pattern action (invoke/toggle/select/expand/collapse/setvalue/focus) on a single element located by automation id, name, contr",
+   "one_line": "UIA control-pattern actions (no synthetic input); the first side-effecting skill -- open when an agent must actually click/type via UIA.",
    "parallel_safe": false,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:05/uia.actor"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -172,24 +725,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/05-uia-actor/skill.json",
      "sha256": "b964fe2e7ec36c45853e473b22e5f4a72f943c6b773c9798837e38c52eef3e70"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#06"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/06-capture-screen/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/06-capture-screen/WORK_ORDER.md"
+    }
+   ],
    "determinism": "deterministic",
-   "display_name": "#06 capture.screen",
+   "display_name": "Screen Capture",
    "id": "module:06/capture.screen",
    "ns": "module",
-   "one_line": "Capture a monitor, a top-level window (by hwnd/pid/title), an application's main window (by process name), or an explicit screen rectangle to a PNG (or JPG) ima",
+   "one_line": "Read-only screenshot / region capture (GDI, DPI-aware); open when an agent needs a still image of the screen.",
    "parallel_safe": true,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:06/capture.screen"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -200,24 +853,129 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/06-capture-screen/skill.json",
      "sha256": "5419f1b72d834dc8a4f7c92e635e5b863bfadc9307b01bf053063a15c458e052"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#07"
    ],
+   "confidence": "uncertain",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/07-model-gateway/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/07-model-gateway/WORK_ORDER.md"
+    }
+   ],
    "determinism": "mixed",
-   "display_name": "#07 model.gateway",
+   "display_name": "Local Model Gateway",
    "id": "module:07/model.gateway",
+   "note": "hosts/normalizes models but does not itself reason; secondary intelligence tag is a judgment call, not doc-stated.",
    "ns": "module",
-   "one_line": "A common interface for local and frontier agents to run local models on this machine.",
+   "one_line": "Hosts and normalizes every local GGUF model behind one llama-server interface; open before invoking ANY local LLM/VLM tier.",
    "parallel_safe": false,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "planes_secondary": [
+    "intelligence"
+   ],
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "planes_secondary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:07/model.gateway"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -228,24 +986,129 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/07-model-gateway/skill.json",
      "sha256": "c995b96f424eea0ddf31f183c9f847ef484a30d2d3c29dd8e90a8d368ab67f60"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.6.0"
   },
   {
    "aliases": [
     "#08"
    ],
+   "confidence": "uncertain",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/08-classify-batch/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/08-classify-batch/WORK_ORDER.md"
+    }
+   ],
    "determinism": "mixed",
-   "display_name": "#08 classify.batch",
+   "display_name": "Batch Classifier",
    "id": "module:08/classify.batch",
+   "note": "model-driven judgment task; plane assignment is this claim's judgment, not stated verbatim in a source.",
    "ns": "module",
-   "one_line": "Batch categorize / label / extract over a list of text items using a weak local model, via model.gateway (Module 7).",
+   "one_line": "Weak-LLM batch classify/multilabel/extract with below-threshold routing to the review queue; open for bulk labeling work.",
    "parallel_safe": false,
-   "skeleton": true,
+   "plane_primary": "intelligence",
+   "planes_secondary": [
+    "capability"
+   ],
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "planes_secondary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:08/classify.batch"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -256,24 +1119,129 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/08-classify-batch/skill.json",
      "sha256": "210d0d9d3887716eb9d80936e84c66aac3de1c740ee6bcb4c299db0c8b16ec9f"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#09"
    ],
+   "confidence": "uncertain",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/09-review-processor/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/09-review-processor/WORK_ORDER.md"
+    }
+   ],
    "determinism": "mixed",
-   "display_name": "#09 review.processor",
+   "display_name": "Review Queue Processor",
    "id": "module:09/review.processor",
+   "note": "model-driven judgment task; plane assignment is this claim's judgment, not stated verbatim in a source.",
    "ns": "module",
-   "one_line": "Drain review_queue.jsonl by adjudicating flagged items one at a time with a STRONGER local model via model.gateway (default tier mid = Qwen2.5-3B; strong = 27B)",
+   "one_line": "Stronger-tier adjudication drainer for classify.batch's review queue; open to understand how low-confidence items get resolved.",
    "parallel_safe": false,
-   "skeleton": true,
+   "plane_primary": "intelligence",
+   "planes_secondary": [
+    "capability"
+   ],
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "planes_secondary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:09/review.processor"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -284,24 +1252,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/09-review-processor/skill.json",
      "sha256": "c16ff8291abd7cc1f2c1b467143b0b81622dc49509d4749f8063631cb4295a73"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#10"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/10-audio-ingest/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/10-audio-ingest/WORK_ORDER.md"
+    }
+   ],
    "determinism": "deterministic",
-   "display_name": "#10 audio.ingest",
+   "display_name": "Audio Ingest",
    "id": "module:10/audio.ingest",
    "ns": "module",
-   "one_line": "Normalize and convert a single audio (or media) file to a requested format, sample rate, channel count, sample format, and optional loudness normalization, by w",
+   "one_line": "Deterministic ffmpeg/ffprobe decode/resample/normalize/segment; open before any STT/TTS pipeline needs clean audio.",
    "parallel_safe": true,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:10/audio.ingest"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -312,24 +1380,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/10-audio-ingest/skill.json",
      "sha256": "85a84c8eabb9eace11c45fbc0ca00a9e83256b85da1887d423c581c28e2171e9"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#11"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/11-speech-stt/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/11-speech-stt/WORK_ORDER.md"
+    }
+   ],
    "determinism": "mixed",
-   "display_name": "#11 speech.stt",
+   "display_name": "Speech-to-Text",
    "id": "module:11/speech.stt",
    "ns": "module",
-   "one_line": "Transcribe one audio/media file into timestamped text segments with per-segment and overall confidence, by wrapping the whisper.cpp whisper-cli.",
+   "one_line": "whisper.cpp CUDA transcription with mean-token-probability confidence; open for audio->text work.",
    "parallel_safe": false,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:11/speech.stt"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -340,24 +1508,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/11-speech-stt/skill.json",
      "sha256": "d45615183d695596eae070648c52e3a39b563465574db241cca92b3328d90f47"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#12"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/12-speech-tts/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/12-speech-tts/WORK_ORDER.md"
+    }
+   ],
    "determinism": "mixed",
-   "display_name": "#12 speech.tts",
+   "display_name": "Text-to-Speech",
    "id": "module:12/speech.tts",
    "ns": "module",
-   "one_line": "Synthesize speech audio from text using the Qwen3-TTS CustomVoice models (transformers / the qwen_tts package) under the speech venv.",
+   "one_line": "Qwen3-TTS venv worker synthesis; open for text->audio work.",
    "parallel_safe": false,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:12/speech.tts"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -368,24 +1636,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/12-speech-tts/skill.json",
      "sha256": "433137a3010b60ab0c93a5d77db9e9779b0cac17be12e73bc2d27a2ef1facb45"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#13"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/13-voice-live/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/13-voice-live/WORK_ORDER.md"
+    }
+   ],
    "determinism": "mixed",
-   "display_name": "#13 voice.live",
+   "display_name": "Voice Live (file-driven)",
    "id": "module:13/voice.live",
    "ns": "module",
-   "one_line": "Compose a local voice turn from one input audio file: speech.stt transcribes it (whisper segmentation = utterance/voice-activity detection), model.gateway answe",
+   "one_line": "Composes STT -> optional LLM answer -> optional TTS for one file-driven voice turn; open to see the reference voice-pipeline composition.",
    "parallel_safe": false,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:13/voice.live"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -396,24 +1764,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/13-voice-live/skill.json",
      "sha256": "a34f47060ca8292fb30af9fe39ca1c482aef329e1169c2725a613cc95e6bb059"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#14"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/14-ocr-layout/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/14-ocr-layout/WORK_ORDER.md"
+    }
+   ],
    "determinism": "mixed",
-   "display_name": "#14 ocr.layout",
+   "display_name": "OCR + Layout",
    "id": "module:14/ocr.layout",
    "ns": "module",
-   "one_line": "Recognize the text in one image and return it with per-word pixel bounding boxes and lines in reading order, by driving the system Windows.Media.Ocr engine insi",
+   "one_line": "Windows.Media.Ocr via a PowerShell 5.1 worker; per-word boxes + reading order; open for text-in-image extraction.",
    "parallel_safe": true,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:14/ocr.layout"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -424,24 +1892,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/14-ocr-layout/skill.json",
      "sha256": "47bab568d006f1aa53f1aa14cf551e7cbe057baed505069811865962f50f929e"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#15"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/15-image-util/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/15-image-util/WORK_ORDER.md"
+    }
+   ],
    "determinism": "deterministic",
-   "display_name": "#15 image.util",
+   "display_name": "Image Utilities",
    "id": "module:15/image.util",
    "ns": "module",
-   "one_line": "Deterministic image plumbing for one image: probe metadata (dims/format/mode/has_alpha/dpi/EXIF-lite), content + perceptual hashes (sha256 + pHash + dHash), res",
+   "one_line": "Deterministic Pillow/numpy metadata, hashing (sha256/pHash/dHash), resize/crop/convert/tile; open for any image transform/dedup need.",
    "parallel_safe": true,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:15/image.util"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -452,24 +2020,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/15-image-util/skill.json",
      "sha256": "4222934f1bd201533203bb7e5d70dcea8e690b6725220096310f10757b24abe5"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#16"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/16-detect-objects/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/16-detect-objects/WORK_ORDER.md"
+    }
+   ],
    "determinism": "mixed",
-   "display_name": "#16 detect.objects",
+   "display_name": "Object Detection",
    "id": "module:16/detect.objects",
    "ns": "module",
-   "one_line": "Detect objects in one image and return each as {class, class_id, score, box{x,y,width,height}} with a REAL per-detection confidence (YOLOX objectness * class pr",
+   "one_line": "YOLOX via onnxruntime with real per-detection confidence; open for bounding-box object detection.",
    "parallel_safe": true,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:16/detect.objects"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -480,24 +2148,129 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/16-detect-objects/skill.json",
      "sha256": "0db84fb5938acff7717c2c7fdc2bf27bed890f149db0504e2a6fc55d4758bbf8"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#17"
    ],
+   "confidence": "uncertain",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/17-image-interpret/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/17-image-interpret/WORK_ORDER.md"
+    }
+   ],
    "determinism": "mixed",
-   "display_name": "#17 image.interpret",
+   "display_name": "Image Interpret (VLM)",
    "id": "module:17/image.interpret",
+   "note": "model-driven (VLM) judgment task; plane assignment is this claim's judgment call.",
    "ns": "module",
-   "one_line": "Interpret one image with a local vision-language model and return a free-text interpretation (caption / detailed description / answer to a question / screen sum",
+   "one_line": "Local VLM caption/VQA/screen understanding via model.gateway's multimodal mode; open when a picture needs describing or questioning.",
    "parallel_safe": false,
-   "skeleton": true,
+   "plane_primary": "intelligence",
+   "planes_secondary": [
+    "capability"
+   ],
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "planes_secondary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:17/image.interpret"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -508,24 +2281,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/17-image-interpret/skill.json",
      "sha256": "b93eb8998c829334b309424fce457f89a0dca03743a6fac3fa8b69102dcf9dae"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#18"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/18-image-index/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/18-image-index/WORK_ORDER.md"
+    }
+   ],
    "determinism": "mixed",
-   "display_name": "#18 image.index",
+   "display_name": "Image Index",
    "id": "module:18/image.index",
    "ns": "module",
-   "one_line": "Fuse the image/document perception block (14-17) into one per-image record for a single image: image.util (#15) ALWAYS provides metadata + sha256/pHash/dHash (t",
+   "one_line": "Fuses ocr.layout/image.util/detect.objects/image.interpret into one per-image record; open for a single combined image summary.",
    "parallel_safe": false,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:18/image.index"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -536,24 +2409,125 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/18-image-index/skill.json",
      "sha256": "27b1c2a2155223b5ad45dc7cf141b507a2ef562378efe7817b85beb5161303d3"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#19"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/19-logic-escalator/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/19-logic-escalator/WORK_ORDER.md"
+    }
+   ],
    "determinism": "mixed",
-   "display_name": "#19 logic.escalator",
+   "display_name": "Logic Escalator",
    "id": "module:19/logic.escalator",
+   "note": "NOTE: module:19 is NOT the same entity as arch:19 (media.decompose) -- a known repo-wide numbering collision (i46-pcb-design.md s2); do not conflate.",
    "ns": "module",
-   "one_line": "Run an escalating ladder of local model tiers (tiny 0.5B -> weak 1.5B -> mid 3B -> strong 27B, all via model.gateway) over a batch of tasks.",
+   "one_line": "Tier-ladder deterministic-gated model escalation (weak->mid->strong); open when deciding how to climb model tiers safely.",
    "parallel_safe": false,
-   "skeleton": true,
+   "plane_primary": "intelligence",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:19/logic.escalator"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -564,24 +2538,125 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/19-logic-escalator/skill.json",
      "sha256": "9e3f9225f65e4aabdaaf5408addb8819baf50a56c18e1296549ed45abcbff057"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#20"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/20-doc-io/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/20-doc-io/WORK_ORDER.md"
+    }
+   ],
    "determinism": "deterministic",
-   "display_name": "#20 doc.io",
+   "display_name": "Doc I/O",
    "id": "module:20/doc.io",
+   "note": "NOTE: module:20 is NOT arch:20 (track.objects) -- numbering collision (i46-pcb-design.md s2).",
    "ns": "module",
-   "one_line": "Read, write, edit, and append UTF-8 text documents on the local machine (one operation per invocation), with atomic writes, EOL preservation, sha256 reporting, ",
+   "one_line": "Atomic read/write/edit/append with EOL preservation and doc:<path> lease consumption; open for any safe text-file mutation.",
    "parallel_safe": false,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:20/doc.io"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -592,24 +2667,129 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/20-doc-io/skill.json",
      "sha256": "8b4378954475bdf7bc4a628fe0f00cb771c0e5f2e742ff5d6f758b100aaf4908"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.2.0"
   },
   {
    "aliases": [
     "#21"
    ],
+   "confidence": "uncertain",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/21-agent-local/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/21-agent-local/WORK_ORDER.md"
+    }
+   ],
    "determinism": "mixed",
-   "display_name": "#21 agent.local",
+   "display_name": "Local Agent (bounded ReAct)",
    "id": "module:21/agent.local",
+   "note": "the near-term skill.orchestrator slice (partial arch:26 realization; see edges); plane split is a judgment call.",
    "ns": "module",
-   "one_line": "A bounded, ReAct-style LOCAL agent loop: given a natural-language goal it decides which Module (tool) to call, generates that tool's arguments, invokes it, obse",
+   "one_line": "Bounded ReAct loop over a closed tools.json registry (the registry IS the sandbox); open to run an autonomous local-tool task.",
    "parallel_safe": false,
-   "skeleton": true,
+   "plane_primary": "intelligence",
+   "planes_secondary": [
+    "capability"
+   ],
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "planes_secondary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:21/agent.local"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -620,24 +2800,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/21-agent-local/skill.json",
      "sha256": "dbf4d447eda6cd389742cac2da1e40d4d2212c228111292ee328de58b010a59c"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.2.0"
   },
   {
    "aliases": [
     "#22"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/22-gen-audio/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/22-gen-audio/WORK_ORDER.md"
+    }
+   ],
    "determinism": "deterministic",
-   "display_name": "#22 gen.audio",
+   "display_name": "Audio Generator",
    "id": "module:22/gen.audio",
    "ns": "module",
-   "one_line": "Generate a single synthetic audio signal from a compact specification by wrapping ffmpeg lavfi sources.",
+   "one_line": "Deterministic procedural ffmpeg synth (tone/chord/noise/sweep/silence); no neural stack staged; open for programmatic SFX.",
    "parallel_safe": true,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:22/gen.audio"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -648,24 +2928,125 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/22-gen-audio/skill.json",
      "sha256": "014a60b7e6f3da679edd287c05a4f2b860ac33f54ab625ec7427934be86197a6"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#23"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/23-gen-image/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/23-gen-image/WORK_ORDER.md"
+    }
+   ],
    "determinism": "mixed",
-   "display_name": "#23 gen.image",
+   "display_name": "Image Generator",
    "id": "module:23/gen.image",
+   "note": "NOTE: module:23 is NOT arch:23 (artifact.search, realized by module:36) -- numbering collision (i46-pcb-design.md s2).",
    "ns": "module",
-   "one_line": "Generate one image from a text prompt with a local Stable Diffusion pipeline.",
+   "one_line": "SD 1.5 (default) / SD 3.5 Medium fp16 (opt-in, not a clean 11GB fit) diffusers venv worker; seed-reproducible; open for local text-to-image.",
    "parallel_safe": false,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:23/gen.image"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -676,24 +3057,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/23-gen-image/skill.json",
      "sha256": "e00de98e42dab111f33860a9de0c5db587d630e220521c54626025e56054b0a0"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.2.0"
   },
   {
    "aliases": [
     "#24"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/24-gen-music/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/24-gen-music/WORK_ORDER.md"
+    }
+   ],
    "determinism": "mixed",
-   "display_name": "#24 gen.music",
+   "display_name": "Music Generator",
    "id": "module:24/gen.music",
    "ns": "module",
-   "one_line": "Generate one short piece of instrumental music from a text prompt with a local MusicGen model.",
+   "one_line": "MusicGen Small (transformers-native), 1-30s, seed-reproducible; open for local text-to-music.",
    "parallel_safe": false,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:24/gen.music"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -704,24 +3185,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/24-gen-music/skill.json",
      "sha256": "ab60ab9ce5dfa5c8613a238777e6af3a31c68bcf2df44a1f133459711b2a365b"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#25"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/25-gen-video/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/25-gen-video/WORK_ORDER.md"
+    }
+   ],
    "determinism": "mixed",
-   "display_name": "#25 gen.video",
+   "display_name": "Video Generator",
    "id": "module:25/gen.video",
    "ns": "module",
-   "one_line": "Generate one short silent video clip from a text prompt with a local AnimateDiff pipeline.",
+   "one_line": "AnimateDiff-Lightning 4-step over staged SD 1.5; silent seed-reproducible clips; open for local text-to-video.",
    "parallel_safe": false,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:25/gen.video"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -732,22 +3313,88 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/25-gen-video/skill.json",
      "sha256": "2c522d46fd4a97a11159cdf63010eafe1354de95735912e270cdac4b69df4cda"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
-    "#26"
+    "#26",
+    "agent.coding"
    ],
-   "display_name": "#26 agent-coding",
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/26-agent-coding/README.md"
+    }
+   ],
+   "display_name": "Coding Agent (deferred)",
    "id": "module:26/agent-coding",
    "ns": "module",
-   "one_line": "Harvest-seeded module 26-agent-coding (awaiting claims).",
-   "skeleton": true,
+   "one_line": "Deferred bounded local coding loop (draft->static-check->gated run); no safe code-exec substrate on this box; work order authored, not built.",
+   "plane_primary": "intelligence",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -758,20 +3405,106 @@
      "ref": "modules/26-agent-coding/WORK_ORDER.md",
      "sha256": "13b5ac5059b94936c3a551339758d6e44678ec40e45b9786ea34b6de6f6bcefe"
     }
-   ]
+   ],
+   "status": "deferred"
   },
   {
    "aliases": [
     "#27"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/27-route-tools/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/27-route-tools/WORK_ORDER.md"
+    }
+   ],
    "determinism": "mixed",
-   "display_name": "#27 route.tools",
+   "display_name": "Tool Router",
    "id": "module:27/route.tools",
    "ns": "module",
-   "one_line": "Given a natural-language request and the attachable-tools registry, emit the minimal set of tool ids needed to carry it out, using a dedicated mid-tier router p",
+   "one_line": "Deterministic-gated mid-tier request-to-minimal-tool-id-set router; the which-tools pass of the (unbuilt) route.tasks position; narrows a request to a tool set.",
    "parallel_safe": false,
-   "skeleton": true,
+   "plane_primary": "intelligence",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:27/route.tools"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -782,24 +3515,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/27-route-tools/skill.json",
      "sha256": "be32b1d3b2c581f04edf17b489c42dd1d3572e196746e4c6c8529d1b5c2a9cf6"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#28"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/28-fs-manage/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/28-fs-manage/WORK_ORDER.md"
+    }
+   ],
    "determinism": "deterministic",
-   "display_name": "#28 fs.manage",
+   "display_name": "Filesystem Manage",
    "id": "module:28/fs.manage",
    "ns": "module",
-   "one_line": "Deterministic last-mile file placement: copy or move an existing file to a destination (a folder or a file path), or make a folder.",
+   "one_line": "Guarded copy/move/mkdir with known-folder resolution; wired into agent.local; open for safe filesystem mutation beyond doc.io.",
    "parallel_safe": false,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:28/fs.manage"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -810,24 +3643,150 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/28-fs-manage/skill.json",
      "sha256": "39a2179be94044481f670ee5bb0a25ff3d828b3e9a00736589ce19041b88bd46"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#29"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/29-resource-lease/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/29-resource-lease/WORK_ORDER.md"
+    }
+   ],
    "determinism": "deterministic",
-   "display_name": "#29 res.lease",
+   "display_name": "Resource Arbitration Lease",
    "id": "module:29/res.lease",
+   "note": "explicitly named alongside action.authz/gates/boundary as Authority-plane in i46-pcb-design.md s3.",
    "ns": "module",
-   "one_line": "A filesystem lease/lock so several processes on this one machine arbitrate contended resources: acquire/release/renew/status/list/check/commit/fence-op a named ",
+   "one_line": "Filesystem TTL leases (gpu / git-commit-lock / doc:<path>) with a hardened fencing-token GPU-lease-split primitive for multi-worker collision safety.",
    "parallel_safe": true,
-   "skeleton": true,
+   "plane_primary": "authority",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "state_owned",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "planes_secondary"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/research/2026-08-11-i46-pcb-design.md",
+     "sha256": "54808753d006158f562b6cf405725629e47d9b9f946137ee687a5c0b0e820f23"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:29/res.lease"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -838,24 +3797,156 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/29-resource-lease/skill.json",
      "sha256": "bf63824d0b0a0c59eada94f8e9b9a680bf426c40686bd938a60a943eab01ae5d"
     }
    ],
+   "state_owned": [
+    "modules/29-resource-lease/runtime/leases/"
+   ],
+   "status": "mvp-complete",
    "version": "0.4.1"
   },
   {
    "aliases": [
     "#30"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/30-orchestrate-fanout/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/30-orchestrate-fanout/WORK_ORDER.md"
+    }
+   ],
    "determinism": "deterministic",
-   "display_name": "#30 orchestrate.fanout",
+   "display_name": "Fan-out Orchestration",
    "id": "module:30/orchestrate.fanout",
+   "note": "plane pair explicitly given as an example in i46-pcb-design.md s3 (\"#30 intelligence+capability\"); taken verbatim from that source rather than independently re-derived.",
    "ns": "module",
-   "one_line": "Deterministic scaffolding for N parallel worker Cowork sessions (D-0050/D-0051), built on res.lease #29.",
+   "one_line": "Plan/dispatch/collect scaffolding over res.lease for multi-worker waves; the orchestrator's deterministic backbone for planning/dispatching a wave.",
    "parallel_safe": true,
-   "skeleton": true,
+   "plane_primary": "intelligence",
+   "planes_secondary": [
+    "capability"
+   ],
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "planes_secondary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "planes_secondary"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/research/2026-08-11-i46-pcb-design.md",
+     "sha256": "54808753d006158f562b6cf405725629e47d9b9f946137ee687a5c0b0e820f23"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:30/orchestrate.fanout"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -866,24 +3957,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/30-orchestrate-fanout/skill.json",
      "sha256": "f4a43fa986e819ab41fbb824de9db288ec77d3c67fadbf7f1299808c344cd23d"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#31"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/31-frontier-bridge/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/31-frontier-bridge/WORK_ORDER.md"
+    }
+   ],
    "determinism": "deterministic",
-   "display_name": "#31 frontier.bridge",
+   "display_name": "Frontier Bridge",
    "id": "module:31/frontier.bridge",
    "ns": "module",
-   "one_line": "Assemble a Claude-written prompt + selected local files into ONE copy-paste pack the user manually carries to their own external model session, plus read the pa",
+   "one_line": "Automated D-0052 human-courier packaging (pack {prompt,files} / read-return); open when preparing a human-couriered frontier-review packet.",
    "parallel_safe": true,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:31/frontier.bridge"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -894,24 +4085,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/31-frontier-bridge/skill.json",
      "sha256": "074b6e081def4976d3919310f28780d36f927dd4afdb556b6dfad128ec82b09a"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#32"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/32-media-decompose/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/32-media-decompose/WORK_ORDER.md"
+    }
+   ],
    "determinism": "deterministic",
-   "display_name": "#32 media.decompose",
+   "display_name": "Media Decompose",
    "id": "module:32/media.decompose",
    "ns": "module",
-   "one_line": "Decompose one video (or media) file into its constituent parts with ffmpeg/ffprobe.",
+   "one_line": "Deterministic ffmpeg/ffprobe decompose (meta/audio/keyframes/scenes); realizes arch position 19; breaks a video into analyzable parts.",
    "parallel_safe": true,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:32/media.decompose"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -922,24 +4213,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/32-media-decompose/skill.json",
      "sha256": "47e0014487158fd10a6a9f6d5170b0b4d906b3acbdbdf4a99c15684418eb8ff4"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#33"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/33-track-objects/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/33-track-objects/WORK_ORDER.md"
+    }
+   ],
    "determinism": "deterministic",
-   "display_name": "#33 track.objects",
+   "display_name": "Object Tracking",
    "id": "module:33/track.objects",
    "ns": "module",
-   "one_line": "Associate per-frame object detections (the detect.objects #16 output shape: each detection {class, class_id, score, box{x,y,width,height}}) into stable identity",
+   "one_line": "Deterministic per-class stable-identity tracker (greedy-IoU baseline + 0.2.0 hardening) over detect.objects-shape input; realizes arch position 20.",
    "parallel_safe": true,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:33/track.objects"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -950,24 +4341,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/33-track-objects/skill.json",
      "sha256": "0564d9defc30dc58ac28c73f9b8acfdcee0eb30d65cb436503a72a2ad0a0f6b3"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.2.0"
   },
   {
    "aliases": [
     "#34"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/34-video-timeline/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/34-video-timeline/WORK_ORDER.md"
+    }
+   ],
    "determinism": "deterministic",
-   "display_name": "#34 video.timeline",
+   "display_name": "Video Timeline",
    "id": "module:34/video.timeline",
    "ns": "module",
-   "one_line": "Fuse the per-source video artifacts of the Phase C spine -- media meta (#32), scenes (#32), the reviewed sample manifest, reviewed-schema identity tracks (#33 u",
+   "one_line": "Deterministic per-source fuse of media.decompose/track.objects/speech.stt/ocr.layout/detect.objects into one canonical timeline; realizes arch position 21.",
    "parallel_safe": true,
-   "skeleton": true,
+   "plane_primary": "capability",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:34/video.timeline"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -978,24 +4469,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/34-video-timeline/skill.json",
      "sha256": "3c2f1c0bbf8429e88c70bed2749ca49fa806246224244304e364b42b4d834330"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.1"
   },
   {
    "aliases": [
     "#35"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/35-embedding-local/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/35-embedding-local/WORK_ORDER.md"
+    }
+   ],
    "determinism": "mixed",
-   "display_name": "#35 embedding.local",
+   "display_name": "Local Embedding Provider",
    "id": "module:35/embedding.local",
    "ns": "module",
-   "one_line": "Embed text (single or batch) into L2-normalized dense vectors that serve as SEMANTIC ADDRESSES for the Collective Agent memory substrate (governing sec 6.3).",
+   "one_line": "Wires the embedding.qwen3-0p6b (dim 1024) transient CUDA worker; defines the memory subsystem's embedding-provider interface.",
    "parallel_safe": false,
-   "skeleton": true,
+   "plane_primary": "memory",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:35/embedding.local"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -1006,24 +4597,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/35-embedding-local/skill.json",
      "sha256": "6b8df0242f5c3b25378d76d87a707345a4d1d629731ce98a567013580153b15b"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#36"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/36-artifact-search/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/36-artifact-search/WORK_ORDER.md"
+    }
+   ],
    "determinism": "deterministic",
-   "display_name": "#36 artifact.search",
+   "display_name": "Artifact Search",
    "id": "module:36/artifact.search",
    "ns": "module",
-   "one_line": "The Collective Agent's authoritative catalog + memory-record substrate (D-0080 Wave 1/2, arch position 23), built to the FROZEN MEMORY_CONTRACT (D-0083).",
+   "one_line": "SQLite+FTS5 typed-record memory substrate, Tier-1 bounded-fanout hierarchy + fast-beam ranking; realizes arch:23; the memory subsystem's retrieval core.",
    "parallel_safe": false,
-   "skeleton": true,
+   "plane_primary": "memory",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:36/artifact.search"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -1034,24 +4725,129 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/36-artifact-search/skill.json",
      "sha256": "bf08baf3e20eff38cdafd2e25c5c39c7eb21542cd26fa3f8334ab5cf311940aa"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.7.0"
   },
   {
    "aliases": [
     "#37"
    ],
+   "confidence": "uncertain",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/37-retrieval-eval/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/37-retrieval-eval/WORK_ORDER.md"
+    }
+   ],
    "determinism": "deterministic",
-   "display_name": "#37 retrieval.eval",
+   "display_name": "Retrieval Evaluation",
    "id": "module:37/retrieval.eval",
+   "note": "evaluation/benchmark role could plausibly sit in intelligence primary instead; kept memory-primary because it is grouped with the memory-substrate wave (#35-#43) throughout MODULE_ROADMAP/CURRENT_STATE.",
    "ns": "module",
-   "one_line": "SELECTION-POLICY + NAMESPACE-PREDICATE OWNER + eval harness.",
+   "one_line": "The canonical selpol_rrf_v1 selection-policy library + retrieval-quality benchmark (recall@K/MRR/stale/provenance) + the Tier-1 rehearsal harness.",
    "parallel_safe": true,
-   "skeleton": true,
+   "plane_primary": "memory",
+   "planes_secondary": [
+    "intelligence"
+   ],
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "planes_secondary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:37/retrieval.eval"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -1062,24 +4858,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/37-retrieval-eval/skill.json",
      "sha256": "bcdc6589d2dd666722590a58809dd1b01335241340347457629cc676b9fe16e0"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.8.1"
   },
   {
    "aliases": [
     "#38"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/38-repo-intel/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/38-repo-intel/WORK_ORDER.md"
+    }
+   ],
    "determinism": "deterministic",
-   "display_name": "#38 repo.intel",
+   "display_name": "Repo Intelligence",
    "id": "module:38/repo.intel",
    "ns": "module",
-   "one_line": "The Collective Agent's repository-intelligence PRODUCER (D-0080 Wave 2, arch position 38).",
+   "one_line": "Deterministic typed-record producer (symbol/entity/relationship/skill/summary), the sole record_kind=skill owner; turns repo facts into memory records.",
    "parallel_safe": true,
-   "skeleton": true,
+   "plane_primary": "memory",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:38/repo.intel"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -1090,24 +4986,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/38-repo-intel/skill.json",
      "sha256": "35dd102521b98dc010af96353a5082ff2191b550a391c6f0d16d64ed5fb8153a"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
     "#39"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/39-episode-memory/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/39-episode-memory/WORK_ORDER.md"
+    }
+   ],
    "determinism": "deterministic",
-   "display_name": "#39 episode.record",
+   "display_name": "Episode & Failure Recorder",
    "id": "module:39/episode.record",
    "ns": "module",
-   "one_line": "Wave 2 PRODUCER (D-0080/D-0083; conformed to MEMORY_CONTRACT Amendment A1 record-envelope v0.1.1, D-0085; directive 5.3/5.4/10).",
+   "one_line": "Episode + failure schemas and deterministic recorder with the failure-signature seam; open to see how a run becomes durable episodic memory.",
    "parallel_safe": true,
-   "skeleton": true,
+   "plane_primary": "memory",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:39/episode.record"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -1118,24 +5114,119 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/39-episode-memory/skill.json",
      "sha256": "1e932efb392dc02953d8d741a68d72428451af15bf4071e658fc08f34cd31ec8"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.1"
   },
   {
    "aliases": [
-    "#40"
+    "#40",
+    "context.compiler"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/40-context-compiler/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/40-context-compiler/WORK_ORDER.md"
+    }
    ],
    "determinism": "deterministic",
-   "display_name": "#40 context.compile",
+   "display_name": "Context Compiler",
    "id": "module:40/context.compile",
+   "note": "plane pair given verbatim in i46-pcb-design.md s3 (\"#40 memory+intelligence\").",
    "ns": "module",
-   "one_line": "The Collective Agent's context-compilation centerpiece (D-0080 directive Priority 4 / section 8; arch position 40), conformed to core-docs/CONTEXT_PACKET_CONTRA",
+   "one_line": "Deterministic three-region context_packet/0.2 compiler (control/evidence separation, R-1 router, #42 wm hydration); turns a task into a small context packet.",
    "parallel_safe": true,
-   "skeleton": true,
+   "plane_primary": "memory",
+   "planes_secondary": [
+    "intelligence"
+   ],
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "planes_secondary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "planes_secondary"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/research/2026-08-11-i46-pcb-design.md",
+     "sha256": "54808753d006158f562b6cf405725629e47d9b9f946137ee687a5c0b0e820f23"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -1150,20 +5241,111 @@
      "sha256": "597fe2898b9f05f6653ef729d021afd49f4a33a28c10892bf1bf3734f56a4bbc"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.9.0"
   },
   {
    "aliases": [
     "#41"
    ],
+   "confidence": "uncertain",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/41-skill-card/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/41-skill-card/WORK_ORDER.md"
+    }
+   ],
    "determinism": "deterministic",
-   "display_name": "#41 skill.card",
+   "display_name": "Skill Activation Cards",
    "id": "module:41/skill.card",
+   "note": "skill-activation plane (per ARCHITECTURE_MAP's Collective Agent planes) nests into this scheme's intelligence per i46-pcb-design.md s3's general framing; not independently confirmed for this specific module.",
    "ns": "module",
-   "one_line": "The Collective Agent's skill-ACTIVATION substrate (D-0080 Wave 3, directive Priority 6 / section 9 'Skill card format').",
+   "one_line": "Section-9 skill-activation cards (summary_type skill_activation_card) + Stage-1 eligibility/Stage-2 lexical seam; how a skill becomes retrievable/activatable.",
    "parallel_safe": true,
-   "skeleton": true,
+   "plane_primary": "memory",
+   "planes_secondary": [
+    "intelligence"
+   ],
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "planes_secondary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:41/skill.card"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -1174,24 +5356,124 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/41-skill-card/skill.json",
      "sha256": "4da24150b85954675d9a85a92818caa58d74502fe51f34374d9d832ebe971019"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.2.0"
   },
   {
    "aliases": [
     "#42"
    ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/42-working-memory/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/42-working-memory/WORK_ORDER.md"
+    }
+   ],
    "determinism": "deterministic",
-   "display_name": "#42 working.memory",
+   "display_name": "Working Memory Store",
    "id": "module:42/working.memory",
    "ns": "module",
-   "one_line": "i34 Tier-1 build (D-0090/D-0096/D-0077): the per-task WORKING-MEMORY STORE that MEMORY_CONTRACT Amendment A5 (U3') fully specified and RESERVED but did not buil",
+   "one_line": "Per-task working-memory store: immutable versioned snapshots + CAS on parent_state_version + fork/close/archive/promote.",
    "parallel_safe": true,
-   "skeleton": true,
+   "plane_primary": "memory",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "module:42/working.memory"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -1202,22 +5484,115 @@
       "parallel_safe",
       "version"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
      "ref": "modules/42-working-memory/skill.json",
      "sha256": "22ac0746f878fd3a0ada98bee46f5d90b7781d7746ec7ae534097dc4372aada7"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   },
   {
    "aliases": [
-    "#43"
+    "#43",
+    "action.authz"
    ],
-   "display_name": "#43 action-authz",
+   "authority_level": "deny-by-default reference monitor; non_execution:true (activation prohibited)",
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/43-action-authz/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/43-action-authz/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Action Authorization (P0-1)",
    "id": "module:43/action-authz",
+   "note": "explicitly named alongside res.lease/gates/boundary as Authority-plane in i46-pcb-design.md s3; p0_1_gate_status=pass (D-0118) but build_status/activation are distinct axes -- status here reflects the design-only/non-execution state, not gate ratification.",
    "ns": "module",
-   "one_line": "Harvest-seeded module 43-action-authz (awaiting claims).",
-   "skeleton": true,
+   "one_line": "Deny-by-default action-authorization reference monitor (A01-A36 + Boundary A-D) built to the FROZEN contract; DESIGN-ONLY, non_execution:true holds.",
+   "plane_primary": "authority",
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "authority_level",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "deeper",
+      "skeleton"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": "7b647adff388408f188c7668e8fc013176573e549f7091827287c36e612b0308"
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "planes_secondary"
+     ],
+     "reaffirmed": [
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+       "by": "orchestrator-i46-close"
+      }
+     ],
+     "ref": "core-docs/research/2026-08-11-i46-pcb-design.md",
+     "sha256": "54808753d006158f562b6cf405725629e47d9b9f946137ee687a5c0b0e820f23"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -1228,20 +5603,76 @@
      "ref": "modules/43-action-authz/README.md",
      "sha256": "fd3f88d6b3f0bbba904a36e26d0a016d36e71b1c6b3f6ed88212e01a80086ae0"
     }
-   ]
+   ],
+   "status": "design-only"
   },
   {
    "aliases": [
     "#44"
    ],
+   "authority_docs": [
+    "doc:core-docs/DOC_PROTOCOL.md"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "decision",
+     "ref": "decision:D-0130"
+    },
+    {
+     "kind": "readme",
+     "ref": "modules/44-project-map/README.md"
+    },
+    {
+     "kind": "research",
+     "ref": "core-docs/research/2026-08-11-i46-pcb-design.md"
+    },
+    {
+     "kind": "schema-notes",
+     "ref": "modules/44-project-map/SCHEMA_NOTES.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/44-project-map/WORK_ORDER.md"
+    }
+   ],
    "determinism": "deterministic",
-   "display_name": "#44 project.map",
+   "display_name": "Project Map (PCB)",
    "id": "module:44/project.map",
    "ns": "module",
-   "one_line": "The Life Orchestrator's Project Comprehension Bootstrap (PCB) mechanism (i46, arch position 44).",
+   "one_line": "Deterministic project-comprehension compiler: canonical entity/edge/overlay state -> validated BOOT_PACKET + L0/L1 views (progressive disclosure).",
    "parallel_safe": false,
-   "skeleton": true,
+   "plane_primary": "memory",
+   "planes_secondary": [
+    "observability"
+   ],
+   "skeleton": false,
    "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "ref": "module:44/project.map"
+    },
+    {
+     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "by": "orchestrator-i46-fold",
+     "fields": [
+      "aliases",
+      "authority_docs",
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "planes_secondary",
+      "skeleton",
+      "status"
+     ],
+     "ref": "modules/44-project-map/WORK_ORDER.md",
+     "sha256": "439261078ffeb0169e22de4829e9024081b50470187d78901dd9f2479a550725"
+    },
     {
      "at_commit": "seed",
      "by": "harvest_v1",
@@ -1256,6 +5687,7 @@
      "sha256": "01479163b623b412e4ed92db3f36a8f42194cb95c04381b993898f18e5cc5b47"
     }
    ],
+   "status": "mvp-complete",
    "version": "0.1.0"
   }
  ],

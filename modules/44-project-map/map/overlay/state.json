@@ -1,0 +1,36 @@
+{
+ "schema": "lifeorch.map_overlay/0.1",
+ "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
+ "iteration": 46,
+ "phase": {
+  "ref": "doc:core-docs/CURRENT_STATE.md",
+  "text": "Collective Agent build on cognitive virtual memory (D-0080); Tier-1 accepted; audit program mid-arc; PCB (module:44/project.map) shipped i46; i47 = the migration gate."
+ },
+ "frontier": {
+  "next_iteration": 47,
+  "summary": "i47 = (1) the mandate-02 sunset REPORT (due BEFORE wave work; PROCESS_MANDATE s1/s3), then (2) the FROZEN legacy-vs-PCB side-by-side dry-run migration gate per modules/44-project-map/eval/I47_EVAL_PACKET.md; the blind verdict gates i48 migration (GO/CONDITIONAL/NO-GO).",
+  "derived_from": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md s4 at fea1fd92645bc25e2151b6594877f0763aa212dc (the frontier statement, same wording)",
+  "candidates": [
+   {"ref": "doc:core-docs/AUDIT_PIPELINE.md", "text": "post-gate: the LRAP completion set (raw-prompt front step + live ride-along + output side) per next_increment"},
+   {"ref": "mandate:02", "text": "M2-C docs-into-memory first increment (FO-3; design note shipped in the PCB design s6)"},
+   {"ref": "module:40/context.compile", "text": "beam-WIDTH follow-on (the fast-beam residual scale lever)"}
+  ]
+ },
+ "mandate": {"id": "02", "sunset_iteration": 47, "state": "ACTIVE"},
+ "prohibitions": [
+  {"text": "P0-1 / action.authz ACTIVATION prohibited -- the ratified gate result is a DESIGN pass only; non_execution:true holds", "authority": "decision:D-0118", "status": "live"},
+  {"text": "No orchestrator-driven external/frontier AI sessions; frontier material is human-couriered; in-session cloud subagents ARE permitted", "authority": "decision:D-0119", "status": "live"},
+  {"text": "Warm-pool durable supervisor default-ON is GATE-NO; classic detached-warm stays the trusted default", "authority": "decision:D-0079", "status": "live"},
+  {"text": "FROZEN: generator upgrades, video.interpret + live composition, deep real-time perception, broad training", "authority": "decision:D-0080", "status": "live"}
+ ],
+ "open_rulings": [
+  {"text": "LRAP poser live-click confirm pending (Nicholas: ? -> Ask -> a real 9B answer)", "ref": "decision:D-0129"},
+  {"text": "_to_delete_w07/ disposition (the open i43 ruling; now gitignored, still on disk)", "ref": "decision:D-0120"}
+ ],
+ "boot_read": [
+  {"kind": "other", "ref": "core-docs/START_HERE.md"},
+  {"kind": "other", "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md"},
+  {"kind": "other", "ref": "core-docs/CURRENT_STATE.md"},
+  {"kind": "other", "ref": "core-docs/PROCESS_MANDATE.md"}
+ ]
+}

@@ -1,0 +1,16 @@
+{
+ "schema": "lifeorch.map_claims/0.1",
+ "by": "orchestrator-i46-fold",
+ "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+ "entities": [
+  {"id": "decision:D-0079", "ns": "decision", "display_name": "D-0079", "one_line": "Warm-pool durable supervisor as-built red-team GATE = NO; default-ON gated on the named hardening sequence.", "confidence": "established", "skeleton": false,
+   "sources": [{"ref": "core-docs/DECISION_LOG_INDEX.md", "sha256": null, "fields": ["one_line"], "by": "orchestrator-i46-fold", "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a"}]},
+  {"id": "decision:D-0119", "ns": "decision", "display_name": "D-0119", "one_line": "In-session cloud subagents PERMITTED inside the D-0051-as-amended boundary; frontier stays human-couriered (M2-E resolved).", "confidence": "established", "skeleton": false,
+   "sources": [{"ref": "core-docs/DECISION_LOG_INDEX.md", "sha256": null, "fields": ["one_line"], "by": "orchestrator-i46-fold", "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a"}]},
+  {"id": "decision:D-0120", "ns": "decision", "display_name": "D-0120", "one_line": "i43: audit widgets 05/06/07 judged expert-forensic/post-hoc; LRAP reframed as the audit program's target (P9).", "confidence": "established", "skeleton": false,
+   "sources": [{"ref": "core-docs/DECISION_LOG_INDEX.md", "sha256": null, "fields": ["one_line"], "by": "orchestrator-i46-fold", "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a"}]},
+  {"id": "decision:D-0129", "ns": "decision", "display_name": "D-0129", "one_line": "LRAP poser live no-op ROOT CAUSE fixed (dotnet-tool apphost pwsh trap); the human live-click confirm remains PENDING.", "confidence": "established", "skeleton": false,
+   "sources": [{"ref": "core-docs/DECISION_LOG_INDEX.md", "sha256": null, "fields": ["one_line"], "by": "orchestrator-i46-fold", "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a"}]}
+ ],
+ "relationships": []
+}
