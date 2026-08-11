@@ -354,7 +354,13 @@ def _parse_decision_ids(repo):
 
 
 def _parse_mandate_header(repo):
-    txt = read_text(os.path.join(repo, "core-docs", "PROCESS_MANDATE.md"))
+    # An ABSENT mandate doc is a legitimate tree state, not a crash: a mandate SUNSET deletes the
+    # live doc (D-0132 removed core-docs/PROCESS_MANDATE.md at i47). Empty header {} = no live
+    # mandate on this tree (i48 orchestrator fix; 0.1.0 hard-read the file and crashed harvest).
+    path = os.path.join(repo, "core-docs", "PROCESS_MANDATE.md")
+    if not os.path.isfile(path):
+        return {}
+    txt = read_text(path)
     hdr = {}
     for m in re.finditer(r"^-\s*`([a-z_]+):\s*([^`]*)`", txt, re.M):
         hdr[m.group(1)] = m.group(2).strip()
@@ -801,6 +807,12 @@ def validate(model, harvest, is_real=True):
                         add("OVERLAY_MANDATE_DRIFT", w, "header current_iteration < overlay.iteration")
                 except (TypeError, ValueError):
                     pass
+            else:
+                # Fail-closed (i48): the overlay still CLAIMS a mandate but the tree's header is
+                # EMPTY (doc absent/sunset) -- a stale overlay must not present a dead mandate.
+                add("OVERLAY_MANDATE_DRIFT", w,
+                    "overlay claims mandate %r but the tree has no PROCESS_MANDATE header (absent/sunset)"
+                    % (om.get("id"),))
         # prohibitions
         prohibitions = ov.get("prohibitions", []) or []
         live_freeze = False

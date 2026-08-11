@@ -163,3 +163,19 @@ tree). The result also carries `beyond_tree_count`, `at_commit_drift_count`, and
 stating BOTH commits: `{map_state_commit (overlay.at_commit), harvest_commit, in_sync}`. Every currency
 surface states both commits -- the BOOT_PACKET freshness line reads `@ tree <sha> | map-state <sha>
 [in-sync|MAP-VS-TREE-SPLIT]`.
+
+### Mandate absence -- harvest tolerates a sunset-deleted PROCESS_MANDATE.md (i48 orchestrator fix)
+
+An ABSENT `core-docs/PROCESS_MANDATE.md` is a legitimate tree state, not a crash: a mandate SUNSET
+deletes the live doc (D-0132 removed it at i47; the archived copy lives under `archive/mandates/`).
+`_parse_mandate_header` now returns the EMPTY header `{}` when the file is absent (`harvest.mandate ==
+{}` = *no live mandate on this tree*); 0.1.0 hard-read the file, so every post-i47 real-tree `harvest`
+-- and therefore `validate`/`render`/the `-Live` smoke -- crashed (`FileNotFoundError`, exit 2).
+Fail-closed cross-check added in `validate`: an overlay that still CLAIMS a mandate
+(`overlay.mandate` present) against an empty header fires the existing **`OVERLAY_MANDATE_DRIFT`**
+("overlay claims mandate ... but the tree has no PROCESS_MANDATE header") -- a stale overlay may not
+present a dead mandate as live. The post-sunset overlay simply OMITS `mandate` (the overlay schema keeps
+it optional; `required` = schema/at_commit/iteration only). `live_freeze` detection (the
+`OVERLAY_PROHIBITIONS_EMPTY` gate) falls back to frozen-ENTITY status when no mandate state exists, so
+standing freezes (e.g. P0-1) still demand a non-empty prohibitions list. Error table unchanged (the
+new trigger reuses `OVERLAY_MANDATE_DRIFT`); covered by the `mandate-absent` suite class (4 tests).

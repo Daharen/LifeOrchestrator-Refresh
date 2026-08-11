@@ -461,10 +461,50 @@ def test_ops_roundtrip():
     shutil.rmtree(out, ignore_errors=True)
 
 
+# --------------------------------------------------------------- mandate absence (i48 fix) ----
+def test_mandate_absent():
+    import copy
+    # 1) _parse_mandate_header: an ABSENT doc -> {} (no crash) -- the post-i47-sunset tree state.
+    with tempfile.TemporaryDirectory() as td:
+        rec("mandate-absent", "absent-doc->empty-header", P._parse_mandate_header(td) == {}, "")
+        cd = os.path.join(td, "core-docs")
+        os.makedirs(cd)
+        with open(os.path.join(cd, "PROCESS_MANDATE.md"), "wb") as fh:
+            fh.write(b"# PM\n- `mandate_id: 02`\n- `state: ACTIVE`\n")
+        hdr = P._parse_mandate_header(td)
+        rec("mandate-absent", "present-doc-parses(regression)",
+            hdr.get("mandate_id") == "02" and hdr.get("state") == "ACTIVE", str(hdr))
+    # 2) fail-closed: overlay CLAIMS a mandate while the tree header is EMPTY -> OVERLAY_MANDATE_DRIFT
+    gmap = os.path.join(FIX, "golden-map")
+    harvest = json.loads(P.read_text(os.path.join(FIX, "harvest.json")))
+    h2 = copy.deepcopy(harvest)
+    h2["mandate"] = {}
+    model = P.load_map(gmap)
+    vr = P.validate(model, h2, is_real=True)
+    codes = [f["code"] for f in vr["findings"]]
+    rec("mandate-absent", "overlay-claims-vs-absent->DRIFT",
+        any(f["code"] == "OVERLAY_MANDATE_DRIFT" and "no PROCESS_MANDATE header" in f["message"]
+            for f in vr["findings"]), str(codes))
+    # 3) overlay WITHOUT a mandate + empty header -> NO mandate drift (the post-sunset overlay shape)
+    model2 = P.load_map(gmap)
+    model2.overlay = copy.deepcopy(model2.overlay)
+    model2.overlay.pop("mandate", None)
+    vr2 = P.validate(model2, h2, is_real=True)
+    rec("mandate-absent", "no-overlay-mandate+absent->no-drift",
+        not any(f["code"] == "OVERLAY_MANDATE_DRIFT" for f in vr2["findings"]),
+        str([f["code"] for f in vr2["findings"]]))
+    # 4) both present (golden baseline) -> still no drift (regression; invariants match)
+    vr3 = P.validate(P.load_map(gmap), harvest, is_real=True)
+    rec("mandate-absent", "both-present->no-drift(regression)",
+        not any(f["code"] == "OVERLAY_MANDATE_DRIFT" for f in vr3["findings"]),
+        str([f["code"] for f in vr3["findings"]]))
+
+
 def main():
     for t in (test_golden, test_determinism, test_negatives, test_drift,
               test_parse_budgets_parity, test_ingest, test_reaffirm_fmt_changed,
-              test_shortform, test_evidence_provenance, test_operations, test_ops_roundtrip):
+              test_shortform, test_evidence_provenance, test_operations, test_ops_roundtrip,
+              test_mandate_absent):
         try:
             t()
         except Exception as e:
