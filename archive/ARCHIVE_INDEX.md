@@ -113,3 +113,6 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 | archive/handoffs/2026-08-08-FANOUT_ORCHESTRATOR_HANDOFF-i44.md | the outgoing i43-shaped live handoff snapshotted at the i44 close | 2026-08-08 | D-0121 |
 | archive/handoffs/2026-08-08-FANOUT_ORCHESTRATOR_HANDOFF-i45.md | the outgoing i44-shaped live handoff snapshotted at the i45 close | 2026-08-08 | D-0122 |
 | archive/fanout-agents/i45-003.md | i45 CODING-lane brief (LRAP-WIDGET08-i45; NEW widgets/08 Live-Run Audit Pathway) | 2026-08-08 | D-0122 |
+| archive/handoffs/2026-08-11-FANOUT_ORCHESTRATOR_HANDOFF-i46.md | the outgoing i45-shaped live handoff snapshotted at the i46 close | 2026-08-11 | D-0131 |
+| archive/fanout-agents/i46-002.md | i46 CPU-lane brief (PCB-CLAIMS-i46; the system-map claims layer) | 2026-08-11 | D-0131 |
+| archive/fanout-agents/i46-003.md | i46 CODING-lane brief (PCB-BUILD-i46; NEW modules/44 project.map) | 2026-08-11 | D-0131 |

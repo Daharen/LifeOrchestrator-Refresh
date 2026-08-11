@@ -44,6 +44,8 @@ describe NOW and stay ingestable whole; history is never deleted, it moves to la
 | DOC_PROTOCOL.md | this contract | 12 KB |
 | research/&lt;date&gt;-*.md | dated research digests | 10 KB each |
 | fanout/FANOUT_AGENT_*.md | worker-brief template + numbered slots | 8 KB each |
+| modules/44-project-map/map/** | PCB canonical map state (machine-validated JSON; judgment enters ONLY via validated claims; D-0130) | no cap (module-gated) |
+| modules/44-project-map/generated/** | PCB derived views incl. BOOT_PACKET (GENERATED, never hand-edited; drift-checked) | no cap (packet <=20 KB via #44 tests) |
 
 Budgets = actual size at adoption rounded up with ~10-15% headroom. **A budget rises only via a new
 D-entry naming the current-truth content that needs the room** -- never by silently editing this table.

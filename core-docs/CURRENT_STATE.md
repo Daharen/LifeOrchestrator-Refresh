@@ -4,7 +4,7 @@ Owns **reality as it exists now** — not intended architecture, not history. Ke
 
 History lives elsewhere: **`DECISION_LOG.md`** (read **`DECISION_LOG_INDEX.md`** first, pull by ID), **git**, and
 **`archive/`**. **Rule: NEVER grow `[prior]` accretion chains** — replace a stale statement in place, cite `D-####`
-if the reason matters. A `CURRENT_STATE.json` counterpart is planned, not yet created.
+if the reason matters. A `CURRENT_STATE.json` counterpart = PCB FO-2 (post-i47-pass).
 
 Owned elsewhere, don't duplicate: `TOOL_MODEL_REGISTRY.md` (tools/models/hardware) · `MODULE_ROADMAP.md` (build
 order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HANDOFF.md` (orchestrator ops) ·
@@ -28,12 +28,12 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
   (i36, D-0102: 11/11 s10 criteria over a distinct 6-package foreign corpus at 100x leaf span). Fast-beam recall
   lever shipped i39 (D-0108; hpr ~2x; guaranteed+packet recall stay 1e6).
   Arc detail: the index; per-module state: `MODULE_ROADMAP.md`.
-- **P0-1 action-authorization gate (#43): `build_status=build_complete | p0_1_gate_status=PASS | activation_status=prohibited`.** #43 0.6.0 (`10d0d1e`, i42) is a RATIFIED DESIGN pass -- the ROUND-5 independent review returned PASS -> s7 `p0_1_gate_status=pass` (D-0118, M2-D, pack `6bb613ea`; the 5-round arc 7->7->5->3->0 closed; F5/F4/F2 seam detail in D-0116/18). Verified x2 byte-identical (364/364; bundle `3b5d62f4`); A06 denies every authentic packet; `non_execution:true` holds. **Activation stays PROHIBITED** -- a design pass, NOT an activation grant.
-- **i45 CLOSED (D-0122, plan `fo-45-b17a531e`; single CODING lane):** SHIPPED NEW **widgets/08 Live-Run Audit Pathway (LRAP)** -- the audit program's phenomenological TOP surface (P9; `a88e177` + fix pass `6028b9c`), a read-only replay of a #40 compile as ONE chronological plain-language INTENT/INPUT/OUTPUT/RECONCILE narrative. Independently re-verified 87/0/0 -Live (five-fixture machine classify 0 FP/FN); leveled Nicholas accept (buttons + improvement/foundation PASS; whole-system + complete inclusion NOT YET).
+- **P0-1 action-authorization gate (#43): `build_status=build_complete | p0_1_gate_status=PASS | activation_status=prohibited`.** #43 0.6.0 (`10d0d1e`, i42) is a RATIFIED DESIGN pass -- round-5 independent review PASS -> s7 `p0_1_gate_status=pass` (D-0118, M2-D, pack `6bb613ea`; arc detail D-0116/18). Verified x2 byte-identical (364/364; bundle `3b5d62f4`); A06 denies every authentic packet; `non_execution:true` holds. **Activation stays PROHIBITED** -- a design pass, NOT an activation grant.
+- **i46 CLOSED (D-0130/D-0131, plan `fo-46-6dd32d37`; Nicholas DIRECTIVE-HIJACKED):** SHIPPED NEW **modules/44 `project.map` 0.1.0 -- the Project Comprehension Bootstrap (PCB)**: deterministic fail-closed system map + L1 cards + a generated <=20 KB `BOOT_PACKET.md`; judgment enters ONLY via validated evidence-pointed claims; built ALONGSIDE the untouched legacy handoff. Independent re-verify 49/49 + -Live smoke + selftest; claims folded 0-findings. **i47 = the FROZEN legacy-vs-PCB migration gate** (`modules/44-project-map/eval/I47_EVAL_PACKET.md`) after the mandate-02 sunset report.
 - **FROZEN / deferred (D-0080):** durable-supervisor / warm-pool hardening (D-0079 GATE-NO stands; classic
   detached-warm is the trusted default); generator upgrades; `video.interpret` + live composition; deep
   real-time perception (arch 27-49); broad training.
-- **Fan-out loop:** 40 iterations run via `orchestrate.fanout` #30 over `res.lease` #29; workers hand-dispatched
+- **Fan-out loop:** 46 iterations run via `orchestrate.fanout` #30 over `res.lease` #29; workers hand-dispatched
   into fresh Cowork sessions. Ledger + wave model: **`FANOUT_ORCHESTRATOR_HANDOFF.md`**.
 - **Boundary (D-0051, amended by D-0080):** the orchestrator never drives another *external/frontier* AI session
   (human-couriered only); a deterministic LOCAL coordinator IS authorized to spawn local contexts (Priority 10).
@@ -132,11 +132,12 @@ registry facts: `TOOL_MODEL_REGISTRY.md`. Roster (all MVP-complete unless noted)
   byte-identical back to 0.7.0) · #41 skill.card 0.2.0 · #42 working.memory 0.1.0 (per-task store, CAS heads,
   ns isolation) · **#43 action.authz 0.4.0** (P0-1 deny-by-default reference monitor + injection suite;
   DESIGN-ONLY; exact-closure-complete, gate incomplete pending ratification — see Phase).
+- **#44 `project.map` 0.1.0** (i46, D-0130/31) -- the PCB: fail-closed map/claims/boot-packet compiler. `MODULE_ROADMAP.md` #44.
 - **NOT built:** #26 agent.coding — designed + DEFERRED (D-0037; no safe code-exec substrate on this box).
 - **Widgets (native + `launch.bat`, D-0038):** 01 Local Agent Console · 02 Module Launcher · 03 Verification
   Console (durable verdicts, D-0065) · 04 Fan-out Wave Dashboard (live-GUI confirm DONE) · 05 Provenance Map
   (audit tier A1) · 06 Compile Trace Console (audit A1) · 07 Audit Timeline+Tournament (audit A2) · 08 Live-Run Audit Pathway (LRAP, i45). Widgets
-  05/06/07 live-GUI confirms DONE (i43, D-0120; expert-forensic descend target); Widget 08 (LRAP v1) SHIPPED + machine-verified 87/0/0; NOT a phenomenological pass even on built cases -- Nicholas sees the flags but can't adopt the agent's role (D-0125); P9 open; poser SHIPPED (D-0127); next front-step/ride-along.
+  05/06/07 live-GUI DONE (i43); Widget 08 SHIPPED + verified 87/0/0, NOT yet phenomenological (D-0125; P9 open; poser SHIPPED D-0127; live-click confirm PENDING D-0129).
 
 **Phase A complete** (0-25 + 00.1; #26 deferred); generator track complete; **Phase B Widgets 01-08 shipped;
 Phase C video spine front half built; memory subsystem #35-#43 built, Tier-1 accepted.**
@@ -246,6 +247,7 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 | #43 action.authz | **0.6.0 (i42): the 3 round-4 exact closures (F5/F4/F2 -- seam detail D-0116/18); suite x2 exit 0 byte-identical (364/364, mutations 69/69, fuzzer 400/0, oracle 152 not_run=0, role 30/30, completion 21/21, views 64/64); empty-dir self-verify VERIFIED (3b5d62f4); taxonomy=`pass` (D-0118 round-5 PASS, pack 6bb613ea; activation prohibited)** | `10d0d1e` | 08-08 |
 | widgets/05 / 06 / 07 | 100/100+STA 8/8 · 85/85+98/98 -Live (STA 9/9) · 81 cloud + 93 -Live (STA 8/8) — live-GUI confirm DONE i43 | `3ad71d3`/`c912854`/`855c242` | 08-05..08 |
 | widgets/08 LRAP | **87/0/0 -Live (i45): read-only replay pathway; every SELFTEST_*_OK (incl. RECONCILE/DESCEND/INTERACT/READONLY/LAYOUT); five-fixture machine classify 0 FP/FN (mis-route->s3, dropped->s4, wrong-record->s6, clean+quirk consistent); byte-identical re-render; read-only + i33 sanitization fail-closed; real #40 render; orchestrator INDEPENDENT re-verify** | `a88e177`/`6028b9c` | 08-08 |
+| #44 project.map | **0.1.0 (i46): 49/49 cloud (negative 33/33 -- every error code) + -Live Skeleton full-repo smoke + selftest OK; independent on-box re-run (py3.12+pwsh); golden digest 0a1deec4 cloud==box; fold ingest 143 entities/98 edges -> validate 0 findings** | `11416a8` | 08-11 |
 | D-0077 cross-module folds | i34 smoke 38/38 · i36 Tier-1 11/11 (`tier1_accepted=TRUE`) · i38/i39 18/18 · i40/i41 fold-i39 exit 0 · **i42: fold-i39 vs 0.6.0 exit 0 + i34 38/38 + the independent #43 suite x2 byte-identical (3b5d62f4); i45: widgets/08 pinned 06/07 adapter + cross-widget contract test green in the independent -Live 87/0/0** | `runtime/smoke-i34.py`/`fold-i39.py` | 08-08 |
 
 ## Known failures / gotchas
@@ -341,9 +343,7 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 - **`-Profile max` 9B arg-gen returns non-JSON** (`arg_parse_failed`) — floor is the reliable path (D-0046).
 - **The executor file-lock crash root cause was never reproduced** — self-healed, not explained.
 - **Widget 03 `model.gateway` GPU live-GUI pass still open** (since D-0060).
-- **Audit surface -- LRAP v1 legible but NOT phenomenological even on built cases (D-0125):** Widget 08 lets Nicholas
-  SEE the pipeline actions + machine flags (steps 1-6) but NOT adopt the agent's role -- no initial prompt, rationale/
-  agent-view not surfaced (F1 verdict-only) -> P9 NOT met; poser SHIPPED (D-0127); next = front-step/ride-along/output (`core-docs/AUDIT_PIPELINE.md`).
+- **Audit surface -- LRAP v1 NOT phenomenological (D-0125):** P9 open; poser SHIPPED (D-0127; live-click PENDING D-0129); next = front-step/ride-along/output (`core-docs/AUDIT_PIPELINE.md`).
 - **Portability:** `$PwshPath` defaults across ~15 model-bound entrypoints; core-infra (00.1 + `ops/*.bat`);
   interpreter paths #15/#16; model-bound F: literals — each its own follow-on wave (D-0069).
 - **Generator upgrades (D-0068 leads):** image Z-Image-Turbo Q8 (needs stable-diffusion.cpp), music ACE-Step,
@@ -355,13 +355,13 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ## Next expected action
 
-**i45 CLOSED (D-0122):** SHIPPED NEW **widgets/08 Live-Run Audit Pathway (LRAP)** -- the audit program's phenomenological TOP surface (P9; `a88e177` + fix pass `6028b9c`; read-only replay of a #40 compile, assembly-side steps 1-6). Orchestrator INDEPENDENT re-verify 87/0/0 -Live (five-fixture machine classify 0 FP/FN). Leveled Nicholas accept: buttons + improvement/foundation PASS; whole-system + complete inclusion NOT YET.
+**i46 CLOSED (D-0130/D-0131):** the PCB shipped -- NEW modules/44 `project.map` 0.1.0 (map + claims folded + BOOT_PACKET rendered) ALONGSIDE the untouched legacy handoff; the I47 evaluation packet is FROZEN (EVAL_SHA `0bcb5e7`).
 
-**NEXT = i46** (seat: Opus 4.8 Extra): the audit program's next increment = the LRAP ride-along + OUTPUT side (A2.2 pause hook + captured output / instruction<->output reconciliation; possession/side-by-side) -- each design-first -> red-team-gated. Deferred candidates: M2-C docs-into-memory note; #40 beam-width; PB-2 delegation seam (unblocked D-0119). Menu: **`FANOUT_ORCHESTRATOR_HANDOFF.md`** s4. Mandate-02 countdown i45 -> 45/2 (i46 -> 46/1). P0-1 activation stays FROZEN.
+**NEXT = i47** (seat: Opus 4.8 Extra): (1) the mandate-02 SUNSET REPORT first (blocks wave work; PROCESS_MANDATE s1/s3); (2) the legacy-vs-PCB side-by-side dry run per **`modules/44-project-map/eval/I47_EVAL_PACKET.md`** (MANIFEST-verify, Nicholas picks T1/T2/T3, dispatches A/B/C1/C2); (3) apply the packet s7 verdict rules -> GO / CONDITIONAL / NO-GO for i48 migration. Post-gate menu: AUDIT_PIPELINE next_increment (front step + ride-along + output side); M2-C first increment (advanced by the PCB design s6; FO-3); #40 beam-width. Mandate-02 countdown i46 -> 46/1. P0-1 activation stays FROZEN.
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades; `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-08 -- i45 CLOSED (D-0122): NEW widgets/08 Live-Run Audit Pathway (LRAP) shipped + independently verified 87/0/0 + Nicholas: LRAP v1 machine-verified but NOT a phenomenological pass even on built cases -- can't adopt the agent's role (D-0125); P9 open; poser SHIPPED (D-0127); next front-step/ride-along (i46).
+**Last updated:** 2026-08-11 -- i46 CLOSED (D-0130/D-0131): the Project Comprehension Bootstrap (modules/44 project.map 0.1.0) shipped + independently verified + folded (claims 0-findings; BOOT_PACKET rendered); the I47 legacy-vs-PCB migration-gate packet FROZEN (EVAL_SHA 0bcb5e7); i47 owes the mandate-02 sunset report first.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*
