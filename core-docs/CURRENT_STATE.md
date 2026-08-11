@@ -29,11 +29,11 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
   lever shipped i39 (D-0108; hpr ~2x; guaranteed+packet recall stay 1e6).
   Arc detail: the index; per-module state: `MODULE_ROADMAP.md`.
 - **P0-1 action-authorization gate (#43): `build_status=build_complete | p0_1_gate_status=PASS | activation_status=prohibited`.** #43 0.6.0 (`10d0d1e`, i42) is a RATIFIED DESIGN pass -- round-5 independent review PASS -> s7 `p0_1_gate_status=pass` (D-0118, M2-D, pack `6bb613ea`; arc detail D-0116/18). Verified x2 byte-identical (364/364; bundle `3b5d62f4`); A06 denies every authentic packet; `non_execution:true` holds. **Activation stays PROHIBITED** -- a design pass, NOT an activation grant.
-- **i46 CLOSED (D-0130/D-0131, plan `fo-46-6dd32d37`; Nicholas DIRECTIVE-HIJACKED):** SHIPPED NEW **modules/44 `project.map` 0.1.0 -- the Project Comprehension Bootstrap (PCB)**: deterministic fail-closed system map + L1 cards + a generated <=20 KB `BOOT_PACKET.md`; judgment enters ONLY via validated evidence-pointed claims; built ALONGSIDE the untouched legacy handoff. Independent re-verify 49/49 + -Live smoke + selftest; claims folded 0-findings. **i47 = the FROZEN legacy-vs-PCB migration gate** (`modules/44-project-map/eval/I47_EVAL_PACKET.md`) after the mandate-02 sunset report.
+- **i47+i48 CLOSED (D-0132..D-0135):** mandate-02 SUNSET (YES; SEALED_CHECK_47 armed, open i>=54) and the migration gate = **CONDITIONAL** (quality PASS, efficiency VOID via RT2-F9) -> i48 shipped **#44 `project.map` 0.2.0** (CD-1 OPERATIONS boot canon + CD-3 query surface + the harvest sunset-fix; recovered ship `c451890` + `4055dc1`; fold VALIDATE 0; `-Live Folded` green). **Legacy stays the default bootstrap pending the CD-1 probe + CD-2 A/B efficiency re-check** (frozen s7 mechanics; fresh T2/T3 pick at dispatch).
 - **FROZEN / deferred (D-0080):** durable-supervisor / warm-pool hardening (D-0079 GATE-NO stands; classic
   detached-warm is the trusted default); generator upgrades; `video.interpret` + live composition; deep
   real-time perception (arch 27-49); broad training.
-- **Fan-out loop:** 46 iterations run via `orchestrate.fanout` #30 over `res.lease` #29; workers hand-dispatched
+- **Fan-out loop:** 48 iterations run via `orchestrate.fanout` #30 over `res.lease` #29; workers hand-dispatched
   into fresh Cowork sessions. Ledger + wave model: **`FANOUT_ORCHESTRATOR_HANDOFF.md`**.
 - **Boundary (D-0051, amended by D-0080):** the orchestrator never drives another *external/frontier* AI session
   (human-couriered only); a deterministic LOCAL coordinator IS authorized to spawn local contexts (Priority 10).
@@ -132,7 +132,7 @@ registry facts: `TOOL_MODEL_REGISTRY.md`. Roster (all MVP-complete unless noted)
   byte-identical back to 0.7.0) · #41 skill.card 0.2.0 · #42 working.memory 0.1.0 (per-task store, CAS heads,
   ns isolation) · **#43 action.authz 0.4.0** (P0-1 deny-by-default reference monitor + injection suite;
   DESIGN-ONLY; exact-closure-complete, gate incomplete pending ratification — see Phase).
-- **#44 `project.map` 0.1.0** (i46, D-0130/31) -- the PCB: fail-closed map/claims/boot-packet compiler. `MODULE_ROADMAP.md` #44.
+- **#44 `project.map` 0.2.0** (i48, D-0135; i46 base D-0130/31) -- the PCB: fail-closed map/claims/boot-packet compiler + OPERATIONS boot canon + short-form/alias queries + evidence currency. `MODULE_ROADMAP.md` #44.
 - **NOT built:** #26 agent.coding — designed + DEFERRED (D-0037; no safe code-exec substrate on this box).
 - **Widgets (native + `launch.bat`, D-0038):** 01 Local Agent Console · 02 Module Launcher · 03 Verification
   Console (durable verdicts, D-0065) · 04 Fan-out Wave Dashboard (live-GUI confirm DONE) · 05 Provenance Map
@@ -247,7 +247,7 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 | #43 action.authz | **0.6.0 (i42): the 3 round-4 exact closures (F5/F4/F2 -- seam detail D-0116/18); suite x2 exit 0 byte-identical (364/364, mutations 69/69, fuzzer 400/0, oracle 152 not_run=0, role 30/30, completion 21/21, views 64/64); empty-dir self-verify VERIFIED (3b5d62f4); taxonomy=`pass` (D-0118 round-5 PASS, pack 6bb613ea; activation prohibited)** | `10d0d1e` | 08-08 |
 | widgets/05 / 06 / 07 | 100/100+STA 8/8 · 85/85+98/98 -Live (STA 9/9) · 81 cloud + 93 -Live (STA 8/8) — live-GUI confirm DONE i43 | `3ad71d3`/`c912854`/`855c242` | 08-05..08 |
 | widgets/08 LRAP | **87/0/0 -Live (i45): read-only replay pathway; every SELFTEST_*_OK (incl. RECONCILE/DESCEND/INTERACT/READONLY/LAYOUT); five-fixture machine classify 0 FP/FN (mis-route->s3, dropped->s4, wrong-record->s6, clean+quirk consistent); byte-identical re-render; read-only + i33 sanitization fail-closed; real #40 render; orchestrator INDEPENDENT re-verify** | `a88e177`/`6028b9c` | 08-08 |
-| #44 project.map | **0.1.0 (i46): 49/49 cloud (negative 33/33 -- every error code) + -Live Skeleton full-repo smoke + selftest OK; independent on-box re-run (py3.12+pwsh); golden digest 0a1deec4 cloud==box; fold ingest 143 entities/98 edges -> validate 0 findings** | `11416a8` | 08-11 |
+| #44 project.map | **0.2.0 (i48): 98/98 x3 interpreters (py3.11/3.10/3.12; +shortform/provenance/operations/roundtrip/mandate-absent classes); four CD-3 probes RESOLVE on the real map; ingests idempotent -> VALIDATE 0; -Live Folded green** | `c451890`+`4055dc1` | 08-11 |
 | D-0077 cross-module folds | i34 smoke 38/38 · i36 Tier-1 11/11 (`tier1_accepted=TRUE`) · i38/i39 18/18 · i40/i41 fold-i39 exit 0 · **i42: fold-i39 vs 0.6.0 exit 0 + i34 38/38 + the independent #43 suite x2 byte-identical (3b5d62f4); i45: widgets/08 pinned 06/07 adapter + cross-widget contract test green in the independent -Live 87/0/0** | `runtime/smoke-i34.py`/`fold-i39.py` | 08-08 |
 
 ## Known failures / gotchas
@@ -355,13 +355,13 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ## Next expected action
 
-**i47 CLOSED (D-0132/D-0133):** mandate 02 SUNSET (verdict YES; SEALED_CHECK_47 open i>=54) + the frozen legacy-vs-PCB migration gate RUN blind end-to-end (T1; one B re-run after a wrong-grant void) -> **CONDITIONAL**.
+**i48 CLOSED (D-0135):** the D-0133 CD closures SHIPPED -- #44 0.2.0 (CD-1 boot-surface OPERATIONS canon + CD-3 query surface; ORCHESTRATOR-RECOVERED ship `c451890`) + the harvest sunset-fix (`4055dc1`) + fold to VALIDATE 0 / `-Live Folded` green.
 
-**NEXT = i48 (D-0134: Nicholas direction = the CD path; seat = Fable 5 until settled)**: the migration gate returned **CONDITIONAL (D-0133; `modules/44-project-map/eval/results/I47_RESULTS.md`)** -- quality PASS, efficiency VOID; the LEGACY handoff STAYS the default bootstrap. i48 = the 3 bounded CD units (CD-1 boot-surface wave-mechanics; CD-2 efficiency re-check; CD-3 #44 query-surface) -> the CONDITIONAL re-check. Deferred menu: AUDIT_PIPELINE next_increment (review_due i49; + the w08 window-close defect, D-0134); M2-C (FO-3); #40 beam-width. P0-1 activation stays FROZEN.
+**NEXT = the i48 CONDITIONAL re-check (with Nicholas; BEFORE any new wave):** (1) the CD-1 probe-only dry-run at a fresh frozen EVAL_SHA_2 (PCB-booted; K3/K4/TR2/TR3 pointer-cited; accept = NO legacy-handoff open in its ledger, RT2-F9 un-triggered; consumes no task); (2) CD-2 = the A/B efficiency re-run per the frozen I47_EVAL_PACKET s7 mechanics (unused T2/T3 pick at dispatch; BOTH bars un-voided = accept; no C round). A pass licenses the migration unit (PCB default; FO-2; DOC_PROTOCOL rows) at i49; legacy stays default until then. Deferred (D-0134): AUDIT_PIPELINE next_increment (review_due i49; w08 window-close defect on the next w08 touch); M2-C/FO-3; #40 beam-width; PB-2. P0-1 activation stays FROZEN.
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades; `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-11 -- i47 CLOSED: mandate 02 SUNSET (YES; SEALED_CHECK_47 armed, D-0132) + the migration gate -> CONDITIONAL (D-0133); D-0134 rulings: CD path, Fable seat, poser live-click CONFIRMED (window-close defect), w07 + eval folder removed.
+**Last updated:** 2026-08-11 -- i48 CLOSED (D-0135): #44 0.2.0 CD closures (recovered ship) + harvest sunset-fix + fold VALIDATE 0; the CONDITIONAL re-check staged (CD-1 probe -> CD-2 A/B).
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

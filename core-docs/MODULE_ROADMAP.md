@@ -329,14 +329,15 @@ F1/F7 CLOSED (the manifest-derived pack rule proven), 3 seam findings -> the 0.6
 reparse/ADS/junction profiles; production store formats; freshness relaxation; the real
 `non_execution=false` transition; timing-channel hardening; rollback.
 
-**44 `project.map`** — MVP complete **0.1.0** (i46, D-0130/D-0131; Nicholas's comprehension/bootstrap
+**44 `project.map`** — MVP complete **0.2.0** (i48 D-0135; i46 base D-0130/D-0131; Nicholas's comprehension/bootstrap
 reconstruction directive). The Project Comprehension Bootstrap (PCB): deterministic stdlib-Python+pwsh
 compiler over canonical JSON map state (closed namespaces `module:`/`widget:`/`arch:`/`plane:`/`contract:`/
 `doc:`/`store:`/..., per-FIELD provenance, coverage/staleness/conflicts FAIL-CLOSED) -> validated
 `generated/BOOT_PACKET.md` (<=20 KB, section budgets + recorded ladder) + L0/L1/alias views; agent judgment
 enters ONLY via versioned evidence-pointed claims (`claims/`); render refuses dirty/stale/skeleton/over-budget.
-Built ALONGSIDE the legacy handoff (control condition); **i47 = the frozen legacy-vs-PCB migration gate**
-(`modules/44-project-map/eval/I47_EVAL_PACKET.md`). **Follow-ons:** FO-1 richer changed-since (git-driven
+Built ALONGSIDE the legacy handoff (control); the i47 gate = **CONDITIONAL** (D-0133) -> the i48 CD closures
+shipped (OPERATIONS boot canon; short-form/alias queries + evidence currency; the harvest sunset-fix); the
+re-check (CD-1 probe -> CD-2 A/B) is pending; legacy default until pass (`eval/results/I47_RESULTS.md`). **Follow-ons:** FO-1 richer changed-since (git-driven
 touch lists); FO-2 CURRENT_STATE.json generated from the overlay (post-pass); FO-3 map->#36 records (the
 M2-C re-layer build); FO-4 shared-identity flow map->memory->packet->authz->audit (directive s13); FO-5
 doc-gate rows if views promote into core-docs.

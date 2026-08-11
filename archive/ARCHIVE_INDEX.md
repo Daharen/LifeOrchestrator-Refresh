@@ -118,3 +118,5 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 | archive/fanout-agents/i46-003.md | i46 CODING-lane brief (PCB-BUILD-i46; NEW modules/44 project.map) | 2026-08-11 | D-0131 |
 | archive/mandates/mandate-02-i40-i47.md | mandate 02 (opened i40, D-0110) at its i47 sunset: report delivered (research/2026-08-11-process-mandate-02-report.md), verdict YES, SEALED_CHECK_47 armed | 2026-08-11 | D-0132 |
 | archive/handoffs/2026-08-11-FANOUT_ORCHESTRATOR_HANDOFF-i47.md | the outgoing i46-shaped live handoff snapshotted at the i47 close | 2026-08-11 | D-0133 |
+| archive/handoffs/2026-08-11-FANOUT_ORCHESTRATOR_HANDOFF-i48.md | the outgoing i47-shaped live handoff snapshotted at the i48 close | 2026-08-11 | D-0135 |
+| archive/fanout-agents/i48-003.md | i48 CODING-lane brief (PCB-CD-i48; #44 0.2.0 CD-1+CD-3 closures) | 2026-08-11 | D-0135 |
