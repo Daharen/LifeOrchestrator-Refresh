@@ -115,17 +115,17 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0090 | 2026-08-03 | locked | Adopt the full long-horizon memory architecture as the evidence-staged design target (Tiers 0-3, design-now vs build-now). |
 | D-0091 | 2026-08-03 | locked | Selection-policy settle (i31): context.compiler imports retrieval.eval's canonical selpol, resolving the i30 divergence. |
 | D-0092 | 2026-08-04 | provisional | Tier-0 seam repairs (i32, p1): contract amendments for hard-namespace, current/supersession, and reserved hierarchy/working/query seams. |
-| D-0093 | 2026-08-04 | provisional | Establish PROCESS_BACKLOG (process/doc-hygiene router) + capture rule; the mechanical commit gate, not the prose checklist, is the forcing function. |
+| D-0093 | 2026-08-04 | provisional | Establish PROCESS_BACKLOG (process router) + capture rule; the mechanical gate is the forcing function |
 | D-0094 | 2026-08-04 | provisional | Adopt a sunsetting PROCESS_MANDATE (time-boxed, self-deleting, mandatory sunset report) + a blind sealed-check regression test for process health. |
 | D-0095 | 2026-08-04 | provisional | Frontier red-team: NO-GO on i32 as-written (envelope-only ns; candidate-dependent supersession) -> i33 hardening |
 | D-0096 | 2026-08-04 | locked | i33 p1: MEMORY_CONTRACT A5 + CPC re-amend Tier-0 seams (ns-closure, supersession, working-state, classifier) |
-| D-0097 | 2026-08-04 | locked | i33 CLOSED: ns-closure + supersession re-conformance shipped (#36/#37/#40; ONE ns_permitted); D-0077 mixed-ns fold PASSED; Tier-0 seams DONE -> i34 Tier 1 |
+| D-0097 | 2026-08-04 | locked | i33 CLOSED: ns-closure + supersession re-conformance (#36/#37/#40); mixed-ns fold PASSED; Tier-0 seams DONE |
 | D-0098 | 2026-08-04 | locked | i34 Tier-1 hierarchy design red-team NO-GO-as-drafted -> A6/i34 PART-1 redraft (split -> i35) |
 | D-0099 | 2026-08-05 | locked | i34 CLOSED: Tier-1 bounded-fanout hierarchy shipped + fold passed; acceptance gated on the rehearsal |
 
 | D-0100 | 2026-08-05 | locked | i35 CLOSED: consumer wiring + rehearsal harness; tier1 -> i36; P0-1 red-team NO-GO w/o deny-by-default |
 
-| D-0101 | 2026-08-05 | provisional | Adopt the couriered audit-surface / interpretability program (staged A0-A5; R-1 stage-trace binds the router; Widgets 05/06/07 = audit-tier vehicles) |
+| D-0101 | 2026-08-05 | provisional | Adopt the couriered audit-surface program (A0-A5; R-1 stage-trace binds the router; Widgets 05/06/07 = vehicles) |
 | D-0102 | 2026-08-05 | locked | i36 CLOSED: TIER-1 ACCEPTED (11/11 s10 over a hash-verified foreign corpus, 100x leaf span; tier1_accepted TRUE; fast-beam lossy, #36-flat fallback) |
 | D-0103 | 2026-08-05 | provisional | i37 open: action-authz contract FROZEN = P0-1 target (non_execution holds) + the safety+router wave |
 | D-0104 | 2026-08-05 | locked | i37 CLOSED: #40 0.8.0 router + NEW #43 P0-1 suite MVP; folds green; freeze red-team GO-WITH-AMENDMENTS |
@@ -160,3 +160,4 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0133 | 2026-08-11 | locked | i47 PCB migration gate = CONDITIONAL: quality PASS (floors clear, swap-stable) but efficiency VOID (mechanism-not-exercised) -> 3 bounded i48 CD units; legacy stays default |
 | D-0134 | 2026-08-11 | locked | i47 addendum (Nicholas): i48 = CD path; seat Fable-until-settled [amends D-0116]; poser live-click CONFIRMED (window-close defect); w07 + eval folder deleted |
 | D-0135 | 2026-08-11 | locked | i48: #44 0.2.0 CD-1+CD-3 (recovered) + harvest sunset-fix + fold 0-findings; re-check staged (probe -> A/B) |
+| D-0136 | 2026-08-11 | locked | i48 re-check FAILED: void x2 + bars missed (B 1.24x A, raw fallback) -> legacy default; N1-N4 |

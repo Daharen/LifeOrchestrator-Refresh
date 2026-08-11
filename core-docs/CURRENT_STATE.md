@@ -357,11 +357,11 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 **i48 CLOSED (D-0135):** the D-0133 CD closures SHIPPED -- #44 0.2.0 (CD-1 boot-surface OPERATIONS canon + CD-3 query surface; ORCHESTRATOR-RECOVERED ship `c451890`) + the harvest sunset-fix (`4055dc1`) + fold to VALIDATE 0 / `-Live Folded` green.
 
-**NEXT = the i48 CONDITIONAL re-check (with Nicholas; BEFORE any new wave):** (1) the CD-1 probe-only dry-run at a fresh frozen EVAL_SHA_2 (PCB-booted; K3/K4/TR2/TR3 pointer-cited; accept = NO legacy-handoff open in its ledger, RT2-F9 un-triggered; consumes no task); (2) CD-2 = the A/B efficiency re-run per the frozen I47_EVAL_PACKET s7 mechanics (unused T2/T3 pick at dispatch; BOTH bars un-voided = accept; no C round). A pass licenses the migration unit (PCB default; FO-2; DOC_PROTOCOL rows) at i49; legacy stays default until then. Deferred (D-0134): AUDIT_PIPELINE next_increment (review_due i49; w08 window-close defect on the next w08 touch); M2-C/FO-3; #40 beam-width; PB-2. P0-1 activation stays FROZEN.
+**The re-check RAN same-session (Nicholas's remote held-session loop) and FAILED (D-0136; `modules/44-project-map/eval/results/I48_RECHECK_RESULTS.md`):** efficiency VOID x2 (RT2-F9) + both bars missed -- B out-ingested A 1.24x (raw-store fallback ~75%: deep narrative not query-reachable; the boot bar arithmetically dead post-CD-1). Comprehension parity repeated. **Legacy STAYS the default bootstrap.** **NEXT = i49 direction (Nicholas):** the PCB efficiency units N1-N3 (L2 narrative queries; overlay frontier; packet verb table) + N4 bar re-freeze (RATIFICATION reqd) before any fresh gate -- or the deferred menu (AUDIT_PIPELINE next_increment, review_due i49 + the w08 defect; M2-C/FO-3; #40 beam-width, A/B packs = design input; PB-2). P0-1 stays FROZEN.
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades; `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-11 -- i48 CLOSED (D-0135): #44 0.2.0 CD closures (recovered ship) + harvest sunset-fix + fold VALIDATE 0; the CONDITIONAL re-check staged (CD-1 probe -> CD-2 A/B).
+**Last updated:** 2026-08-11 -- i48 CLOSED (D-0135) + the re-check RAN + FAILED (D-0136): legacy stays default; N1-N4 named for i49.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

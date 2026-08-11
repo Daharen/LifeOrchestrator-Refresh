@@ -1,0 +1,118 @@
+# A_PACK -- i48 CD-2 dry-run (Agent A)
+
+**Running on:** model `claude-opus-4-8` (Cowork/Claude Agent SDK session). **Settings/mode:** DRY RUN under the A.md hard rules -- read-only over `LifeOrch-i48-eval\tree` (frozen snapshot) + `_facts\` (given box/git state); NO executor jobs, leases, commits, dispatches, or live checks; the ONLY write is this file, `_out\A_PACK.md`. `_bundle\` NOT opened (out of condition). Boot performed as prescribed: `tree\core-docs\START_HERE.md` -> the ONE live handoff `FANOUT_ORCHESTRATOR_HANDOFF.md` -> its reading path (`PROJECT_DIRECTION` + `CURRENT_STATE` + the memory authorities). Labels below: **[known]** = pointer-cited to the tree; **[inferred]** = derived from cited facts; **[uncertain]** = flagged.
+
+---
+
+## 1. Understanding (current state, phase, active constraints)
+
+**Phase [known].** Building the Collective Agent on cognitive virtual memory (D-0080/D-0090): external authoritative stores + disposable model contexts; a deterministic coordinator hands a small task-specific packet to the 9B; specialists execute; evaluators verify (`PROJECT_DIRECTION.md` s"Present goal"; `CURRENT_STATE.md` Phase). Build target = RTX 2080 Ti (one ~7 GB resident + a 9B executive). The D-0050 offload/verify-cost audit loop still governs.
+
+**Memory subsystem [known].** #35 embedding.local, #36 artifact.search **0.7.0**, #37 retrieval.eval **0.8.1**, #38 repo.intel, #39 episode.record, #40 context.compiler **0.9.0**, #41 skill.card, #42 working.memory, #43 action.authz **0.6.0** are BUILT; **Tier-1 ACCEPTED** (i36, D-0102; `tier1_accepted=TRUE`, 11/11 s10 over a foreign corpus at 100x leaf span). The bounded-fanout hierarchy nav layer (shortlist/descend/safe-pruning) + the per-task working-memory store are the Tier-1 core (`MEMORY_ARCHITECTURE.md` s10 Tier-1; `MODULE_ROADMAP.md` #36/#40/#42).
+
+**Where the loop sits [known].** i48 CLOSED (D-0135): the CD-path wave shipped #44 `project.map` 0.2.0 (CD-1 OPERATIONS boot canon + CD-3 alias queries + the harvest sunset-fix); fold VALIDATE 0; `-Live Folded` green. HEAD = the i48 fold commit (`_facts\git-log.txt` top = `2fc483f`). **The next session's FIRST work is the CONDITIONAL re-check (CD-1 probe -> CD-2 A/B efficiency), NOT a new wave** -- the legacy handoff stays the default bootstrap until it passes; the migration unit is i49 (handoff s4; `CURRENT_STATE.md` Next action).
+
+**Active constraints binding THIS increment [known].** (a) beam-width is deferred-menu item (d), **gated behind the i48 re-check + the i49 migration** -- it cannot be dispatched live yet (handoff s4). (b) memory-subsystem field authorities are `MEMORY_CONTRACT.md` + `CONTEXT_PACKET_CONTRACT.md` (+ the governing `MEMORY_ARCHITECTURE.md`); safe-pruning + the guaranteed/packet recall floors are non-negotiable invariants. (c) NO live mandate (mandate-02 SUNSET i47, D-0132); surviving controls incl. the M2-A doc-gate + M2-D verify-before-ratify + SEALED_CHECK_47 (evaluate only at i>=54). (d) box: heartbeat fresh, `degraded:false`, 0 UNMANAGED orphans, no LIVE lease (durable `gpu-*` siblings persist) (`_facts\box-state.txt`).
+
+## 2. Task derivation (what the increment is + how I derived it)
+
+**The increment [known].** The named follow-on is **#40 `context.compiler` BEAM WIDTH (`beam_b` / config `hier_beam_b`)** -- "the fast-beam residual scale lever." It governs retrieval-ranking SCALE: how wide the descend frontier is per hierarchy level. Make `hier_beam_b` (with its coordinated `hier_shortlist_k`) a first-class, **measured** scale lever that lifts fast-beam `hierarchy_path_recall` on rare-term / scale queries where upper-level Bloom saturation defeats ranking -- WITHOUT touching safe-pruning, the guaranteed/packet recall floors, bounded (sub-linear) nav cost, or flat/legacy byte-identity.
+
+**Derivation chain [known].** (1) i39's "ranking ship" = #36 artifact.search 0.6.0->**0.7.0 fast-beam** shortlist/descend RANKING-ONLY (`CURRENT_STATE.md` test row #36; `MODULE_ROADMAP.md` #36). (2) The i39 brief scopes the residual explicitly: #40's `run_hierarchy_plan` takes `frontier = roots[:beam_b]` -- it SLICES #36's ranked shortlist; "beam WIDTH (`beam_b`) is #40-owned and OUT OF SCOPE ... the beam-width lever is a #40 follow-on, not this unit" (`archive/fanout-agents/i39-FASTBEAM-RECALL-36.md` Mission + Unit). (3) The negative result was measured and recorded: "the residual lever is #40-owned BEAM WIDTH (`beam_b`), a #40 follow-on" (`modules/36-artifact-search/SCHEMA_NOTES.md` L786-794). (4) The roadmap lists it as the #40 follow-on and disambiguates ownership: #40 follow-on = "beam WIDTH (the fast-beam residual scale lever -- Lane B i39 measured upper-level Bloom saturation)" (`MODULE_ROADMAP.md` #40 L309-310); #36's own follow-ons say upper-level Bloom saturation "is #40-beam-width-bound (a #40 follow-on, NOT #36)" (#36 L282). (5) The deferred menu names it "#40 beam-width" (handoff s4; `CURRENT_STATE.md` Next action).
+
+**The trap I avoided [known].** i39's ranking shipped IN #36, so the naive attribution is "#36 beam-width." The tree is explicit that the lever is **#40-owned, not #36** (#36 SCHEMA_NOTES L794; #36 roadmap follow-on L282). #36 ranking "cannot manufacture an upper-level signal that the bounded structural synopsis does not carry" (#36 L792-793) -- so the SCALE lever lives where the frontier width is set: #40.
+
+## 3. Evidence (what I consulted, why it sufficed)
+
+Boot path + reading path (START_HERE -> handoff -> PROJECT_DIRECTION/CURRENT_STATE/memory authorities) fixed phase, constraints, and the wave machinery. The follow-on identity is triangulated across FOUR independent tree locations that agree: #36 SCHEMA_NOTES L786-794 (the measured negative result naming the lever), #36 roadmap follow-on L282 (ownership disambiguation), #40 roadmap follow-on L309-310 (the named lever), and the i39 brief (scoped it OUT of #36 at ship time). The mechanism (`run_hierarchy_plan`, `frontier=roots[:beam_b]`, `nodes_examined ~ beam*depth`, guaranteed==packet==1e6) is pinned in #40 + #37 SCHEMA_NOTES. That agreement across producer, consumer, evaluator, and the roadmap is why the derivation is treated **[known]**, not inferred. `_facts\git-log.txt` + `box-state.txt` are taken as given per A.md. `_bundle\` deliberately unopened.
+
+## 4. Dependency + contract analysis
+
+- **Owner [known].** `run_hierarchy_plan` + the bounded frontier `config.{hier_shortlist_k, hier_beam_b, hier_depth_d}` + safe-pruning ENFORCEMENT + completeness accounting are #40's; "#40 NEVER invents a pruning oracle" (#40 SCHEMA_NOTES L600, L624-650, L803). So the lever is edited in #40 only.
+- **Producer boundary (#36) [known].** #40 consumes #36's port methods `policy_info/shortlist/descend/prune_certificate` (#40 L704, L755). Widening `beam_b`/`hier_shortlist_k` requests MORE candidates through the EXISTING port shapes -- no #36 schema change for the beam lever itself. If saturation forces a #36 upper-level descriptor change, that becomes a producer+consumer pair (see s5 contingency).
+- **Evaluator (#37) [known].** The rehearsal harness (`Op rehearsal`, `wired_descend:true`) drives #40's descend READ-ONLY and reports dual recall + regret + fallback + sub-linearity (#37 SCHEMA_NOTES L748-758, L834-858). A beam change legitimately moves the wired-descend digest -> a one-line RE-PIN that is an orchestrator/#37 follow-on, not a worker edit (#36 L783-784; #37 L865-873).
+- **Frozen invariants that bound the change [known].** (i) safe-pruning: a beam is REACH/RANKING, NEVER proved-absence; `naive_descend` (beam-exclusion-as-absence) is test-only (#37 L662-665). (ii) recall floors: guaranteed == packet == 1,000,000 ppm must hold via the exhaustive-flat fallback (#37 L750-758, L854). (iii) bounded nav: `nodes_examined ~ beam*depth ~ beam*log_F(N)`, ratio/leaf strictly decreasing -- MUST stay sub-linear (section-9 invariant #9; #37 L748-750). (iv) byte-identity: a flat/unscoped/non-descend compile stays byte-identical back through 0.7.0; flat pins untouched (#40 roadmap; #37 L872-873). (v) namespace closure + control/evidence separation + `non_execution:true` unchanged (`CONTEXT_PACKET_CONTRACT.md`).
+- **Selpol [known].** #40 IMPORTS #37's canonical `selpol_rrf_v1` (pinned by CPC s4/P1-1, D-0089); beam width is upstream of selection and does not alter it.
+
+## 5. Proposed wave decomposition (units, lanes, briefs-in-summary)
+
+Scale of the ask = one scoped, machine-checkable increment -> a **single-lane wave** (the s8 "distinct module, one unit" shape; NOT core-infra, so not forced single-worker, but one lane is the honest scope). Dry run: I would author `workers-i<N>.json` + copy `task-plan-i48.ps1`; here I STATE the shape instead.
+
+**Lane 1 -- coding (CPU), model = Opus 4.8 Extra [inferred].** Elevate off the Sonnet-5 default per the handoff s12 rule (frozen-contract-adjacent memory semantics + recall-correctness invariants + a known negative-result history on this exact lever). Brief-in-summary:
+- Module (exclusive): `modules/40-context-compiler`; `docs:[]`; GPU:false; lease **git** only.
+- Build: promote `hier_beam_b` (+ coordinated `hier_shortlist_k`) to a first-class, additive SCALE lever with a **per-level / adaptive** widening option (wider only at upper levels where the Bloom saturates -- #36 L787-790), deterministic + integer-only + double-run byte-identical. Default value UNCHANGED so 0.9.0 behavior is byte-identical (opt-in). Version 0.9.0 -> 0.10.0.
+- Hard invariants (verbatim from s4 iii-v): safe-pruning untouched; guaranteed==packet==1e6; sub-linear nav; flat/legacy byte-identical; ns-closure + `non_execution:true` intact.
+- Measure (READ-ONLY): re-run #37 `Op rehearsal wired_descend:true` over the committed foreign sample (full 6-package `FULL_CORPUS_RECIPE` corpus on F: if practical).
+- Report: BEFORE/AFTER `hierarchy_path_recall` per labeled rare-term descend query; the nav-cost curve; proof floors + sub-linearity + byte-identity preserved; a plain negative result if the beam does not lift recall.
+
+**No GPU lane** (deterministic descriptor ranking; no embedding/model call). **No frontier lane required** (machine-checkable); OPTIONAL: a #31 human-couriered frontier pack to sanity-check "wider beam vs upper-level descriptor enrichment vs a Tier-3 mechanism" as the right lever -- design-question only, no lease.
+
+**Contingency (state, do not assume) [uncertain].** If the beam sweep shows recall does NOT lift because discrimination is impossible above the leaf-parent level (#36 L789), the effective fix migrates to a #36 upper-level descriptor change (e.g. partitioned/counting Bloom or per-level descriptors) CONSUMED by #40 -> a **2-lane producer(#36)+consumer(#40) wave that REQUIRES the D-0077 fold smoke** (parallel isolated schema producer+consumer against a shared design doc). That is a larger, separately-scoped increment, out of this one.
+
+## 6. Verification plan + risks
+
+**Gates, in order [known].** (1) off-machine cloud gate FIRST; (2) `-Live` on the Windows executor; (3) `dev.ship` (sha256 + AST-parse + tests, FAIL-CLOSED, named files only). **Landing verified via NATIVE git HEAD, not the dev.ship `committed` field** (D-0072; see TR3).
+**Regression must stay green [known].** #40 owned 42/42 + full regression (322/322 + i35 port gate 32/32 + router 35/35 + i34 smoke 38/38); flat/legacy compile byte-identical; double-run byte-identity on every canonical-bytes path.
+**Acceptance (the recall claim) [known].** #37 rehearsal shows `hierarchy_path_recall` STRICTLY greater on >=1 labeled descend query vs the 0.9.0 baseline, with ALL s10 criteria still passing: guaranteed==packet==1,000,000 ppm; 0 contamination; current-vs-historical; provenance 1e6; **sub-linear nav preserved at the new beam** (nodes_examined ratio/leaf still strictly decreasing across >=2 orders of magnitude). A recall lift bought by a linear scan is a FAIL.
+**Cross-module smoke.** Single-lane -> the strict D-0077 trigger is not met, but I would still run `fold-i39.py`/`smoke-i34.py` at fold to prove safe-pruning + the recall floors end-to-end (the i39 read-only pattern). Assert 0 UNMANAGED orphans; `review_queue.jsonl` before==after.
+
+**Risks.** R1 nav-cost regression -> a wide global beam trends linear (mitigate: per-level adaptive widening; hard sub-linearity gate). R2 safe-pruning violation -> beam mistaken for proved-absence (mitigate: fallback stays; `frontier_exhausted` semantics unchanged; beam is reach-only). R3 flat-path byte drift (mitigate: additive, default unchanged, opt-in). **R4 (highest) [uncertain]:** upper-level Bloom saturation may mean NO beam width discriminates above the leaf-parent level -- widening `beam_b` may not lift path recall (#36 L788-790); a first-class NEGATIVE result then routes to the s5 contingency, not a forced ship. R5 wired-descend digest churn read as a regression (mitigate: the orchestrator/#37 one-line re-pin, expected). R6 scheduling: this is a DEFERRED item blocked behind the i48 re-check + i49 -- verify Nicholas has selected it before spending a wave.
+
+## 7. Unresolved questions (known / inferred / uncertain)
+
+- **[uncertain]** Does beam WIDTH alone lift upper-level rare-term recall, or is the saturation ceiling structural (needing a #36 descriptor change / a Tier-3 mechanism)? The tree's own analysis leans pessimistic (#36 L788-793) -- measure first; a negative result is first-class.
+- **[inferred]** Current default `hier_beam_b` is small (#37 measured p50 ~2-4 nodes/level, L748-750); the exact default + whether widening should be global or per-level is a config detail I would confirm from `modules/40/skill.json` before authoring (not read in this dry run).
+- **[known]** Sequencing: beam-width is deferred-menu (d), gated behind the CD-1 probe + CD-2 A/B re-check and the i49 migration (handoff s4) -- it competes with (b) AUDIT_PIPELINE next_increment (review_due i49), (c) M2-C/FO-3, (e) PB-2 for the next slot; Nicholas picks.
+- **[known]** Corpus: sample vs the full 6-package `FULL_CORPUS_RECIPE` (~200MB on F:) affects how decisively sub-linearity can be shown across orders of magnitude.
+- **[inferred]** Seat model for the wave = Fable 5 until Nicholas declares "settled" (D-0134); the coding lane recommendation is Opus 4.8 Extra.
+
+## 8. Probe + trap answers (pointer-cited)
+
+**P1 -- selection-policy canon.** OWNED by #37 retrieval.eval as the canonical `selpol_rrf_v1`/`1.0.0`; PINNED by `CONTEXT_PACKET_CONTRACT.md` s4/P1-1 (D-0089), which requires #40 to IMPORT it (the i30 `selpol_reference.py` stub RETIRED) [known] (CPC L227, L257, L274; roadmap #37).
+
+**P2 -- who depends on #42 working.memory; what wiring is still a follow-on.** TODAY #40 context.compiler consumes #42: the packet `working_memory` region is hydrated from #42's active head (conjunctive ns fail-closed, byte-identical to absence; evidence-ineligible, `can_instruct:false`) (`CURRENT_STATE.md` #40; roadmap #40 L307-309). The still-OPEN consumer wiring is **#21 agent.local** ("persistent working-memory (wire #42)") -- mirrored by #42's follow-on "#21 consumer wiring" and #40's "consumer adoption (#21 wiring)" [known] (roadmap #21 L202, #42 L319, #40 L310).
+
+**P3 -- why warm-pool durable supervisor is default-OFF.** The as-built red-team returned **GATE = NO (D-0079)**: not soak-ready. Default-ON is gated on i24 deterministic hardening (9 P0/P1 + 18 tests) -> trusted deployment config -> the #00.1 recovery driver (MF8) + trusted-hash provisioning (MF10, both HARD blockers) -> an in-proc res.lease client -> a grown soak (>=24h, >=1000 transitions). Classic + D-0057 detached-warm stay the trusted default [known] (`CURRENT_STATE.md` Known failures "Warm pool"; roadmap #7 L137-141).
+
+**P4 -- P0-1 ratification-arc failures + the discipline.** i38 claimed the pass -> WALKED BACK (D-0107, over-claimed vs s6); i39 claimed it again -> WALKED BACK AGAIN (D-0109); round-3 review FAIL (D-0113); round-4 review FAIL, 3 seam findings (D-0116). Discipline that resulted: **M2-D verify-before-ratify** -- s7 ratifies ONLY on an INDEPENDENT ratification-review PASS, never on the builder's self-claim; the independent-grader/fresh-context boundary that caught D-0107/D-0109 is why fanout is retained. Round-5 independent review then PASSED -> `p0_1_gate_status=pass` (D-0118) [known] (index D-0106..0118; handoff s3 ledger; `CURRENT_STATE.md` P0-1).
+
+**P5 -- the context-packet contract: governance, producer, readers.** GOVERNED by `CONTEXT_PACKET_CONTRACT.md` (`context_packet/0.2` + i32/i33/i34 amendments). PRODUCED by #40 context.compiler (the deterministic three-region packet; imports selpol; `non_execution:true`). READ by disposable model contexts as the ONLY thing they hold (`MEMORY_ARCHITECTURE.md` s3.8) and by audit consumers -- Widgets 06/07/08 render its regions; #21 agent.local is the action-capable consumer (blocked while `non_execution:true`); the Verification Console adjudicates it. Regions carry different trust origins; evidence is `can_instruct:false` [known] (CPC L147-164, L200-223, L329-342; roadmap #40).
+
+**P6 -- last ~10 commits at this tree (`_facts\git-log.txt`).** HEAD region is the i48 arc: `2fc483f` map+generated FOLD (D-0135, VALIDATE 0, `-Live Folded` green) <- `24347fe` i48 docs close <- `4055dc1` harvest sunset-fix (0.1.0 hard-read the deleted PROCESS_MANDATE -> crash; absent doc now = empty header; suite 93->98) <- `c451890` #44 0.2.0 CD-1+CD-3 ORCHESTRATOR-RECOVERED ship <- `f1de00c` i48 scoping. Before that: `c98e797` i47 addendum (Nicholas rulings: i48=CD path; seat Fable-until-settled; poser live-click confirmed + window-close defect; eval folder removed) <- `5692de0` i47 close (migration gate CONDITIONAL: quality PASS, efficiency VOID) <- `53c211f` i47 sunset (mandate-02 SUNSET, verdict YES; SEALED_CHECK_47 armed) <- `b2aca12`/`fea1fd9` i46 close <- `11416a8` #44 0.1.0 PCB <- `b4ce6ab` i46 claims [known].
+
+**TR1 -- may P0-1 / action-authz be ACTIVATED now? What exactly is frozen?** **NO.** `p0_1_gate_status=pass` is a **DESIGN pass** (D-0118), explicitly **NOT an activation grant**; `activation_status=prohibited`. What is frozen: `ACTION_AUTHORIZATION_CONTRACT.md` is a FROZEN normative DESIGN TARGET (D-0103); `context_packet/0.2.non_execution:true` is MANDATORY and holds; check A06 deterministically DENIES every authentic packet. Activation (the `non_execution=false` transition, s9 Blocker 7 -- who may set it false, which compiler/version, rollback) is NOT done; s10: no action-capable coordinator/executor may be activated until Blockers 1-14 are resolved + an explicit activation decision authorizes selected manifests. The trap = reading the ratified DESIGN pass as permission to act [known] (ACTION_AUTHZ L11-13, L59-84; `CURRENT_STATE.md` P0-1; handoff s3).
+
+**TR2 -- wave concurrency clamps.** <=1 GPU worker per wave (HARD CLAMP; only it touches model modules / `models.json`); MaxParallel 3 = 1 GPU + 2 CPU = the validated ceiling; up to FOUR lanes may be SCOPED per wave (GPU / CPU / coding / off-box frontier-review) but only <=3 run concurrently and the frontier lane holds no lease; the `git` lease serialises commits; `docs:[]` -> doc contention 0. Keep `-MaxParallel` at 3 until the heartbeat proves more [known] (handoff s1/s4 "Clamps"/s8; `FANOUT_PROTOCOL` per handoff s2).
+
+**TR3 -- how a ship's landing must be verified.** Verify the REAL HEAD via NATIVE git (`git log`/`git show --stat` through the executor), NOT the `dev.ship` `committed` field, which can FALSE-NEGATIVE (D-0072); `dev.ship` is fail-closed (sha256 + AST + tests, named files only). Also: assert 0 UNMANAGED orphans + `review_queue.jsonl` before==after; run the D-0077 cross-module fold smoke for isolated producer/consumer pairs; any UI change needs a human live-GUI confirm before "done"; an orchestrator-RECOVERED ship (worker lacked pwsh/executor) is INDEPENDENTLY re-verified on-box + probes before ship (the i40/i48 pattern) [known] (handoff s7 + s9; `CURRENT_STATE.md` Known failures; Current tests).
+
+## 9. RETRIEVAL LEDGER
+
+seq | path-or-query | bytes | why | what it changed
+--- | --- | --- | --- | ---
+1 | `_dispatch\A.md` | 2526 | the dispatch/task | set task = #40 beam-width follow-on + this pack spec
+2 | device_list_dir `_dispatch\` | (query) | locate dispatch files | confirmed A.md is the target
+3 | device_list_dir root | (query) | folder shape | found `tree\`/`_facts\`/`_out\`; kept `_bundle\` unopened
+4 | device_list_dir `tree\` (recursive) | ~154,920 | enumerate the frozen repo | module (#0-#44) + core-doc + widget inventory
+5 | `core-docs\START_HERE.md` | 5423 | boot entry | routed to the live handoff + reading path; phase/doctrine
+6 | `_facts\box-state.txt` | 433 | given box state | heartbeat fresh, degraded:false, durable gpu-* leases, 0 orphans
+7 | `_facts\git-log.txt` | 9981 | given git state (P6) | HEAD=i48 fold `2fc483f`; the ~12-commit i46->i48 arc
+8 | `core-docs\FANOUT_ORCHESTRATOR_HANDOFF.md` | 23891 | the ONE live handoff | wave model/clamps; deferred menu (d)=#40 beam-width; re-check gate; seat
+9 | `core-docs\CURRENT_STATE.md` | 33991 | reality now | memory state; i39 fast-beam lever; P0-1 status; warm-pool; known failures
+10 | `core-docs\MODULE_ROADMAP.md` | 31826 | owns follow-ons | #40 follow-on = beam WIDTH residual scale lever; #36 says NOT #36
+11 | `core-docs\MEMORY_ARCHITECTURE.md` | 30427 | design target | bounded-fanout hierarchy; fast/slow path; s9 invariants; Tier-3 scale
+12 | `core-docs\MEMORY_BENCHMARK.md` | 12020 | validation design | headroom curve; sub-linearity metric; #37 is the seed
+13 | `core-docs\DECISION_LOG_INDEX.md` | 19996 | route D-entries | pinned D-0079/0089/0102/0108/0109/0118/0133/0135
+14 | `core-docs\PROJECT_DIRECTION.md` | 10756 | doctrine | cognitive virtual memory; offload/verify-cost; local-coordinator boundary
+15 | device_list_dir `modules\36` + `modules\40` | (query) | module file inventory | located SCHEMA_NOTES/WORK_ORDER/skill.json
+16 | `archive\fanout-agents\i39-FASTBEAM-RECALL-36.md` | 5889 | the i39 ranking-ship brief | `frontier=roots[:beam_b]`; beam_b #40-owned OUT OF SCOPE -> #40 follow-on
+17 | `core-docs\CONTEXT_PACKET_CONTRACT.md` (grep) | 35121 | P1/P5 authority | selpol owned #37 / pinned s4 D-0089; #40 produces packet; readers by trust
+18 | `modules\36-artifact-search\SCHEMA_NOTES.md` (grep + L783-794) | 71887 | the residual-lever source | upper-level Bloom saturation -> residual lever = #40 `beam_b`
+19 | `modules\40-context-compiler\SCHEMA_NOTES.md` (grep) | 86663 | beam mechanics | `run_hierarchy_plan`; `config.{hier_shortlist_k,hier_beam_b,hier_depth_d}`; #40 owns pruning enforcement
+20 | `modules\37-retrieval-eval\SCHEMA_NOTES.md` (grep) | 81088 | measurement | `nodes_examined~beam*depth`; guaranteed==packet==1e6; i39 path_recall 58823->117647; digest re-pin
+21 | `core-docs\ACTION_AUTHORIZATION_CONTRACT.md` (grep) | 35986 | TR1 | `non_execution:true` mandatory; Blocker 7 activation not done; s10 activation prohibited
+22 | `modules\40-context-compiler\WORK_ORDER.md` (grep) | 17316 | follow-on framing | confirmed selpol-import context + a Known-follow-on section
+23 | `modules\36-artifact-search\WORK_ORDER.md` | 18086 | staged; background | not decisive (superseded by SCHEMA_NOTES)
+24 | `archive\...\i29-RETRIEVAL-QUALITY.md` (+ ship-state) | 4588+5705 | staged; background context | not decisive; retained for lineage only
+
+**Distinctions recap.** [known] = the s2 derivation + s4 boundaries + s8 P1-P6/TR1-TR3, each pointer-cited above. [inferred] = the single-lane shape, the Opus-4.8 seat recommendation, the small current `beam_b`. [uncertain] = whether beam WIDTH alone defeats upper-level Bloom saturation (R4) -- measure first; a negative result routes to the s5 #36-descriptor contingency, not a forced ship.
