@@ -1,0 +1,5659 @@
+{
+ "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+ "by": "lane-B-i46",
+ "entities": [
+  {
+   "aliases": [
+    "pos 0"
+   ],
+   "confidence": "established",
+   "display_name": "exec.bootstrap",
+   "id": "arch:0",
+   "ns": "arch",
+   "one_line": "Trusted High-Risk Bootstrap Executor. Deterministic.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "pos 00.1"
+   ],
+   "confidence": "established",
+   "display_name": "exec.watchdog",
+   "id": "arch:00.1",
+   "ns": "arch",
+   "one_line": "Cooperative executor recovery. Deterministic.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "pos 1"
+   ],
+   "confidence": "established",
+   "display_name": "skill.bootstrap",
+   "id": "arch:1",
+   "ns": "arch",
+   "one_line": "Skill contract + registry + generic wrapper. Deterministic.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "pos 10"
+   ],
+   "confidence": "established",
+   "display_name": "audio.ingest",
+   "id": "arch:10",
+   "ns": "arch",
+   "one_line": "Decode/resample/normalize/segment. Deterministic (ffmpeg).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "pos 11"
+   ],
+   "confidence": "established",
+   "display_name": "speech.stt",
+   "id": "arch:11",
+   "ns": "arch",
+   "one_line": "Transcription + timestamps. whisper.cpp today.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "pos 12"
+   ],
+   "confidence": "established",
+   "display_name": "speech.tts",
+   "id": "arch:12",
+   "ns": "arch",
+   "one_line": "Synthesis. Qwen3-TTS today.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "pos 13"
+   ],
+   "confidence": "established",
+   "display_name": "voice.live",
+   "id": "arch:13",
+   "ns": "arch",
+   "one_line": "One voice turn (STT -> LLM -> TTS). Composition.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "pos 14"
+   ],
+   "confidence": "established",
+   "display_name": "ocr.layout",
+   "id": "arch:14",
+   "ns": "arch",
+   "one_line": "OCR + word boxes + reading order. Windows.Media.Ocr today.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "pos 15"
+   ],
+   "confidence": "established",
+   "display_name": "image.util",
+   "id": "arch:15",
+   "ns": "arch",
+   "one_line": "Resize/crop/hash/tile/similarity/meta. Deterministic (Pillow).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "pos 16"
+   ],
+   "confidence": "established",
+   "display_name": "detect.objects",
+   "id": "arch:16",
+   "ns": "arch",
+   "one_line": "Object boxes + real scores. YOLOX/ONNX today.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "pos 17"
+   ],
+   "confidence": "established",
+   "display_name": "image.interpret",
+   "id": "arch:17",
+   "ns": "arch",
+   "one_line": "VLM caption/VQA/screen. Qwen2.5-VL-3B today.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "pos 18"
+   ],
+   "confidence": "established",
+   "display_name": "image.index",
+   "id": "arch:18",
+   "ns": "arch",
+   "one_line": "Fuse OCR/util/detect/interpret into one per-image record. Composition.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "pos 19"
+   ],
+   "confidence": "established",
+   "display_name": "media.decompose",
+   "id": "arch:19",
+   "ns": "arch",
+   "one_line": "Audio/subs/scene cuts/keyframes/clips/proxies. Deterministic (ffmpeg).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "pos 2"
+   ],
+   "confidence": "established",
+   "display_name": "fs.observer",
+   "id": "arch:2",
+   "ns": "arch",
+   "one_line": "Filesystem inspect/search/index. Deterministic (optional summarizer).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "pos 20"
+   ],
+   "confidence": "established",
+   "display_name": "track.objects",
+   "id": "arch:20",
+   "ns": "arch",
+   "one_line": "Identity across frames (SAM2+ByteTrack over a detector, planned form).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "pos 21"
+   ],
+   "confidence": "uncertain",
+   "display_name": "video.timeline",
+   "id": "arch:21",
+   "note": "MODULE_ROADMAP marks module:34/video.timeline MVP-complete 0.1.1 REALIZING this position, but ARCHITECTURE_MAP's own \"Video (19-22)\" section banner still reads \"planned\" and this position's bullet carries no BUILT annotation (unlike 19/20) -- a doc-staleness gap, not a contradiction I can resolve; status here follows the more specific MODULE_ROADMAP realizes-claim.",
+   "ns": "arch",
+   "one_line": "Fuse transcription+scenes+OCR+detections+tracks -> searchable timeline. Composition.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "pos 22"
+   ],
+   "confidence": "established",
+   "display_name": "video.interpret",
+   "id": "arch:22",
+   "ns": "arch",
+   "one_line": "Selective frames/clips -> VLM.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "proposed"
+  },
+  {
+   "aliases": [
+    "pos 23"
+   ],
+   "confidence": "established",
+   "display_name": "artifact.search",
+   "id": "arch:23",
+   "ns": "arch",
+   "one_line": "Retrieval over all local-skill artifacts. Embeddings + reranker.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "pos 24"
+   ],
+   "confidence": "uncertain",
+   "display_name": "route.tasks",
+   "id": "arch:24",
+   "note": "position is explicitly described as only PARTIALLY realized (route.tools=which-tools pass / agent.local=scoped slice); status=in-progress reflects that partiality, not a full build.",
+   "ns": "arch",
+   "one_line": "Model/tool task router by type/confidence/cost/time.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "in-progress"
+  },
+  {
+   "aliases": [
+    "pos 25"
+   ],
+   "confidence": "established",
+   "display_name": "observe.broker",
+   "id": "arch:25",
+   "ns": "arch",
+   "one_line": "Route one desktop-observation question across fs/proc/UIA/OCR/capture.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "proposed"
+  },
+  {
+   "aliases": [
+    "pos 26"
+   ],
+   "confidence": "uncertain",
+   "display_name": "skill.orchestrator",
+   "id": "arch:26",
+   "note": "position is explicitly described as only PARTIALLY realized (route.tools=which-tools pass / agent.local=scoped slice); status=in-progress reflects that partiality, not a full build.",
+   "ns": "arch",
+   "one_line": "Compose skills into workflows; scheduling/locking/retries/gates/state.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "in-progress"
+  },
+  {
+   "aliases": [
+    "pos 27"
+   ],
+   "confidence": "established",
+   "display_name": "net-media",
+   "id": "arch:27",
+   "ns": "arch",
+   "one_line": "Network knowledge & media acquisition -- deterministic fetch/provenance/parse; small LLM for query expansion + ranking.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "pos 28"
+   ],
+   "confidence": "established",
+   "display_name": "screen-parser",
+   "id": "arch:28",
+   "ns": "arch",
+   "one_line": "Hierarchical screen parser -- OmniParser V2 / ShowUI-2B / PP-OCRv5 + a VLM for unresolved regions.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "pos 29"
+   ],
+   "confidence": "established",
+   "display_name": "grounding-seg",
+   "id": "arch:29",
+   "ns": "arch",
+   "one_line": "Open-vocabulary grounding & segmentation -- Grounding DINO + SAM 2 + YOLOE-26 + a VLM.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "pos 3"
+   ],
+   "confidence": "established",
+   "display_name": "proc.observer",
+   "id": "arch:3",
+   "ns": "arch",
+   "one_line": "Process + window snapshot. Deterministic.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "pos 30"
+   ],
+   "confidence": "established",
+   "display_name": "visual-registry",
+   "id": "arch:30",
+   "ns": "arch",
+   "one_line": "Visual asset & instance registry -- DINOv2/3 + VL-embeddings + VL-reranker; persistent identities.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "pos 31"
+   ],
+   "confidence": "established",
+   "display_name": "app-ontology",
+   "id": "arch:31",
+   "ns": "arch",
+   "one_line": "Application ontology & schema learner -- VLM + LLM; graph + evidence system custom.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "pos 32"
+   ],
+   "confidence": "established",
+   "display_name": "annotation-builder",
+   "id": "arch:32",
+   "ns": "arch",
+   "one_line": "Active annotation & dataset builder -- Grounding DINO + SAM 2 + DINOv2 + VLM.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "pos 33"
+   ],
+   "confidence": "established",
+   "display_name": "specialist-training",
+   "id": "arch:33",
+   "ns": "arch",
+   "one_line": "Specialist model training & distillation -- LoRA/QLoRA/teacher-student pipelines.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "pos 34"
+   ],
+   "confidence": "established",
+   "display_name": "specialist-eval",
+   "id": "arch:34",
+   "ns": "arch",
+   "one_line": "Specialist evaluation & calibration gate -- deterministic metrics/calibration/held-out.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "pos 35"
+   ],
+   "confidence": "established",
+   "display_name": "temporal-state-graph",
+   "id": "arch:35",
+   "ns": "arch",
+   "one_line": "Temporal screen state graph -- SAM2/ByteTrack/VL-embeddings; persistent identity+causality.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "pos 36"
+   ],
+   "confidence": "established",
+   "display_name": "interaction-trace",
+   "id": "arch:36",
+   "ns": "arch",
+   "one_line": "Interaction trace reconstruction -- UI-TARS-1.5-7B/ShowUI/CogAgent/VLM.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "pos 37"
+   ],
+   "confidence": "established",
+   "display_name": "active-exploration",
+   "id": "arch:37",
+   "ns": "arch",
+   "one_line": "Active exploration & affordance learner -- UI-TARS/ShowUI/CogAgent/VLM.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "pos 38"
+   ],
+   "confidence": "established",
+   "display_name": "visual-action-exec",
+   "id": "arch:38",
+   "ns": "arch",
+   "one_line": "Visual-only action executor -- UI-TARS/ShowUI/CogAgent/OmniParser.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "pos 39"
+   ],
+   "confidence": "established",
+   "display_name": "outcome-verify",
+   "id": "arch:39",
+   "ns": "arch",
+   "one_line": "Outcome verification, recovery & rollback -- VLM+UI-TARS/ShowUI.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "pos 4"
+   ],
+   "confidence": "established",
+   "display_name": "uia.inspector",
+   "id": "arch:4",
+   "ns": "arch",
+   "one_line": "Read-only UI Automation tree. Deterministic.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "pos 40"
+   ],
+   "confidence": "established",
+   "display_name": "procedure-learner",
+   "id": "arch:40",
+   "ns": "arch",
+   "one_line": "Demonstration & procedure learner -- ShowUI-Aloha/UI-TARS/VLM.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "pos 41"
+   ],
+   "confidence": "established",
+   "display_name": "diagnostic-reasoner",
+   "id": "arch:41",
+   "ns": "arch",
+   "one_line": "Screen-only diagnostic reasoner -- VLM 8B+ + strong LLM.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "pos 42"
+   ],
+   "confidence": "established",
+   "display_name": "forensics-orchestrator",
+   "id": "arch:42",
+   "ns": "arch",
+   "one_line": "Retrospective screen forensics orchestrator -- VLM+ASR+OmniParser+GroundingDINO+SAM2+DINO+embeddings.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "pos 43"
+   ],
+   "confidence": "established",
+   "display_name": "opaque-operator",
+   "id": "arch:43",
+   "ns": "arch",
+   "one_line": "Opaque computer operator -- UI-TARS/ShowUI/CogAgent/OmniParser/VLM; engineered composite.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "pos 44"
+   ],
+   "confidence": "established",
+   "display_name": "screen-asset-gen",
+   "id": "arch:44",
+   "ns": "arch",
+   "one_line": "Synthetic screen & asset generator -- Qwen-Image/FLUX.1-schnell/SDXL (+DreamBooth/LoRA).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "pos 45"
+   ],
+   "confidence": "established",
+   "display_name": "rt-perception-runtime",
+   "id": "arch:45",
+   "ns": "arch",
+   "one_line": "Real-Time Perception & Control Runtime -- persistent async loops at different frequencies.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "pos 46"
+   ],
+   "confidence": "established",
+   "display_name": "event-salience-broker",
+   "id": "arch:46",
+   "ns": "arch",
+   "one_line": "Event, Salience & Interrupt Broker -- converts continuous change into sparse meaningful events.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "pos 47"
+   ],
+   "confidence": "established",
+   "display_name": "reflex-runtime",
+   "id": "arch:47",
+   "ns": "arch",
+   "one_line": "Reactive Skill & Reflex Runtime -- very fast bounded policies; mostly not LLM calls.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "pos 48"
+   ],
+   "confidence": "established",
+   "display_name": "skill-arbitration",
+   "id": "arch:48",
+   "ns": "arch",
+   "one_line": "Skill Arbitration & Action Inhibition -- decides which policy owns each input channel.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "pos 49"
+   ],
+   "confidence": "established",
+   "display_name": "world-model",
+   "id": "arch:49",
+   "ns": "arch",
+   "one_line": "Predictive State & Short-Horizon World Model -- predicts near-future state (DreamerV3-style).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "pos 5"
+   ],
+   "confidence": "established",
+   "display_name": "uia.actor",
+   "id": "arch:5",
+   "ns": "arch",
+   "one_line": "UIA control-pattern actions. Deterministic.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "pos 6"
+   ],
+   "confidence": "established",
+   "display_name": "capture.screen",
+   "id": "arch:6",
+   "ns": "arch",
+   "one_line": "Screenshot / region capture. Deterministic.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "pos 7"
+   ],
+   "confidence": "established",
+   "display_name": "model.gateway",
+   "id": "arch:7",
+   "ns": "arch",
+   "one_line": "Hosts + normalizes every local model. Infra (no model of its own).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "pos 8"
+   ],
+   "confidence": "established",
+   "display_name": "classify.batch",
+   "id": "arch:8",
+   "ns": "arch",
+   "one_line": "Batch classify / label / extract. Weak LLM.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "pos 9"
+   ],
+   "confidence": "established",
+   "display_name": "review.processor",
+   "id": "arch:9",
+   "ns": "arch",
+   "one_line": "Review-queue adjudication. Stronger LLM.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "contract",
+     "ref": "core-docs/ACTION_AUTHORIZATION_CONTRACT.md"
+    }
+   ],
+   "display_name": "Action Authorization Contract",
+   "id": "contract:action-authorization",
+   "ns": "contract",
+   "one_line": "FROZEN (D-0103) P0-1 deny-by-default reference-monitor design target that action.authz (#43) builds to; DESIGN-ONLY, activation gate still prohibited.",
+   "plane_primary": "authority",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ACTION_AUTHORIZATION_CONTRACT.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DOC_PROTOCOL.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "contract",
+     "ref": "core-docs/CONTEXT_PACKET_CONTRACT.md"
+    }
+   ],
+   "display_name": "Context Packet Contract",
+   "id": "contract:context-packet",
+   "ns": "contract",
+   "one_line": "Owns the context-packet between retrieval and a model context (control/evidence separation, selection-policy library); context.compiler (#40) build target.",
+   "plane_primary": "memory",
+   "planes_secondary": [
+    "intelligence"
+   ],
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/CONTEXT_PACKET_CONTRACT.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DOC_PROTOCOL.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "uncertain",
+   "deeper": [
+    {
+     "kind": "contract",
+     "ref": "core-docs/DOC_PROTOCOL.md"
+    }
+   ],
+   "display_name": "Doc Protocol",
+   "id": "contract:doc-protocol",
+   "note": "plane assignment is this claim's judgment (a governance/hygiene contract does not map cleanly onto the 5-plane test); not independently confirmed by a source.",
+   "ns": "contract",
+   "one_line": "The anti-bloat contract for core-docs/ (hot-doc budgets + replace-don't-append + the DECISION_LOG/index/archive layering); open before editing any core doc.",
+   "plane_primary": "authority",
+   "planes_secondary": [
+    "observability"
+   ],
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DOC_PROTOCOL.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/START_HERE.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "contract",
+     "ref": "core-docs/MEMORY_CONTRACT.md"
+    }
+   ],
+   "display_name": "Memory Contract",
+   "id": "contract:memory",
+   "ns": "contract",
+   "one_line": "The FROZEN (D-0083) record/provenance-envelope + embedding-provider + retriever interfaces every memory producer/consumer (#35-#42) builds to.",
+   "plane_primary": "memory",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DOC_PROTOCOL.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/MEMORY_CONTRACT.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "contract",
+     "ref": "core-docs/SKILL_CONTRACT.md"
+    }
+   ],
+   "display_name": "Skill Contract",
+   "id": "contract:skill",
+   "ns": "contract",
+   "one_line": "The interface (manifest/envelope/-InputsJson/wrapper) every independently-invokable local skill must expose; open before building or modifying ANY module.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DOC_PROTOCOL.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/SKILL_CONTRACT.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "id": "decision:D-0029",
+   "ns": "decision",
+   "one_line": "Build order pivots to a usable local core; Modules and Widgets separated",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "id": "decision:D-0038",
+   "ns": "decision",
+   "one_line": "Widgets default to native WinForms/PowerShell and always ship launchers",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "id": "decision:D-0050",
+   "ns": "decision",
+   "one_line": "Adopt verify-cost offloading, an audit-loop spine, and a Claude-led bridge doctrine",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "id": "decision:D-0077",
+   "ns": "decision",
+   "one_line": "Video tracker and timeline shipped; cross-module fold smoke mandated for isolated producer/consumer waves",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "id": "decision:D-0080",
+   "ns": "decision",
+   "one_line": "Pivot to Collective Agent cognitive virtual memory; freeze warm-pool, generators, and real-time work",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "id": "decision:D-0090",
+   "ns": "decision",
+   "one_line": "Adopt the full long-horizon memory architecture as the evidence-staged design target (Tiers 0-3, design-now vs build-now)",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "id": "decision:D-0102",
+   "ns": "decision",
+   "one_line": "i36 CLOSED: TIER-1 ACCEPTED (11/11 s10 over a hash-verified foreign corpus, 100x leaf span); tier1_accepted TRUE",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "id": "decision:D-0103",
+   "ns": "decision",
+   "one_line": "i37 open: action-authz contract FROZEN = P0-1 target (non_execution holds; blockers activation-gating)",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "id": "decision:D-0118",
+   "ns": "decision",
+   "one_line": "i42 round-5 ratification PASS: P0-1 = DESIGN PASS (p0_1_gate_status=pass); activation still prohibited",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "id": "decision:D-0122",
+   "ns": "decision",
+   "one_line": "i45 close: LRAP/Widget 08 (D-0120 P9 surface) SHIPPED + re-verified 87/0/0; leveled accept -- increment PASS, whole auditor NOT complete",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "id": "decision:D-0125",
+   "ns": "decision",
+   "one_line": "i45 acceptance CORRECTED (Nicholas): LRAP v1 NOT phenomenological even on built scope -- flag-visibility only; P9 open",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "id": "decision:D-0130",
+   "ns": "decision",
+   "one_line": "i46 DIRECTIVE-HIJACK: PCB design FROZEN -- namespace scheme + 5 planes + NEW modules/44 project.map + claims-only judgment; 2 red-teams folded",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "AUDIT_PIPELINE",
+   "id": "doc:core-docs/AUDIT_PIPELINE.md",
+   "note": "Judged doc:, not contract: -- explicitly a \"design TARGET, staged\" governing doc (its own header), not a versioned wire-format interface with a frozen field schema the way the four contract: entities are; see CLAIMS_NOTES.",
+   "ns": "doc",
+   "one_line": "The full human-in-the-loop audit + interpretability program design target (staged tier ladder A0-A5, P9 legibility); governs audit-surface widgets 05-08.",
+   "plane_primary": "observability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/AUDIT_PIPELINE.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DOC_PROTOCOL.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "MEMORY_ARCHITECTURE",
+   "id": "doc:core-docs/MEMORY_ARCHITECTURE.md",
+   "note": "Judged doc:, not contract: -- it is explicitly \"the design TARGET\"/\"governing, versioned\" doctrine that MEMORY_CONTRACT.md and CONTEXT_PACKET_CONTRACT.md are \"subordinate to\" (its own text), not itself a wire-format interface other modules build to and D-0077-fold-verify against the way the four contract: entities are; see CLAIMS_NOTES for the full reasoning.",
+   "ns": "doc",
+   "one_line": "North-star long-horizon memory design (Tier 0-3 build order; bounded context vs unbounded stored memory); the target #35-#42 and the memory contracts build",
+   "plane_primary": "memory",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DOC_PROTOCOL.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/MEMORY_ARCHITECTURE.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "id": "iteration:i46",
+   "ns": "iteration",
+   "one_line": "The current fan-out wave (plan fo-46-6dd32d37): Lane A builds modules/44-project-map to its frozen WORK_ORDER; Lane B authors judgment claims.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/research/2026-08-11-i46-pcb-design.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "id": "mandate:02",
+   "ns": "mandate",
+   "one_line": "The live SUNSETTING process-hygiene mandate (opened i40, sunset i47); governs M2-A..M2-E; supersedes mandate 01.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/PROCESS_MANDATE.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "#00.1"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/00.1-exec-watchdog/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/00.1-exec-watchdog/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Executor Watchdog & Recovery",
+   "id": "module:00.1/exec.watchdog",
+   "ns": "module",
+   "one_line": "Cooperative, session-scoped restart/recovery for the executor; open when the executor hangs/crashes and you need auto-recovery semantics.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#00"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/00-bootstrap-executor/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/00-bootstrap-executor/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Bootstrap Executor",
+   "id": "module:00/exec.bootstrap",
+   "ns": "module",
+   "one_line": "Trusted high-risk filesystem-queue task executor; every local module runs through it -- start here to understand how anything executes.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#01"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/01-skill-bootstrap/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/01-skill-bootstrap/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Skill Contract & Registry",
+   "id": "module:01/skill.bootstrap",
+   "ns": "module",
+   "one_line": "Defines the skill manifest/envelope/wrapper every module implements; open this to understand what makes any module a \"skill\".",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#02"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/02-fs-observer/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/02-fs-observer/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Filesystem Observer",
+   "id": "module:02/fs.observer",
+   "ns": "module",
+   "one_line": "Deterministic filesystem inspect/search/index; open when an agent needs read-only visibility into files on this box.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#03"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/03-proc-observer/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/03-proc-observer/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Process Observer",
+   "id": "module:03/proc.observer",
+   "ns": "module",
+   "one_line": "Deterministic process + window snapshot; open when an agent needs to see what is running.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#04"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/04-uia-inspector/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/04-uia-inspector/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "UIA Inspector",
+   "id": "module:04/uia.inspector",
+   "ns": "module",
+   "one_line": "Read-only UI Automation tree walker; open before any UI-driving module to understand what it can see.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#05"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/05-uia-actor/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/05-uia-actor/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "UIA Actor",
+   "id": "module:05/uia.actor",
+   "ns": "module",
+   "one_line": "UIA control-pattern actions (no synthetic input); the first side-effecting skill -- open when an agent must actually click/type via UIA.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#06"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/06-capture-screen/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/06-capture-screen/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Screen Capture",
+   "id": "module:06/capture.screen",
+   "ns": "module",
+   "one_line": "Read-only screenshot / region capture (GDI, DPI-aware); open when an agent needs a still image of the screen.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#07"
+   ],
+   "confidence": "uncertain",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/07-model-gateway/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/07-model-gateway/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Local Model Gateway",
+   "id": "module:07/model.gateway",
+   "note": "hosts/normalizes models but does not itself reason; secondary intelligence tag is a judgment call, not doc-stated.",
+   "ns": "module",
+   "one_line": "Hosts and normalizes every local GGUF model behind one llama-server interface; open before invoking ANY local LLM/VLM tier.",
+   "plane_primary": "capability",
+   "planes_secondary": [
+    "intelligence"
+   ],
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status",
+      "planes_secondary"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#08"
+   ],
+   "confidence": "uncertain",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/08-classify-batch/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/08-classify-batch/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Batch Classifier",
+   "id": "module:08/classify.batch",
+   "note": "model-driven judgment task; plane assignment is this claim's judgment, not stated verbatim in a source.",
+   "ns": "module",
+   "one_line": "Weak-LLM batch classify/multilabel/extract with below-threshold routing to the review queue; open for bulk labeling work.",
+   "plane_primary": "intelligence",
+   "planes_secondary": [
+    "capability"
+   ],
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status",
+      "planes_secondary"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#09"
+   ],
+   "confidence": "uncertain",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/09-review-processor/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/09-review-processor/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Review Queue Processor",
+   "id": "module:09/review.processor",
+   "note": "model-driven judgment task; plane assignment is this claim's judgment, not stated verbatim in a source.",
+   "ns": "module",
+   "one_line": "Stronger-tier adjudication drainer for classify.batch's review queue; open to understand how low-confidence items get resolved.",
+   "plane_primary": "intelligence",
+   "planes_secondary": [
+    "capability"
+   ],
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status",
+      "planes_secondary"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#10"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/10-audio-ingest/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/10-audio-ingest/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Audio Ingest",
+   "id": "module:10/audio.ingest",
+   "ns": "module",
+   "one_line": "Deterministic ffmpeg/ffprobe decode/resample/normalize/segment; open before any STT/TTS pipeline needs clean audio.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#11"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/11-speech-stt/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/11-speech-stt/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Speech-to-Text",
+   "id": "module:11/speech.stt",
+   "ns": "module",
+   "one_line": "whisper.cpp CUDA transcription with mean-token-probability confidence; open for audio->text work.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#12"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/12-speech-tts/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/12-speech-tts/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Text-to-Speech",
+   "id": "module:12/speech.tts",
+   "ns": "module",
+   "one_line": "Qwen3-TTS venv worker synthesis; open for text->audio work.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#13"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/13-voice-live/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/13-voice-live/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Voice Live (file-driven)",
+   "id": "module:13/voice.live",
+   "ns": "module",
+   "one_line": "Composes STT -> optional LLM answer -> optional TTS for one file-driven voice turn; open to see the reference voice-pipeline composition.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#14"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/14-ocr-layout/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/14-ocr-layout/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "OCR + Layout",
+   "id": "module:14/ocr.layout",
+   "ns": "module",
+   "one_line": "Windows.Media.Ocr via a PowerShell 5.1 worker; per-word boxes + reading order; open for text-in-image extraction.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#15"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/15-image-util/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/15-image-util/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Image Utilities",
+   "id": "module:15/image.util",
+   "ns": "module",
+   "one_line": "Deterministic Pillow/numpy metadata, hashing (sha256/pHash/dHash), resize/crop/convert/tile; open for any image transform/dedup need.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#16"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/16-detect-objects/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/16-detect-objects/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Object Detection",
+   "id": "module:16/detect.objects",
+   "ns": "module",
+   "one_line": "YOLOX via onnxruntime with real per-detection confidence; open for bounding-box object detection.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#17"
+   ],
+   "confidence": "uncertain",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/17-image-interpret/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/17-image-interpret/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Image Interpret (VLM)",
+   "id": "module:17/image.interpret",
+   "note": "model-driven (VLM) judgment task; plane assignment is this claim's judgment call.",
+   "ns": "module",
+   "one_line": "Local VLM caption/VQA/screen understanding via model.gateway's multimodal mode; open when a picture needs describing or questioning.",
+   "plane_primary": "intelligence",
+   "planes_secondary": [
+    "capability"
+   ],
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status",
+      "planes_secondary"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#18"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/18-image-index/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/18-image-index/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Image Index",
+   "id": "module:18/image.index",
+   "ns": "module",
+   "one_line": "Fuses ocr.layout/image.util/detect.objects/image.interpret into one per-image record; open for a single combined image summary.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#19"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/19-logic-escalator/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/19-logic-escalator/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Logic Escalator",
+   "id": "module:19/logic.escalator",
+   "note": "NOTE: module:19 is NOT the same entity as arch:19 (media.decompose) -- a known repo-wide numbering collision (i46-pcb-design.md s2); do not conflate.",
+   "ns": "module",
+   "one_line": "Tier-ladder deterministic-gated model escalation (weak->mid->strong); open when deciding how to climb model tiers safely.",
+   "plane_primary": "intelligence",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#20"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/20-doc-io/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/20-doc-io/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Doc I/O",
+   "id": "module:20/doc.io",
+   "note": "NOTE: module:20 is NOT arch:20 (track.objects) -- numbering collision (i46-pcb-design.md s2).",
+   "ns": "module",
+   "one_line": "Atomic read/write/edit/append with EOL preservation and doc:<path> lease consumption; open for any safe text-file mutation.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#21"
+   ],
+   "confidence": "uncertain",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/21-agent-local/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/21-agent-local/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Local Agent (bounded ReAct)",
+   "id": "module:21/agent.local",
+   "note": "the near-term skill.orchestrator slice (partial arch:26 realization; see edges); plane split is a judgment call.",
+   "ns": "module",
+   "one_line": "Bounded ReAct loop over a closed tools.json registry (the registry IS the sandbox); open to run an autonomous local-tool task.",
+   "plane_primary": "intelligence",
+   "planes_secondary": [
+    "capability"
+   ],
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status",
+      "planes_secondary"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#22"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/22-gen-audio/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/22-gen-audio/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Audio Generator",
+   "id": "module:22/gen.audio",
+   "ns": "module",
+   "one_line": "Deterministic procedural ffmpeg synth (tone/chord/noise/sweep/silence); no neural stack staged; open for programmatic SFX.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#23"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/23-gen-image/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/23-gen-image/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Image Generator",
+   "id": "module:23/gen.image",
+   "note": "NOTE: module:23 is NOT arch:23 (artifact.search, realized by module:36) -- numbering collision (i46-pcb-design.md s2).",
+   "ns": "module",
+   "one_line": "SD 1.5 (default) / SD 3.5 Medium fp16 (opt-in, not a clean 11GB fit) diffusers venv worker; seed-reproducible; open for local text-to-image.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#24"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/24-gen-music/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/24-gen-music/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Music Generator",
+   "id": "module:24/gen.music",
+   "ns": "module",
+   "one_line": "MusicGen Small (transformers-native), 1-30s, seed-reproducible; open for local text-to-music.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#25"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/25-gen-video/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/25-gen-video/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Video Generator",
+   "id": "module:25/gen.video",
+   "ns": "module",
+   "one_line": "AnimateDiff-Lightning 4-step over staged SD 1.5; silent seed-reproducible clips; open for local text-to-video.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#26"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/26-agent-coding/README.md"
+    }
+   ],
+   "display_name": "Coding Agent (deferred)",
+   "id": "module:26/agent.coding",
+   "ns": "module",
+   "one_line": "Deferred bounded local coding loop (draft->static-check->gated run); no safe code-exec substrate on this box; work order authored, not built.",
+   "plane_primary": "intelligence",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "deferred"
+  },
+  {
+   "aliases": [
+    "#27"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/27-route-tools/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/27-route-tools/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Tool Router",
+   "id": "module:27/route.tools",
+   "ns": "module",
+   "one_line": "Deterministic-gated mid-tier request-to-minimal-tool-id-set router; the which-tools pass of the (unbuilt) route.tasks position; narrows a request to a tool set.",
+   "plane_primary": "intelligence",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#28"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/28-fs-manage/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/28-fs-manage/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Filesystem Manage",
+   "id": "module:28/fs.manage",
+   "ns": "module",
+   "one_line": "Guarded copy/move/mkdir with known-folder resolution; wired into agent.local; open for safe filesystem mutation beyond doc.io.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#29"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/29-resource-lease/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/29-resource-lease/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Resource Arbitration Lease",
+   "id": "module:29/res.lease",
+   "note": "explicitly named alongside action.authz/gates/boundary as Authority-plane in i46-pcb-design.md s3.",
+   "ns": "module",
+   "one_line": "Filesystem TTL leases (gpu / git-commit-lock / doc:<path>) with a hardened fencing-token GPU-lease-split primitive for multi-worker collision safety.",
+   "plane_primary": "authority",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status",
+      "state_owned"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "planes_secondary"
+     ],
+     "ref": "core-docs/research/2026-08-11-i46-pcb-design.md",
+     "sha256": null
+    }
+   ],
+   "state_owned": [
+    "modules/29-resource-lease/runtime/leases/"
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#30"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/30-orchestrate-fanout/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/30-orchestrate-fanout/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Fan-out Orchestration",
+   "id": "module:30/orchestrate.fanout",
+   "note": "plane pair explicitly given as an example in i46-pcb-design.md s3 (\"#30 intelligence+capability\"); taken verbatim from that source rather than independently re-derived.",
+   "ns": "module",
+   "one_line": "Plan/dispatch/collect scaffolding over res.lease for multi-worker waves; the orchestrator's deterministic backbone for planning/dispatching a wave.",
+   "plane_primary": "intelligence",
+   "planes_secondary": [
+    "capability"
+   ],
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status",
+      "planes_secondary"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "planes_secondary"
+     ],
+     "ref": "core-docs/research/2026-08-11-i46-pcb-design.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#31"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/31-frontier-bridge/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/31-frontier-bridge/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Frontier Bridge",
+   "id": "module:31/frontier.bridge",
+   "ns": "module",
+   "one_line": "Automated D-0052 human-courier packaging (pack {prompt,files} / read-return); open when preparing a human-couriered frontier-review packet.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#32"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/32-media-decompose/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/32-media-decompose/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Media Decompose",
+   "id": "module:32/media.decompose",
+   "ns": "module",
+   "one_line": "Deterministic ffmpeg/ffprobe decompose (meta/audio/keyframes/scenes); realizes arch position 19; breaks a video into analyzable parts.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#33"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/33-track-objects/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/33-track-objects/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Object Tracking",
+   "id": "module:33/track.objects",
+   "ns": "module",
+   "one_line": "Deterministic per-class stable-identity tracker (greedy-IoU baseline + 0.2.0 hardening) over detect.objects-shape input; realizes arch position 20.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#34"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/34-video-timeline/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/34-video-timeline/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Video Timeline",
+   "id": "module:34/video.timeline",
+   "ns": "module",
+   "one_line": "Deterministic per-source fuse of media.decompose/track.objects/speech.stt/ocr.layout/detect.objects into one canonical timeline; realizes arch position 21.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#35"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/35-embedding-local/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/35-embedding-local/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Local Embedding Provider",
+   "id": "module:35/embedding.local",
+   "ns": "module",
+   "one_line": "Wires the embedding.qwen3-0p6b (dim 1024) transient CUDA worker; defines the memory subsystem's embedding-provider interface.",
+   "plane_primary": "memory",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#36"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/36-artifact-search/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/36-artifact-search/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Artifact Search",
+   "id": "module:36/artifact.search",
+   "ns": "module",
+   "one_line": "SQLite+FTS5 typed-record memory substrate, Tier-1 bounded-fanout hierarchy + fast-beam ranking; realizes arch:23; the memory subsystem's retrieval core.",
+   "plane_primary": "memory",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#37"
+   ],
+   "confidence": "uncertain",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/37-retrieval-eval/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/37-retrieval-eval/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Retrieval Evaluation",
+   "id": "module:37/retrieval.eval",
+   "note": "evaluation/benchmark role could plausibly sit in intelligence primary instead; kept memory-primary because it is grouped with the memory-substrate wave (#35-#43) throughout MODULE_ROADMAP/CURRENT_STATE.",
+   "ns": "module",
+   "one_line": "The canonical selpol_rrf_v1 selection-policy library + retrieval-quality benchmark (recall@K/MRR/stale/provenance) + the Tier-1 rehearsal harness.",
+   "plane_primary": "memory",
+   "planes_secondary": [
+    "intelligence"
+   ],
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status",
+      "planes_secondary"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#38"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/38-repo-intel/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/38-repo-intel/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Repo Intelligence",
+   "id": "module:38/repo.intel",
+   "ns": "module",
+   "one_line": "Deterministic typed-record producer (symbol/entity/relationship/skill/summary), the sole record_kind=skill owner; turns repo facts into memory records.",
+   "plane_primary": "memory",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#39"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/39-episode-memory/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/39-episode-memory/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Episode & Failure Recorder",
+   "id": "module:39/episode.record",
+   "ns": "module",
+   "one_line": "Episode + failure schemas and deterministic recorder with the failure-signature seam; open to see how a run becomes durable episodic memory.",
+   "plane_primary": "memory",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#40"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/40-context-compiler/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/40-context-compiler/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Context Compiler",
+   "id": "module:40/context.compiler",
+   "note": "plane pair given verbatim in i46-pcb-design.md s3 (\"#40 memory+intelligence\").",
+   "ns": "module",
+   "one_line": "Deterministic three-region context_packet/0.2 compiler (control/evidence separation, R-1 router, #42 wm hydration); turns a task into a small context packet.",
+   "plane_primary": "memory",
+   "planes_secondary": [
+    "intelligence"
+   ],
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status",
+      "planes_secondary"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "planes_secondary"
+     ],
+     "ref": "core-docs/research/2026-08-11-i46-pcb-design.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#41"
+   ],
+   "confidence": "uncertain",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/41-skill-card/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/41-skill-card/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Skill Activation Cards",
+   "id": "module:41/skill.card",
+   "note": "skill-activation plane (per ARCHITECTURE_MAP's Collective Agent planes) nests into this scheme's intelligence per i46-pcb-design.md s3's general framing; not independently confirmed for this specific module.",
+   "ns": "module",
+   "one_line": "Section-9 skill-activation cards (summary_type skill_activation_card) + Stage-1 eligibility/Stage-2 lexical seam; how a skill becomes retrievable/activatable.",
+   "plane_primary": "memory",
+   "planes_secondary": [
+    "intelligence"
+   ],
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status",
+      "planes_secondary"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#42"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/42-working-memory/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/42-working-memory/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Working Memory Store",
+   "id": "module:42/working.memory",
+   "ns": "module",
+   "one_line": "Per-task working-memory store: immutable versioned snapshots + CAS on parent_state_version + fork/close/archive/promote.",
+   "plane_primary": "memory",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#43"
+   ],
+   "authority_level": "deny-by-default reference monitor; non_execution:true (activation prohibited)",
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/43-action-authz/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "modules/43-action-authz/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Action Authorization (P0-1)",
+   "id": "module:43/action.authz",
+   "note": "explicitly named alongside res.lease/gates/boundary as Authority-plane in i46-pcb-design.md s3; p0_1_gate_status=pass (D-0118) but build_status/activation are distinct axes -- status here reflects the design-only/non-execution state, not gate ratification.",
+   "ns": "module",
+   "one_line": "Deny-by-default action-authorization reference monitor (A01-A36 + Boundary A-D) built to the FROZEN contract; DESIGN-ONLY, non_execution:true holds.",
+   "plane_primary": "authority",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status",
+      "authority_level"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "planes_secondary"
+     ],
+     "ref": "core-docs/research/2026-08-11-i46-pcb-design.md",
+     "sha256": null
+    }
+   ],
+   "status": "design-only"
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "ops/audit/README.md"
+    },
+    {
+     "kind": "other",
+     "ref": "ops/audit/doc-commit-gate.py"
+    }
+   ],
+   "display_name": "Doc-Hygiene Commit Gate",
+   "id": "ops:doc-commit-gate",
+   "note": "SHIPPED per PB-1/M2-A (i42 close, D-0117); reuses gen-doc-health.py budget parsing per PROCESS_BACKLOG PB-1.",
+   "ns": "ops",
+   "one_line": "Deterministic fail-closed commit-time gate refusing core-doc commits that violate density/budget rules (mandate-02 M2-A / PB-1); why a commit gets refused.",
+   "plane_primary": "authority",
+   "planes_secondary": [
+    "observability"
+   ],
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/PROCESS_BACKLOG.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "harvest_v1",
+     "fields": [
+      "*"
+     ],
+     "ref": "ops/audit/doc-commit-gate.py",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "modules/00-bootstrap-executor/README.md"
+    },
+    {
+     "kind": "other",
+     "ref": "modules/00-bootstrap-executor/exec-job.sh"
+    }
+   ],
+   "display_name": "Executor Job-Runner Client",
+   "id": "ops:exec-job",
+   "ns": "ops",
+   "one_line": "The exec-job.sh client to exec.bootstrap's dev.ship fail-closed job (sha256->AST-parse->test_argv->commit); ships a unit from a Linux-mount worker session.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "harvest_v1",
+     "fields": [
+      "*"
+     ],
+     "ref": "modules/00-bootstrap-executor/exec-job.sh",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "ops/audit/README.md"
+    },
+    {
+     "kind": "other",
+     "ref": "ops/audit/gen-doc-health.py"
+    }
+   ],
+   "display_name": "Doc-Health Monitor",
+   "id": "ops:gen-doc-health",
+   "note": "its parse_budgets() is imported (not re-implemented) by the modules/44-project-map harvest op per WORK_ORDER s3.1.",
+   "ns": "ops",
+   "one_line": "Color-coded size-vs-quota HTML + a jsonl log row per close over every core-doc budget; audit tier A0.5; open to see current doc-budget health at a glance.",
+   "plane_primary": "observability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "harvest_v1",
+     "fields": [
+      "*"
+     ],
+     "ref": "ops/audit/gen-doc-health.py",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "ops/setup/README.md"
+    },
+    {
+     "kind": "other",
+     "ref": "ops/setup/VERIFY-RUNBOOK.md"
+    }
+   ],
+   "display_name": "Portability Bring-Up Config Layer",
+   "id": "ops:setup",
+   "ns": "ops",
+   "one_line": "ops/setup/ config layer (setup.ps1 + CPU-verify + download plan + VERIFY-RUNBOOK) to relocate the stack to a fresh Windows box in one pass; Stage-1 SHIPPED.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "in-progress"
+  },
+  {
+   "confidence": "established",
+   "id": "pb:PB-4",
+   "ns": "pb",
+   "one_line": "AUDIT_PIPELINE increment tracking row: LRAP v1 shipped+accepted (i45); remaining = front step + live ride-along + output-side reconciliation.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/PROCESS_BACKLOG.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "Authority",
+   "id": "plane:authority",
+   "note": "the 5-plane closed enum + this framing come from i46-pcb-design.md s3; ARCHITECTURE_MAP's differently-named \"Collective Agent planes\" (Memory/Retrieval/Context-compiler/Skill-activation/Episode/Sandboxed-worker/Unified-interface) are a finer-grained scheme that NESTS into memory+intelligence here per that same source -- the two taxonomies are not identical and should not be conflated.",
+   "ns": "plane",
+   "one_line": "Deterministic gates/leases/the deny-by-default action-authorization boundary deciding what may execute or commit (res.lease #29, action.authz #43, doc-commit",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/research/2026-08-11-i46-pcb-design.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "Capability",
+   "id": "plane:capability",
+   "note": "the 5-plane closed enum + this framing come from i46-pcb-design.md s3; ARCHITECTURE_MAP's differently-named \"Collective Agent planes\" (Memory/Retrieval/Context-compiler/Skill-activation/Episode/Sandboxed-worker/Unified-interface) are a finer-grained scheme that NESTS into memory+intelligence here per that same source -- the two taxonomies are not identical and should not be conflated.",
+   "ns": "plane",
+   "one_line": "The base local-skills toolset (perception, audio, image/video, generation, filesystem/UI control) plus the human-interface Widgets invoking it.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/research/2026-08-11-i46-pcb-design.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "Intelligence",
+   "id": "plane:intelligence",
+   "note": "the 5-plane closed enum + this framing come from i46-pcb-design.md s3; ARCHITECTURE_MAP's differently-named \"Collective Agent planes\" (Memory/Retrieval/Context-compiler/Skill-activation/Episode/Sandboxed-worker/Unified-interface) are a finer-grained scheme that NESTS into memory+intelligence here per that same source -- the two taxonomies are not identical and should not be conflated.",
+   "ns": "plane",
+   "one_line": "Reasoning/routing/retrieval-judgment/skill-activation layers turning stored memory + a task into a plan/packet/answer; nests the Collective Agent's retrieval",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/research/2026-08-11-i46-pcb-design.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "Memory",
+   "id": "plane:memory",
+   "note": "the 5-plane closed enum + this framing come from i46-pcb-design.md s3; ARCHITECTURE_MAP's differently-named \"Collective Agent planes\" (Memory/Retrieval/Context-compiler/Skill-activation/Episode/Sandboxed-worker/Unified-interface) are a finer-grained scheme that NESTS into memory+intelligence here per that same source -- the two taxonomies are not identical and should not be conflated.",
+   "ns": "plane",
+   "one_line": "Durable external stores (SQLite artifact substrate, episodic/procedural/failure memory) that grow unbounded while working context stays bounded (D-0090).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/research/2026-08-11-i46-pcb-design.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "Observability / Audit",
+   "id": "plane:observability",
+   "note": "the 5-plane closed enum + this framing come from i46-pcb-design.md s3; ARCHITECTURE_MAP's differently-named \"Collective Agent planes\" (Memory/Retrieval/Context-compiler/Skill-activation/Episode/Sandboxed-worker/Unified-interface) are a finer-grained scheme that NESTS into memory+intelligence here per that same source -- the two taxonomies are not identical and should not be conflated.",
+   "ns": "plane",
+   "one_line": "Human-in-the-loop audit + interpretability program (Widgets 05-08, gen-doc-health) keeping system behavior legible/verifiable without growing audit cost.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/research/2026-08-11-i46-pcb-design.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "Artifact-Search SQLite Catalog",
+   "id": "store:artifact-search-sqlite",
+   "ns": "store",
+   "one_line": "The SQLite+FTS5 catalog artifact.search (#36) owns: typed-record envelope, Tier-1 hierarchy nodes, fast-beam shortlist/descend ranking.",
+   "plane_primary": "memory",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "Decision Log",
+   "id": "store:decision-log",
+   "ns": "store",
+   "one_line": "DECISION_LOG.md (append-only rationale) + DECISION_LOG_INDEX.md (one routing row per decision) -- the project's locked-decision record.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DOC_PROTOCOL.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "Episode & Failure Record Store",
+   "id": "store:episode-store",
+   "ns": "store",
+   "one_line": "The episode.record (#39) episode+failure record store (structural per-stage detail; failure-signature seam).",
+   "plane_primary": "memory",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "Lease Directory",
+   "id": "store:lease-dir",
+   "ns": "store",
+   "one_line": "modules/29-resource-lease/runtime/leases/: the filesystem TTL lease directory (gpu/git/doc:<path>) res.lease (#29) owns.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "Model Registry (models.json)",
+   "id": "store:model-registry",
+   "ns": "store",
+   "one_line": "models.json under model.gateway (#7): the machine-specific registry of staged local models/quants/engine builds/tiers.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/CURRENT_STATE.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "Fan-out Plans Directory",
+   "id": "store:plans-dir",
+   "ns": "store",
+   "one_line": "modules/30-orchestrate-fanout/runtime/plans/<plan_id>/: the per-wave plan/worker/report directory orchestrate.fanout (#30) owns.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "Review Queue (jsonl)",
+   "id": "store:review-queue-jsonl",
+   "ns": "store",
+   "one_line": "The append-only jsonl review queue classify.batch (#8) produces and review.processor (#9) drains + rewrites in place.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "aliases": [
+    "#01"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "widgets/01-local-agent-console/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "widgets/01-local-agent-console/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Local Agent Console",
+   "id": "widget:01/local-agent-console",
+   "ns": "widget",
+   "one_line": "WinForms shell driving agent.local (#21) with an Auto-Ramp toggle + governor trace; open to run/watch a bounded local-agent task live.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#02"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "widgets/02-module-launcher/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "widgets/02-module-launcher/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Module Launcher",
+   "id": "widget:02/module-launcher",
+   "ns": "widget",
+   "one_line": "Browses every modules/*/skill.json and runs one via the skill.bootstrap wrapper; open to invoke any module without hand-building a command line.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#03"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "widgets/03-verification-console/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "widgets/03-verification-console/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Verification Console",
+   "id": "widget:03/verification-console",
+   "ns": "widget",
+   "one_line": "The human-AUDIT surface: packet in, durable verdict out (results sidecar keyed by packet_id, source packet never modified); review/verdict a packet by hand.",
+   "plane_primary": "observability",
+   "planes_secondary": [
+    "capability"
+   ],
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status",
+      "planes_secondary"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#04"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "widgets/04-fanout-wave-dashboard/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "widgets/04-fanout-wave-dashboard/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Fan-out Wave Dashboard",
+   "id": "widget:04/fanout-wave-dashboard",
+   "ns": "widget",
+   "one_line": "Read-only live view of orchestrate.fanout plans/workers/leases; open to watch a running fan-out wave.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#05"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "widgets/05-provenance-map/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "widgets/05-provenance-map/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Provenance Map",
+   "id": "widget:05/provenance-map",
+   "ns": "widget",
+   "one_line": "Read-only construction map joining canonical docs + git trailers + plans + verdicts (existence/new-since/verification/over-budget flags); audit tier A1.",
+   "plane_primary": "observability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#06"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "widgets/06-compile-trace-console/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "widgets/06-compile-trace-console/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Compile Trace Console",
+   "id": "widget:06/compile-trace-console",
+   "ns": "widget",
+   "one_line": "Read-only renderer over context.compiler (#40) compile/eval artifacts (4 packet regions, trust banners, R-1 stage-traces) + a counterfactual runner; audit tier",
+   "plane_primary": "observability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#07"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "widgets/07-audit-timeline-tournament/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "widgets/07-audit-timeline-tournament/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Audit Timeline + Tournament",
+   "id": "widget:07/audit-timeline-tournament",
+   "ns": "widget",
+   "one_line": "The s2.6 tool-selection tournament pane (elimination rounds, R-1 stage-trace) + the s2.1 cross-context stitched timeline (episodes+plans+state chains); audit",
+   "plane_primary": "observability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "aliases": [
+    "#08"
+   ],
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "readme",
+     "ref": "widgets/08-live-run-audit-pathway/README.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "widgets/08-live-run-audit-pathway/WORK_ORDER.md"
+    }
+   ],
+   "display_name": "Live-Run Audit Pathway (LRAP)",
+   "id": "widget:08/live-run-audit-pathway",
+   "note": "P9 (adopt-the-agent's-role legibility) is explicitly NOT yet met per Nicholas's D-0125 correction even though the technical/machine verification is 87/0/0 -- status here is build status, not P9 legibility status.",
+   "ns": "widget",
+   "one_line": "Read-only STA WinForms replay of a #40 compile as ONE plain-language INTENT/INPUT/OUTPUT/RECONCILE narrative (steps 1-6) + a rationale poser; P9 not yet met",
+   "plane_primary": "observability",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "plane_primary",
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  }
+ ],
+ "relationships": [
+  {
+   "from": "contract:action-authorization",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/ACTION_AUTHORIZATION_CONTRACT.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:43/action.authz",
+   "type": "governs"
+  },
+  {
+   "from": "contract:context-packet",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/CONTEXT_PACKET_CONTRACT.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:40/context.compiler",
+   "type": "governs"
+  },
+  {
+   "from": "contract:doc-protocol",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/DOC_PROTOCOL.md",
+     "sha256": null
+    }
+   ],
+   "to": "ops:doc-commit-gate",
+   "type": "governs"
+  },
+  {
+   "from": "contract:memory",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MEMORY_CONTRACT.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:35/embedding.local",
+   "type": "governs"
+  },
+  {
+   "from": "contract:memory",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MEMORY_CONTRACT.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:36/artifact.search",
+   "type": "governs"
+  },
+  {
+   "from": "contract:memory",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MEMORY_CONTRACT.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:37/retrieval.eval",
+   "type": "governs"
+  },
+  {
+   "from": "contract:memory",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MEMORY_CONTRACT.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:38/repo.intel",
+   "type": "governs"
+  },
+  {
+   "from": "contract:memory",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MEMORY_CONTRACT.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:39/episode.record",
+   "type": "governs"
+  },
+  {
+   "from": "contract:skill",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/SKILL_CONTRACT.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:01/skill.bootstrap",
+   "type": "governs"
+  },
+  {
+   "from": "decision:D-0029",
+   "note": "D-0029 established the Module/Widget vocabulary split that plane:capability's definition rests on.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "plane:capability",
+   "type": "governs"
+  },
+  {
+   "from": "decision:D-0038",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ],
+   "to": "widget:01/local-agent-console",
+   "type": "governs"
+  },
+  {
+   "from": "decision:D-0077",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:34/video.timeline",
+   "type": "governs"
+  },
+  {
+   "from": "decision:D-0080",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/research/2026-07-31-roadmap-reprioritization-cognitive-virtual-memory.md",
+     "sha256": null
+    }
+   ],
+   "to": "plane:memory",
+   "type": "governs"
+  },
+  {
+   "from": "decision:D-0090",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ],
+   "to": "doc:core-docs/MEMORY_ARCHITECTURE.md",
+   "type": "documents"
+  },
+  {
+   "from": "decision:D-0102",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:36/artifact.search",
+   "type": "documents"
+  },
+  {
+   "from": "decision:D-0103",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ],
+   "to": "contract:action-authorization",
+   "type": "documents"
+  },
+  {
+   "from": "decision:D-0118",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:43/action.authz",
+   "type": "documents"
+  },
+  {
+   "from": "decision:D-0122",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ],
+   "to": "widget:08/live-run-audit-pathway",
+   "type": "documents"
+  },
+  {
+   "from": "decision:D-0125",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ],
+   "to": "widget:08/live-run-audit-pathway",
+   "type": "documents"
+  },
+  {
+   "from": "decision:D-0130",
+   "note": "D-0130 is the i46 freeze that FROZE this 5-plane scheme itself.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/research/2026-08-11-i46-pcb-design.md",
+     "sha256": null
+    }
+   ],
+   "to": "plane:observability",
+   "type": "governs"
+  },
+  {
+   "from": "doc:core-docs/AUDIT_PIPELINE.md",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/AUDIT_PIPELINE.md",
+     "sha256": null
+    }
+   ],
+   "to": "ops:gen-doc-health",
+   "type": "governs"
+  },
+  {
+   "from": "doc:core-docs/AUDIT_PIPELINE.md",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/AUDIT_PIPELINE.md",
+     "sha256": null
+    }
+   ],
+   "to": "widget:05/provenance-map",
+   "type": "governs"
+  },
+  {
+   "from": "doc:core-docs/AUDIT_PIPELINE.md",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/AUDIT_PIPELINE.md",
+     "sha256": null
+    }
+   ],
+   "to": "widget:06/compile-trace-console",
+   "type": "governs"
+  },
+  {
+   "from": "doc:core-docs/AUDIT_PIPELINE.md",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/AUDIT_PIPELINE.md",
+     "sha256": null
+    }
+   ],
+   "to": "widget:07/audit-timeline-tournament",
+   "type": "governs"
+  },
+  {
+   "from": "doc:core-docs/AUDIT_PIPELINE.md",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/AUDIT_PIPELINE.md",
+     "sha256": null
+    }
+   ],
+   "to": "widget:08/live-run-audit-pathway",
+   "type": "governs"
+  },
+  {
+   "from": "doc:core-docs/MEMORY_ARCHITECTURE.md",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MEMORY_ARCHITECTURE.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:35/embedding.local",
+   "type": "governs"
+  },
+  {
+   "from": "doc:core-docs/MEMORY_ARCHITECTURE.md",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MEMORY_ARCHITECTURE.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:36/artifact.search",
+   "type": "governs"
+  },
+  {
+   "from": "doc:core-docs/MEMORY_ARCHITECTURE.md",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MEMORY_ARCHITECTURE.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:37/retrieval.eval",
+   "type": "governs"
+  },
+  {
+   "from": "doc:core-docs/MEMORY_ARCHITECTURE.md",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MEMORY_ARCHITECTURE.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:38/repo.intel",
+   "type": "governs"
+  },
+  {
+   "from": "doc:core-docs/MEMORY_ARCHITECTURE.md",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MEMORY_ARCHITECTURE.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:39/episode.record",
+   "type": "governs"
+  },
+  {
+   "from": "doc:core-docs/MEMORY_ARCHITECTURE.md",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MEMORY_ARCHITECTURE.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:40/context.compiler",
+   "type": "governs"
+  },
+  {
+   "from": "doc:core-docs/MEMORY_ARCHITECTURE.md",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MEMORY_ARCHITECTURE.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:41/skill.card",
+   "type": "governs"
+  },
+  {
+   "from": "doc:core-docs/MEMORY_ARCHITECTURE.md",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MEMORY_ARCHITECTURE.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:42/working.memory",
+   "type": "governs"
+  },
+  {
+   "from": "iteration:i46",
+   "note": "loose but evidenced: i46's claims-authoring unit is what populates plane: entities in the first place.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/research/2026-08-11-i46-pcb-design.md",
+     "sha256": null
+    }
+   ],
+   "to": "plane:memory",
+   "type": "produces"
+  },
+  {
+   "from": "mandate:02",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/PROCESS_MANDATE.md",
+     "sha256": null
+    }
+   ],
+   "to": "ops:doc-commit-gate",
+   "type": "governs"
+  },
+  {
+   "from": "module:00.1/exec.watchdog",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "display_name"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:00.1",
+   "type": "realizes"
+  },
+  {
+   "from": "module:00/exec.bootstrap",
+   "note": "module number == arch position number == same concept/name in this 0-18 range (ARCHITECTURE_MAP).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "display_name"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:0",
+   "type": "realizes"
+  },
+  {
+   "from": "module:01/skill.bootstrap",
+   "note": "module number == arch position number == same concept/name in this 0-18 range (ARCHITECTURE_MAP).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "display_name"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:1",
+   "type": "realizes"
+  },
+  {
+   "from": "module:02/fs.observer",
+   "note": "module number == arch position number == same concept/name in this 0-18 range (ARCHITECTURE_MAP).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "display_name"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:2",
+   "type": "realizes"
+  },
+  {
+   "from": "module:03/proc.observer",
+   "note": "module number == arch position number == same concept/name in this 0-18 range (ARCHITECTURE_MAP).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "display_name"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:3",
+   "type": "realizes"
+  },
+  {
+   "from": "module:04/uia.inspector",
+   "note": "module number == arch position number == same concept/name in this 0-18 range (ARCHITECTURE_MAP).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "display_name"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:4",
+   "type": "realizes"
+  },
+  {
+   "from": "module:05/uia.actor",
+   "note": "module number == arch position number == same concept/name in this 0-18 range (ARCHITECTURE_MAP).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "display_name"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:5",
+   "type": "realizes"
+  },
+  {
+   "from": "module:06/capture.screen",
+   "note": "module number == arch position number == same concept/name in this 0-18 range (ARCHITECTURE_MAP).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "display_name"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:6",
+   "type": "realizes"
+  },
+  {
+   "from": "module:07/model.gateway",
+   "note": "the gpu lease under res.lease's GPU-lease-split primitive.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/CURRENT_STATE.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:29/res.lease",
+   "type": "depends-on"
+  },
+  {
+   "from": "module:07/model.gateway",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/CURRENT_STATE.md",
+     "sha256": null
+    }
+   ],
+   "to": "store:model-registry",
+   "type": "depends-on"
+  },
+  {
+   "from": "module:07/model.gateway",
+   "note": "module number == arch position number == same concept/name in this 0-18 range (ARCHITECTURE_MAP).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "display_name"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:7",
+   "type": "realizes"
+  },
+  {
+   "from": "module:08/classify.batch",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "store:review-queue-jsonl",
+   "type": "produces"
+  },
+  {
+   "from": "module:08/classify.batch",
+   "note": "module number == arch position number == same concept/name in this 0-18 range (ARCHITECTURE_MAP).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "display_name"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:8",
+   "type": "realizes"
+  },
+  {
+   "from": "module:09/review.processor",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "store:review-queue-jsonl",
+   "type": "consumes"
+  },
+  {
+   "from": "module:09/review.processor",
+   "note": "module number == arch position number == same concept/name in this 0-18 range (ARCHITECTURE_MAP).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "display_name"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:9",
+   "type": "realizes"
+  },
+  {
+   "from": "module:10/audio.ingest",
+   "note": "audio.ingest is described as \"whisper-ready\" normalization consumed by speech.stt; direction here = speech.stt depends on audio.ingest's output shape.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:11/speech.stt",
+   "type": "depends-on"
+  },
+  {
+   "from": "module:10/audio.ingest",
+   "note": "module number == arch position number == same concept/name in this 0-18 range (ARCHITECTURE_MAP).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "display_name"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:10",
+   "type": "realizes"
+  },
+  {
+   "from": "module:11/speech.stt",
+   "note": "module number == arch position number == same concept/name in this 0-18 range (ARCHITECTURE_MAP).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "display_name"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:11",
+   "type": "realizes"
+  },
+  {
+   "from": "module:12/speech.tts",
+   "note": "module number == arch position number == same concept/name in this 0-18 range (ARCHITECTURE_MAP).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "display_name"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:12",
+   "type": "realizes"
+  },
+  {
+   "from": "module:13/voice.live",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:11/speech.stt",
+   "type": "depends-on"
+  },
+  {
+   "from": "module:13/voice.live",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:12/speech.tts",
+   "type": "depends-on"
+  },
+  {
+   "from": "module:13/voice.live",
+   "note": "module number == arch position number == same concept/name in this 0-18 range (ARCHITECTURE_MAP).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "display_name"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:13",
+   "type": "realizes"
+  },
+  {
+   "from": "module:14/ocr.layout",
+   "note": "module number == arch position number == same concept/name in this 0-18 range (ARCHITECTURE_MAP).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "display_name"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:14",
+   "type": "realizes"
+  },
+  {
+   "from": "module:15/image.util",
+   "note": "module number == arch position number == same concept/name in this 0-18 range (ARCHITECTURE_MAP).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "display_name"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:15",
+   "type": "realizes"
+  },
+  {
+   "from": "module:16/detect.objects",
+   "note": "module number == arch position number == same concept/name in this 0-18 range (ARCHITECTURE_MAP).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "display_name"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:16",
+   "type": "realizes"
+  },
+  {
+   "from": "module:17/image.interpret",
+   "note": "module number == arch position number == same concept/name in this 0-18 range (ARCHITECTURE_MAP).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "display_name"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:17",
+   "type": "realizes"
+  },
+  {
+   "from": "module:18/image.index",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:14/ocr.layout",
+   "type": "depends-on"
+  },
+  {
+   "from": "module:18/image.index",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:15/image.util",
+   "type": "depends-on"
+  },
+  {
+   "from": "module:18/image.index",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:16/detect.objects",
+   "type": "depends-on"
+  },
+  {
+   "from": "module:18/image.index",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:17/image.interpret",
+   "type": "depends-on"
+  },
+  {
+   "from": "module:18/image.index",
+   "note": "module number == arch position number == same concept/name in this 0-18 range (ARCHITECTURE_MAP).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "display_name"
+     ],
+     "ref": "core-docs/ARCHITECTURE_MAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:18",
+   "type": "realizes"
+  },
+  {
+   "from": "module:21/agent.local",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:19/logic.escalator",
+   "type": "depends-on"
+  },
+  {
+   "from": "module:21/agent.local",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:27/route.tools",
+   "type": "invokes"
+  },
+  {
+   "from": "module:21/agent.local",
+   "note": "PARTIAL realization only -- MODULE_ROADMAP: \"26 skill.orchestrator (scoped slice built as #21; the full composer remains Proposed)\".",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:26",
+   "type": "realizes"
+  },
+  {
+   "from": "module:27/route.tools",
+   "note": "PARTIAL realization only -- MODULE_ROADMAP: \"24 route.tasks (partial: #27 is the which-tools pass)\".",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:24",
+   "type": "realizes"
+  },
+  {
+   "from": "module:29/res.lease",
+   "note": "the gpu lease is the fencing/authorization primitive model.gateway's warm server holds.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/CURRENT_STATE.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:07/model.gateway",
+   "type": "authorizes"
+  },
+  {
+   "from": "module:29/res.lease",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
+     "sha256": null
+    }
+   ],
+   "to": "store:lease-dir",
+   "type": "persists"
+  },
+  {
+   "from": "module:30/orchestrate.fanout",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:29/res.lease",
+   "type": "depends-on"
+  },
+  {
+   "from": "module:30/orchestrate.fanout",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
+     "sha256": null
+    }
+   ],
+   "to": "store:plans-dir",
+   "type": "persists"
+  },
+  {
+   "from": "module:32/media.decompose",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:19",
+   "type": "realizes"
+  },
+  {
+   "from": "module:33/track.objects",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:20",
+   "type": "realizes"
+  },
+  {
+   "from": "module:34/video.timeline",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:11/speech.stt",
+   "type": "depends-on"
+  },
+  {
+   "from": "module:34/video.timeline",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:14/ocr.layout",
+   "type": "depends-on"
+  },
+  {
+   "from": "module:34/video.timeline",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:16/detect.objects",
+   "type": "depends-on"
+  },
+  {
+   "from": "module:34/video.timeline",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:32/media.decompose",
+   "type": "depends-on"
+  },
+  {
+   "from": "module:34/video.timeline",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:33/track.objects",
+   "type": "depends-on"
+  },
+  {
+   "from": "module:34/video.timeline",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:21",
+   "type": "realizes"
+  },
+  {
+   "from": "module:36/artifact.search",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "store:artifact-search-sqlite",
+   "type": "persists"
+  },
+  {
+   "from": "module:36/artifact.search",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "one_line",
+      "status"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "arch:23",
+   "type": "realizes"
+  },
+  {
+   "from": "module:39/episode.record",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "store:episode-store",
+   "type": "persists"
+  },
+  {
+   "from": "module:40/context.compiler",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/CURRENT_STATE.md",
+     "sha256": null
+    }
+   ],
+   "to": "store:artifact-search-sqlite",
+   "type": "retrieves-from"
+  },
+  {
+   "from": "module:43/action.authz",
+   "note": "A06 deterministically denies every authentic context_packet while non_execution:true holds (design-only).",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/ACTION_AUTHORIZATION_CONTRACT.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:40/context.compiler",
+   "type": "verifies"
+  },
+  {
+   "from": "ops:doc-commit-gate",
+   "note": "PB-1: \"reuse ops/audit/gen-doc-health.py budget parsing (the monitor stays the dashboard; the gate is the pawl)\".",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/PROCESS_BACKLOG.md",
+     "sha256": null
+    }
+   ],
+   "to": "ops:gen-doc-health",
+   "type": "depends-on"
+  },
+  {
+   "from": "ops:exec-job",
+   "note": "exec-job.sh is the client to exec.bootstrap's dev.ship job.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:00/exec.bootstrap",
+   "type": "invokes"
+  },
+  {
+   "from": "ops:gen-doc-health",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/PROCESS_BACKLOG.md",
+     "sha256": null
+    }
+   ],
+   "to": "contract:doc-protocol",
+   "type": "audits"
+  },
+  {
+   "from": "pb:PB-4",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/PROCESS_BACKLOG.md",
+     "sha256": null
+    }
+   ],
+   "to": "widget:08/live-run-audit-pathway",
+   "type": "governs"
+  },
+  {
+   "from": "widget:01/local-agent-console",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:21/agent.local",
+   "type": "invokes"
+  },
+  {
+   "from": "widget:02/module-launcher",
+   "note": "Module Launcher runs any module THROUGH the skill.bootstrap generic wrapper, per MODULE_ROADMAP.",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:01/skill.bootstrap",
+   "type": "invokes"
+  },
+  {
+   "from": "widget:05/provenance-map",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:30/orchestrate.fanout",
+   "type": "audits"
+  },
+  {
+   "from": "widget:06/compile-trace-console",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:40/context.compiler",
+   "type": "audits"
+  },
+  {
+   "from": "widget:07/audit-timeline-tournament",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:30/orchestrate.fanout",
+   "type": "audits"
+  },
+  {
+   "from": "widget:07/audit-timeline-tournament",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:39/episode.record",
+   "type": "audits"
+  },
+  {
+   "from": "widget:08/live-run-audit-pathway",
+   "sources": [
+    {
+     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "by": "lane-B-i46",
+     "fields": [
+      "*"
+     ],
+     "ref": "core-docs/MODULE_ROADMAP.md",
+     "sha256": null
+    }
+   ],
+   "to": "module:40/context.compiler",
+   "type": "audits"
+  }
+ ],
+ "schema": "lifeorch.map_claims/0.1"
+}
