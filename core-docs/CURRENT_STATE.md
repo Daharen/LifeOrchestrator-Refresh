@@ -357,11 +357,11 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 **i47 CLOSED (D-0132/D-0133):** mandate 02 SUNSET (verdict YES; SEALED_CHECK_47 open i>=54) + the frozen legacy-vs-PCB migration gate RUN blind end-to-end (T1; one B re-run after a wrong-grant void) -> **CONDITIONAL**.
 
-**NEXT = i48**: the migration gate returned **CONDITIONAL (D-0133; `modules/44-project-map/eval/results/I47_RESULTS.md`)** -- quality PASS, efficiency VOID; the LEGACY handoff STAYS the default bootstrap. Menu: the 3 bounded CD units (CD-1 boot-surface wave-mechanics; CD-2 efficiency re-check; CD-3 #44 query-surface) -> the CONDITIONAL re-check; or AUDIT_PIPELINE next_increment (front step + ride-along + output side; review_due i49); M2-C first increment (FO-3); #40 beam-width. P0-1 activation stays FROZEN.
+**NEXT = i48 (D-0134: Nicholas direction = the CD path; seat = Fable 5 until settled)**: the migration gate returned **CONDITIONAL (D-0133; `modules/44-project-map/eval/results/I47_RESULTS.md`)** -- quality PASS, efficiency VOID; the LEGACY handoff STAYS the default bootstrap. i48 = the 3 bounded CD units (CD-1 boot-surface wave-mechanics; CD-2 efficiency re-check; CD-3 #44 query-surface) -> the CONDITIONAL re-check. Deferred menu: AUDIT_PIPELINE next_increment (review_due i49; + the w08 window-close defect, D-0134); M2-C (FO-3); #40 beam-width. P0-1 activation stays FROZEN.
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades; `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-11 -- i47 CLOSED: mandate 02 SUNSET (YES; SEALED_CHECK_47 armed, D-0132) + the migration gate run blind end-to-end -> CONDITIONAL (D-0133): legacy stays default; CD-1/2/3 queued for i48.
+**Last updated:** 2026-08-11 -- i47 CLOSED: mandate 02 SUNSET (YES; SEALED_CHECK_47 armed, D-0132) + the migration gate -> CONDITIONAL (D-0133); D-0134 rulings: CD path, Fable seat, poser live-click CONFIRMED (window-close defect), w07 + eval folder removed.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

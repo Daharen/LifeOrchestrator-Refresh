@@ -143,14 +143,14 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0116 | 2026-08-07 | locked | i41 round-4 review FAIL -- s7 not ratified; 3 seam findings -> #43; orchestrator seat -> Opus 4.8 Extra [amends D-0114] |
 | D-0117 | 2026-08-08 | locked | i42 close: M2-A doc-hygiene commit gate SHIPPED (hard deadline met) + #43 0.6.0 (3 round-4 closures, M2-D held); round-5 pack 6bb613ea couriered |
 | D-0118 | 2026-08-08 | locked | i42 round-5 ratification PASS: P0-1 = DESIGN PASS (p0_1_gate_status=pass, pack 6bb613ea); activation still prohibited; arc closes 7->7->5->3->0 |
-| D-0119 | 2026-08-08 | locked | M2-E resolved (Nicholas): in-session cloud subagents PERMITTED inside the D-0051-as-amended boundary (frontier still human-couriered); PB-2 delegation seam unblocked |
+| D-0119 | 2026-08-08 | locked | M2-E resolved (Nicholas): in-session cloud subagents PERMITTED (frontier still human-couriered); PB-2 unblocked |
 | D-0120 | 2026-08-08 | locked | i43: Widgets 05/06/07 live-GUI confirm PASS but audit surface not yet phenomenologically auditable -> Live-Run Audit Pathway reprioritized (P9 legibility) |
 | D-0121 | 2026-08-08 | locked | i44: AUDIT_PIPELINE promoted to core-docs/ (P9 legibility added; cadence i43/i47); _to_delete_w07 untracked |
 | D-0122 | 2026-08-08 | locked | i45 close: LRAP/Widget 08 SHIPPED + re-verified 87/0/0; leveled accept -- increment PASS, whole auditor NOT complete [D-0124/D-0125] |
 | D-0123 | 2026-08-08 | locked | i45 addendum: LRAP human confirm passes built steps, whole widget INCOMPLETE -- no front step + ride-along + output side = next [refined by D-0125] |
 | D-0124 | 2026-08-08 | locked | i45 acceptance finalized: five-fixture human walk = SCORED PASS on the built LRAP pathway (whole widget incomplete, D-0123) [corrected by D-0125] |
-| D-0125 | 2026-08-08 | provisional | i45 acceptance CORRECTED (Nicholas): LRAP v1 NOT phenomenological even on built scope -- flag-visibility only, can't adopt the agent's role; P9 open [corrects D-0124] |
-| D-0126 | 2026-08-08 | provisional | interpretability POSER decision (Nicholas): UNGATED read-only info-only '?' -> local-9B explain; info-only invariant = ungate-able [built D-0127, live-fixed D-0128] |
+| D-0125 | 2026-08-08 | provisional | i45 acceptance CORRECTED (Nicholas): LRAP v1 NOT phenomenological; P9 open [corrects D-0124] |
+| D-0126 | 2026-08-08 | provisional | interpretability POSER decision (Nicholas): ungated read-only '?' -> local-9B explain [built D-0127, live-fixed D-0128] |
 | D-0127 | 2026-08-08 | locked | LRAP POSER SHIPPED (D-0126): widgets/08 `9f99495` -- ungated, read-only + fail-silent; cloud 104/0/3 + Win -Live 119/0/0 [live-fixed D-0128] |
 | D-0128 | 2026-08-08 | locked | LRAP poser LIVE-CLICK FIX (D-0127): 2 mock-missed defects -- spawn no-launch; 9B empty at 1280 (-> 4096 floor) `cc3dd81` |
 | D-0129 | 2026-08-09 | locked | LRAP poser live no-op ROOT CAUSE: widget host=dotnet.exe -> spawned dotnet.exe -File worker (no-op); fix: real pwsh + -PwshPath `da8a05e` [corrects D-0128 spawn] |
@@ -158,3 +158,4 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0131 | 2026-08-11 | locked | i46 CLOSED: PCB shipped -- modules/44 0.1.0 (recovered ship + 2 fold-fixes); claims folded 0-findings; packet rendered; I47 FROZEN |
 | D-0132 | 2026-08-11 | locked | mandate 02 SUNSET: report delivered, verdict YES (reverses 01's NO) -> SEALED_CHECK_47 armed (open i>=54); live doc deleted; no mandate 03 |
 | D-0133 | 2026-08-11 | locked | i47 PCB migration gate = CONDITIONAL: quality PASS (floors clear, swap-stable) but efficiency VOID (mechanism-not-exercised) -> 3 bounded i48 CD units; legacy stays default |
+| D-0134 | 2026-08-11 | locked | i47 addendum (Nicholas): i48 = CD path; seat Fable-until-settled [amends D-0116]; poser live-click CONFIRMED (window-close defect); w07 + eval folder deleted |
