@@ -116,7 +116,7 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0091 | 2026-08-03 | locked | Selection-policy settle (i31): context.compiler imports retrieval.eval's canonical selpol, resolving the i30 divergence. |
 | D-0092 | 2026-08-04 | provisional | Tier-0 seam repairs (i32, p1): contract amendments for hard-namespace, current/supersession, and reserved hierarchy/working/query seams. |
 | D-0093 | 2026-08-04 | provisional | Establish PROCESS_BACKLOG (process router) + capture rule; the mechanical gate is the forcing function |
-| D-0094 | 2026-08-04 | provisional | Adopt a sunsetting PROCESS_MANDATE (time-boxed, self-deleting, mandatory sunset report) + a blind sealed-check regression test for process health. |
+| D-0094 | 2026-08-04 | provisional | Adopt a sunsetting PROCESS_MANDATE (time-boxed, self-deleting, sunset report) + a blind sealed-check for process health. |
 | D-0095 | 2026-08-04 | provisional | Frontier red-team: NO-GO on i32 as-written (envelope-only ns; candidate-dependent supersession) -> i33 hardening |
 | D-0096 | 2026-08-04 | locked | i33 p1: MEMORY_CONTRACT A5 + CPC re-amend Tier-0 seams (ns-closure, supersession, working-state, classifier) |
 | D-0097 | 2026-08-04 | locked | i33 CLOSED: ns-closure + supersession re-conformance (#36/#37/#40); mixed-ns fold PASSED; Tier-0 seams DONE |
@@ -132,9 +132,9 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0105 | 2026-08-06 | provisional | i38 open: scope P0-1 FULL-GATE + wm wiring + NEW Widget 06; PB-4 |
 | D-0106 | 2026-08-06 | provisional | i38 close: P0-1 FULL gate + #40 0.9.0 wm-hydration + Widget 06 SHIPPED; s7 ratifies pass [walked back, D-0107] |
 | D-0107 | 2026-08-06 | provisional | i38 frontier fold: P0-1 AS-BUILT re-review FAIL -> p0_1_gate_status WALKED BACK to incomplete (over-claimed vs s6); 7 items -> i39 unit-0 |
-| D-0108 | 2026-08-06 | locked | i39: P0-1 -> HONEST pass (#43 0.3.0, 7 findings closed, 308/308, fold 18/18) + #36 0.7.0 + NEW widgets/07; #37 re-pin = PB-5 [walked back again, D-0109] |
+| D-0108 | 2026-08-06 | locked | i39: P0-1 -> HONEST pass (#43 0.3.0, 7 closures) + #36 0.7.0 + widgets/07; PB-5 [walked back again, D-0109] |
 | D-0109 | 2026-08-06 | locked | i39 as-built re-review FAIL -- pass walked back to incomplete AGAIN; 7 findings -> i40 unit-0 [supersedes the D-0108 pass claim] |
-| D-0110 | 2026-08-06 | locked | i40 sunset: mandate-01 report verdict NO -> mandate 02 LICENSED (sunset i47; M2-A deadline i42; M2-D verify-before-ratify structural; M2-E open) |
+| D-0110 | 2026-08-06 | locked | i40 sunset: mandate-01 report NO -> mandate 02 LICENSED (sunset i47; M2-A deadline i42; M2-D structural; M2-E open) |
 | D-0111 | 2026-08-06 | locked | i40 wave open (2-lane CPU): #43 the 7 exact closures (no pass claim -- M2-D) + #37 PB-5 reconcile |
 | D-0112 | 2026-08-06 | locked | i40 close: #43 0.4.0 exact closures (orchestrator-recovered ship; gate stays incomplete) + #37 0.8.1 (PB-5 closed); round-3 pack couriered |
 | D-0113 | 2026-08-06 | locked | i40 round-3 review FAIL -- s7 not ratified; 5 suite-build findings -> the i41 #43 unit; no walk-back (M2-D) |
@@ -147,8 +147,8 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0120 | 2026-08-08 | locked | i43: Widgets 05/06/07 live-GUI confirm PASS but audit surface not yet phenomenologically auditable -> Live-Run Audit Pathway reprioritized (P9 legibility) |
 | D-0121 | 2026-08-08 | locked | i44: AUDIT_PIPELINE promoted to core-docs/ (P9 legibility added; cadence i43/i47); _to_delete_w07 untracked |
 | D-0122 | 2026-08-08 | locked | i45 close: LRAP/Widget 08 SHIPPED + re-verified 87/0/0; leveled accept -- increment PASS, whole auditor NOT complete [D-0124/D-0125] |
-| D-0123 | 2026-08-08 | locked | i45 addendum: LRAP human confirm passes built steps, whole widget INCOMPLETE -- no front step + ride-along + output side = next [refined by D-0125] |
-| D-0124 | 2026-08-08 | locked | i45 acceptance finalized: five-fixture human walk = SCORED PASS on the built LRAP pathway (whole widget incomplete, D-0123) [corrected by D-0125] |
+| D-0123 | 2026-08-08 | locked | i45 addendum: LRAP confirm passes built steps, widget INCOMPLETE -- front/ride-along/output = next [refined by D-0125] |
+| D-0124 | 2026-08-08 | locked | i45 acceptance finalized: five-fixture human walk = SCORED PASS on built LRAP (widget incomplete, D-0123) [corrected by D-0125] |
 | D-0125 | 2026-08-08 | provisional | i45 acceptance CORRECTED (Nicholas): LRAP v1 NOT phenomenological; P9 open [corrects D-0124] |
 | D-0126 | 2026-08-08 | provisional | interpretability POSER decision (Nicholas): ungated read-only '?' -> local-9B explain [built D-0127, live-fixed D-0128] |
 | D-0127 | 2026-08-08 | locked | LRAP POSER SHIPPED (D-0126): widgets/08 `9f99495` -- ungated, read-only + fail-silent; cloud 104/0/3 + Win -Live 119/0/0 [live-fixed D-0128] |
@@ -161,3 +161,4 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0134 | 2026-08-11 | locked | i47 addendum (Nicholas): i48 = CD path; seat Fable-until-settled [amends D-0116]; poser live-click CONFIRMED (window-close defect); w07 + eval folder deleted |
 | D-0135 | 2026-08-11 | locked | i48: #44 0.2.0 CD-1+CD-3 (recovered) + harvest sunset-fix + fold 0-findings; re-check staged (probe -> A/B) |
 | D-0136 | 2026-08-11 | locked | i48 re-check FAILED: void x2 + bars missed (B 1.24x A, raw fallback) -> legacy default; N1-N4 |
+| D-0137 | 2026-08-11 | locked | i49 = N1 wave (narrative queries + N2/N3); AUDIT review -> i54 (override, w/ sealed check) |
