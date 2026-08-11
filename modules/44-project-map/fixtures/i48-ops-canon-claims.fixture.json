@@ -1,0 +1,52 @@
+{
+ "at_commit": "goldensha0000000000000000000000000000000",
+ "by": "cd-lane-i48",
+ "entities": [
+  {
+   "confidence": "established",
+   "display_name": "ship verify",
+   "id": "ops:boot-ship-verify",
+   "ns": "ops",
+   "one_line": "Ship via dev.ship (sha256 + AST + tests, FAIL-CLOSED, named files only); VERIFY the real HEAD with NATIVE git; never git add -A.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "cd-lane-i48",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "ops/audit/gen-doc-health.py",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "display_name": "wave clamps",
+   "id": "ops:boot-wave-clamps",
+   "ns": "ops",
+   "one_line": "Wave clamps: <=1 GPU worker HARD; 1 GPU + 2 CPU => MaxParallel 3; workers run docs:[]; only the GPU lane edits models.json.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "cd-lane-i48",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "core-docs/PROCESS_MANDATE.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  }
+ ],
+ "relationships": [],
+ "schema": "lifeorch.map_claims/0.1"
+}

@@ -104,9 +104,62 @@ is permitted ONLY under `runtime/`; it stamps a DRAFT-STALE banner in every file
 `DRAFT_RENDER` (RT1-F13). `render --check` byte-compares a fresh render against the committed tree
 (`GENERATED_DRIFT`; a DRAFT-STALE banner under a generated tree fails it too).
 
+### OPERATIONS section -- boot-surface wave canon (i48 CD-1)
+
+The BOOT_PACKET carries an **OPERATIONS (wave canon)** section rendered ONLY from validated map state
+(never renderer prose), so a PCB-booted orchestrator answers wave mechanics without opening the legacy
+handoff (D-0133 CD-1). **Selection rule (naming convention):** an `ops:` entity renders into OPERATIONS
+iff its key starts with **`boot-`** (e.g. `ops:boot-wave-clamps`); members are sorted by id. Each rendered
+line is `- <one_line> [<repo-path pointer(s)>]` and is **pointer-backed with >=1 repo-path ref** (drawn
+from the entity's `sources[]`) so the reader can descend. The canon set (authored in
+`claims/i48-ops-canon-claims.json`): wave clamps (`<=1` GPU HARD; MaxParallel 3; workers `docs:[]`; only
+the GPU lane edits models.json), lease order (`gpu -> git -> doc`), fail-closed `dev.ship` + native-git
+HEAD verify + never `git add -A`, detached-server 0-orphan discipline, and the D-0077 fold-smoke rule.
+**Budget + ladder position:** OPERATIONS has its own soft section budget (`SECTION_BUDGETS["ops"]`) and
+fits itself 0->1->2 within it; against the 20,000-byte HARD packet total it is the **LAST** section the
+total-guard ladder degrades -- section 3 (SYSTEM AT A GLANCE) hard-degrades first, and only then does
+OPERATIONS compress to level 1, then to its **min floor** (level 2 = one collapsed pointer line that
+still names each canon slug and one descent pointer). Boot-critical canon compresses but never vanishes.
+
 ## Query set (closed, WO s3.6)
 
 `entity:<id>` | `edges:<id>` | `redges:<id>` | `evidence:<id>` | `deeper:<id>[:kind]` | `stale` |
 `alias:<text>` | `changed-since --paths-file <f>` (the caller precomputes the changed-path list with
 `git diff --name-only <sha>`, keeping git out of the worker, RT1-F21). Anything else is
 `UNSUPPORTED_QUERY`.
+
+### Short-form / alias id resolution (i48 CD-3)
+
+Every id-taking query (`entity:` / `edges:` / `redges:` / `evidence:` / `deeper:`) resolves a raw id
+argument to a canonical entity id before use. **A full canonical id already in the map resolves to
+itself and is byte-identical to 0.1.0 (no extra keys added).** Short forms:
+
+- **`ns:NN` / `ns:NN.N`** (e.g. `module:42`, `widget:08`) -> the UNIQUE entity in that ns whose number
+  token (the key before `/`, or the whole key for `arch:`) equals `NN`.
+- **`#NN`** -> the unique `module:` with number `NN`; **`pos NN`** -> the unique `arch:` position `NN`;
+  a literal `aliases[]` value -> its unique holder.
+
+Resolution is deterministic; **an ambiguous or absent short form is unresolvable**. Unresolvable ids
+raise the **EXISTING `DANGLING_REF`** on `entity:`/`evidence:`/`deeper:` (as in 0.1.0) and now also on
+short-form `edges:`/`redges:` (a short form is a lookup, not a filter). A **full-id-shaped miss**
+(e.g. `edges:module:99/ghost`, no such entity) keeps the 0.1.0 empty-set behavior on `edges:`/`redges:`
+(byte-identical). The closed query set gains **no new query names** and the error table gains **no new
+codes**. When (and only when) a short form was resolved, the result echoes `"resolved":"<canonical>"`
+so a reader sees which entity a bare number mapped to (this is why B's `edges:module:42|30|37` no longer
+silently return `[]`); `edges:` remains OUTBOUND-only, so a resolved id with no outbound edges returns an
+(honest) empty set identical to its full-id form -- inbound connectivity is `redges:`.
+
+### Provenance-at-SHA hygiene on `evidence:` (i48 CD-3)
+
+`evidence:<id>` **without** `--harvest` is byte-identical to 0.1.0 (the raw `sources[]`). **With**
+`--harvest`, each source is annotated with a `_provenance` object -- `{ref_class, in_harvest_tree,
+at_commit_matches_harvest, provenance}` -- computed from **harvest facts alone (no git calls, RT1-F21):**
+a `path`/`doc:` ref is *in-tree* iff present in the harvest `inventory` (or core-doc list); a
+`decision:D-####` ref iff its id is in harvest `decision_ids`; a `contract:`/entity `map-ref` is marked
+`map-internal`. A ref that fails to resolve in the harvested tree is marked **`beyond-tree`**, and a
+source whose `at_commit` differs from the harvest commit sets `at_commit_matches_harvest:false` -- the
+two signals that made B distrust the map (a research file + `decision:D-0130` + an at_commit not in the
+tree). The result also carries `beyond_tree_count`, `at_commit_drift_count`, and a **`currency`** block
+stating BOTH commits: `{map_state_commit (overlay.at_commit), harvest_commit, in_sync}`. Every currency
+surface states both commits -- the BOOT_PACKET freshness line reads `@ tree <sha> | map-state <sha>
+[in-sync|MAP-VS-TREE-SPLIT]`.

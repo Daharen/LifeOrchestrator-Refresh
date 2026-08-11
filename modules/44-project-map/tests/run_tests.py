@@ -330,9 +330,141 @@ def test_reaffirm_fmt_changed():
     shutil.rmtree(work, ignore_errors=True)
 
 
+# --------------------------------------------------------------- CD-3 short-form resolution ---
+def _q(expr, mapdir, harvest=None):
+    args = ["query", "--map", mapdir, "--q", expr]
+    if harvest:
+        args += ["--harvest", harvest]
+    _, env, _ = cli(args)
+    return env
+
+
+def test_shortform():
+    gmap = os.path.join(FIX, "golden-map")
+    # short form resolves to canonical and yields the SAME payload as the full id (entity/edges/redges)
+    pairs = [("entity", "module:90", "module:90/alpha.tool"),
+             ("edges", "module:91", "module:91/beta.tool"),
+             ("redges", "module:90", "module:90/alpha.tool"),
+             ("entity", "widget:90", "widget:90/gamma")]
+    for verb, short, full in pairs:
+        es = _q("%s:%s" % (verb, short), gmap)["result"]
+        ef = _q("%s:%s" % (verb, full), gmap)["result"]
+        rec("shortform", "%s:%s==full-payload" % (verb, short), es.get(verb) == ef.get(verb),
+            "short=%s full=%s" % (es.get(verb), ef.get(verb)))
+        rec("shortform", "%s:%s surfaces resolved" % (verb, short), es.get("resolved") == full, str(es.get("resolved")))
+        # full-id byte-identity vs 0.1.0: NO 'resolved' key, exactly {q, <verb>}
+        rec("shortform", "%s full-id byte-identity(no-resolved)" % verb,
+            "resolved" not in ef and set(ef.keys()) == {"q", verb}, "keys=%s" % sorted(ef.keys()))
+    # #NN alias short form -> module
+    e = _q("entity:#90", gmap)["result"]
+    rec("shortform", "#90->module:90/alpha.tool", e.get("resolved") == "module:90/alpha.tool", str(e.get("resolved")))
+    # negative short form -> DANGLING_REF (acceptance: module:99)
+    for verb in ("entity", "edges", "redges", "evidence", "deeper"):
+        env = _q("%s:module:99" % verb, gmap)
+        code = env and env.get("error", {}) and env["error"].get("code")
+        rec("shortform", "%s:module:99->DANGLING_REF" % verb, env["status"] == "error" and code == "DANGLING_REF", "got=%s" % code)
+    # a full-id-SHAPE miss keeps the 0.1.0 empty-set behavior for edges/redges (NOT an error)
+    env = _q("edges:module:99/ghost", gmap)
+    rec("shortform", "edges:full-shape-miss->[] (0.1.0-identical)", env["status"] == "ok" and env["result"]["edges"] == [], str(env.get("error")))
+    # deeper with :kind on a short form
+    env = _q("deeper:module:90:readme", gmap)
+    rec("shortform", "deeper:short:kind-resolves", env["status"] == "ok" and env["result"].get("resolved") == "module:90/alpha.tool", str(env.get("error")))
+
+
+# --------------------------------------------------------------- CD-3 provenance marking ------
+def test_evidence_provenance():
+    gmap = os.path.join(FIX, "golden-map")
+    harvest = os.path.join(FIX, "harvest.json")
+    prov = os.path.join(FIX, "provenance", "map")
+    # no --harvest: byte-identical to 0.1.0 (raw sources, no marking/currency)
+    e0 = _q("evidence:module:90/alpha.tool", gmap)["result"]
+    rec("provenance", "no-harvest-byte-identical", set(e0.keys()) == {"q", "evidence"}
+        and all(set(s.keys()) <= {"ref", "sha256", "fields", "by", "at_commit", "reaffirmed"} for s in e0["evidence"]),
+        "keys=%s" % sorted(e0.keys()))
+    # with --harvest: marking + currency (both commits) + counts
+    e1 = _q("evidence:module:90/alpha.tool", gmap, harvest)["result"]
+    rec("provenance", "with-harvest-currency-both-commits",
+        set(e1["currency"].keys()) == {"map_state_commit", "harvest_commit", "in_sync"}, str(e1["currency"]))
+    # beyond-tree fixture: ghost research path + unknown decision marked beyond-tree; at_commit drift caught
+    ep = _q("evidence:module:90/alpha.tool", prov, harvest)["result"]
+    provs = {m["ref"]: m["_provenance"]["provenance"] for m in ep["evidence"]}
+    rec("provenance", "beyond-tree-path-marked", provs.get("core-docs/research/2026-08-11-ghost.md") == "beyond-tree", str(provs))
+    rec("provenance", "beyond-tree-decision-marked", provs.get("decision:D-0130") == "beyond-tree", str(provs))
+    rec("provenance", "in-tree-path-marked", provs.get("modules/90-alpha/README.md") == "in-tree", str(provs))
+    rec("provenance", "beyond_tree_count==2", ep["beyond_tree_count"] == 2, str(ep["beyond_tree_count"]))
+    rec("provenance", "currency-map-vs-tree-split", ep["currency"]["in_sync"] is False, str(ep["currency"]))
+    rec("provenance", "at_commit_drift-caught", ep["at_commit_drift_count"] >= 1, str(ep["at_commit_drift_count"]))
+
+
+# --------------------------------------------------------------- CD-1 OPERATIONS section ------
+def test_operations():
+    gmap = os.path.join(FIX, "golden-map")
+    harvest = json.loads(P.read_text(os.path.join(FIX, "harvest.json")))
+    model = P.load_map(gmap)
+    vr = P.validate(model, harvest, is_real=True)
+    lb = vr["load_bearing"]
+    stale = set(vr["stale_entities"])
+    body, total, ladder, _, _, _ = P._build_boot_packet(model, harvest, stale, lb)
+    ops_sec = ""
+    if "## OPERATIONS" in body:
+        ops_sec = body.split("## OPERATIONS", 1)[1].split("\n## ", 1)[0]
+    # content assertions (rendered from ops: state; each token present)
+    for tok in ["<=1 GPU", "MaxParallel 3", "docs:[]", "NATIVE git", "never git add -A",
+                "gpu -> git -> doc", "0 UNMANAGED orphans"]:
+        rec("operations", "token:%s" % tok, tok in ops_sec, "")
+    bullets = [ln for ln in ops_sec.splitlines() if ln.startswith("- ")]
+    rec("operations", "every-line-pointer-backed", len(bullets) >= 5 and all("[" in b and "]" in b for b in bullets),
+        "bullets=%d" % len(bullets))
+    rec("operations", "packet-under-hard-20000", total <= P.BOOT_PACKET_HARD, "total=%d" % total)
+    # min-floor: level 2 is a single line that never vanishes and keeps a pointer
+    mn, n = P._build_operations_section(model.entities, 2)
+    rec("operations", "minfloor-nonempty-with-pointer", n > 0 and bool(mn.strip()) and "descend:" in mn, "")
+    # degrade-LAST: under a forced tiny HARD, section3 degrades in the ladder BEFORE OPERATIONS, and
+    # OPERATIONS still survives (never removed).
+    save = P.BOOT_PACKET_HARD
+    try:
+        P.BOOT_PACKET_HARD = 1
+        b2, t2, l2, _, _, _ = P._build_boot_packet(model, harvest, stale, lb)
+        idx3 = next((i for i, s in enumerate(l2) if "section3" in s), 999)
+        idxop = next((i for i, s in enumerate(l2) if "OPERATIONS -> level" in s), 1000)
+        rec("operations", "degrade-LAST(section3-before-OPERATIONS)", idx3 < idxop, "ladder=%s" % l2)
+        rec("operations", "OPERATIONS-survives-max-degrade", "## OPERATIONS" in b2, "")
+    finally:
+        P.BOOT_PACKET_HARD = save
+
+
+# --------------------------------------------------------------- CD-1 ops claims roundtrip -----
+def test_ops_roundtrip():
+    harvest = json.loads(P.read_text(os.path.join(FIX, "harvest.json")))
+    base = os.path.join(FIX, "golden-map")
+    work = tempfile.mkdtemp(prefix="pm-ops-")
+    m = os.path.join(work, "m")
+    shutil.copytree(base, m)
+    # strip the pre-seeded boot-ops so we PROVE they arrive via ingest of the claims file
+    P.write_lf(os.path.join(m, "entities", "ops.json"),
+               P.dumps_map({"schema": P.SCHEMA_ENTITIES, "kind": "entities", "items": []}))
+    fc = os.path.join(FIX, "i48-ops-canon-claims.fixture.json")
+    res = P.op_ingest_claims(m, fc, harvest, None)
+    rec("ops-roundtrip", "ingest-upserts-boot-ops", res["entities_upserted"] >= 2, str(res))
+    model = P.load_map(m)
+    ids = [i for i in model.entities if i.startswith("ops:boot-")]
+    rec("ops-roundtrip", "boot-ops-in-map", len(ids) >= 2, str(ids))
+    out = tempfile.mkdtemp(prefix="pm-opsr-")
+    P.op_render(m, harvest, out, check=False, draft=False)
+    bp = P.read_text(os.path.join(out, "BOOT_PACKET.md"))
+    rec("ops-roundtrip", "OPERATIONS-rendered-from-ingested", "## OPERATIONS" in bp and "MaxParallel 3" in bp, "")
+    d1 = _map_digest(m)
+    P.op_ingest_claims(m, fc, harvest, None)
+    d2 = _map_digest(m)
+    rec("ops-roundtrip", "ingest-idempotent", d1 == d2, "d1=%s d2=%s" % (d1[:10], d2[:10]))
+    shutil.rmtree(work, ignore_errors=True)
+    shutil.rmtree(out, ignore_errors=True)
+
+
 def main():
     for t in (test_golden, test_determinism, test_negatives, test_drift,
-              test_parse_budgets_parity, test_ingest, test_reaffirm_fmt_changed):
+              test_parse_budgets_parity, test_ingest, test_reaffirm_fmt_changed,
+              test_shortform, test_evidence_provenance, test_operations, test_ops_roundtrip):
         try:
             t()
         except Exception as e:

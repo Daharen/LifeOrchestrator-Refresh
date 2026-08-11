@@ -1,0 +1,191 @@
+{
+ "at_commit": "f1de00c759bf390e53e1870450c086163d1c8f1e",
+ "by": "cd-lane-i48",
+ "entities": [
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "decision",
+     "ref": "decision:D-0077"
+    }
+   ],
+   "display_name": "Cross-module fold-smoke rule",
+   "id": "ops:boot-fold-smoke",
+   "ns": "ops",
+   "one_line": "D-0077: a schema producer+consumer pair split across parallel workers requires the orchestrator cross-module fold smoke before close.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "f1de00c759bf390e53e1870450c086163d1c8f1e",
+     "by": "cd-lane-i48",
+     "fields": [
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "modules/30-orchestrate-fanout/FANOUT_PROTOCOL.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "other",
+     "ref": "modules/30-orchestrate-fanout/FANOUT_PROTOCOL.md"
+    },
+    {
+     "kind": "readme",
+     "ref": "modules/29-resource-lease/README.md"
+    }
+   ],
+   "display_name": "Resource-lease acquisition order",
+   "id": "ops:boot-lease-order",
+   "ns": "ops",
+   "one_line": "Lease order: acquire gpu -> git -> doc and release in reverse; the single git lease serializes every commit across the wave.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "f1de00c759bf390e53e1870450c086163d1c8f1e",
+     "by": "cd-lane-i48",
+     "fields": [
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "modules/29-resource-lease/README.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "f1de00c759bf390e53e1870450c086163d1c8f1e",
+     "by": "cd-lane-i48",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "modules/30-orchestrate-fanout/FANOUT_PROTOCOL.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "decision",
+     "ref": "decision:D-0055"
+    },
+    {
+     "kind": "decision",
+     "ref": "decision:D-0056"
+    }
+   ],
+   "display_name": "Detached-server orphan discipline",
+   "id": "ops:boot-orphan-discipline",
+   "ns": "ops",
+   "one_line": "Orphan discipline: launch persistent llama-servers DETACHED and reap them before finalize; assert 0 UNMANAGED orphans every wave.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "f1de00c759bf390e53e1870450c086163d1c8f1e",
+     "by": "cd-lane-i48",
+     "fields": [
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "decision",
+     "ref": "decision:D-0072"
+    },
+    {
+     "kind": "decision",
+     "ref": "decision:D-0117"
+    },
+    {
+     "kind": "other",
+     "ref": "modules/00-bootstrap-executor/exec-job.sh"
+    }
+   ],
+   "display_name": "Fail-closed ship + native-git HEAD verify",
+   "id": "ops:boot-ship-verify",
+   "ns": "ops",
+   "one_line": "Ship via dev.ship (sha256 + AST + tests, FAIL-CLOSED, named files only); VERIFY the real HEAD with NATIVE git; never git add -A.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "f1de00c759bf390e53e1870450c086163d1c8f1e",
+     "by": "cd-lane-i48",
+     "fields": [
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "modules/00-bootstrap-executor/exec-job.sh",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "other",
+     "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md#s4"
+    },
+    {
+     "kind": "other",
+     "ref": "modules/30-orchestrate-fanout/FANOUT_PROTOCOL.md"
+    }
+   ],
+   "display_name": "Wave concurrency clamps",
+   "id": "ops:boot-wave-clamps",
+   "ns": "ops",
+   "one_line": "Wave clamps: <=1 GPU worker HARD; 1 GPU + 2 CPU => MaxParallel 3; workers run docs:[]; only the GPU lane edits models.json.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "f1de00c759bf390e53e1870450c086163d1c8f1e",
+     "by": "cd-lane-i48",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "f1de00c759bf390e53e1870450c086163d1c8f1e",
+     "by": "cd-lane-i48",
+     "fields": [
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "modules/30-orchestrate-fanout/FANOUT_PROTOCOL.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  }
+ ],
+ "relationships": [],
+ "schema": "lifeorch.map_claims/0.1"
+}

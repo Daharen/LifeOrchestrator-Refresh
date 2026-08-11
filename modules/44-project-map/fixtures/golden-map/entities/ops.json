@@ -1,5 +1,121 @@
 {
- "items": [],
+ "items": [
+  {
+   "confidence": "established",
+   "display_name": "boot fold smoke",
+   "id": "ops:boot-fold-smoke",
+   "ns": "ops",
+   "one_line": "D-0077: a schema producer+consumer pair split across parallel workers requires the orchestrator cross-module fold smoke before close.",
+   "plane_primary": "capability",
+   "skeleton": false,
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "cd-lane-i48",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "modules/91-beta/README.md",
+     "sha256": "93bad37195219c842e7a90638d79d2f042742b3e6856a8f52cb3d0beb108748d"
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "display_name": "boot lease order",
+   "id": "ops:boot-lease-order",
+   "ns": "ops",
+   "one_line": "Lease order: acquire gpu -> git -> doc and release in reverse; the single git lease serializes every commit across the wave.",
+   "plane_primary": "capability",
+   "skeleton": false,
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "cd-lane-i48",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "core-docs/DOC_PROTOCOL.md",
+     "sha256": "2e8587d959c4c9e2aab39d7c59307100b65004d0496a95795ba5995803ef0dbd"
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "display_name": "boot orphan discipline",
+   "id": "ops:boot-orphan-discipline",
+   "ns": "ops",
+   "one_line": "Orphan discipline: launch persistent llama-servers DETACHED and reap them before finalize; assert 0 UNMANAGED orphans every wave.",
+   "plane_primary": "capability",
+   "skeleton": false,
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "cd-lane-i48",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "modules/90-alpha/README.md",
+     "sha256": "82f63bd91cd4ab45c9f1a2a2faa719b3accfba55eb6ad101016e685feaac8d0a"
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "display_name": "boot ship verify",
+   "id": "ops:boot-ship-verify",
+   "ns": "ops",
+   "one_line": "Ship via dev.ship (sha256 + AST + tests, FAIL-CLOSED, named files only); VERIFY the real HEAD with NATIVE git; never git add -A.",
+   "plane_primary": "capability",
+   "skeleton": false,
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "cd-lane-i48",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "ops/audit/gen-doc-health.py",
+     "sha256": "916aaffd47b00b20af0dcae0cb03d7c208982cdc2a7d26e7de4ec3262e82a7a4"
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "display_name": "boot wave clamps",
+   "id": "ops:boot-wave-clamps",
+   "ns": "ops",
+   "one_line": "Wave clamps: <=1 GPU worker HARD; 1 GPU + 2 CPU => MaxParallel 3; workers run docs:[]; only the GPU lane edits models.json.",
+   "plane_primary": "capability",
+   "skeleton": false,
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "cd-lane-i48",
+     "fields": [
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "core-docs/PROCESS_MANDATE.md",
+     "sha256": "9c12b0d25cb9e9a688f143374ba1ac339efaf3c7d320d74a6404a939df02969f"
+    }
+   ],
+   "status": "mvp-complete"
+  }
+ ],
  "kind": "entities",
  "schema": "lifeorch.project_map/0.1"
 }
