@@ -1,30 +1,43 @@
-# FANOUT_AGENT_003 -- EMPTY slot
+# FANOUT_AGENT_003 -- i46 Lane A: BUILD modules/44-project-map (the PCB mechanism)
 
 ## Header
 - **Slot:** FANOUT_AGENT_003
-- **Status:** EMPTY
-- **Wave / iteration:** -- (fill at wave scoping; plan id `fo-<N>-<id>` once planned)
-- **Lane:** -- (convention: 001 GPU / 002 CPU / 003 coding)
-- **Worker id / label:** --
-- **Module/area (exclusive):** --
-- **GPU:** false (set true ONLY if this is the wave single GPU worker)
+- **Status:** READY
+- **Wave / iteration:** i46 (plan id `fo-46-6dd32d37`)
+- **Lane:** CODING (CPU)
+- **Worker id / label:** `PCB-BUILD-i46`
+- **Module/area (exclusive):** `modules/44-project-map/**` EXCEPT `claims/**` (a parallel lane owns claims/ -- NEVER write it)
+- **GPU:** false
 - **Docs:** `[]`
+- **RECOMMENDED MODEL:** Opus 4.8 Extra (new load-bearing infra; the mechanism under the i47 migration gate; D-0114/D-0116 elevation)
 
-## Mission
-_EMPTY -- no unit assigned._ Fill from the candidate menu in `core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md` section 4 (i46 front-runner: the LRAP ride-along + OUTPUT increment -- design-first -> red-team -> a gated build; the pause/possession hooks touch live lease windows). Paste the `plan`-emitted worker prompt (or a tight summary + a pointer to the emitted copy when over the 8 KB budget); mirror it.
+## Mission (why this exists)
+
+Nicholas's comprehension/bootstrap reconstruction directive hijacked i46: build the **Project Comprehension Bootstrap** -- a deterministic module that harvests, validates, and renders the project's system map, L1 capability cards, and the orchestrator BOOT_PACKET from canonical JSON state, fail-closed (directive 6.6A), built ALONGSIDE the legacy handoff. i47 runs a controlled legacy-vs-new dry run; your build is the mechanism under test. Governing docs: `modules/44-project-map/WORK_ORDER.md` (THE frozen spec) + `core-docs/research/2026-08-11-i46-pcb-design.md` (decision record) + `modules/44-project-map/design/redteam-rt1.md` (folded findings -- load-bearing, not commentary).
 
 ## Unit (the full worker prompt)
-_pending -- filled at wave scoping._
 
-## Rails (standing rules -- keep in every brief)
+The complete emitted prompt is the file `modules/30-orchestrate-fanout/runtime/artifacts/db536ce1-fe00-4da4-a89c-407e7599a10e/workers/worker-PCB-BUILD-i46.prompt.md` (also delivered to you as a FILE) -- **execute that verbatim; it is the authority for this unit.** Compressed here for the 8 KB slot budget:
+
+- **FIRST:** verify the WORK_ORDER sha256 = `439261078ffeb0169e22de4829e9024081b50470187d78901dd9f2479a550725` (LF bytes). Mismatch => STOP + report (never build to drifted spec).
+- **BUILD** `project.map` 0.1.0 exactly per WORK_ORDER s0-s5: stdlib Python 3.10-compatible worker + pwsh 7.4.6 entrypoint; SKILL_CONTRACT v0.2 result envelope (logical refusals = exit 0 + status:error + the closed s3.9 error-code table; nonzero = crash only); ops harvest/validate/ingest-claims/render/verify/query/reaffirm/fmt/selftest; schema `lifeorch.project_map/0.1` (closed namespaces; number-only `arch:` keys; `store:` ns; per-FIELD provenance; DERIVED load_bearing + member-of; pinned claims shape -- fixture #0 accepted byte-verbatim); LF/UTF-8/sorted-keys canonical bytes with EXPLICITLY sorted arrays; ALL sha256 over CRLF->LF-normalized bytes; git facts as entrypoint INPUTS (--at-commit/--dirty, dirty excludes modules/44 itself); BOOT_PACKET <=20,000 B HARD (per-section budgets + recorded degradation ladder + `?`/`~` markers); coverage fail-closed (HARVEST_ORPHAN + ENTITY_UNBACKED); per-field staleness + STALE_BUDGET >20%; idempotent staged-tree atomic-swap ingest; drafts ONLY under runtime/ (always status:error); `render --check` drift gate; `parse_budgets()` IMPORTED from ops/audit/gen-doc-health.py.
+- **SEED** (WO s7): map/ from harvest ONLY (skeleton:true; one_line seed = manifest purpose first sentence; NO judgment fields); generated/ ships EMPTY (+.gitkeep); golden renders under fixtures/golden-generated/; fixture overlay in fixtures/ only.
+- **TESTS** (WO s6): golden positive; double-run byte-identity + SHUFFLE test + CRLF/LF hash-equivalence (+ -Live cloud-vs-box digest parity); the >=22-fixture NEGATIVE suite (one per error code, each failing with exactly its code); drift gate (mutated-generated FAILS; DRAFT-STALE banner under generated/ FAILS); parse_budgets synthetic-fixture parity; ingest idempotence + interrupted-ingest safety; reaffirm/fmt/changed-since; full-repo -Live smoke with `-RepoState Skeleton` (counts sanity; 0 orphans).
+- **OUT:** the real overlay; any claims content; eval/ (orchestrator-owned); any #36 write; any core-doc edit; queries beyond the closed s3.6 set.
+
+## Rails (standing rules)
+
 - Read `core-docs/START_HERE.md` + `core-docs/CURRENT_STATE.md` 'Known failures' first; obey `SKILL_CONTRACT.md`.
-- Acquire res.lease(s) in **gpu -> git -> doc** order; release on exit; a whole-task gpu lease for any resident-model work.
-- Do ONE unit; never touch modules/areas outside the header's exclusive claim; `docs:[]`.
-- Gate off-machine FIRST, then ship via `dev.ship` (sha256 + AST + tests, FAIL-CLOSED, named files only); VERIFY the real HEAD via native git (D-0072); assert 0 UNMANAGED orphans.
-- Report: `-Action report -PlanId <plan> -WorkerId <id> -State done` + a plain measured summary (negative results are first-class, the D-0061 ethos).
+- Leases in **gpu -> git -> doc** order (this unit: git at ship only); release on exit.
+- ONE unit; nothing outside the header's exclusive claim; `docs:[]`.
+- Gate off-machine FIRST (cloud pwsh 7.4.6 + python3), then -Live via the executor, then ship via `exec-job.sh devship` (sha256 + AST + tests FAIL-CLOSED, named files only -- NOTHING under claims/ -- trailers); VERIFY the real HEAD via native git (D-0072); assert 0 UNMANAGED orphans.
+- ASCII-only sources; LF for all module files; no timestamps/randomness in artifact bytes.
+- Report: `-Action report -PlanId fo-46-6dd32d37 -WorkerId PCB-BUILD-i46 -State done` + a plain measured summary (negative results are first-class; an unexplained spec deviation = FAIL; honest INCOMPLETE beats false done, D-0107/D-0109).
 
-## Verification
-_pending -- filled at wave scoping._
+## Verification (what proves it)
+
+Cloud suite green with per-class counts; -Live green (STA not needed -- no GUI; the -RepoState Skeleton full-repo smoke + digest parity); devship commit verified via native git; REPORT carries: WORK_ORDER sha built against, per-ns harvest counts, the negative-suite fixture->code table, determinism digests (double-run + shuffle + CRLF), one quoted refusal envelope, golden BOOT_PACKET byte size + ladder behavior, deviations w/ reasons, open items.
 
 ## Report-back record (ORCHESTRATOR fills from `plans/<id>/reports/` before archiving)
-_empty._
+
+_pending._
