@@ -121,12 +121,14 @@ total-guard ladder degrades -- section 3 (SYSTEM AT A GLANCE) hard-degrades firs
 OPERATIONS compress to level 1, then to its **min floor** (level 2 = one collapsed pointer line that
 still names each canon slug and one descent pointer). Boot-critical canon compresses but never vanishes.
 
-## Query set (closed, WO s3.6)
+## Query set (closed, WO s3.6; i49 adds `section` + `entity --fields` serve)
 
-`entity:<id>` | `edges:<id>` | `redges:<id>` | `evidence:<id>` | `deeper:<id>[:kind]` | `stale` |
-`alias:<text>` | `changed-since --paths-file <f>` (the caller precomputes the changed-path list with
-`git diff --name-only <sha>`, keeping git out of the worker, RT1-F21). Anything else is
-`UNSUPPORTED_QUERY`.
+`entity:<id>` | `edges:<id>` | `redges:<id>` | `evidence:<id>` | `deeper:<id>[:kind]` |
+`section:<id>#<heading>` | `stale` | `alias:<text>` | `changed-since --paths-file <f>` (the caller
+precomputes the changed-path list with `git diff --name-only <sha>`, keeping git out of the worker,
+RT1-F21). Anything else is `UNSUPPORTED_QUERY`. The closed verb set is a SINGLE machine-readable
+declaration (`QUERY_VERBS`) that BOTH gates the dispatcher AND renders the BOOT_PACKET RETRIEVAL
+PROTOCOL table (N3, test-asserted equal -- an agent never needs `project_map.py` to learn the verbs).
 
 ### Short-form / alias id resolution (i48 CD-3)
 
@@ -179,3 +181,48 @@ it optional; `required` = schema/at_commit/iteration only). `live_freeze` detect
 `OVERLAY_PROHIBITIONS_EMPTY` gate) falls back to frozen-ENTITY status when no mandate state exists, so
 standing freezes (e.g. P0-1) still demand a non-empty prohibitions list. Error table unchanged (the
 new trigger reuses `OVERLAY_MANDATE_DRIFT`); covered by the `mandate-absent` suite class (4 tests).
+
+### L2 narrative surface -- purpose retrieval + SCHEMA_NOTES section fetch (i49 N1, D-0136/D-0137)
+
+The load-bearing DEEP narrative (manifest `purpose`; SCHEMA_NOTES prose) is now reachable at query
+granularity, so a thorough boot does bounded queries instead of grepping the raw harvest/store (F1).
+
+- **`entity:<id> --fields <csv> --harvest <h>`** serves the named manifest field(s) FROM THE HARVEST
+  (not the map), provenance-stamped with `field_provenance` = `{served_from:"harvest", harvest_commit,
+  ref:"modules/<dir>/skill.json", sha256}`. Servable fields = the harvestable set (version, purpose,
+  determinism, parallel_safe, inputs, outputs, requirements); any other field is `UNSUPPORTED_QUERY`.
+  Each string field is BOUNDED to `FIELD_SERVE_MAX` (4800) bytes; when a value is longer the result
+  carries `truncated:{<field>:true}` + `full_bytes:{<field>:N}` and the `ref` points at the full
+  skill.json. This extends the EXISTING `entity:` verb (no new query name); `entity:<id>` WITHOUT
+  `--fields` is byte-identical to 0.1.0. A `--fields` request without `--harvest` is
+  `UNSUPPORTED_QUERY`; an unresolvable id is the EXISTING `DANGLING_REF`.
+- **`section:<id>#<heading>`** (needs `--repo` + `--harvest`) fetches ONE named heading's section from
+  the entity's SCHEMA_NOTES.md, repo-READ-ONLY (like harvest), CRLF->LF `sha256`-stamped. **Selector:**
+  the exact heading text after the leading `#`s, whitespace-normalized (collapsed + stripped) on both
+  sides, case-sensitive; the section spans that heading line to the next heading of the SAME-OR-
+  SHALLOWER level (so nested sub-headings are included) or EOF. The body is BOUNDED to
+  `SECTION_FETCH_MAX` (8000) bytes (`truncated:true` when clipped). **Target resolution (N1(3)):** an
+  authored `deeper[kind=schema-notes]` PATH pointer is preferred (the section fetch is that pointer's
+  natural resolution); otherwise the target is `modules/<dir>/SCHEMA_NOTES.md` derived from harvest.
+  **Refusals reuse the EXISTING closed codes:** an unresolved id, a module with no SCHEMA_NOTES, or a
+  missing file all refuse `DANGLING_REF`; an unknown heading also refuses `DANGLING_REF` (the `#heading`
+  ref does not resolve); a missing `--repo`/`--harvest` is `UNSUPPORTED_QUERY`. No new error codes.
+
+### Overlay frontier richness (i49 N2)
+
+The overlay `frontier.candidates[]` may carry OPTIONAL rich objects `{item, gate|status, pointer|ref}`
+(all optional; the overlay stays orchestrator-authored at fold -- this module ships only the schema,
+the render, and fixtures). The BOOT_PACKET **OVERLAY** section renders each rich candidate as
+`- [<gate>] <item> -> <pointer>` at handoff-s4 usefulness (so task-scoping needs no legacy handoff,
+F3). An overlay with NO rich candidates renders BYTE-IDENTICAL to 0.2.0. The frontier block self-fits
+to the section-4 soft budget (levels 0=full, 1=trim, 2=one collapsed count+gates line) and has a
+documented **total-guard ladder position: it degrades AFTER section 3 and BEFORE OPERATIONS** -- so
+OPERATIONS still degrades LAST, and the packet stays <= 20,000 B HARD.
+
+### RETRIEVAL PROTOCOL verb table (i49 N3)
+
+BOOT_PACKET section 6 renders the FULL closed query set as an exact-invocation `| query form | returns |`
+table from the single `QUERY_VERBS` tuple (every verb incl. `section`, the `entity --fields` serve, and
+the `--harvest`/`--repo`/`--fields` modifiers, each with a one-line what-it-returns). The same tuple
+gates `op_query`, so the packet's documented interface can never drift from the dispatcher (kills F4).
+

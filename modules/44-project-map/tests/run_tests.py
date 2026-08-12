@@ -9,6 +9,7 @@ drift gate, parse_budgets import parity, ingest idempotence + interrupted-ingest
 changed-since. Exit 0 only if every class passes; prints per-class counts."""
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -500,11 +501,190 @@ def test_mandate_absent():
         str([f["code"] for f in vr3["findings"]]))
 
 
+
+# --------------------------------------------------------------- i49 N1/N2/N3 acceptance -------
+def _cli_raw(args, cwd=None):
+    """Run the worker; return the raw last JSON envelope LINE (str) for exact byte measurement."""
+    p = subprocess.run([PY, WORKER] + args, capture_output=True, text=True, cwd=cwd)
+    for line in reversed(p.stdout.strip().split("\n")):
+        line = line.strip()
+        if line.startswith("{"):
+            return line
+    return ""
+
+
+def test_n1_purpose():
+    gmap = os.path.join(FIX, "golden-map")
+    harvest = os.path.join(FIX, "harvest.json")
+    # N1(1): short form + --fields purpose + --harvest -> served FROM HARVEST, provenance-stamped
+    rc, env, err = cli(["query", "--map", gmap, "--q", "entity:module:90", "--fields", "purpose", "--harvest", harvest])
+    r = (env or {}).get("result", {})
+    ok = (env and env["status"] == "ok" and r.get("resolved") == "module:90/alpha.tool"
+          and r["fields"]["purpose"].startswith("Alpha does the first thing")
+          and r["field_provenance"]["served_from"] == "harvest"
+          and r["field_provenance"]["harvest_commit"] == "goldensha0000000000000000000000000000000"
+          and r["field_provenance"]["ref"] == "modules/90-alpha/skill.json"
+          and bool(r["field_provenance"]["sha256"]))
+    rec("n1-purpose", "serves-purpose-from-harvest-provenance-stamped", ok, str(r)[:180])
+    # bounded: a huge purpose -> truncated + WHOLE query envelope <= 6000 B (acceptance a: vs 478,784 B grep)
+    big = json.loads(P.read_text(harvest))
+    for m in big["modules"]:
+        if m["num"] == "90":
+            m["purpose"] = "X" * 40000
+    bp = tempfile.mktemp(suffix=".json"); P.write_lf(bp, json.dumps(big))
+    raw = _cli_raw(["query", "--map", gmap, "--q", "entity:module:90", "--fields", "purpose", "--harvest", bp])
+    env2 = json.loads(raw); r2 = env2["result"]; envbytes = len(raw.encode("utf-8"))
+    rec("n1-purpose", "bounded-envelope<=6000B(acceptance-a)", envbytes <= 6000, "bytes=%d" % envbytes)
+    rec("n1-purpose", "truncation-flagged+full_bytes",
+        r2.get("truncated", {}).get("purpose") is True and r2.get("full_bytes", {}).get("purpose") == 40000, str(r2.get("full_bytes")))
+    rec("n1-purpose", "served-len==FIELD_SERVE_MAX",
+        len(r2["fields"]["purpose"].encode("utf-8")) == P.FIELD_SERVE_MAX, str(len(r2["fields"]["purpose"])))
+    # negatives
+    rc, env, _ = cli(["query", "--map", gmap, "--q", "entity:module:99", "--fields", "purpose", "--harvest", harvest])
+    rec("n1-purpose", "unknown-module->DANGLING_REF", env["status"] == "error" and env["error"]["code"] == "DANGLING_REF", str(env.get("error")))
+    rc, env, _ = cli(["query", "--map", gmap, "--q", "entity:module:90", "--fields", "purpose"])
+    rec("n1-purpose", "fields-without-harvest->UNSUPPORTED_QUERY", env["status"] == "error" and env["error"]["code"] == "UNSUPPORTED_QUERY", str(env.get("error")))
+    rc, env, _ = cli(["query", "--map", gmap, "--q", "entity:module:90", "--fields", "load_bearing", "--harvest", harvest])
+    rec("n1-purpose", "non-harvest-field->UNSUPPORTED_QUERY", env["status"] == "error" and env["error"]["code"] == "UNSUPPORTED_QUERY", str(env.get("error")))
+    # regression (acceptance d): entity WITHOUT --fields is 0.2.0-identical; --harvest alone does not change it
+    rc, ef, _ = cli(["query", "--map", gmap, "--q", "entity:module:90/alpha.tool"])
+    rc, eh, _ = cli(["query", "--map", gmap, "--q", "entity:module:90/alpha.tool", "--harvest", harvest])
+    rec("n1-purpose", "entity-no-fields-0.2.0-identical",
+        set(ef["result"].keys()) == {"q", "entity"} and ef["result"] == eh["result"], str(sorted(ef["result"].keys())))
+
+
+def _mk_section_repo():
+    repo = tempfile.mkdtemp(prefix="secrepo-")
+    d = os.path.join(repo, "modules", "90-alpha"); os.makedirs(d)
+    SN = ("# alpha SCHEMA_NOTES\n\n## 3. ranking\n\nprose.\n\n"
+          "## 15. the FAST-BEAM residual lever (RANKING ONLY)\n\n"
+          "the beam slices the shortlist; the residual lever is #40-owned BEAM WIDTH, a #40 follow-on.\n\n"
+          "### 15.1 nested\n\nstays inside 15.\n\n## 16. after\n\nnot 15.\n")
+    P.write_lf(os.path.join(d, "SCHEMA_NOTES.md"), SN)
+    h = json.loads(P.read_text(os.path.join(FIX, "harvest.json")))
+    for m in h["modules"]:
+        if m["num"] == "90":
+            m["has_schema_notes"] = True
+    hp = os.path.join(repo, "h.json"); P.write_lf(hp, json.dumps(h))
+    return repo, hp
+
+
+def test_n1_section():
+    gmap = os.path.join(FIX, "golden-map")
+    repo, hp = _mk_section_repo()
+    head = "15. the FAST-BEAM residual lever (RANKING ONLY)"
+    raw = _cli_raw(["query", "--map", gmap, "--q", "section:module:90#" + head, "--repo", repo, "--harvest", hp])
+    env = json.loads(raw); s = env["result"]["section"]; envbytes = len(raw.encode("utf-8"))
+    rec("n1-section", "fetch-ok+beam+#40(acceptance-b)",
+        env["status"] == "ok" and "beam" in s["text"].lower() and "#40" in s["text"], "")
+    rec("n1-section", "envelope<=8000B", envbytes <= 8000, "bytes=%d" % envbytes)
+    rec("n1-section", "spans-nested-excludes-next", "15.1 nested" in s["text"] and "16. after" not in s["text"], "")
+    rec("n1-section", "sha-stamped+path+level",
+        bool(s["sha256"]) and s["path"].endswith("SCHEMA_NOTES.md") and s["level"] == 2, str(s.get("level")))
+    raw2 = _cli_raw(["query", "--map", gmap, "--q", "section:module:90#  15.   the FAST-BEAM residual lever (RANKING ONLY) ", "--repo", repo, "--harvest", hp])
+    rec("n1-section", "selector-whitespace-normalized", json.loads(raw2)["status"] == "ok", "")
+    for q, exp, nm in [("section:module:90#NoHeading", "DANGLING_REF", "unknown-heading"),
+                       ("section:module:91#x", "DANGLING_REF", "module-without-schema-notes"),
+                       ("section:module:99#x", "DANGLING_REF", "unresolved-module")]:
+        e = json.loads(_cli_raw(["query", "--map", gmap, "--q", q, "--repo", repo, "--harvest", hp]))
+        rec("n1-section", "%s->%s" % (nm, exp), e["status"] == "error" and e["error"]["code"] == exp, str(e.get("error")))
+    e = json.loads(_cli_raw(["query", "--map", gmap, "--q", "section:module:90#" + head, "--harvest", hp]))
+    rec("n1-section", "no-repo->UNSUPPORTED_QUERY", e["status"] == "error" and e["error"]["code"] == "UNSUPPORTED_QUERY", "")
+    e = json.loads(_cli_raw(["query", "--map", gmap, "--q", "section:module:90#" + head, "--repo", repo]))
+    rec("n1-section", "no-harvest->UNSUPPORTED_QUERY", e["status"] == "error" and e["error"]["code"] == "UNSUPPORTED_QUERY", "")
+    # N1(3): a deeper[schema-notes] PATH pointer is preferred over the derived path
+    m = P.load_map(gmap)
+    m.entities["module:90/alpha.tool"] = dict(m.entities["module:90/alpha.tool"])
+    m.entities["module:90/alpha.tool"]["deeper"] = [{"kind": "schema-notes", "ref": "modules/90-alpha/SCHEMA_NOTES.md#anchor"}]
+    rel = P._schema_notes_rel_for("module:90/alpha.tool", json.loads(P.read_text(hp)), m)
+    rec("n1-section", "deeper-schema-notes-pointer-preferred", rel == "modules/90-alpha/SCHEMA_NOTES.md", str(rel))
+    # a LARGE section clips head+tail, keeps the tail sentinel, and the whole envelope stays <= 8000 B
+    repo2 = tempfile.mkdtemp(prefix="bigsec-")
+    d2 = os.path.join(repo2, "modules", "90-alpha"); os.makedirs(d2)
+    body = "## 9. big\n\nBEAMHEAD start.\n" + ("filler beam line %d\n" % 0) + "\n".join("mid line %d" % i for i in range(1200)) + "\nTAILSENTINEL #40 ownership at the very end.\n"
+    P.write_lf(os.path.join(d2, "SCHEMA_NOTES.md"), "# x\n\n" + body)
+    h2 = json.loads(P.read_text(os.path.join(FIX, "harvest.json")))
+    for mm in h2["modules"]:
+        if mm["num"] == "90": mm["has_schema_notes"] = True
+    hp2 = os.path.join(repo2, "h.json"); P.write_lf(hp2, json.dumps(h2))
+    raw = _cli_raw(["query", "--map", gmap, "--q", "section:module:90#9. big", "--repo", repo2, "--harvest", hp2])
+    e = json.loads(raw); s = e["result"]["section"]; envb = len(raw.encode("utf-8"))
+    rec("n1-section", "large-section-clipped-envelope<=8000", e["status"] == "ok" and s["truncated"] is True and envb <= 8000, "env=%d body=%d" % (envb, s["bytes"]))
+    rec("n1-section", "clip-keeps-head-and-tail-sentinel", "BEAMHEAD" in s["text"] and "TAILSENTINEL #40" in s["text"] and "clipped" in s["text"], "")
+
+
+def test_n2_frontier():
+    import copy
+    gmap = os.path.join(FIX, "golden-map")
+    harvest = json.loads(P.read_text(os.path.join(FIX, "harvest.json")))
+    model = P.load_map(gmap)
+    sec_empty, nr = P._build_overlay_section(model, 0)
+    rec("n2-frontier", "empty-candidates-no-frontier-block(0.2.0-identical)",
+        nr == 0 and "FRONTIER CANDIDATES" not in sec_empty, "")
+    model.overlay = copy.deepcopy(model.overlay)
+    model.overlay["frontier"]["candidates"] = [
+        {"item": "#40 beam-width", "gate": "deferred D-0134", "pointer": "MODULE_ROADMAP.md#40"},
+        {"item": "AUDIT_PIPELINE next_increment", "gate": "review_due i49", "pointer": "core-docs/AUDIT_PIPELINE.md"},
+        {"item": "bar re-freeze (N4)", "gate": "requires Nicholas ratification", "pointer": "decision:D-0137"}]
+    vr = P.validate(model, harvest, is_real=True)
+    body, total, ladder = P._build_boot_packet(model, harvest, set(vr["stale_entities"]), vr["load_bearing"])[:3]
+    block = body.split("FRONTIER CANDIDATES", 1)[1].split("PROHIBITIONS", 1)[0]
+    cand = [ln for ln in block.splitlines() if ln.startswith("- [")]
+    gated = [ln for ln in cand if re.match(r"^- \[[^\]]+\] ", ln)]
+    rec("n2-frontier", ">=3-candidates-each-gated(acceptance-c)", len(cand) >= 3 and len(gated) == len(cand), "n=%d gated=%d" % (len(cand), len(gated)))
+    rec("n2-frontier", "carries-item-gate-pointer", all("->" in ln for ln in cand), str(cand)[:160])
+    rec("n2-frontier", "packet<=20000", total <= P.BOOT_PACKET_HARD, "total=%d" % total)
+    save = P.BOOT_PACKET_HARD
+    try:
+        P.BOOT_PACKET_HARD = 1
+        b2, t2, l2 = P._build_boot_packet(model, harvest, set(vr["stale_entities"]), vr["load_bearing"])[:3]
+        idx3 = next((i for i, s in enumerate(l2) if "total-guard: section3" in s), 999)
+        idxov = next((i for i, s in enumerate(l2) if "total-guard: OVERLAY frontier" in s), 1000)
+        idxop = next((i for i, s in enumerate(l2) if "total-guard: OPERATIONS" in s), 2000)
+        rec("n2-frontier", "ladder section3<frontier<OPERATIONS(OPERATIONS-last)", idx3 < idxov < idxop, "ladder=%s" % l2)
+        rec("n2-frontier", "frontier-min-floor-collapses-with-gates", "frontier candidates:" in b2 and "gates:" in b2, "")
+        rec("n2-frontier", "OPERATIONS-survives-max-degrade", "## OPERATIONS" in b2, "")
+    finally:
+        P.BOOT_PACKET_HARD = save
+
+
+def _is_unknown_verb(env):
+    return (env.get("status") == "error" and env.get("error", {}).get("code") == "UNSUPPORTED_QUERY"
+            and "not in the closed set" in (env["error"].get("message") or ""))
+
+
+def test_n3_verbtable():
+    gmap = os.path.join(FIX, "golden-map")
+    harvest = json.loads(P.read_text(os.path.join(FIX, "harvest.json")))
+    model = P.load_map(gmap)
+    vr = P.validate(model, harvest, is_real=True)
+    body = P._build_boot_packet(model, harvest, set(vr["stale_entities"]), vr["load_bearing"])[0]
+    proto = body.split("## RETRIEVAL PROTOCOL", 1)[1]
+    forms = re.findall(r"^\| `([^`]+)` \|", proto, re.M)
+    tokens = sorted({f.split(":")[0].split(" ")[0] for f in forms})
+    rec("n3-verbtable", "table==QUERY_VERB_TOKENS(test-asserted-equal)", tokens == sorted(P.QUERY_VERB_TOKENS), "table=%s" % tokens)
+    # the dispatcher recognizes EXACTLY the declared verbs (a declared verb never reads as 'unknown verb')
+    probe = {"entity": "entity:module:90", "edges": "edges:module:90", "redges": "redges:module:90",
+             "evidence": "evidence:module:90", "deeper": "deeper:module:90", "alias": "alias:#90",
+             "section": "section:module:90#x", "stale": "stale", "changed-since": "changed-since"}
+    accepted = []
+    for v in P.QUERY_VERB_TOKENS:
+        rc, env, _ = cli(["query", "--map", gmap, "--q", probe[v]])
+        if not _is_unknown_verb(env or {}):
+            accepted.append(v)
+    rec("n3-verbtable", "every-declared-verb-dispatch-accepted", sorted(accepted) == sorted(P.QUERY_VERB_TOKENS), "accepted=%s" % sorted(accepted))
+    rc, env, _ = cli(["query", "--map", gmap, "--q", "bogus:x"])
+    rec("n3-verbtable", "undeclared-verb->UNSUPPORTED_QUERY(not-in-closed-set)", _is_unknown_verb(env or {}), str(env.get("error")))
+    rec("n3-verbtable", "table-lists-modifiers(--harvest/--fields/--repo)+section",
+        "--harvest" in proto and "--fields" in proto and "--repo" in proto and "section:" in proto, "")
+
+
 def main():
     for t in (test_golden, test_determinism, test_negatives, test_drift,
               test_parse_budgets_parity, test_ingest, test_reaffirm_fmt_changed,
               test_shortform, test_evidence_provenance, test_operations, test_ops_roundtrip,
-              test_mandate_absent):
+              test_mandate_absent, test_n1_purpose, test_n1_section, test_n2_frontier,
+              test_n3_verbtable):
         try:
             t()
         except Exception as e:

@@ -9,7 +9,7 @@
     "at_commit": {"type": "string"},
     "iteration": {"type": "integer"},
     "phase": {"type": "object", "properties": {"ref": {"type": "string"}, "text": {"type": "string", "maxLength": 160}}},
-    "frontier": {"type": "object", "properties": {"next_iteration": {"type": "integer"}, "summary": {"type": "string", "maxLength": 300, "description": "VERBATIM handoff-s4 extract"}, "derived_from": {"type": "string"}, "candidates": {"type": "array"}}},
+    "frontier": {"type": "object", "properties": {"next_iteration": {"type": "integer"}, "summary": {"type": "string", "maxLength": 300, "description": "VERBATIM handoff-s4 extract"}, "derived_from": {"type": "string"}, "candidates": {"type": "array", "description": "OPTIONAL rich frontier candidates (N2, i49); orchestrator-authored at fold", "items": {"type": "object", "properties": {"item": {"type": "string"}, "gate": {"type": "string", "description": "status/gate token, e.g. deferred D-0134 / review_due i54 / requires Nicholas ratification"}, "status": {"type": "string"}, "pointer": {"type": "string"}, "ref": {"type": "string"}}}}}},
     "mandate": {"type": "object", "description": "cross-checked on INVARIANTS ONLY (id, sunset_iteration, state monotonic), RT1-F2", "properties": {"id": {}, "sunset_iteration": {}, "state": {"enum": ["ACTIVE","REPORT_DUE","SUNSET","RE-LICENSED"]}}},
     "prohibitions": {"type": "array", "items": {"type": "object", "required": ["text","authority","status"], "properties": {"text": {"type": "string", "maxLength": 160}, "authority": {"type": "string", "pattern": "^decision:D-[0-9]{4}$"}, "status": {"const": "live"}}}},
     "open_rulings": {"type": "array"},

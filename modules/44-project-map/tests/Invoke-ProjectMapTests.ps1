@@ -19,9 +19,11 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 if (-not $PythonPath) {
-  $PythonPath = (Get-Command python3 -ErrorAction SilentlyContinue)?.Source
-  if (-not $PythonPath) { $PythonPath = (Get-Command python -ErrorAction SilentlyContinue)?.Source }
-  if (-not $PythonPath) { $PythonPath = 'python' }
+  # WindowsApps python/python3 are Store alias STUBS (exit 9009) -- exclude them (D-0129 trap class),
+  # mirroring Invoke-ProjectMap.ps1 so the test gate never resolves the fake python (i49 fix).
+  $pmCands = @((Get-Command python3 -ErrorAction SilentlyContinue), (Get-Command python -ErrorAction SilentlyContinue)) |
+    Where-Object { $_ -and $_.Source -and ($_.Source -notmatch 'WindowsApps') }
+  if ($pmCands) { $PythonPath = @($pmCands)[0].Source } else { $PythonPath = 'python' }
 }
 
 Write-Host "== project.map cloud suite =="

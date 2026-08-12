@@ -1,4 +1,4 @@
-# module:44 project.map -- Project Comprehension Bootstrap (PCB) 0.1.0
+# module:44 project.map -- Project Comprehension Bootstrap (PCB) 0.3.0
 
 Deterministic, fail-closed machinery that HARVESTS mechanical repo facts, VALIDATES the canonical
 project map, idempotently INGESTS evidence-pointed agent claims, and RENDERS bounded
@@ -45,6 +45,9 @@ The worker is directly runnable too (the pinned progressive-disclosure query pat
 python3 project_map.py query --map map --q edges:module:40/context.compiler
 python3 project_map.py query --map map --q deeper:doc:core-docs/AUDIT_PIPELINE.md:failure
 python3 project_map.py verify  --map map --harvest runtime/harvest.json
+# i49 L2 narrative surface (N1): bounded manifest purpose + one SCHEMA_NOTES section, query-granular
+python3 project_map.py query --map map --q entity:module:36 --fields purpose --harvest runtime/harvest.json
+python3 project_map.py query --map map --q "section:module:36#<exact heading>" --repo <repo> --harvest runtime/harvest.json
 ```
 
 A logical refusal is exit 0 + `status:"error"` + a machine `error.code` from the closed table (see

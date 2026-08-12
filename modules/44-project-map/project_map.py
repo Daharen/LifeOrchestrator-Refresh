@@ -29,11 +29,16 @@ SCHEMA_ENTITIES = "lifeorch.project_map/0.1"
 SCHEMA_OVERLAY = "lifeorch.map_overlay/0.1"
 SCHEMA_CLAIMS = "lifeorch.map_claims/0.1"
 SKILL_ID = "project.map"
-SKILL_VERSION = "0.2.0"
+SKILL_VERSION = "0.3.0"
 CONTRACT_VERSION = "0.2"
 WORK_ORDER_SHA256 = "439261078ffeb0169e22de4829e9024081b50470187d78901dd9f2479a550725"
 KB = 1000
 BOOT_PACKET_HARD = 20000
+# N1 (i49, D-0136/D-0137) bounds for the L2 narrative query surface. A harvest-served manifest
+# field (entity --fields --harvest) is capped so the purpose query envelope stays < 6000 B (vs
+# the 478,784 B raw-harvest grep); a SCHEMA_NOTES section fetch body is capped (vs the whole file).
+FIELD_SERVE_MAX = 4800
+SECTION_FETCH_MAX = 6600
 
 # ---- closed namespace / enum tables (WO s2) -------------------------------------------------
 NS_ENUM = (
@@ -1234,6 +1239,59 @@ def _fit_operations(ents, ladder):
     return sec, n, 2
 
 
+def _frontier_candidates(overlay):
+    fr = (overlay or {}).get("frontier", {})
+    if not isinstance(fr, dict):
+        return []
+    return [c for c in (fr.get("candidates") or []) if isinstance(c, dict) and c.get("item")]
+
+
+def _candidate_line(c, level):
+    gate = c.get("gate") or c.get("status") or "open"
+    item = " ".join(str(c.get("item")).split())
+    ptr = c.get("pointer") or c.get("ref") or ""
+    if level == 0:
+        line = "- [%s] %s" % (gate, _trunc(item, 110))
+        return (line + " -> " + ptr) if ptr else line
+    return "- [%s] %s" % (gate, _trunc(item, 70))
+
+
+def _build_overlay_section(model, cand_level=0):
+    """OVERLAY section (BOOT_PACKET s4). N2: renders the orchestrator-authored frontier CANDIDATES
+    (item + gate/status token + pointer) at handoff-s4 usefulness so task-scoping needs no legacy
+    handoff. An overlay with NO rich candidates renders BYTE-IDENTICAL to 0.2.0. cand_level walks a
+    degradation ladder: 0=full (item<=110 + pointer), 1=trim (item<=70, no pointer), 2=one collapsed
+    count+gates line. Returns (section_text, rich_candidate_count)."""
+    s4 = ["## OVERLAY"]
+    ov = model.overlay or {}
+    n_rich = 0
+    if ov:
+        ph = ov.get("phase", {})
+        s4.append("iteration: %s -- phase: %s" % (ov.get("iteration"), (ph.get("text") if isinstance(ph, dict) else ph)))
+        fr = ov.get("frontier", {})
+        if isinstance(fr, dict):
+            s4.append("frontier -> %s: %s" % (fr.get("next_iteration"), _trunc(fr.get("summary"), 280)))
+            rich = _frontier_candidates(ov)
+            n_rich = len(rich)
+            if rich and cand_level >= 2:
+                gates = ", ".join(sorted({(c.get("gate") or c.get("status") or "open") for c in rich}))
+                s4.append("frontier candidates: %d (gates: %s) -- see handoff s4" % (n_rich, gates))
+            elif rich:
+                s4.append("FRONTIER CANDIDATES (task-scoping; gate/status + pointer):")
+                for c in rich:
+                    s4.append(_candidate_line(c, cand_level))
+        if ov.get("prohibitions"):
+            s4.append("PROHIBITIONS (mandatory):")
+            for pr in ov["prohibitions"]:
+                s4.append("- [%s] %s (%s)" % (pr.get("status"), _trunc(pr.get("text"), 156), pr.get("authority")))
+        for br in ov.get("boot_read", []) or []:
+            ref = br.get("ref") if isinstance(br, dict) else br
+            s4.append("boot_read: %s" % ref)
+    else:
+        s4.append("(no overlay authored)")
+    return "\n".join(s4) + "\n", n_rich
+
+
 def _build_boot_packet(model, harvest, stale_set, lb):
     ents = model.entities
     at = harvest.get("at_commit", "?") if harvest else "?"
@@ -1264,25 +1322,19 @@ def _build_boot_packet(model, harvest, stale_set, lb):
         collapse = True
         sec3, collapsed, mvpc = _build_section3(ents, lb, stale_set, 56, True)
         ladder.append("collapse mvp-complete widgets to counts")
-    # section 4: overlay verbatim
-    s4 = ["## OVERLAY"]
-    ov = model.overlay or {}
-    if ov:
-        ph = ov.get("phase", {})
-        s4.append("iteration: %s -- phase: %s" % (ov.get("iteration"), (ph.get("text") if isinstance(ph, dict) else ph)))
-        fr = ov.get("frontier", {})
-        if isinstance(fr, dict):
-            s4.append("frontier -> %s: %s" % (fr.get("next_iteration"), _trunc(fr.get("summary"), 280)))
-        if ov.get("prohibitions"):
-            s4.append("PROHIBITIONS (mandatory):")
-            for pr in ov["prohibitions"]:
-                s4.append("- [%s] %s (%s)" % (pr.get("status"), _trunc(pr.get("text"), 156), pr.get("authority")))
-        for br in ov.get("boot_read", []) or []:
-            ref = br.get("ref") if isinstance(br, dict) else br
-            s4.append("boot_read: %s" % ref)
-    else:
-        s4.append("(no overlay authored)")
-    sec4 = "\n".join(s4) + "\n"
+    # section 4: overlay + frontier richness (N2). _build_overlay_section renders frontier
+    # candidates (item + gate/status + pointer) when present; empty candidates keep it BYTE-IDENTICAL
+    # to 0.2.0. Self-fit to the section-4 soft budget; the frontier block also has a documented
+    # total-guard position (degrades AFTER section3, BEFORE OPERATIONS).
+    sec4, n_rich = _build_overlay_section(model, 0)
+    cand_level = 0
+    if n_rich and len(sec4.encode("utf-8")) > SECTION_BUDGETS["4"]:
+        for cl in (1, 2):
+            sec4, n_rich = _build_overlay_section(model, cl)
+            cand_level = cl
+            ladder.append("OVERLAY frontier -> level %d (fit section budget)" % cl)
+            if len(sec4.encode("utf-8")) <= SECTION_BUDGETS["4"] or cl == 2:
+                break
     # section 5: authority table (rows sorted by doc name -> deterministic regardless of harvest order)
     owner_rows = sorted((harvest.get("doc_owner_rows", []) if harvest else []),
                         key=lambda r: r.get("doc", ""))
@@ -1296,16 +1348,24 @@ def _build_boot_packet(model, harvest, stale_set, lb):
             s5.append("- %s -- %s" % (row.get("doc"), _trunc(row.get("owns"), 70)))
         sec5 = "\n".join(s5[:40]) + "\n"
         ladder.append("authority table trimmed to budget")
-    # section 6: retrieval protocol
+    # section 6: retrieval protocol -- the FULL closed query set as an exact-invocation table,
+    # rendered from the SINGLE QUERY_VERBS declaration (N3: no hand-maintained prose that can drift;
+    # a test asserts this table == the dispatcher verb set). An agent never needs the tool source.
     s6 = ["## RETRIEVAL PROTOCOL",
           "Progressive disclosure: read L0 map -> open L1 card -> retrieve L2 only when relevant.",
           "Do NOT ingest a doc until it is relevant. RECORD every open in your ledger (retrieval is measurement).",
           "First step each session: run `verify` / `query stale` before trusting the packet.",
-          "Query invocations (mount VM):",
-          "  python3 modules/44-project-map/project_map.py query --map <map> --q entity:<id>",
-          "  python3 modules/44-project-map/project_map.py query --map <map> --q edges:<id>",
-          "  python3 modules/44-project-map/project_map.py query --map <map> --q deeper:<id>:contract",
-          "  python3 modules/44-project-map/project_map.py query --map <map> --q stale"]
+          "Run: python3 modules/44-project-map/project_map.py query --map <map> --q <form>",
+          "",
+          "| query form | returns |",
+          "|---|---|"]
+    for v in QUERY_VERBS:
+        s6.append("| `%s` | %s |" % (v["form"], v["returns"]))
+    s6 += ["",
+           "Short forms: ns:NN / #NN / pos NN resolve to the unique entity (result echoes resolved); "
+           "a full id is byte-identical to 0.1.0. Modifiers: --harvest <h> adds provenance/currency, "
+           "enables entity --fields narrative serve + section; --repo <root> enables section; "
+           "--fields <csv> selects manifest fields (bounded to %d B each)." % FIELD_SERVE_MAX]
     for br in (model.overlay or {}).get("boot_read", []) or []:
         ref = br.get("ref") if isinstance(br, dict) else br
         s6.append("boot_read pointer: %s" % ref)
@@ -1328,6 +1388,12 @@ def _build_boot_packet(model, harvest, stale_set, lb):
     if total > BOOT_PACKET_HARD:
         sec3, collapsed, mvpc = _build_section3(ents, lb, stale_set, 56, True)
         ladder.append("total-guard: section3 -> trunc 56 + collapse mvp widgets")
+        body = _assemble(sec3, sec_ops)
+        total = len(body.encode("utf-8"))
+    if total > BOOT_PACKET_HARD and n_rich and cand_level < 2:
+        sec4, n_rich = _build_overlay_section(model, 2)
+        cand_level = 2
+        ladder.append("total-guard: OVERLAY frontier -> level 2 (min floor)")
         body = _assemble(sec3, sec_ops)
         total = len(body.encode("utf-8"))
     if total > BOOT_PACKET_HARD and sec_ops and ops_level < 1:
@@ -1639,7 +1705,164 @@ def _currency(model, harvest):
             "in_sync": bool(map_state is not None and tree is not None and map_state == tree)}
 
 
-def op_query(map_dir, q, harvest=None, paths_file=None):
+# ---- closed query-verb declaration (N3, i49) -----------------------------------------------
+# SINGLE source of truth for the closed query set. BOTH the op_query dispatch guard (accepts only
+# these verbs) AND the BOOT_PACKET RETRIEVAL PROTOCOL table render from THIS tuple, so the packet's
+# documented interface can never drift from the dispatcher (test-asserted equal). An agent never
+# needs project_map.py source to learn the verbs (kills F4).
+QUERY_VERBS = (
+    {"verb": "entity", "form": "entity:<id>", "returns": "full validated entity record; short forms (ns:NN, #NN, pos NN) resolve; add --fields <csv> --harvest to serve bounded manifest narrative (e.g. purpose)"},
+    {"verb": "edges", "form": "edges:<id>", "returns": "outbound edges from <id>"},
+    {"verb": "redges", "form": "redges:<id>", "returns": "inbound edges to <id>"},
+    {"verb": "evidence", "form": "evidence:<id>", "returns": "the entity sources[]; with --harvest each is provenance/currency-marked"},
+    {"verb": "deeper", "form": "deeper:<id>[:kind]", "returns": "typed descend pointers (kind in readme|work-order|schema-notes|contract|decision|failure|research|test|trace|other)"},
+    {"verb": "section", "form": "section:<id>#<heading>", "returns": "one named heading section from the entity SCHEMA_NOTES.md (needs --repo + --harvest; bounded); resolves a deeper[schema-notes] pointer"},
+    {"verb": "alias", "form": "alias:<text>", "returns": "the entity id(s) an alias or number resolves to"},
+    {"verb": "stale", "form": "stale", "returns": "entities carrying a stale field (needs --harvest)"},
+    {"verb": "changed-since", "form": "changed-since --paths-file <f>", "returns": "entities whose sources/deeper touch a path in <f>"},
+)
+QUERY_VERB_TOKENS = tuple(v["verb"] for v in QUERY_VERBS)
+QUERY_COLON_VERBS = frozenset(v["verb"] for v in QUERY_VERBS if v["verb"] not in ("stale", "changed-since"))
+
+
+def _harvest_unit_for(cid, harvest):
+    """Map a resolved module/widget id to its harvested manifest record + repo dir + skill.json sha
+    (N1). Reuses the CONFLICT_HARVEST id-matching (num + skill_id/dir_slug)."""
+    if harvest is None:
+        return None, None, None
+    ns = _ns_of(cid)
+    if ns == "module":
+        for mod in harvest.get("modules", []):
+            cands = ["module:%s/%s" % (mod.get("num"), mod.get("dir_slug"))]
+            if mod.get("skill_id"):
+                cands.append("module:%s/%s" % (mod.get("num"), mod.get("skill_id")))
+            if cid in cands:
+                return mod, "modules/" + mod.get("dir", ""), mod.get("skill_json_sha256")
+    elif ns == "widget":
+        for wid in harvest.get("widgets", []):
+            if "widget:%s/%s" % (wid.get("num"), wid.get("dir_slug")) == cid:
+                return wid, "widgets/" + wid.get("dir", ""), None
+    return None, None, None
+
+
+def _serve_fields(q, cid, fields_csv, harvest):
+    """N1 (kills F1): serve a module/widget manifest narrative field (esp. purpose) FROM THE HARVEST
+    at query granularity -- provenance-stamped (harvest commit + skill.json ref/sha), each field
+    bounded to FIELD_SERVE_MAX bytes so the query envelope stays well under the raw-store grep cost.
+    Only HARVEST_FIELDS are servable; anything else is UNSUPPORTED_QUERY."""
+    if harvest is None:
+        raise Refuse("UNSUPPORTED_QUERY",
+                     "entity --fields serves manifest narrative from harvest; pass --harvest")
+    want = [f.strip() for f in fields_csv.split(",") if f.strip()]
+    bad = [f for f in want if f not in HARVEST_FIELDS]
+    if bad:
+        raise Refuse("UNSUPPORTED_QUERY",
+                     "field(s) %s not harvest-servable (servable: %s)" % (bad, list(HARVEST_FIELDS)))
+    hrec, dirpath, sj_sha = _harvest_unit_for(cid, harvest)
+    if hrec is None:
+        raise Refuse("DANGLING_REF", "no harvested manifest for %r" % cid)
+    served, truncated, full_bytes = {}, {}, {}
+    for f in want:
+        val = hrec.get(f)
+        if isinstance(val, str):
+            b = val.encode("utf-8")
+            full_bytes[f] = len(b)
+            if len(b) > FIELD_SERVE_MAX:
+                served[f] = b[:FIELD_SERVE_MAX].decode("utf-8", "ignore")
+                truncated[f] = True
+            else:
+                served[f] = val
+        else:
+            served[f] = val
+    out = {"q": q, "entity": cid, "fields": served,
+           "field_provenance": {"served_from": "harvest", "harvest_commit": harvest.get("at_commit"),
+                                "ref": (dirpath + "/skill.json") if dirpath else None, "sha256": sj_sha}}
+    if truncated:
+        out["truncated"] = truncated
+        out["full_bytes"] = full_bytes
+    return out
+
+
+def _schema_notes_rel_for(cid, harvest, model):
+    """The repo-relative SCHEMA_NOTES.md path for an entity (N1). Prefers an authored
+    deeper[kind=schema-notes] PATH pointer (the descend index); else derives modules/<dir>/
+    SCHEMA_NOTES.md from harvest when the unit has one."""
+    rec = model.entities.get(cid, {}) if model else {}
+    for d in rec.get("deeper", []) or []:
+        if isinstance(d, dict) and d.get("kind") == "schema-notes":
+            base = str(d.get("ref", "")).split("#", 1)[0]
+            if base and _ref_is_path(base):
+                return base
+    hrec, dirpath, _sha = _harvest_unit_for(cid, harvest)
+    if hrec is not None and dirpath and hrec.get("has_schema_notes"):
+        return dirpath + "/SCHEMA_NOTES.md"
+    return None
+
+
+def _extract_heading_section(text, heading_sel):
+    """Return (section_text, level, heading_text) for the ATX heading whose text (whitespace-
+    normalized) equals the selector, spanning to the next heading of the SAME-OR-SHALLOWER level or
+    EOF; None if no heading matches. Selector = exact heading text after the leading #s, whitespace
+    normalized on both sides (case-sensitive)."""
+    want = " ".join(str(heading_sel).split())
+    lines = text.split("\n")
+    start = level = None
+    htext = None
+    for i, ln in enumerate(lines):
+        m = re.match(r"^(#{1,6})\s+(.*)$", ln)
+        if not m:
+            continue
+        cur = " ".join(m.group(2).split())
+        if cur == want:
+            start, level, htext = i, len(m.group(1)), cur
+            break
+    if start is None:
+        return None
+    end = len(lines)
+    for j in range(start + 1, len(lines)):
+        m = re.match(r"^(#{1,6})\s+", lines[j])
+        if m and len(m.group(1)) <= level:
+            end = j
+            break
+    return "\n".join(lines[start:end]), level, htext
+
+
+def _fetch_schema_note_section(q, cid, heading, harvest, model, repo):
+    """N1 (kills F3/F1 deep narrative): bounded, deterministic fetch of ONE named SCHEMA_NOTES
+    heading section. Repo-READ-ONLY (like harvest); CRLF->LF sha-stamped. Refuses an unresolved
+    module OR an unknown heading with the EXISTING DANGLING_REF (no new error codes)."""
+    if not repo:
+        raise Refuse("UNSUPPORTED_QUERY", "section fetch requires --repo (repo-read-only source)")
+    if harvest is None:
+        raise Refuse("UNSUPPORTED_QUERY", "section fetch requires --harvest (to locate SCHEMA_NOTES)")
+    rel = _schema_notes_rel_for(cid, harvest, model)
+    if not rel:
+        raise Refuse("DANGLING_REF", "no SCHEMA_NOTES.md for %r (module unresolved or has none)" % cid)
+    full = os.path.join(repo, rel.replace("/", os.sep))
+    if not os.path.isfile(full):
+        raise Refuse("DANGLING_REF", "SCHEMA_NOTES path %r does not exist in the tree" % rel)
+    text = read_text(full)
+    got = _extract_heading_section(text, heading)
+    if got is None:
+        raise Refuse("DANGLING_REF", "heading %r not found in %s" % (heading, rel))
+    sec, level, htext = got
+    b = sec.encode("utf-8")
+    truncated = len(b) > SECTION_FETCH_MAX
+    if truncated:
+        # keep the HEAD (heading/context) AND the TAIL (a section conclusion often lands last), so a
+        # clipped fetch carries both ends and the whole envelope stays well under 8000 B.
+        marker = "\n...[clipped: kept head+tail of %d/%d B; full at %s]...\n" % (SECTION_FETCH_MAX, len(b), rel)
+        budget = max(0, SECTION_FETCH_MAX - len(marker.encode("utf-8")))
+        head_n = (budget * 3) // 5
+        tail_n = budget - head_n
+        sec = b[:head_n].decode("utf-8", "ignore") + marker + (b[-tail_n:].decode("utf-8", "ignore") if tail_n else "")
+    return {"q": q, "entity": cid,
+            "section": {"path": rel, "sha256": sha256_norm(text), "heading": htext, "level": level,
+                        "harvest_commit": harvest.get("at_commit"),
+                        "bytes": len(sec.encode("utf-8")), "truncated": truncated, "text": sec}}
+
+
+def op_query(map_dir, q, harvest=None, paths_file=None, fields=None, repo=None):
     model = load_map(map_dir)
     ents = model.entities
     if q == "stale":
@@ -1667,6 +1890,8 @@ def op_query(map_dir, q, harvest=None, paths_file=None):
     if ":" not in q:
         raise Refuse("UNSUPPORTED_QUERY", "query %r not in the closed set" % q)
     verb, arg = q.split(":", 1)
+    if verb not in QUERY_COLON_VERBS:
+        raise Refuse("UNSUPPORTED_QUERY", "query verb %r not in the closed set" % verb)
 
     def _resolved_key(out, cid, was_short):
         # surface the canonical id ONLY when a short form was resolved; full-id output stays
@@ -1679,6 +1904,8 @@ def op_query(map_dir, q, harvest=None, paths_file=None):
         cid, was_short = resolve_query_id(arg, model)
         if cid is None:
             raise Refuse("DANGLING_REF", "no such entity %r" % arg)
+        if fields:
+            return _resolved_key(_serve_fields(q, cid, fields, harvest), cid, was_short)
         return _resolved_key({"q": q, "entity": {k: v for k, v in ents[cid].items()
                                                  if not k.startswith("_")}}, cid, was_short)
     if verb == "edges":
@@ -1726,6 +1953,17 @@ def op_query(map_dir, q, harvest=None, paths_file=None):
         if kind:
             deep = [d for d in deep if d.get("kind") == kind]
         return _resolved_key({"q": q, "deeper": deep}, cid, was_short)
+    if verb == "section":
+        # N1: fetch ONE named heading section from the entity SCHEMA_NOTES.md (repo-READ-ONLY,
+        # bounded). Form section:<id>#<exact-heading>. Natural resolution of a
+        # deeper[kind=schema-notes] pointer. Needs --repo + --harvest.
+        if "#" not in arg:
+            raise Refuse("UNSUPPORTED_QUERY", "section requires the form section:<id>#<heading>")
+        eid, heading = arg.split("#", 1)
+        cid, was_short = resolve_query_id(eid, model)
+        if cid is None:
+            raise Refuse("DANGLING_REF", "no such entity for section %r" % eid)
+        return _resolved_key(_fetch_schema_note_section(q, cid, heading, harvest, model, repo), cid, was_short)
     if verb == "alias":
         hits = []
         for rid, r in ents.items():
@@ -1832,6 +2070,10 @@ def op_selftest():
     _sec, _n = _build_operations_section(_ents, 2)
     assert _n == 1 and "descend:" in _sec and "a/b.md" in _sec
     lines.append("SELFTEST_OPS_OK")
+    # i49 N1/N2/N3: the query-verb declaration is the single source for packet table + dispatch
+    assert QUERY_VERB_TOKENS == tuple(v["verb"] for v in QUERY_VERBS)
+    assert "section" in QUERY_VERB_TOKENS and "entity" in QUERY_COLON_VERBS and "stale" not in QUERY_COLON_VERBS
+    lines.append("SELFTEST_QUERYVERBS_OK")
     return {"ok": True, "checks": lines}
 
 
@@ -1922,7 +2164,7 @@ def dispatch(a, started):
         return {"status": "ok", "result": op_verify(a.map_dir, harvest)}
     if a.action == "query":
         harvest = _load_harvest(a.harvest) if a.harvest else None
-        return {"status": "ok", "result": op_query(a.map_dir, a.q, harvest, a.paths_file)}
+        return {"status": "ok", "result": op_query(a.map_dir, a.q, harvest, a.paths_file, a.fields, a.repo)}
     if a.action == "reaffirm":
         harvest = _load_harvest(a.harvest)
         return {"status": "ok", "result": op_reaffirm(a.map_dir, a.entity, a.fields, a.by, a.at_commit, harvest)}

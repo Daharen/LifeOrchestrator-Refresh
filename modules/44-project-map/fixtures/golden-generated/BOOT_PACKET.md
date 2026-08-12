@@ -55,10 +55,20 @@ boot_read: decision:D-9001
 Progressive disclosure: read L0 map -> open L1 card -> retrieve L2 only when relevant.
 Do NOT ingest a doc until it is relevant. RECORD every open in your ledger (retrieval is measurement).
 First step each session: run `verify` / `query stale` before trusting the packet.
-Query invocations (mount VM):
-  python3 modules/44-project-map/project_map.py query --map <map> --q entity:<id>
-  python3 modules/44-project-map/project_map.py query --map <map> --q edges:<id>
-  python3 modules/44-project-map/project_map.py query --map <map> --q deeper:<id>:contract
-  python3 modules/44-project-map/project_map.py query --map <map> --q stale
+Run: python3 modules/44-project-map/project_map.py query --map <map> --q <form>
+
+| query form | returns |
+|---|---|
+| `entity:<id>` | full validated entity record; short forms (ns:NN, #NN, pos NN) resolve; add --fields <csv> --harvest to serve bounded manifest narrative (e.g. purpose) |
+| `edges:<id>` | outbound edges from <id> |
+| `redges:<id>` | inbound edges to <id> |
+| `evidence:<id>` | the entity sources[]; with --harvest each is provenance/currency-marked |
+| `deeper:<id>[:kind]` | typed descend pointers (kind in readme|work-order|schema-notes|contract|decision|failure|research|test|trace|other) |
+| `section:<id>#<heading>` | one named heading section from the entity SCHEMA_NOTES.md (needs --repo + --harvest; bounded); resolves a deeper[schema-notes] pointer |
+| `alias:<text>` | the entity id(s) an alias or number resolves to |
+| `stale` | entities carrying a stale field (needs --harvest) |
+| `changed-since --paths-file <f>` | entities whose sources/deeper touch a path in <f> |
+
+Short forms: ns:NN / #NN / pos NN resolve to the unique entity (result echoes resolved); a full id is byte-identical to 0.1.0. Modifiers: --harvest <h> adds provenance/currency, enables entity --fields narrative serve + section; --repo <root> enables section; --fields <csv> selects manifest fields (bounded to 4800 B each).
 boot_read pointer: contract:skill-contract
 boot_read pointer: decision:D-9001
