@@ -1,39 +1,30 @@
-# FANOUT_AGENT_003 -- READY (i49: PCB-N-i49)
+# FANOUT_AGENT_003 -- EMPTY slot
 
 ## Header
 - **Slot:** FANOUT_AGENT_003
-- **Status:** READY
-- **Wave / iteration:** i49 (plan id `fo-49-655c25df`)
-- **Lane:** CODING (CPU)
-- **Worker id / label:** PCB-N-i49 -- modules/44 `project.map` 0.2.0 -> 0.3.0 (the D-0136 efficiency mechanisms: N1 + N2 + N3, D-0137)
-- **Module/area (exclusive):** `modules/44-project-map/**` EXCEPT `map/`, `generated/`, `eval/` -- NEVER write those three (fold-owned; read `eval/results/*` as spec only)
-- **GPU:** false
+- **Status:** EMPTY
+- **Wave / iteration:** -- (fill at wave scoping; plan id `fo-<N>-<id>` once planned)
+- **Lane:** -- (convention: 001 GPU / 002 CPU / 003 coding)
+- **Worker id / label:** --
+- **Module/area (exclusive):** --
+- **GPU:** false (set true ONLY if this is the wave single GPU worker)
 - **Docs:** `[]`
-- **RECOMMENDED MODEL:** Opus 4.8 Extra (the held `i48-SPARE-W` session -- repo grant, Opus -- is purpose-built for this dispatch)
 
-## Mission (2-4 lines)
-The i48 re-check FAILED on retrieval economics (D-0136): the PCB-booted arm out-ingested the legacy arm 1.24x because deep narrative is not query-reachable (F1: a 478,784 B raw harvest grep for 4 module purposes), frontier detail lives only in the legacy handoff (F3), and agents read the 90,116 B tool source to learn the verbs (F4). This unit closes F1/F3/F4 so the PCB can win on bytes, not just comprehension. Spec: `modules/44-project-map/eval/results/I48_RECHECK_RESULTS.md` + the A/B pack ledgers (D-0136), direction D-0137.
+## Mission
+_EMPTY -- no unit assigned._ Fill from the candidate menu in `core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md` section 4 (i41: unit-0 = fold the round-3 ratification pack `5807bc3e`; unit-1 = scope the M2-A doc gate, deadline i42). Paste the `plan`-emitted worker prompt (or a tight summary + a pointer to the emitted copy when over the 8 KB budget); mirror it.
 
 ## Unit (the full worker prompt)
-**The verbatim authority is the emitted prompt file** (over this slot's 8 KB budget -- summary + pointer, the i40/i48 pattern):
-`modules/30-orchestrate-fanout/runtime/artifacts/8082c76e-529b-43ba-b0d7-9a64e264b32e/workers/worker-PCB-N-i49.prompt.md`
-**READ THAT FILE FIRST AND EXECUTE IT.** Condensed shape:
-- **N1 (kills F1):** manifest `purpose` retrieval (harvest-backed, provenance-stamped, bounded; prefer extending existing verbs, e.g. `entity:<id>` + `--fields purpose` + `--harvest`) + a deterministic SCHEMA_NOTES NAMED-SECTION fetch (bounded; existing error codes; documented selector). Any closed-set extension is fully documented in skill.json + SCHEMA_NOTES in the same ship, else refused.
-- **N2 (kills F3):** OPTIONAL overlay-schema fields + render support so the BOOT_PACKET frontier carries items + gates + pointers at handoff-s4 usefulness (the REAL overlay stays orchestrator-authored at fold; you ship schema/render/fixtures). BOOT_PACKET <=20,000 B HARD; ladder positions documented (OPERATIONS still degrades LAST).
-- **N3 (kills F4):** the RETRIEVAL PROTOCOL section renders the FULL closed verb set with exact invocation forms from a SINGLE machine-readable declaration, test-asserted equal to the dispatcher.
-- **ACCEPTANCE (mechanical, -Live + fixtures, verbatim outputs + byte counts):** B's 478,784 B harvest grep -> module 36/37/40 purpose queries <= 6,000 B each; A's #36 fast-beam-residual lookup -> ONE section fetch <= 8,000 B containing the "beam" + #40-ownership statement; verb-table == dispatcher; frontier gates >= 3 candidates (fixture); 0.2.0 byte-identity on unchanged queries; ladder proof.
-- **PRESERVE** all WO/0.2.0 invariants; skill.json 0.3.0 + purpose addendum. Cloud pwsh FIRST, then -Live. NO real map/ or generated/ writes.
-- **SHIP** via `exec-job.sh devship` (named files ONLY incl. schema/overlay.schema.json if extended; trailers; NATIVE-git HEAD verify D-0072; 0 orphans) then `-Action report -PlanId fo-49-655c25df -WorkerId PCB-N-i49 -State done`.
+_pending -- filled at wave scoping._
 
 ## Rails (standing rules -- keep in every brief)
 - Read `core-docs/START_HERE.md` + `core-docs/CURRENT_STATE.md` 'Known failures' first; obey `SKILL_CONTRACT.md`.
-- Acquire res.lease(s) in **gpu -> git -> doc** order; release on exit (this unit: `git` only, at ship time).
+- Acquire res.lease(s) in **gpu -> git -> doc** order; release on exit; a whole-task gpu lease for any resident-model work.
 - Do ONE unit; never touch modules/areas outside the header's exclusive claim; `docs:[]`.
 - Gate off-machine FIRST, then ship via `dev.ship` (sha256 + AST + tests, FAIL-CLOSED, named files only); VERIFY the real HEAD via native git (D-0072); assert 0 UNMANAGED orphans.
-- Report: `-Action report -PlanId fo-49-655c25df -WorkerId PCB-N-i49 -State done` + a plain measured summary (negative results are first-class, the D-0061 ethos).
+- Report: `-Action report -PlanId <plan> -WorkerId <id> -State done` + a plain measured summary (negative results are first-class, the D-0061 ethos).
 
 ## Verification
-Cloud + -Live suite counts; the acceptance-replay outputs with exact byte counts vs the D-0136 baselines (478,784 / 90,116); the BOOT_PACKET fixture total + ladder proof; every closed-set/schema extension with its documentation pointers; Verification Console `run_module` item = `project.map` selftest. The orchestrator independently re-runs the acceptance replays at fold before any gate staging (N4 = Nicholas ratification first).
+_pending -- filled at wave scoping._
 
 ## Report-back record (ORCHESTRATOR fills from `plans/<id>/reports/` before archiving)
-_pending._
+_empty._

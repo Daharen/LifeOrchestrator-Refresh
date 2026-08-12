@@ -29,7 +29,7 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
   lever shipped i39 (D-0108; hpr ~2x; guaranteed+packet recall stay 1e6).
   Arc detail: the index; per-module state: `MODULE_ROADMAP.md`.
 - **P0-1 action-authorization gate (#43): `build_status=build_complete | p0_1_gate_status=PASS | activation_status=prohibited`.** #43 0.6.0 (`10d0d1e`, i42) is a RATIFIED DESIGN pass -- round-5 independent review PASS -> s7 `p0_1_gate_status=pass` (D-0118, M2-D, pack `6bb613ea`; arc detail D-0116/18). Verified x2 byte-identical (364/364; bundle `3b5d62f4`); A06 denies every authentic packet; `non_execution:true` holds. **Activation stays PROHIBITED** -- a design pass, NOT an activation grant.
-- **i47+i48 CLOSED (D-0132..D-0135):** mandate-02 SUNSET (YES; SEALED_CHECK_47 armed, open i>=54) and the migration gate = **CONDITIONAL** (quality PASS, efficiency VOID via RT2-F9) -> i48 shipped **#44 `project.map` 0.2.0** (CD-1 OPERATIONS boot canon + CD-3 query surface + the harvest sunset-fix; recovered ship `c451890` + `4055dc1`; fold VALIDATE 0; `-Live Folded` green). **Legacy stays the default bootstrap pending the CD-1 probe + CD-2 A/B efficiency re-check** (frozen s7 mechanics; fresh T2/T3 pick at dispatch).
+- **i47-i49 CLOSED (D-0132..D-0138):** mandate-02 SUNSET (YES; SEALED_CHECK_47 armed, open i>=54) and the migration gate = **CONDITIONAL** (quality PASS, efficiency VOID via RT2-F9); i48 shipped **#44 `project.map` 0.2.0** (CD-1 OPERATIONS canon + CD-3 queries), the i48 re-check FAILED on economics (D-0136, B 1.24x A), and **i49 shipped 0.3.0** (N1 narrative queries + N2 frontier + N3 verb table; D-0138; fold VALIDATE 0). **Legacy stays the default bootstrap; N4 bar re-freeze (Nicholas ratification) precedes any fresh gate.**
 - **FROZEN / deferred (D-0080):** durable-supervisor / warm-pool hardening (D-0079 GATE-NO stands; classic
   detached-warm is the trusted default); generator upgrades; `video.interpret` + live composition; deep
   real-time perception (arch 27-49); broad training.
@@ -132,7 +132,7 @@ registry facts: `TOOL_MODEL_REGISTRY.md`. Roster (all MVP-complete unless noted)
   byte-identical back to 0.7.0) · #41 skill.card 0.2.0 · #42 working.memory 0.1.0 (per-task store, CAS heads,
   ns isolation) · **#43 action.authz 0.4.0** (P0-1 deny-by-default reference monitor + injection suite;
   DESIGN-ONLY; exact-closure-complete, gate incomplete pending ratification — see Phase).
-- **#44 `project.map` 0.2.0** (i48, D-0135; i46 base D-0130/31) -- the PCB: fail-closed map/claims/boot-packet compiler + OPERATIONS boot canon + short-form/alias queries + evidence currency. `MODULE_ROADMAP.md` #44.
+- **#44 `project.map` 0.3.0** (i49, D-0138; i46 base D-0130/31) -- the PCB: fail-closed map/claims/boot-packet compiler + OPERATIONS boot canon + N1 narrative query surface (purpose + SCHEMA_NOTES section) + short-form/alias queries + N2 overlay frontier + N3 verb table. `MODULE_ROADMAP.md` #44.
 - **NOT built:** #26 agent.coding — designed + DEFERRED (D-0037; no safe code-exec substrate on this box).
 - **Widgets (native + `launch.bat`, D-0038):** 01 Local Agent Console · 02 Module Launcher · 03 Verification
   Console (durable verdicts, D-0065) · 04 Fan-out Wave Dashboard (live-GUI confirm DONE) · 05 Provenance Map
@@ -247,7 +247,7 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 | #43 action.authz | **0.6.0 (i42): the 3 round-4 exact closures (F5/F4/F2 -- seam detail D-0116/18); suite x2 exit 0 byte-identical (364/364, mutations 69/69, fuzzer 400/0, oracle 152 not_run=0, role 30/30, completion 21/21, views 64/64); empty-dir self-verify VERIFIED (3b5d62f4); taxonomy=`pass` (D-0118 round-5 PASS, pack 6bb613ea; activation prohibited)** | `10d0d1e` | 08-08 |
 | widgets/05 / 06 / 07 | 100/100+STA 8/8 · 85/85+98/98 -Live (STA 9/9) · 81 cloud + 93 -Live (STA 8/8) — live-GUI confirm DONE i43 | `3ad71d3`/`c912854`/`855c242` | 08-05..08 |
 | widgets/08 LRAP | **87/0/0 -Live (i45): read-only replay pathway; every SELFTEST_*_OK (incl. RECONCILE/DESCEND/INTERACT/READONLY/LAYOUT); five-fixture machine classify 0 FP/FN (mis-route->s3, dropped->s4, wrong-record->s6, clean+quirk consistent); byte-identical re-render; read-only + i33 sanitization fail-closed; real #40 render; orchestrator INDEPENDENT re-verify** | `a88e177`/`6028b9c` | 08-08 |
-| #44 project.map | **0.2.0 (i48): 98/98 x3 interpreters (py3.11/3.10/3.12; +shortform/provenance/operations/roundtrip/mandate-absent classes); four CD-3 probes RESOLVE on the real map; ingests idempotent -> VALIDATE 0; -Live Folded green** | `c451890`+`4055dc1` | 08-11 |
+| #44 project.map | **0.3.0 (i49): 130/130 x3 interpreters (py3.11/3.10/3.12; +n1-purpose/n1-section/n2-frontier/n3-verbtable); fold VALIDATE 0; CD-3 probes RESOLVE; verb-table==dispatcher; -Live Folded green** | `c0c3abe` | 08-12 |
 | D-0077 cross-module folds | i34 smoke 38/38 · i36 Tier-1 11/11 (`tier1_accepted=TRUE`) · i38/i39 18/18 · i40/i41 fold-i39 exit 0 · **i42: fold-i39 vs 0.6.0 exit 0 + i34 38/38 + the independent #43 suite x2 byte-identical (3b5d62f4); i45: widgets/08 pinned 06/07 adapter + cross-widget contract test green in the independent -Live 87/0/0** | `runtime/smoke-i34.py`/`fold-i39.py` | 08-08 |
 
 ## Known failures / gotchas
@@ -355,13 +355,13 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ## Next expected action
 
-**i48 CLOSED (D-0135):** the D-0133 CD closures SHIPPED -- #44 0.2.0 (CD-1 boot-surface OPERATIONS canon + CD-3 query surface; ORCHESTRATOR-RECOVERED ship `c451890`) + the harvest sunset-fix (`4055dc1`) + fold to VALIDATE 0 / `-Live Folded` green.
+**i49 CLOSED (D-0138):** #44 `project.map` 0.3.0 shipped the D-0136 efficiency mechanisms -- N1 narrative query surface (`entity --fields purpose --harvest` + `section:<id>#<heading>`), N2 overlay frontier richness, N3 the verb table. Orchestrator fold VALIDATE 0; BOOT_PACKET 16,640 B; `-Live Folded` green (fold `c0c3abe`).
 
-**The re-check RAN same-session (Nicholas's remote held-session loop) and FAILED (D-0136; `modules/44-project-map/eval/results/I48_RECHECK_RESULTS.md`):** efficiency VOID x2 (RT2-F9) + both bars missed -- B out-ingested A 1.24x (raw-store fallback ~75%: deep narrative not query-reachable; the boot bar arithmetically dead post-CD-1). Comprehension parity repeated. **Legacy STAYS the default bootstrap.** **NEXT = i49 (D-0137, Nicholas): the N1 wave** -- N1 L2 narrative queries + same-lane N2 (overlay frontier) + N3 (packet verb table); N4 bar re-freeze = a Nicholas-ratification act at the next gate staging (no fresh gate before it). AUDIT review pushed i49 -> i54 (override, with SEALED_CHECK_47). Deferred: M2-C/FO-3; #40 beam-width (A/B packs = design input); PB-2. P0-1 stays FROZEN.
+**Independent fold replays** (D-0136 economics proof): module 36/37/40 purpose 5662/5659/5663 B (<= 6000; vs 478,784 B grep), #36 fast-beam section 7684 B, verb-table == dispatcher; suite 130/130 + -Live Folded green. **NEXT = i50:** N4 bar re-freeze (Nicholas ratification) precedes any fresh gate -- the frozen s7 bars are dead post-CD-1; legacy stays the default bootstrap. Deferred (D-0134): AUDIT next_increment (review_due i54, D-0137); M2-C/FO-3; #40 beam-width (A/B packs = design input); PB-2. P0-1 FROZEN; SEALED_CHECK_47 sealed (open i>=54).
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades; `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-11 -- i48 closed (D-0135/36); i49 = the N1 wave (D-0137); audit review -> i54.
+**Last updated:** 2026-08-12 -- i49 CLOSED (D-0138): #44 project.map 0.3.0 (N1/N2/N3 efficiency); fold VALIDATE 0; legacy default (N4 unratified).
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

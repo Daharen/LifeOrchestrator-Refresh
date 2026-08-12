@@ -154,11 +154,12 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0127 | 2026-08-08 | locked | LRAP POSER SHIPPED (D-0126): widgets/08 `9f99495` -- ungated, read-only + fail-silent; cloud 104/0/3 + Win -Live 119/0/0 [live-fixed D-0128] |
 | D-0128 | 2026-08-08 | locked | LRAP poser LIVE-CLICK FIX (D-0127): 2 mock-missed defects -- spawn no-launch; 9B empty at 1280 (-> 4096 floor) `cc3dd81` |
 | D-0129 | 2026-08-09 | locked | LRAP poser live no-op ROOT CAUSE: widget host=dotnet.exe -> spawned dotnet.exe -File worker (no-op); fix: real pwsh + -PwshPath `da8a05e` [corrects D-0128 spawn] |
-| D-0130 | 2026-08-11 | locked | i46 DIRECTIVE-HIJACK: PCB design FROZEN -- namespaces + 5 planes + NEW modules/44 project.map + claims-only judgment + the i47 gate packet; 2 red-teams folded |
-| D-0131 | 2026-08-11 | locked | i46 CLOSED: PCB shipped -- modules/44 0.1.0 (recovered ship + 2 fold-fixes); claims folded 0-findings; packet rendered; I47 FROZEN |
+| D-0130 | 2026-08-11 | locked | i46: PCB design FROZEN -- namespaces + 5 planes + NEW #44 project.map + claims-only judgment + i47 gate packet; 2 red-teams |
+| D-0131 | 2026-08-11 | locked | i46 CLOSED: PCB shipped -- #44 0.1.0 (recovered + 2 fold-fixes); claims folded 0-findings; I47 FROZEN |
 | D-0132 | 2026-08-11 | locked | mandate 02 SUNSET: report delivered, verdict YES (reverses 01's NO) -> SEALED_CHECK_47 armed (open i>=54); live doc deleted; no mandate 03 |
-| D-0133 | 2026-08-11 | locked | i47 PCB migration gate = CONDITIONAL: quality PASS (floors clear, swap-stable) but efficiency VOID (mechanism-not-exercised) -> 3 bounded i48 CD units; legacy stays default |
-| D-0134 | 2026-08-11 | locked | i47 addendum (Nicholas): i48 = CD path; seat Fable-until-settled [amends D-0116]; poser live-click CONFIRMED (window-close defect); w07 + eval folder deleted |
-| D-0135 | 2026-08-11 | locked | i48: #44 0.2.0 CD-1+CD-3 (recovered) + harvest sunset-fix + fold 0-findings; re-check staged (probe -> A/B) |
+| D-0133 | 2026-08-11 | locked | i47 PCB migration gate CONDITIONAL: quality PASS, efficiency VOID -> 3 i48 CD units; legacy default |
+| D-0134 | 2026-08-11 | locked | i47 addendum (Nicholas): i48 = CD path; seat Fable-until-settled [amends D-0116]; poser live-click CONFIRMED; w07 + eval folder deleted |
+| D-0135 | 2026-08-11 | locked | i48: #44 0.2.0 CD-1+CD-3 (recovered) + harvest fix + fold 0-findings; re-check staged |
 | D-0136 | 2026-08-11 | locked | i48 re-check FAILED: void x2 + bars missed (B 1.24x A, raw fallback) -> legacy default; N1-N4 |
 | D-0137 | 2026-08-11 | locked | i49 = N1 wave (narrative queries + N2/N3); AUDIT review -> i54 (override, w/ sealed check) |
+| D-0138 | 2026-08-12 | locked | i49 CLOSED: #44 project.map 0.3.0 (N1 narrative queries + N2 frontier + N3 verb table); fold VALIDATE 0; legacy default, N4 unratified |
