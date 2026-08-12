@@ -73,6 +73,10 @@
        "by": "orchestrator-i48"
       },
       {
+       "at_commit": "5d46731269b819648ef7e883ec83daf9af86699e",
+       "by": "orchestrator-i49"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -86,7 +90,7 @@
       }
      ],
      "ref": "core-docs/AUDIT_PIPELINE.md",
-     "sha256": "72601cd52918b3d979615cfaeaada3af9db68ce6f74129a5c59fe898caf9bf21"
+     "sha256": "316995ae519af150e903a07da852841fd3d292ac904d76df48c08ba1cd39d0ab"
     },
     {
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
@@ -100,6 +104,10 @@
        "by": "orchestrator-i48"
       },
       {
+       "at_commit": "5d46731269b819648ef7e883ec83daf9af86699e",
+       "by": "orchestrator-i49"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -113,7 +121,7 @@
       }
      ],
      "ref": "core-docs/AUDIT_PIPELINE.md",
-     "sha256": "72601cd52918b3d979615cfaeaada3af9db68ce6f74129a5c59fe898caf9bf21"
+     "sha256": "316995ae519af150e903a07da852841fd3d292ac904d76df48c08ba1cd39d0ab"
     },
     {
      "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
@@ -122,8 +130,14 @@
       "plane_primary",
       "skeleton"
      ],
+     "reaffirmed": [
+      {
+       "at_commit": "5d46731269b819648ef7e883ec83daf9af86699e",
+       "by": "orchestrator-i49"
+      }
+     ],
      "ref": "core-docs/AUDIT_PIPELINE.md",
-     "sha256": "72601cd52918b3d979615cfaeaada3af9db68ce6f74129a5c59fe898caf9bf21"
+     "sha256": "316995ae519af150e903a07da852841fd3d292ac904d76df48c08ba1cd39d0ab"
     },
     {
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
@@ -135,6 +149,10 @@
       {
        "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
        "by": "orchestrator-i48"
+      },
+      {
+       "at_commit": "5d46731269b819648ef7e883ec83daf9af86699e",
+       "by": "orchestrator-i49"
       },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
@@ -163,6 +181,10 @@
       {
        "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
        "by": "orchestrator-i48"
+      },
+      {
+       "at_commit": "5d46731269b819648ef7e883ec83daf9af86699e",
+       "by": "orchestrator-i49"
       },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",

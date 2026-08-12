@@ -6379,6 +6379,12 @@
       "*"
      ],
      "note": "override: i46 fold: claims-lane + orchestrator-affirmed judgment supersedes harvest-seeded placeholder fields (aliases/one_line/status; WO s7 seed semantics, s3.3 recorded override)",
+     "reaffirmed": [
+      {
+       "at_commit": "5d46731269b819648ef7e883ec83daf9af86699e",
+       "by": "orchestrator-i49"
+      }
+     ],
      "ref": "module:44/project.map"
     },
     {
@@ -6411,14 +6417,18 @@
       {
        "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
        "by": "orchestrator-i48-harvest-sync"
+      },
+      {
+       "at_commit": "5d46731269b819648ef7e883ec83daf9af86699e",
+       "by": "orchestrator-i49"
       }
      ],
      "ref": "modules/44-project-map/skill.json",
-     "sha256": "fc8cda6803d9cade52bf7e79967a7b06401c78fc58bffb4d2d07378861a46820"
+     "sha256": "14bff6d84c4fe706d03f5438e9c0ce446da5d4ff930b4dc2331d1a59e00486f9"
     }
    ],
    "status": "mvp-complete",
-   "version": "0.2.0"
+   "version": "0.3.0"
   }
  ],
  "kind": "entities",

@@ -1,5 +1,5 @@
 {
- "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
+ "at_commit": "5d46731269b819648ef7e883ec83daf9af86699e",
  "boot_read": [
   {
    "kind": "other",
@@ -21,27 +21,46 @@
  "frontier": {
   "candidates": [
    {
-    "ref": "doc:core-docs/AUDIT_PIPELINE.md",
-    "text": "deferred (D-0134, not dropped): the LRAP completion set per next_increment; review_due i49; + the w08 explain-window-close defect on the next w08 touch"
+    "gate": "SEALED -- open only at i>=54 (D-0132)",
+    "item": "SEALED_CHECK_47 evaluation",
+    "pointer": "core-docs/SEALED_CHECK_47.md"
    },
    {
-    "ref": "doc:core-docs/PROCESS_BACKLOG.md",
-    "text": "deferred (D-0134): M2-C/FO-3 docs-into-memory re-layer; PB-2 (trigger-gated)"
+    "gate": "deferred D-0134",
+    "item": "#40 context.compile beam-WIDTH follow-on (fast-beam residual scale lever; i48 A/B packs = design input)",
+    "pointer": "MODULE_ROADMAP.md #40"
    },
    {
-    "ref": "module:40/context.compile",
-    "text": "deferred (D-0134): beam-WIDTH follow-on (the fast-beam residual scale lever)"
+    "gate": "deferred D-0134",
+    "item": "M2-C / FO-3 docs-into-memory re-layer",
+    "pointer": "core-docs/PROCESS_BACKLOG.md"
    },
    {
-    "ref": "module:44/project.map",
-    "text": "the CONDITIONAL re-check (CD-1 dry-run -> CD-2 efficiency A/B) -> on pass, the migration unit (PCB default; FO-2)"
+    "gate": "deferred D-0134",
+    "item": "PB-2 (trigger-gated backlog item)",
+    "pointer": "core-docs/PROCESS_BACKLOG.md"
+   },
+   {
+    "gate": "requires Nicholas ratification at next gate staging",
+    "item": "N4 BOOT/total-ingest bar RE-FREEZE (the frozen s7 bars are dead post-CD-1)",
+    "pointer": "modules/44-project-map/eval/results/I48_RECHECK_RESULTS.md"
+   },
+   {
+    "gate": "review_due i54 (D-0137 override)",
+    "item": "AUDIT_PIPELINE next_increment (front-step + ride-along + output side)",
+    "pointer": "core-docs/AUDIT_PIPELINE.md s5"
+   },
+   {
+    "gate": "rides next w08 touch (D-0134 live-GUI cycle)",
+    "item": "w08 explain-window-close defect",
+    "pointer": "widgets/08-live-run-audit-pathway"
    }
   ],
-  "derived_from": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md s4 at 24347fe1f8c8d2e07100c76754a0c54e414c41e8 (the frontier statement, same wording)",
-  "next_iteration": 49,
-  "summary": "Post-i48-fold: (1) the CD-1 acceptance dry-run -- a fresh PCB-booted PROBE-ONLY session answers K3/K4/TR2/TR3 pointer-cited with NO tree-handoff open (RT2-F9 un-triggered; consumes no pre-registered task); then (2) CD-2 -- the efficiency re-check under the frozen I47_EVAL_PACKET s7 mechanics at a NEW frozen SHA (fresh Nicholas task pick from unused T2/T3 at dispatch; A+B dry-runs; proxies orchestrator-computed; BOTH bars met un-voided = accept). A passed re-check LICENSES the migration unit (PCB default bootstrap; FO-2; DOC_PROTOCOL rows; legacy = fallback until a retirement gate)."
+  "derived_from": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md s4 + the D-0134 deferred menu at 5d46731269b819648ef7e883ec83daf9af86699e (N4 per D-0136).",
+  "next_iteration": 50,
+  "summary": "i49 CLOSED: project.map 0.3.0 shipped the D-0136 efficiency mechanisms (N1 narrative queries, N2 frontier richness, N3 verb table); the PCB serves module purposes + SCHEMA_NOTES sections as bounded queries. i50: N4 bar re-freeze (Nicholas ratification) before any fresh gate; else the deferred menu."
  },
- "iteration": 48,
+ "iteration": 49,
  "open_rulings": [
   {
    "ref": "decision:D-0134",
@@ -50,7 +69,7 @@
  ],
  "phase": {
   "ref": "doc:core-docs/CURRENT_STATE.md",
-  "text": "Collective Agent build on cognitive virtual memory (D-0080); Tier-1 accepted; mandate-02 SUNSET at i47 (verdict YES; SEALED_CHECK_47 armed, open i>=54); the i47 legacy-vs-PCB migration gate = CONDITIONAL (D-0133) -- legacy stays the default bootstrap; i48 shipped the CD-1/CD-3 closures (project.map 0.2.0) + the harvest mandate-absence fix."
+  "text": "Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; i47 migration gate CONDITIONAL, legacy default; i49 shipped project.map 0.3.0 (PCB efficiency)."
  },
  "prohibitions": [
   {
