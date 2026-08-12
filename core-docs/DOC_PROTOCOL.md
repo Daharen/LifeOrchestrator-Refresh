@@ -52,7 +52,7 @@ D-entry naming the current-truth content that needs the room** -- never by silen
 
 **Over-budget action ("you bust it, you slim it"):** the session whose edit pushes a doc over budget slims
 it in that same session -- snapshot the pre-slim doc to `archive/doc-snapshots/<date>/`, compress history to
-D-refs, re-check size. Check sizes at every mirror: `wc -c core-docs/*.md` (device_bash) takes seconds. **Mechanized i42 (D-0117):** the fail-closed `ops/audit/doc-commit-gate.py` pre-commit gate enforces these s2 budgets + the s3 accretion rules at commit time.
+D-refs, re-check size. Check sizes at every mirror: `wc -c core-docs/*.md` (device_bash) takes seconds. **Mechanized i42 (D-0117):** the fail-closed `ops/audit/doc-commit-gate.py` pre-commit gate enforces these s2 budgets + the s3 accretion rules at commit time. **Cumulative classes re-layer, not slim (D-0141):** for an inherently cumulative surface (registries / catalogs / ledgers / histories -- PB-7) repeated cap pressure is a RE-LAYER TRIGGER, not indefinite compression -- record its conversion (PB-7), bound the hot view, do not degrade it; genuinely read-whole artifacts still slim.
 
 ## 3. Accretion rules (hot docs)
 
