@@ -120,3 +120,4 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 | archive/handoffs/2026-08-11-FANOUT_ORCHESTRATOR_HANDOFF-i47.md | the outgoing i46-shaped live handoff snapshotted at the i47 close | 2026-08-11 | D-0133 |
 | archive/handoffs/2026-08-11-FANOUT_ORCHESTRATOR_HANDOFF-i48.md | the outgoing i47-shaped live handoff snapshotted at the i48 close | 2026-08-11 | D-0135 |
 | archive/fanout-agents/i48-003.md | i48 CODING-lane brief (PCB-CD-i48; #44 0.2.0 CD-1+CD-3 closures) | 2026-08-11 | D-0135 |
+| archive/handoffs/2026-08-12-FANOUT_ORCHESTRATOR_HANDOFF-i50.md | the outgoing i49-shaped live handoff snapshotted at the i50 close | 2026-08-12 | D-0140 |

@@ -166,3 +166,4 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0137 | 2026-08-11 | locked | i49 = N1 wave (narrative queries + N2/N3); AUDIT review -> i54 (override, w/ sealed check) |
 | D-0138 | 2026-08-12 | locked | i49 CLOSED: #44 project.map 0.3.0 (N1 narrative queries + N2 frontier + N3 verb table); fold VALIDATE 0; legacy default, N4 unratified |
 | D-0139 | 2026-08-12 | locked | i49 patch: DECISION_LOG_INDEX GROWTH-EXEMPT (per-row density guards, no whole-file cap); i49-compressed rows restored; decision re-layer deferred (PB-6) |
+| D-0140 | 2026-08-12 | locked | i50 N4 bars RE-FROZEN (D-0140): s7 = abs boot (packet<=20KB+canon) + total B<=0.7xA on query-output + void on PCB-insufficiency; gate stageable, legacy default |

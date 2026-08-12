@@ -29,7 +29,7 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
   lever shipped i39 (D-0108; hpr ~2x; guaranteed+packet recall stay 1e6).
   Arc detail: the index; per-module state: `MODULE_ROADMAP.md`.
 - **P0-1 action-authorization gate (#43): `build_status=build_complete | p0_1_gate_status=PASS | activation_status=prohibited`.** #43 0.6.0 (`10d0d1e`, i42) is a RATIFIED DESIGN pass -- round-5 independent review PASS -> s7 `p0_1_gate_status=pass` (D-0118, M2-D, pack `6bb613ea`; arc detail D-0116/18). Verified x2 byte-identical (364/364; bundle `3b5d62f4`); A06 denies every authentic packet; `non_execution:true` holds. **Activation stays PROHIBITED** -- a design pass, NOT an activation grant.
-- **i47-i49 CLOSED (D-0132..D-0138):** mandate-02 SUNSET (YES; SEALED_CHECK_47 armed, open i>=54) and the migration gate = **CONDITIONAL** (quality PASS, efficiency VOID via RT2-F9); i48 shipped **#44 `project.map` 0.2.0** (CD-1 OPERATIONS canon + CD-3 queries), the i48 re-check FAILED on economics (D-0136, B 1.24x A), and **i49 shipped 0.3.0** (N1 narrative queries + N2 frontier + N3 verb table; D-0138; fold VALIDATE 0). **Legacy stays the default bootstrap; N4 bar re-freeze (Nicholas ratification) precedes any fresh gate.**
+- **i47-i50 (D-0132..D-0140):** mandate-02 SUNSET (YES; SEALED_CHECK_47 armed, open i>=54) and the migration gate = **CONDITIONAL** (quality PASS, efficiency VOID via RT2-F9); i48 shipped **#44 `project.map` 0.2.0** (CD-1 canon + CD-3 queries), the i48 re-check FAILED on economics (D-0136, B 1.24x A), **i49 shipped 0.3.0** (N1 narrative queries + N2 frontier + N3 verb table; D-0138; fold VALIDATE 0), and **i50 RATIFIED the N4 bar re-freeze (D-0140):** the s7 efficiency rules re-frozen -- absolute boot (`packet <= 20,000 B` + CD-1 canon) + total `B <= 0.7 x A` on query-output accounting + void on PCB-insufficiency. **A fresh gate is now STAGEABLE but not yet run, so the LEGACY handoff stays the default bootstrap until it runs + passes.**
 - **FROZEN / deferred (D-0080):** durable-supervisor / warm-pool hardening (D-0079 GATE-NO stands; classic
   detached-warm is the trusted default); generator upgrades; `video.interpret` + live composition; deep
   real-time perception (arch 27-49); broad training.
@@ -355,13 +355,13 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ## Next expected action
 
-**i49 CLOSED (D-0138):** #44 `project.map` 0.3.0 shipped the D-0136 efficiency mechanisms -- N1 narrative query surface (`entity --fields purpose --harvest` + `section:<id>#<heading>`), N2 overlay frontier richness, N3 the verb table. Orchestrator fold VALIDATE 0; BOOT_PACKET 16,640 B; `-Live Folded` green (fold `c0c3abe`).
+**i50 (D-0140):** the N4 migration-gate bar re-freeze RATIFIED (Nicholas). The frozen `I47_EVAL_PACKET` s7 efficiency rules -- dead post-CD-1 (D-0136 F1/F2/F4) -- are replaced for the next gate run: BOOT absolute (`packet <= 20,000 B` + CD-1 canon; retires the unreachable 0.5xA ratio), TOTAL `B <= 0.7 x A` counting query-OUTPUT bytes for #44-query content (credits N1), VOID on PCB-insufficiency (corroboration counts, does not void; void-(b) retired). s1-s6 + quality floors unchanged; packet untouched. Record: `modules/44-project-map/eval/results/N4_BAR_REFREEZE.md`.
 
-**Independent fold replays** (D-0136 economics proof): module 36/37/40 purpose 5662/5659/5663 B (<= 6000; vs 478,784 B grep), #36 fast-beam section 7684 B, verb-table == dispatcher; suite 130/130 + -Live Folded green. **NEXT = i50:** N4 bar re-freeze (Nicholas ratification) precedes any fresh gate -- the frozen s7 bars are dead post-CD-1; legacy stays the default bootstrap. Deferred (D-0134): AUDIT next_increment (review_due i54, D-0137); M2-C/FO-3; #40 beam-width (A/B packs = design input); PB-2. P0-1 FROZEN; SEALED_CHECK_47 sealed (open i>=54).
+**NEXT = i51:** stage + run the fresh legacy-vs-PCB gate against the D-0140 bars (now licensable; projected ~0.35 x A) -- OR a deferred-menu pick; until it runs + passes, legacy stays default. Deferred (D-0134): #40 beam-width (i48 A/B packs = design input); M2-C/FO-3 decision re-layer (PB-6); AUDIT (i54, D-0137); PB-2. P0-1 FROZEN; SEALED_CHECK_47 sealed (open i>=54).
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades; `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-12 -- i49 CLOSED (D-0138): #44 project.map 0.3.0 (N1/N2/N3 efficiency); fold VALIDATE 0; legacy default (N4 unratified).
+**Last updated:** 2026-08-12 -- i50 (D-0140): N4 migration-gate bar re-freeze RATIFIED; s7 efficiency rules re-frozen (absolute boot + total B<=0.7xA on query-output + void on PCB-insufficiency); fresh gate stageable (not run); legacy stays default.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*
