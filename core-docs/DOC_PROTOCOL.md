@@ -24,7 +24,7 @@ describe NOW and stay ingestable whole; history is never deleted, it moves to la
 | FANOUT_ORCHESTRATOR_HANDOFF.md | THE one live handoff: orchestrator ops + current frontier | 24 KB |
 | CURRENT_STATE.md | reality NOW: phase, active work, box, deps, models, tests table, live gotchas | 34 KB |
 | DECISION_LOG.md | append-only rationale | no cap (indexed; tool-pull only) |
-| DECISION_LOG_INDEX.md | one compressed routing row per decision (id, date, state, one-line label; see its header rules) | 20 KB |
+| DECISION_LOG_INDEX.md | one compressed routing row per decision (id, date, state, ~160-char label; see its header rules) -- GROWTH-EXEMPT routing catalog (D-0139): grows losslessly, NO whole-file cap; per-row density is the guard; whole-file re-layer-pending at ~40 KB (PB-6) | growth-exempt |
 | MODULE_ROADMAP.md | build order, per-module status, deferred follow-ons, portability backlog | 37 KB |
 | PROCESS_BACKLOG.md | cross-cutting process / tooling / doc-hygiene backlog (router; per-module follow-ons stay in MODULE_ROADMAP) | 8 KB |
 | SEALED_CHECK_47.md | sealed metastability predicates (D-0132; evaluate at i>=54 then archive; a new mandate exists only if re-licensed) | 4 KB |

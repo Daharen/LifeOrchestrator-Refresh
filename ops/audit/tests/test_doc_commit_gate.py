@@ -494,5 +494,62 @@ class InstallHookTest(unittest.TestCase):
             repo.cleanup()
 
 
+class CatalogGrowthTest(unittest.TestCase):
+    """D-0139: DECISION_LOG_INDEX.md is a growth-exempt routing CATALOG -- no whole-file byte
+    reject; per-row density + accretion + all OTHER docs' budgets stay fail-closed."""
+
+    def _index(self, nrows, cell="routing label"):
+        head = "# DECISION_LOG_INDEX\n\n| id | date | state | decision |\n|---|---|---|---|\n"
+        rows = "".join("| D-%04d | 2026-08-12 | locked | %s %d |\n" % (i, cell, i) for i in range(1, nrows + 1))
+        return head + rows
+
+    def test_index_over_20kb_not_rejected(self):
+        repo = GateRepo()
+        try:
+            repo.write("core-docs/DECISION_LOG_INDEX.md", self._index(700))  # ~35 KB, over 20 KB, under 40 KB
+            repo.add("core-docs/DECISION_LOG_INDEX.md")
+            code, findings, err = repo.run("--staged", "--repo", repo.dir)
+            self.assertFalse([f for f in findings if f["rule"] == "budget" and f["severity"] == "reject"], findings)
+            self.assertFalse([f for f in findings if f["rule"] == "relayer_40kb"], findings)
+            self.assertEqual(code, 0, (code, findings, err))
+        finally:
+            repo.cleanup()
+
+    def test_index_past_40kb_warns_not_rejects(self):
+        repo = GateRepo()
+        try:
+            repo.write("core-docs/DECISION_LOG_INDEX.md", self._index(900))  # ~45 KB, past the 40 KB re-layer line
+            repo.add("core-docs/DECISION_LOG_INDEX.md")
+            code, findings, err = repo.run("--staged", "--repo", repo.dir)
+            self.assertTrue([f for f in findings if f["rule"] == "relayer_catalog_40kb" and f["severity"] == "warn"], findings)
+            self.assertFalse([f for f in findings if f["severity"] == "reject"], findings)
+            self.assertEqual(code, 0, (code, findings, err))
+        finally:
+            repo.cleanup()
+
+    def test_index_density_still_warns(self):
+        repo = GateRepo()
+        try:
+            repo.write("core-docs/DECISION_LOG_INDEX.md",
+                       "# DECISION_LOG_INDEX\n\n| D-9999 | 2026-08-12 | locked | " + ("x" * 220) + " |\n")
+            repo.add("core-docs/DECISION_LOG_INDEX.md")
+            code, findings, err = repo.run("--staged", "--repo", repo.dir)
+            self.assertTrue([f for f in findings if f["rule"] == "index_density" and f["severity"] == "warn"], findings)
+            self.assertEqual(code, 0, (code, findings))
+        finally:
+            repo.cleanup()
+
+    def test_other_core_doc_still_rejects_over_budget(self):
+        repo = GateRepo(current_state_kb=1)
+        try:
+            repo.write("core-docs/CURRENT_STATE.md", "x" * 2000)  # > 1000-byte budget
+            repo.add("core-docs/CURRENT_STATE.md")
+            code, findings, err = repo.run("--staged", "--repo", repo.dir)
+            self.assertTrue([f for f in findings if f["rule"] == "budget" and f["severity"] == "reject"], findings)
+            self.assertEqual(code, 1, (code, findings))
+        finally:
+            repo.cleanup()
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

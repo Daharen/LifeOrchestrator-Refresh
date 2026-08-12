@@ -311,8 +311,8 @@ def parse_budgets_from_text(text):
 # ---------------------------------------------------------------------------
 # classification
 # ---------------------------------------------------------------------------
-EXEMPT, CORE, RESEARCH, FANOUT, UNLISTED, UNCAPPED = (
-    "exempt", "core", "research", "fanout", "unlisted", "uncapped")
+EXEMPT, CORE, RESEARCH, FANOUT, UNLISTED, UNCAPPED, CATALOG = (
+    "exempt", "core", "research", "fanout", "unlisted", "uncapped", "catalog")
 
 
 def classify(path, budgets):
@@ -327,6 +327,10 @@ def classify(path, budgets):
     rest = path[len("core-docs/"):]
     if rest == "DECISION_LOG.md":
         return EXEMPT, None
+    if rest == "DECISION_LOG_INDEX.md":
+        # growth-exempt routing catalog (D-0139): NO whole-file byte cap; per-row density +
+        # accretion tripwires still apply; the 40 KB re-layer trigger is a WARN, not a reject.
+        return CATALOG, None
     if rest.startswith("research/"):
         return RESEARCH, RESEARCH_BUDGET_KB * KB
     base = os.path.basename(rest)
@@ -386,7 +390,11 @@ def gate_one(unit, message, decision_log_text, doc_protocol_touched, findings, h
             findings.append(reject(path, "budget", measured=measured, budget=budget_bytes, delta=delta))
 
     # RE-LAYER TRIGGER (D-0094) -- independent of the s2 budget check above
-    if kind != EXEMPT and measured > RELAYER_THRESHOLD_BYTES:
+    if kind == CATALOG and measured > RELAYER_THRESHOLD_BYTES:
+        findings.append(warn(path, "relayer_catalog_40kb", measured=measured,
+                              budget=RELAYER_THRESHOLD_BYTES, delta=measured - RELAYER_THRESHOLD_BYTES,
+                              detail="routing catalog past the 40 KB re-layer threshold -- selective/hierarchical decision retrieval due (PROCESS_BACKLOG PB-6); do NOT slim old rows"))
+    elif kind != EXEMPT and measured > RELAYER_THRESHOLD_BYTES:
         if not (message and RELAYER_NOTE_RE.search(message)):
             findings.append(reject(path, "relayer_40kb", measured=measured,
                                     budget=RELAYER_THRESHOLD_BYTES,
