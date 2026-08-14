@@ -1,7 +1,14 @@
 # N8 -- MIGRATION-GATE RE-RUN PROTOCOL RE-FREEZE (PROPOSED)
 
-**STATUS: STAGED FOR NICHOLAS RATIFICATION (i52). NOT ratified; NO gate runs until it is.** Staged by
-Fanout Orchestrator i52 (Fable seat) per the D-0142 directive. Scope: the D-0140/N4 **bars are byte-
+**RATIFIED AS AMENDED 2026-08-14 as D-0144 (Nicholas):** Calls 1-4 as proposed; **Call 5 REPLACED** (C1+C2
+pin = Opus 4.8 Extra, the project default frontier tier; a runtime mismatch is recorded and STOPs
+adjudication before C begins -- no silent substitution; Fable 5 escalation ONLY if explicitly justified +
+frozen at staging before either arm runs; Opus 5 is not the default fallback/escalation tier); **plus the
+dual-counter accounting amendment** (retrieval/materialization bytes recorded SEPARATELY from model-visible
+bytes, never collapsed; the N4 0.7x bar unchanged on charged retrieval bytes) **and the two-class scope
+guard** (T-map/T-prose = minimum load-bearing classes for THIS migration decision, not a task taxonomy).
+The authoritative frozen rules live in `modules/44-project-map/eval/results/N8_RERUN_REFREEZE.md` + D-0144;
+this digest = the staged reasoning. Originally staged by Fanout Orchestrator i52 (Fable seat), D-0142/D-0143. Scope: the D-0140/N4 **bars are byte-
 unchanged** (boot absolute / total 0.7 x A / insufficiency void), and the I47 s1-s6 mechanics + s7
 quality floors carry forward; N8 freezes the **run protocol** for the next gate -- task pool, accounting
 conventions, pins, and checklist derivation -- the four things i51 had to resolve by bracketing or
