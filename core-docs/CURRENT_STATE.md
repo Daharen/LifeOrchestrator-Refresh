@@ -355,13 +355,13 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ## Next expected action
 
-**i52 CLOSED (D-0143..45):** #44 **0.4.0** shipped (`c6c58a8`: N5 doc-section/card granularity -- the i51 T1 cluster now 1.4-2.7 KB bounded queries vs 9.8-20.2 KB whole-doc opens; N6 canon claims + open_rulings render); **N7** close-refold ADOPTED + first-run (`ops/close-refold.ps1`; the final i52 commit = the fold; 0 stale on boot_read at HEAD); **N8** re-run protocol RATIFIED AS AMENDED (D-0144: two-class pool, GO needs BOTH; frozen listing/staged/sliced accounting; C pin Opus 4.8 Extra, mismatch = STOP pre-C; DUAL retrieval/materialization vs model-visible counters, never collapsed).
+**i54 CLOSED (D-0147):** SEALED_CHECK_47 evaluated (opened i>=54; integrity MATCH; 6/7 PASS, **SP3 doc-budget FAIL**: ARCHITECTURE_MAP 16.3KB blob > 15KB genuine + 3 docs over only on the wc-c/CRLF basis vs the enforced LF-blob gate). NOT all-pass -> file RETAINED; **M-03 reconcile mandate PROPOSED, DEFERRED by Nicholas** (priority = PB-7). AUDIT review done -> `review_due` i54->i56. Hygiene: close-refold `-Harvest` restamp fix + worker-template retrieval rail + boot_read trim (CURRENT_STATE+SEALED_CHECK_47).
 
-**NEXT = i54: evaluate SEALED_CHECK_47 FIRST (opens i>=54, D-0132), then the AUDIT_PIPELINE next_increment review co-scheduled with it (D-0137; design-first -> red-team).** i53 = the migration gate GO (D-0146): the PCB BOOT_PACKET is now the DEFAULT bootstrap (legacy handoff = fallback). Deferred (D-0134): #40 beam-width · PB-7 re-layer · PB-2 · F-i53-eff. P0-1 FROZEN.
+**NEXT = i55: PB-7 knowledge-surface re-layer** (D-0141; bounded-hot + indexed-cold across DECISION_LOG/CURRENT_STATE/index + PCB/memory engines; design-first -> red-team, Opus lane) **+ a standing per-session retrieval-byte monitor** (Sonnet lane). SP3 stays OPEN (M-03 deferred). Deferred (D-0134): #40 beam-width * PB-2. P0-1 activation FROZEN.
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades; `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-14 -- i52 (D-0143..45): #44 0.4.0 (N5+N6) shipped + folded under the first N7 close-refold; N8 ratified as amended (D-0144); legacy default; next = the i53 gate-staging decision.
+**Last updated:** 2026-08-14 -- i54 (D-0147): SEALED_CHECK_47 evaluated (SP3 doc-budget FAIL, M-03 mandate deferred, file retained); AUDIT review_due i54->i56; close-refold -Harvest fix + worker-template rail + boot_read trim; next = i55 PB-7 re-layer + retrieval-byte monitor.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

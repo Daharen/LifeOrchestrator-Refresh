@@ -61,7 +61,7 @@ if ($ReaffirmSpec -and (Test-Path -LiteralPath $ReaffirmSpec)) {
   foreach ($r in $spec) {
     $n++
     $ef = Join-Path $work ('env-reaffirm-{0:d3}.json' -f $n)
-    & $entry -Action reaffirm -Map $mapD -Entity $r.entity -Fields $r.fields -By $By -AtCommit $head 1> $ef
+    & $entry -Action reaffirm -Map $mapD -Harvest $hv -Entity $r.entity -Fields $r.fields -By $By -AtCommit $head 1> $ef
     if ($LASTEXITCODE -ne 0) { throw "reaffirm $($r.entity) crashed (exit $LASTEXITCODE)" }
     $er = Get-Content -Raw $ef | ConvertFrom-Json
     if ($er.status -ne 'ok') { throw "reaffirm $($r.entity) refused: $($er.error.code)" }

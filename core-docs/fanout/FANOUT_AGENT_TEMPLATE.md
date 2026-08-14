@@ -34,6 +34,7 @@ worker, paste it here verbatim.
 ## Rails (standing rules -- keep in every brief)
 
 - Read `core-docs/START_HERE.md` + `core-docs/CURRENT_STATE.md` first; obey `SKILL_CONTRACT.md`.
+- Prefer bounded PCB queries (`section:` / `card:` / `--q`) over whole-doc opens; charged retrieval bytes are the cost, so a whole-doc open is a last resort (D-0146 F-i53-eff).
 - Acquire res.lease(s) in **gpu -> git -> doc** order; release on exit. Whole-task gpu lease for any
   resident-model work.
 - Do ONE unit; never touch modules/areas outside the header's exclusive claim; `docs:[]`.
