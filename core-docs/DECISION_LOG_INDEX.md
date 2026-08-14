@@ -172,3 +172,4 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0143 | 2026-08-14 | provisional | i52 scoped: N5+N6 #44 lane dispatched; N7 close-time re-fold ADOPTED; N8 re-run re-freeze staged for Nicholas ratification |
 | D-0144 | 2026-08-14 | locked | N8 ratified AS AMENDED: C pin Opus 4.8 Extra (mismatch=STOP pre-C; Fable-5 escalation only pre-frozen); dual retrieval/model-visible counters; two-class scope guard |
 | D-0145 | 2026-08-14 | locked | i52 CLOSED: #44 0.4.0 accepted (N5 section/card + N6 canon); first N7 close-refold = the final i52 commit; fresh two-class gate stageable i53+ |
+| D-0146 | 2026-08-14 | locked | i53 fresh two-class gate = GO -> PCB BOOT_PACKET becomes the DEFAULT orchestrator bootstrap (legacy handoff = fallback); reverses the i51 NO-GO (supersedes D-0140/42/45) |

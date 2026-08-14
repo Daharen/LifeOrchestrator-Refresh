@@ -29,11 +29,11 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
   lever shipped i39 (D-0108; hpr ~2x; guaranteed+packet recall stay 1e6).
   Arc detail: the index; per-module state: `MODULE_ROADMAP.md`.
 - **P0-1 action-authorization gate (#43): `build_status=build_complete | p0_1_gate_status=PASS | activation_status=prohibited`.** #43 0.6.0 (`10d0d1e`, i42) is a RATIFIED DESIGN pass -- round-5 independent review PASS -> s7 `p0_1_gate_status=pass` (D-0118, M2-D, pack `6bb613ea`; arc detail D-0116/18). Verified x2 byte-identical (364/364; bundle `3b5d62f4`); A06 denies every authentic packet; `non_execution:true` holds. **Activation stays PROHIBITED** -- a design pass, NOT an activation grant.
-- **i47-i52 (D-0132..D-0145):** mandate-02 SUNSET (SEALED_CHECK_47 armed, open i>=54); i47 gate CONDITIONAL; i48 #44 0.2.0 (re-check FAILED, D-0136); i49 0.3.0 (N1-N3); i50 N4 bars re-frozen (D-0140); **i51 fresh gate NO-GO (D-0142:** floor-b constraint gap 1.0 + total 2.74x/1.12x A vs 0.7x; boot PASS); **i52 = the fix wave CLOSED (D-0143..45): #44 0.4.0 (N5 doc-section/card granularity + N6 canon + open_rulings render), N7 close-refold ADOPTED + first-run, N8 re-run protocol RATIFIED AS AMENDED (D-0144). LEGACY stays the default bootstrap; the fresh two-class gate is STAGEABLE (i53+).**
+- **i47-i52 (D-0132..D-0145):** mandate-02 SUNSET (SEALED_CHECK_47 armed, open i>=54); i47 gate CONDITIONAL; i48 #44 0.2.0 (re-check FAILED, D-0136); i49 0.3.0 (N1-N3); i50 N4 bars re-frozen (D-0140); **i51 fresh gate NO-GO (D-0142:** floor-b constraint gap 1.0 + total 2.74x/1.12x A vs 0.7x; boot PASS); **i52 = the fix wave CLOSED (D-0143..45): #44 0.4.0 (N5 doc-section/card granularity + N6 canon + open_rulings render), N7 close-refold ADOPTED + first-run, N8 re-run protocol RATIFIED AS AMENDED (D-0144). i53 = the fresh two-class gate RAN -> GO (D-0146): the PCB BOOT_PACKET is now the DEFAULT orchestrator bootstrap; legacy handoff = fallback.**
 - **FROZEN / deferred (D-0080):** durable-supervisor / warm-pool hardening (D-0079 GATE-NO stands; classic
   detached-warm is the trusted default); generator upgrades; `video.interpret` + live composition; deep
   real-time perception (arch 27-49); broad training.
-- **Fan-out loop:** 52 iterations run via `orchestrate.fanout` #30 over `res.lease` #29; workers hand-dispatched
+- **Fan-out loop:** 53 iterations run via `orchestrate.fanout` #30 over `res.lease` #29; workers hand-dispatched
   into fresh Cowork sessions. Ledger + wave model: **`FANOUT_ORCHESTRATOR_HANDOFF.md`**.
 - **Boundary (D-0051, amended by D-0080):** the orchestrator never drives another *external/frontier* AI session
   (human-couriered only); a deterministic LOCAL coordinator IS authorized to spawn local contexts (Priority 10).
@@ -357,7 +357,7 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 **i52 CLOSED (D-0143..45):** #44 **0.4.0** shipped (`c6c58a8`: N5 doc-section/card granularity -- the i51 T1 cluster now 1.4-2.7 KB bounded queries vs 9.8-20.2 KB whole-doc opens; N6 canon claims + open_rulings render); **N7** close-refold ADOPTED + first-run (`ops/close-refold.ps1`; the final i52 commit = the fold; 0 stale on boot_read at HEAD); **N8** re-run protocol RATIFIED AS AMENDED (D-0144: two-class pool, GO needs BOTH; frozen listing/staged/sliced accounting; C pin Opus 4.8 Extra, mismatch = STOP pre-C; DUAL retrieval/materialization vs model-visible counters, never collapsed).
 
-**NEXT = i53 (Nicholas call): STAGE + RUN the fresh two-class migration gate** (`modules/44-project-map/eval/results/N8_RERUN_REFREEZE.md` + `N4_BAR_REFREEZE.md`; pool + keys frozen at staging; stage at HEAD -- N7 in-sync), **or the deferred menu** (D-0134): AUDIT next_increment (review_due i54, w/ the sealed check) · #40 beam-width (i48+i51 packs = input) · PB-7 re-layer · PB-2. P0-1 FROZEN; SEALED_CHECK_47 sealed (open i>=54).
+**NEXT = i54: evaluate SEALED_CHECK_47 FIRST (opens i>=54, D-0132), then the AUDIT_PIPELINE next_increment review co-scheduled with it (D-0137; design-first -> red-team).** i53 = the migration gate GO (D-0146): the PCB BOOT_PACKET is now the DEFAULT bootstrap (legacy handoff = fallback). Deferred (D-0134): #40 beam-width · PB-7 re-layer · PB-2 · F-i53-eff. P0-1 FROZEN.
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades; `video.interpret` + live composition; deep real-time perception; broad training).
 

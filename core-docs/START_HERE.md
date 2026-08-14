@@ -3,11 +3,15 @@
 **You are a fresh Claude instance joining Life Orchestrator (near-term "local skills" track).**
 Read this first. It routes you; it does not contain the project's substance.
 
-> **ACTIVE WORK:** the fan-out loop (21 iterations done, D-0055..D-0076). If you are the **fan-out
-> orchestrator**, read `core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md` -- the ONE live handoff -- and start
-> there. If you are a dispatched **worker**, read the brief you were pointed at
+> **ACTIVE WORK:** the fan-out loop (53 iterations run). **Orchestrator boot = the PCB (D-0146, i53 migration GO).**
+> If you are the **fan-out orchestrator** working on disk, boot from
+> `modules/44-project-map/generated/BOOT_PACKET.md` FIRST -- run its step-0 (`project_map.py verify` /
+> `query stale`), then expand by progressive disclosure (L0 map -> L1 `card:` -> L2 `section:`/`--q` queries).
+> `core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md` is now the FALLBACK + deep-reference (operational mechanics +
+> gotchas the packet points into) and the context for Project-mirror / desktop-less sessions that cannot reach
+> the generated packet. If you are a dispatched **worker**, read the brief you were pointed at
 > (`core-docs/fanout/FANOUT_AGENT_00N.md` / Project `claude/fanout/`) and execute exactly that unit.
-> Current status lives in `CURRENT_STATE.md`, not here.
+> Live status: the PCB overlay + `CURRENT_STATE.md`.
 
 ## What this project is (one line)
 
@@ -44,8 +48,9 @@ git, and `archive/` (indexed by `archive/ARCHIVE_INDEX.md`). There is exactly ON
 **Always read (hot context for any session):**
 1. `PROJECT_DIRECTION.md` -- the doctrine and long-term direction.
 2. `CURRENT_STATE.md` -- what actually exists right now (it names the active work).
-3. The **active work order**: for module work, `modules/<NN>-<name>/WORK_ORDER.md`; for the fan-out loop,
-   `FANOUT_ORCHESTRATOR_HANDOFF.md` (orchestrator) or your `fanout/FANOUT_AGENT_00N.md` brief (worker).
+3. The **active work order**: for module work, `modules/<NN>-<name>/WORK_ORDER.md`; for the fan-out loop, the
+   PCB `modules/44-project-map/generated/BOOT_PACKET.md` (orchestrator; the handoff is the fallback) or your
+   `fanout/FANOUT_AGENT_00N.md` brief (worker).
 
 **Read only when relevant:**
 - `MODULE_ROADMAP.md` -- build order + your module's entry (do not ingest whole).
