@@ -24,10 +24,10 @@ describe NOW and stay ingestable whole; history is never deleted, it moves to la
 | FANOUT_ORCHESTRATOR_HANDOFF.md | THE one live handoff: orchestrator ops + current frontier | 24 KB |
 | CURRENT_STATE.md | reality NOW: phase, active work, box, deps, models, tests table, live gotchas | 34 KB |
 | DECISION_LOG.md | append-only rationale | no cap (indexed; tool-pull only) |
-| DECISION_LOG_INDEX.md | one compressed routing row per decision (id, date, state, ~160-char label; see its header rules) -- GROWTH-EXEMPT routing catalog (D-0139): grows losslessly, NO whole-file cap; per-row density is the guard; whole-file re-layer-pending at ~40 KB (PB-6) | growth-exempt |
+| DECISION_LOG_INDEX.md | one compressed routing row per decision (header rules) -- GROWTH-EXEMPT (D-0139): no whole-file cap; per-row density is the guard; re-layer ~40 KB (PB-7) | growth-exempt |
 | MODULE_ROADMAP.md | build order, per-module status, deferred follow-ons, portability backlog | 37 KB |
 | PROCESS_BACKLOG.md | cross-cutting process / tooling / doc-hygiene backlog (router; per-module follow-ons stay in MODULE_ROADMAP) | 8 KB |
-| SEALED_CHECK_47.md | sealed metastability predicates (D-0132; evaluate at i>=54 then archive; a new mandate exists only if re-licensed) | 4 KB |
+| SEALED_CHECK_47.md | sealed metastability predicates (D-0132; evaluate at i>=54 then archive) | 4 KB |
 | TOOL_MODEL_REGISTRY.md | tool/model/hardware/storage registry (lookup, not story) | 43 KB |
 | REVIEW_QUEUE.md | queue schema, conventions, producer/consumer table, open design flags | 15 KB |
 | PROJECT_DIRECTION.md | doctrine (stable) | 9 KB |
@@ -52,7 +52,7 @@ D-entry naming the current-truth content that needs the room** -- never by silen
 
 **Over-budget action ("you bust it, you slim it"):** the session whose edit pushes a doc over budget slims
 it in that same session -- snapshot the pre-slim doc to `archive/doc-snapshots/<date>/`, compress history to
-D-refs, re-check size. Check sizes at every mirror: `wc -c core-docs/*.md` (device_bash) takes seconds. **Mechanized i42 (D-0117):** the fail-closed `ops/audit/doc-commit-gate.py` pre-commit gate enforces these s2 budgets + the s3 accretion rules at commit time. **Cumulative classes re-layer, not slim (D-0141):** for an inherently cumulative surface (registries / catalogs / ledgers / histories -- PB-7) repeated cap pressure is a RE-LAYER TRIGGER, not indefinite compression -- record its conversion (PB-7), bound the hot view, do not degrade it; genuinely read-whole artifacts still slim.
+D-refs, re-check size. Check sizes at every mirror: `wc -c core-docs/*.md` (device_bash) takes seconds. **Mechanized i42 (D-0117):** the fail-closed `ops/audit/doc-commit-gate.py` pre-commit gate enforces these s2 budgets + the s3 accretion rules at commit time. **Cumulative classes re-layer, not slim (D-0141):** for an inherently cumulative surface (PB-7) repeated cap pressure is a RE-LAYER TRIGGER, not indefinite compression -- bound the hot view, do not degrade it; genuinely read-whole artifacts still slim.
 
 ## 3. Accretion rules (hot docs)
 
@@ -83,8 +83,7 @@ D-refs, re-check size. Check sizes at every mirror: `wc -c core-docs/*.md` (devi
   forbidden (D-0066 retired the last of them).
 - At the end of an orchestrator session: copy the outgoing handoff to
   `archive/handoffs/<date>-FANOUT_ORCHESTRATOR_HANDOFF.md` (same commit), then rewrite the live doc in
-  place for the next orchestrator: update the TL;DR, ledger (add this session's line), frontier section,
-  box state; keep it under budget.
+  place for the next orchestrator: update TL;DR / ledger / frontier / box state; keep it under budget.
 
 ## 6. Fan-out agent briefs (slots)
 
@@ -134,5 +133,9 @@ D-refs, re-check size. Check sizes at every mirror: `wc -c core-docs/*.md` (devi
    fanout briefs (section 6).
 5. Size check: `wc -c core-docs/*.md` -- anything over budget gets slimmed NOW (section 2).
 6. Commit named docs via the executor under the `git` lease (trailers; never `git add -A`).
-7. Re-mirror changed docs to the Project (section 8 map); delete Project mirrors only per section 8.
-8. Stop. One scoped unit per session.
+7. N7 re-fold (D-0143): after the LAST doc commit of ANY close (incl. doc-only), run
+   `ops/close-refold.ps1` via the executor (harvest at HEAD -> reviewed reaffirms -> validate 0 ->
+   render + -Check); commit map/ + generated/ as the FINAL close commit (RT1-F11). Accept: 0 stale
+   on the overlay boot_read set at HEAD.
+8. Re-mirror changed docs to the Project (section 8 map); delete Project mirrors only per section 8.
+9. Stop. One scoped unit per session.
