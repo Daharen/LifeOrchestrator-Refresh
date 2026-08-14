@@ -363,5 +363,5 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ---
 
-**Last updated:** 2026-08-14 -- i54 (D-0147): SEALED_CHECK_47 evaluated (SP3 doc-budget FAIL, M-03 mandate deferred, file retained); AUDIT review_due i54->i56; close-refold -Harvest fix + worker-template rail + boot_read trim; next = i55 PB-7 re-layer + retrieval-byte monitor.
+**Last updated:** 2026-08-14 -- i54 + D-0148 follow-on: SEALED_CHECK_47 evaluated (SP3 FAIL, M-03 deferred, file retained); AUDIT review_due i56; close-refold FULLY repaired (-Harvest + reaffirm_batch one-process, clobber killed); FANOUT_AGENT_001 = PB-7 READY; next = i55 PB-7 re-layer + retrieval-byte monitor.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

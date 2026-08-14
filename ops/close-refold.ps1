@@ -52,19 +52,26 @@ if ($Mode -eq 'verify') {
   exit 0
 }
 
-# 3. reaffirms (reviewed list; empty spec = no restamps needed this close)
+# 3. reaffirms (reviewed list; empty spec = no restamps needed this close).
+#    D-0147 follow-on: run the WHOLE reviewed spec in ONE process via reaffirm_batch.py. The prior
+#    per-entity subprocess loop raced ACROSS PROCESSES on the whole-file map writes (a later reaffirm
+#    reloaded a stale meta.json and clobbered earlier restamps), so most restamps silently did not
+#    persist. One process = synchronous in-process load/write = correct accumulation.
 $n = 0
 if ($ReaffirmSpec -and (Test-Path -LiteralPath $ReaffirmSpec)) {
-  $spec = @()
   $specRaw = Get-Content -Raw -LiteralPath $ReaffirmSpec | ConvertFrom-Json
-  if ($null -ne $specRaw) { $spec = @($specRaw) }
-  foreach ($r in $spec) {
-    $n++
-    $ef = Join-Path $work ('env-reaffirm-{0:d3}.json' -f $n)
-    & $entry -Action reaffirm -Map $mapD -Harvest $hv -Entity $r.entity -Fields $r.fields -By $By -AtCommit $head 1> $ef
-    if ($LASTEXITCODE -ne 0) { throw "reaffirm $($r.entity) crashed (exit $LASTEXITCODE)" }
+  $n = @($specRaw).Count
+  if ($n -gt 0) {
+    # resolve python as Invoke-ProjectMap.ps1 does (exclude WindowsApps Store stubs, D-0129)
+    $pyCands = @((Get-Command python3 -ErrorAction SilentlyContinue), (Get-Command python -ErrorAction SilentlyContinue)) |
+      Where-Object { $_ -and ($_.Source -notmatch 'WindowsApps') }
+    $py = if ($pyCands) { @($pyCands)[0].Source } else { 'python' }
+    $batch = Join-Path $m44 'reaffirm_batch.py'
+    $ef = Join-Path $work 'env-reaffirm-batch.json'
+    & $py $batch --map $mapD --harvest $hv --spec $ReaffirmSpec --by $By --at-commit $head 1> $ef
+    if ($LASTEXITCODE -ne 0) { throw "reaffirm-batch crashed (exit $LASTEXITCODE)" }
     $er = Get-Content -Raw $ef | ConvertFrom-Json
-    if ($er.status -ne 'ok') { throw "reaffirm $($r.entity) refused: $($er.error.code)" }
+    if ($er.status -ne 'ok') { throw "reaffirm-batch refused: $($er.error.code)" }
   }
 }
 Write-Output ("close-refold: reaffirmed={0}" -f $n)
