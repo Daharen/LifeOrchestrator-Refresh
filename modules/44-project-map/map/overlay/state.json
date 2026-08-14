@@ -1,5 +1,5 @@
 {
- "at_commit": "5d46731269b819648ef7e883ec83daf9af86699e",
+ "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
  "boot_read": [
   {
    "kind": "other",
@@ -26,24 +26,24 @@
     "pointer": "core-docs/SEALED_CHECK_47.md"
    },
    {
-    "gate": "deferred D-0134",
-    "item": "#40 context.compile beam-WIDTH follow-on (fast-beam residual scale lever; i48 A/B packs = design input)",
-    "pointer": "MODULE_ROADMAP.md #40"
+    "gate": "STAGEABLE (N8 ratified D-0144; N5-N7 landed i52)",
+    "item": "fresh two-class migration gate: T-map + T-prose under the N4 bars + the N8 protocol",
+    "pointer": "modules/44-project-map/eval/results/N8_RERUN_REFREEZE.md"
+   },
+   {
+    "gate": "deferred D-0134 / D-0141",
+    "item": "PB-7 knowledge-surface re-layer (subsumes PB-6): bounded-hot + indexed-cold",
+    "pointer": "core-docs/PROCESS_BACKLOG.md"
    },
    {
     "gate": "deferred D-0134",
-    "item": "M2-C / FO-3 docs-into-memory re-layer",
-    "pointer": "core-docs/PROCESS_BACKLOG.md"
+    "item": "#40 context.compile beam-WIDTH follow-on (i48 + i51 packs = design input)",
+    "pointer": "MODULE_ROADMAP.md #40"
    },
    {
     "gate": "deferred D-0134",
     "item": "PB-2 (trigger-gated backlog item)",
     "pointer": "core-docs/PROCESS_BACKLOG.md"
-   },
-   {
-    "gate": "requires Nicholas ratification at next gate staging",
-    "item": "N4 BOOT/total-ingest bar RE-FREEZE (the frozen s7 bars are dead post-CD-1)",
-    "pointer": "modules/44-project-map/eval/results/I48_RECHECK_RESULTS.md"
    },
    {
     "gate": "review_due i54 (D-0137 override)",
@@ -56,11 +56,11 @@
     "pointer": "widgets/08-live-run-audit-pathway"
    }
   ],
-  "derived_from": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md s4 + the D-0134 deferred menu at 5d46731269b819648ef7e883ec83daf9af86699e (N4 per D-0136).",
-  "next_iteration": 50,
-  "summary": "i49 CLOSED: project.map 0.3.0 shipped the D-0136 efficiency mechanisms (N1 narrative queries, N2 frontier richness, N3 verb table); the PCB serves module purposes + SCHEMA_NOTES sections as bounded queries. i50: N4 bar re-freeze (Nicholas ratification) before any fresh gate; else the deferred menu."
+  "derived_from": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md s4 at the i52 docs-close commit (D-0145).",
+  "next_iteration": 53,
+  "summary": "i52 closed the D-0142 fix set: N5-N7 LANDED, N8 RATIFIED (D-0144). The fresh migration gate is STAGEABLE: run it under the D-0140/N4 bars + the D-0144/N8 protocol; GO requires every bar met on BOTH tasks. Else the deferred menu (D-0134)."
  },
- "iteration": 49,
+ "iteration": 52,
  "open_rulings": [
   {
    "ref": "decision:D-0134",
@@ -69,7 +69,7 @@
  ],
  "phase": {
   "ref": "doc:core-docs/CURRENT_STATE.md",
-  "text": "Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; i47 migration gate CONDITIONAL, legacy default; i49 shipped project.map 0.3.0 (PCB efficiency)."
+  "text": "Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; i51 gate NO-GO -> i52 shipped the N5-N8 fix set (project.map 0.4.0); legacy default."
  },
  "prohibitions": [
   {

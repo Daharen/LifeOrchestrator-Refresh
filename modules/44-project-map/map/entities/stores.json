@@ -10,7 +10,7 @@
    "skeleton": false,
    "sources": [
     {
-     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
      "by": "lane-B-i46",
      "fields": [
       "one_line"
@@ -19,6 +19,14 @@
       {
        "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
        "by": "orchestrator-i48-close"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
       },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
@@ -34,10 +42,10 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
+     "sha256": "b5d1230d6c070b95269b81af77504d003676703042b4be1fd0613ca1581bcaa3"
     },
     {
-     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
      "by": "orchestrator-i46-fold",
      "fields": [
       "plane_primary",
@@ -49,6 +57,14 @@
        "by": "orchestrator-i48-close"
       },
       {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -62,7 +78,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
+     "sha256": "b5d1230d6c070b95269b81af77504d003676703042b4be1fd0613ca1581bcaa3"
     }
    ]
   },
@@ -74,7 +90,7 @@
    "one_line": "DECISION_LOG.md (append-only rationale) + DECISION_LOG_INDEX.md (one routing row per decision) -- the project's locked-decision record.",
    "sources": [
     {
-     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
      "by": "lane-B-i46",
      "fields": [
       "one_line"
@@ -83,6 +99,14 @@
       {
        "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
        "by": "orchestrator-i48"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
       },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
@@ -98,7 +122,7 @@
       }
      ],
      "ref": "core-docs/DOC_PROTOCOL.md",
-     "sha256": "b8763900f844e6493187ed22a21cd817598c88ca7a2f4d1f346e86b71739e759"
+     "sha256": "1f220b0d55391605e431f4310c162518c2c0cd37f21a1d539ab80adc05604756"
     }
    ]
   },
@@ -112,7 +136,7 @@
    "skeleton": false,
    "sources": [
     {
-     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
      "by": "lane-B-i46",
      "fields": [
       "one_line"
@@ -121,6 +145,14 @@
       {
        "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
        "by": "orchestrator-i48-close"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
       },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
@@ -136,10 +168,10 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
+     "sha256": "b5d1230d6c070b95269b81af77504d003676703042b4be1fd0613ca1581bcaa3"
     },
     {
-     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
      "by": "orchestrator-i46-fold",
      "fields": [
       "plane_primary",
@@ -151,6 +183,14 @@
        "by": "orchestrator-i48-close"
       },
       {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -164,7 +204,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
+     "sha256": "b5d1230d6c070b95269b81af77504d003676703042b4be1fd0613ca1581bcaa3"
     }
    ]
   },
@@ -176,7 +216,7 @@
    "one_line": "modules/29-resource-lease/runtime/leases/: the filesystem TTL lease directory (gpu/git/doc:<path>) res.lease (#29) owns.",
    "sources": [
     {
-     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
      "by": "lane-B-i46",
      "fields": [
       "one_line"
@@ -189,6 +229,14 @@
       {
        "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
        "by": "orchestrator-i48"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
       },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
@@ -204,7 +252,7 @@
       }
      ],
      "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
-     "sha256": "0f7e8fcbc91f8f6b95fe6dfac55df721150a2f566443f9733b6f420272978f07"
+     "sha256": "182db0eac4d83459c016b8df1a001989a9d2e98fac14502ac8d28f71416ef415"
     }
    ]
   },
@@ -216,7 +264,7 @@
    "one_line": "models.json under model.gateway (#7): the machine-specific registry of staged local models/quants/engine builds/tiers.",
    "sources": [
     {
-     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
      "by": "lane-B-i46",
      "fields": [
       "one_line"
@@ -229,6 +277,14 @@
       {
        "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
        "by": "orchestrator-i48"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
       },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
@@ -244,7 +300,7 @@
       }
      ],
      "ref": "core-docs/CURRENT_STATE.md",
-     "sha256": "23e65d6cbc432674c44a549919384bae3ef12ba928788a48a1b045f6d5be45ab"
+     "sha256": "f74c3cf2bcb7be601fbc90a377529313c57492d3a1ecca13a5f8544f5b5a3b31"
     }
    ]
   },
@@ -256,7 +312,7 @@
    "one_line": "modules/30-orchestrate-fanout/runtime/plans/<plan_id>/: the per-wave plan/worker/report directory orchestrate.fanout (#30) owns.",
    "sources": [
     {
-     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
      "by": "lane-B-i46",
      "fields": [
       "one_line"
@@ -269,6 +325,14 @@
       {
        "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
        "by": "orchestrator-i48"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
       },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
@@ -284,7 +348,7 @@
       }
      ],
      "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
-     "sha256": "0f7e8fcbc91f8f6b95fe6dfac55df721150a2f566443f9733b6f420272978f07"
+     "sha256": "182db0eac4d83459c016b8df1a001989a9d2e98fac14502ac8d28f71416ef415"
     }
    ]
   },
@@ -296,7 +360,7 @@
    "one_line": "The append-only jsonl review queue classify.batch (#8) produces and review.processor (#9) drains + rewrites in place.",
    "sources": [
     {
-     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
      "by": "lane-B-i46",
      "fields": [
       "one_line"
@@ -305,6 +369,14 @@
       {
        "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
        "by": "orchestrator-i48-close"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
       },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
@@ -320,7 +392,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
+     "sha256": "b5d1230d6c070b95269b81af77504d003676703042b4be1fd0613ca1581bcaa3"
     }
    ]
   }

@@ -5,6 +5,81 @@
    "deeper": [
     {
      "kind": "decision",
+     "ref": "decision:D-0125"
+    },
+    {
+     "kind": "other",
+     "ref": "core-docs/AUDIT_PIPELINE.md"
+    }
+   ],
+   "display_name": "Audit-increment red-team gate (non-optional)",
+   "id": "ops:boot-audit-redteam-gate",
+   "ns": "ops",
+   "one_line": "Audit increments are design-first -> red-team-gated, NEVER OPTIONAL; A3+ (enters/pauses the pipeline) gates mandatory; the D-0126 poser was the one exception.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "26e5261cd1bed495737c1edd03eb1b91cc9489e5",
+     "by": "PCB-N5N6-i52",
+     "fields": [
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "core-docs/AUDIT_PIPELINE.md",
+     "sha256": "316995ae519af150e903a07da852841fd3d292ac904d76df48c08ba1cd39d0ab"
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "decision",
+     "ref": "decision:D-0117"
+    },
+    {
+     "kind": "other",
+     "ref": "ops/audit/doc-commit-gate.py"
+    }
+   ],
+   "display_name": "Doc budgets + fail-closed commit gate (K5)",
+   "id": "ops:boot-doc-budgets",
+   "ns": "ops",
+   "one_line": "DOC_PROTOCOL s2 doc budgets are ENFORCED: the fail-closed pre-commit gate ops/audit/doc-commit-gate.py REFUSES violating core-doc commits (M2-A/PB-1, D-0117).",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "26e5261cd1bed495737c1edd03eb1b91cc9489e5",
+     "by": "PCB-N5N6-i52",
+     "fields": [
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "core-docs/DOC_PROTOCOL.md",
+     "sha256": "1f220b0d55391605e431f4310c162518c2c0cd37f21a1d539ab80adc05604756"
+    },
+    {
+     "at_commit": "26e5261cd1bed495737c1edd03eb1b91cc9489e5",
+     "by": "PCB-N5N6-i52",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "ops/audit/doc-commit-gate.py",
+     "sha256": "08369090cd2a2394bcfaf399c06d2ee6056d415d1a85341279abb49770c4817c"
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "decision",
      "ref": "decision:D-0077"
     }
    ],
@@ -76,6 +151,48 @@
    "deeper": [
     {
      "kind": "decision",
+     "ref": "decision:D-0132"
+    },
+    {
+     "kind": "other",
+     "ref": "core-docs/SEALED_CHECK_47.md"
+    }
+   ],
+   "display_name": "Mandate-02 sunset state (K6)",
+   "id": "ops:boot-mandate-sunset",
+   "ns": "ops",
+   "one_line": "Mandate-02 is SUNSET -- NO live process mandate; SEALED_CHECK_47 armed, opens i>=54; the M2-A commit gate + PB triggers + cadence headers + monitor SURVIVE.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "26e5261cd1bed495737c1edd03eb1b91cc9489e5",
+     "by": "PCB-N5N6-i52",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/CURRENT_STATE.md",
+     "sha256": "f74c3cf2bcb7be601fbc90a377529313c57492d3a1ecca13a5f8544f5b5a3b31"
+    },
+    {
+     "at_commit": "26e5261cd1bed495737c1edd03eb1b91cc9489e5",
+     "by": "PCB-N5N6-i52",
+     "fields": [
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "core-docs/SEALED_CHECK_47.md",
+     "sha256": "778ae66ec53375188c4662d8f25d49faeb972b4a3a2bb8a49e63f3fa65f2b499"
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "decision",
      "ref": "decision:D-0055"
     },
     {
@@ -90,7 +207,7 @@
    "plane_primary": "capability",
    "sources": [
     {
-     "at_commit": "f1de00c759bf390e53e1870450c086163d1c8f1e",
+     "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
      "by": "cd-lane-i48",
      "fields": [
       "deeper",
@@ -102,10 +219,18 @@
       {
        "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
        "by": "orchestrator-i48-close"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
       }
      ],
      "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
-     "sha256": "0f7e8fcbc91f8f6b95fe6dfac55df721150a2f566443f9733b6f420272978f07"
+     "sha256": "182db0eac4d83459c016b8df1a001989a9d2e98fac14502ac8d28f71416ef415"
     }
    ],
    "status": "mvp-complete"
@@ -151,6 +276,35 @@
    "confidence": "established",
    "deeper": [
     {
+     "kind": "decision",
+     "ref": "decision:D-0064"
+    }
+   ],
+   "display_name": "UI live-GUI confirm rule (D-0064)",
+   "id": "ops:boot-ui-live-confirm",
+   "ns": "ops",
+   "one_line": "D-0064 FULL STRENGTH: ANY UI change needs a HUMAN live-GUI confirm BEFORE it is called done -- no softening; mock/API gates miss rendered-UI defects.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "26e5261cd1bed495737c1edd03eb1b91cc9489e5",
+     "by": "PCB-N5N6-i52",
+     "fields": [
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "core-docs/CURRENT_STATE.md",
+     "sha256": "f74c3cf2bcb7be601fbc90a377529313c57492d3a1ecca13a5f8544f5b5a3b31"
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
      "kind": "other",
      "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md#s4"
     },
@@ -166,7 +320,7 @@
    "plane_primary": "capability",
    "sources": [
     {
-     "at_commit": "f1de00c759bf390e53e1870450c086163d1c8f1e",
+     "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
      "by": "cd-lane-i48",
      "fields": [
       "one_line"
@@ -175,10 +329,18 @@
       {
        "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
        "by": "orchestrator-i48-close"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
       }
      ],
      "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
-     "sha256": "0f7e8fcbc91f8f6b95fe6dfac55df721150a2f566443f9733b6f420272978f07"
+     "sha256": "182db0eac4d83459c016b8df1a001989a9d2e98fac14502ac8d28f71416ef415"
     },
     {
      "at_commit": "f1de00c759bf390e53e1870450c086163d1c8f1e",
@@ -193,6 +355,14 @@
       {
        "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
        "by": "orchestrator-i48-close"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
       }
      ],
      "ref": "modules/30-orchestrate-fanout/FANOUT_PROTOCOL.md",
@@ -225,7 +395,7 @@
    "skeleton": false,
    "sources": [
     {
-     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
      "by": "lane-B-i46",
      "fields": [
       "one_line",
@@ -235,13 +405,21 @@
       {
        "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
        "by": "orchestrator-i48"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
       }
      ],
      "ref": "core-docs/PROCESS_BACKLOG.md",
-     "sha256": "40a6024759ad7f6e51bbaa8a6bdb6adf6390f20f8af846acb0b0bb5232efa586"
+     "sha256": "e48a840f3d163e83ed40652a232247b459f5b6f5316dc494c47690e515291a77"
     },
     {
-     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
      "by": "orchestrator-i46-fold",
      "fields": [
       "skeleton"
@@ -250,13 +428,21 @@
       {
        "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
        "by": "orchestrator-i48"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
       }
      ],
      "ref": "core-docs/PROCESS_BACKLOG.md",
-     "sha256": "40a6024759ad7f6e51bbaa8a6bdb6adf6390f20f8af846acb0b0bb5232efa586"
+     "sha256": "e48a840f3d163e83ed40652a232247b459f5b6f5316dc494c47690e515291a77"
     },
     {
-     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
      "by": "harvest_v1",
      "fields": [
       "*"
@@ -265,10 +451,18 @@
       {
        "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
        "by": "orchestrator-i48"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
       }
      ],
      "ref": "ops/audit/doc-commit-gate.py",
-     "sha256": "75efd2b147dca7feedc752c5bbb1728c26dce0b9d850e35144a0de7946776d11"
+     "sha256": "08369090cd2a2394bcfaf399c06d2ee6056d415d1a85341279abb49770c4817c"
     }
    ],
    "status": "mvp-complete"
@@ -293,7 +487,7 @@
    "skeleton": false,
    "sources": [
     {
-     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
      "by": "lane-B-i46",
      "fields": [
       "one_line",
@@ -305,6 +499,14 @@
        "by": "orchestrator-i48-close"
       },
       {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -318,10 +520,10 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
+     "sha256": "b5d1230d6c070b95269b81af77504d003676703042b4be1fd0613ca1581bcaa3"
     },
     {
-     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
      "by": "orchestrator-i46-fold",
      "fields": [
       "skeleton"
@@ -332,6 +534,14 @@
        "by": "orchestrator-i48-close"
       },
       {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -345,7 +555,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
+     "sha256": "b5d1230d6c070b95269b81af77504d003676703042b4be1fd0613ca1581bcaa3"
     },
     {
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
@@ -357,6 +567,14 @@
       {
        "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
        "by": "orchestrator-i48-close"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
       },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
@@ -398,7 +616,7 @@
    "skeleton": false,
    "sources": [
     {
-     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
      "by": "lane-B-i46",
      "fields": [
       "one_line",
@@ -410,6 +628,14 @@
        "by": "orchestrator-i48-close"
       },
       {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -423,10 +649,10 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
+     "sha256": "b5d1230d6c070b95269b81af77504d003676703042b4be1fd0613ca1581bcaa3"
     },
     {
-     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
      "by": "orchestrator-i46-fold",
      "fields": [
       "skeleton"
@@ -437,6 +663,14 @@
        "by": "orchestrator-i48-close"
       },
       {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -450,7 +684,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
+     "sha256": "b5d1230d6c070b95269b81af77504d003676703042b4be1fd0613ca1581bcaa3"
     },
     {
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
@@ -462,6 +696,14 @@
       {
        "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
        "by": "orchestrator-i48-close"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
       },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
@@ -502,7 +744,7 @@
    "skeleton": false,
    "sources": [
     {
-     "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
+     "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
      "by": "lane-B-i46",
      "fields": [
       "one_line",
@@ -512,6 +754,14 @@
       {
        "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
        "by": "orchestrator-i48-close"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
       },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
@@ -527,10 +777,10 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
+     "sha256": "b5d1230d6c070b95269b81af77504d003676703042b4be1fd0613ca1581bcaa3"
     },
     {
-     "at_commit": "11416a87e36b40f79f5ccbdce9a44b20cce8e67a",
+     "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
      "by": "orchestrator-i46-fold",
      "fields": [
       "deeper",
@@ -543,6 +793,14 @@
        "by": "orchestrator-i48-close"
       },
       {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+       "by": "orchestrator-i52"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -556,7 +814,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "8f6b9d3e7fb2aa6aa59e6a6d236c4a6e9c37a00fa88d4e916555ee1be93362e2"
+     "sha256": "b5d1230d6c070b95269b81af77504d003676703042b4be1fd0613ca1581bcaa3"
     }
    ],
    "status": "in-progress"
