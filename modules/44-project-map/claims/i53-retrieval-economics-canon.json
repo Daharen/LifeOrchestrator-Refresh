@@ -1,0 +1,37 @@
+{
+ "at_commit": "40c967a4e6351c853b23e47e0738c86d58580356",
+ "by": "orchestrator-i53",
+ "entities": [
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "other",
+     "ref": "modules/44-project-map/eval/results/I53_RESULTS.md"
+    }
+   ],
+   "display_name": "Retrieval economics (F-i53-eff)",
+   "id": "ops:boot-retrieval-economics",
+   "ns": "ops",
+   "one_line": "Prefer bounded queries (section:/card:/--q) over whole-doc opens; charged retrieval bytes are the cost, so a whole-doc open is a last resort (D-0146).",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "40c967a4e6351c853b23e47e0738c86d58580356",
+     "by": "orchestrator-i53",
+     "fields": [
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "modules/44-project-map/eval/results/I53_RESULTS.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  }
+ ],
+ "relationships": [],
+ "schema": "lifeorch.map_claims/0.1"
+}
