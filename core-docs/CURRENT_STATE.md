@@ -29,11 +29,11 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
   lever shipped i39 (D-0108; hpr ~2x; guaranteed+packet recall stay 1e6).
   Arc detail: the index; per-module state: `MODULE_ROADMAP.md`.
 - **P0-1 action-authorization gate (#43): `build_status=build_complete | p0_1_gate_status=PASS | activation_status=prohibited`.** #43 0.6.0 (`10d0d1e`, i42) is a RATIFIED DESIGN pass -- round-5 independent review PASS -> s7 `p0_1_gate_status=pass` (D-0118, M2-D, pack `6bb613ea`; arc detail D-0116/18). Verified x2 byte-identical (364/364; bundle `3b5d62f4`); A06 denies every authentic packet; `non_execution:true` holds. **Activation stays PROHIBITED** -- a design pass, NOT an activation grant.
-- **i47-i51 (D-0132..D-0142):** mandate-02 SUNSET (YES; SEALED_CHECK_47 armed, open i>=54); the i47 gate = **CONDITIONAL**; i48 shipped **#44 0.2.0** (CD-1+CD-3) but its re-check FAILED (D-0136, B 1.24x A); **i49 shipped 0.3.0** (N1+N2+N3; D-0138); **i50 RATIFIED the N4 bar re-freeze (D-0140)** (absolute boot + 0.7xA total on query-output + insufficiency void); and **i51 RAN the fresh gate (T1; full A/B/C1/C2) = NO-GO (D-0142):** quality floor (b) breached (B constraint 3.0 v 4.0, both adjudicators) + TOTAL missed (2.74x/1.12x A vs 0.7x; BOOT PASS). **LEGACY stays the default bootstrap; i52 = the N5-N8 fix wave.**
+- **i47-i52 (D-0132..D-0145):** mandate-02 SUNSET (SEALED_CHECK_47 armed, open i>=54); i47 gate CONDITIONAL; i48 #44 0.2.0 (re-check FAILED, D-0136); i49 0.3.0 (N1-N3); i50 N4 bars re-frozen (D-0140); **i51 fresh gate NO-GO (D-0142:** floor-b constraint gap 1.0 + total 2.74x/1.12x A vs 0.7x; boot PASS); **i52 = the fix wave CLOSED (D-0143..45): #44 0.4.0 (N5 doc-section/card granularity + N6 canon + open_rulings render), N7 close-refold ADOPTED + first-run, N8 re-run protocol RATIFIED AS AMENDED (D-0144). LEGACY stays the default bootstrap; the fresh two-class gate is STAGEABLE (i53+).**
 - **FROZEN / deferred (D-0080):** durable-supervisor / warm-pool hardening (D-0079 GATE-NO stands; classic
   detached-warm is the trusted default); generator upgrades; `video.interpret` + live composition; deep
   real-time perception (arch 27-49); broad training.
-- **Fan-out loop:** 51 iterations run via `orchestrate.fanout` #30 over `res.lease` #29; workers hand-dispatched
+- **Fan-out loop:** 52 iterations run via `orchestrate.fanout` #30 over `res.lease` #29; workers hand-dispatched
   into fresh Cowork sessions. Ledger + wave model: **`FANOUT_ORCHESTRATOR_HANDOFF.md`**.
 - **Boundary (D-0051, amended by D-0080):** the orchestrator never drives another *external/frontier* AI session
   (human-couriered only); a deterministic LOCAL coordinator IS authorized to spawn local contexts (Priority 10).
@@ -132,7 +132,7 @@ registry facts: `TOOL_MODEL_REGISTRY.md`. Roster (all MVP-complete unless noted)
   byte-identical back to 0.7.0) · #41 skill.card 0.2.0 · #42 working.memory 0.1.0 (per-task store, CAS heads,
   ns isolation) · **#43 action.authz 0.4.0** (P0-1 deny-by-default reference monitor + injection suite;
   DESIGN-ONLY; exact-closure-complete, gate incomplete pending ratification — see Phase).
-- **#44 `project.map` 0.3.0** (i49, D-0138; i46 base D-0130/31) -- the PCB: fail-closed map/claims/boot-packet compiler + OPERATIONS boot canon + N1 narrative query surface (purpose + SCHEMA_NOTES section) + short-form/alias queries + N2 overlay frontier + N3 verb table. `MODULE_ROADMAP.md` #44.
+- **#44 `project.map` 0.4.0** (i52, D-0145; base D-0130/31) -- the PCB: fail-closed map/claims/boot-packet compiler + OPERATIONS canon (i52 N6 + open_rulings render) + narrative queries (purpose; `section:` over SCHEMA_NOTES/doc entities/deeper pointers; `card:`) + alias/short-forms + overlay frontier + single-source verb table. `MODULE_ROADMAP.md` #44.
 - **NOT built:** #26 agent.coding — designed + DEFERRED (D-0037; no safe code-exec substrate on this box).
 - **Widgets (native + `launch.bat`, D-0038):** 01 Local Agent Console · 02 Module Launcher · 03 Verification
   Console (durable verdicts, D-0065) · 04 Fan-out Wave Dashboard (live-GUI confirm DONE) · 05 Provenance Map
@@ -247,7 +247,7 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 | #43 action.authz | **0.6.0 (i42): the 3 round-4 exact closures (F5/F4/F2 -- seam detail D-0116/18); suite x2 exit 0 byte-identical (364/364, mutations 69/69, fuzzer 400/0, oracle 152 not_run=0, role 30/30, completion 21/21, views 64/64); empty-dir self-verify VERIFIED (3b5d62f4); taxonomy=`pass` (D-0118 round-5 PASS, pack 6bb613ea; activation prohibited)** | `10d0d1e` | 08-08 |
 | widgets/05 / 06 / 07 | 100/100+STA 8/8 · 85/85+98/98 -Live (STA 9/9) · 81 cloud + 93 -Live (STA 8/8) — live-GUI confirm DONE i43 | `3ad71d3`/`c912854`/`855c242` | 08-05..08 |
 | widgets/08 LRAP | **87/0/0 -Live (i45): read-only replay pathway; every SELFTEST_*_OK (incl. RECONCILE/DESCEND/INTERACT/READONLY/LAYOUT); five-fixture machine classify 0 FP/FN (mis-route->s3, dropped->s4, wrong-record->s6, clean+quirk consistent); byte-identical re-render; read-only + i33 sanitization fail-closed; real #40 render; orchestrator INDEPENDENT re-verify** | `a88e177`/`6028b9c` | 08-08 |
-| #44 project.map | **0.3.0 (i49): 130/130 x3 interpreters (py3.11/3.10/3.12; +n1-purpose/n1-section/n2-frontier/n3-verbtable); fold VALIDATE 0; CD-3 probes RESOLVE; verb-table==dispatcher; -Live Folded green** | `c0c3abe` | 08-12 |
+| #44 project.map | **0.4.0 (i52): 169/169 x3 interpreters + pwsh + on-box; negatives 33/33; N5 replays 1.4-2.7 KB vs 9.8-31.5 KB raw; canon string-asserted; verb-table==dispatcher; fold VALIDATE 0; -Live Folded green** | `c6c58a8` | 08-14 |
 | D-0077 cross-module folds | i34 smoke 38/38 · i36 Tier-1 11/11 (`tier1_accepted=TRUE`) · i38/i39 18/18 · i40/i41 fold-i39 exit 0 · **i42: fold-i39 vs 0.6.0 exit 0 + i34 38/38 + the independent #43 suite x2 byte-identical (3b5d62f4); i45: widgets/08 pinned 06/07 adapter + cross-widget contract test green in the independent -Live 87/0/0** | `runtime/smoke-i34.py`/`fold-i39.py` | 08-08 |
 
 ## Known failures / gotchas
@@ -355,13 +355,13 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ## Next expected action
 
-**i51 (D-0142):** the fresh legacy-vs-PCB gate RAN under the D-0140 bars (T1; full A/B/C1/C2; EVAL_SHA `ef70a57`) -> **NO-GO**: quality floor (b) breached (B constraint 3.0 v 4.0, both adjudicators) + TOTAL missed under both accountings (2.74x/1.12x A vs 0.7x; BOOT PASS; VOID clean). Mechanisms F1-F4: prose-governing docs not query-granular; map stale at doc-only closes; packet canon gaps; unfrozen accounting conventions. Record: `modules/44-project-map/eval/results/I51_RESULTS.md`.
+**i52 CLOSED (D-0143..45):** #44 **0.4.0** shipped (`c6c58a8`: N5 doc-section/card granularity -- the i51 T1 cluster now 1.4-2.7 KB bounded queries vs 9.8-20.2 KB whole-doc opens; N6 canon claims + open_rulings render); **N7** close-refold ADOPTED + first-run (`ops/close-refold.ps1`; the final i52 commit = the fold; 0 stale on boot_read at HEAD); **N8** re-run protocol RATIFIED AS AMENDED (D-0144: two-class pool, GO needs BOTH; frozen listing/staged/sliced accounting; C pin Opus 4.8 Extra, mismatch = STOP pre-C; DUAL retrieval/materialization vs model-visible counters, never collapsed).
 
-**NEXT = i52 (Nicholas directive: fix this iteration's issues, move toward GO):** ONE #44 coding lane ships **N5** (doc-section/`card:` query granularity) + **N6** (OPERATIONS canon extension per I51_RESULTS s7); the orchestrator lands **N7** (close-time #44 re-fold, incl. doc-only closes) + stages **N8** (re-run re-freeze: two-class task pool + accounting conventions; NICHOLAS RATIFICATION). Then a fresh gate stages. Deferred (D-0134): #40 beam-width (i48+i51 packs = design input); M2-C/FO-3 re-layer (PB-7); AUDIT (i54, D-0137); PB-2. P0-1 FROZEN; SEALED_CHECK_47 sealed (open i>=54).
+**NEXT = i53 (Nicholas call): STAGE + RUN the fresh two-class migration gate** (`modules/44-project-map/eval/results/N8_RERUN_REFREEZE.md` + `N4_BAR_REFREEZE.md`; pool + keys frozen at staging; stage at HEAD -- N7 in-sync), **or the deferred menu** (D-0134): AUDIT next_increment (review_due i54, w/ the sealed check) · #40 beam-width (i48+i51 packs = input) · PB-7 re-layer · PB-2. P0-1 FROZEN; SEALED_CHECK_47 sealed (open i>=54).
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades; `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-14 -- i51 (D-0142): fresh PCB gate NO-GO (floor-b constraint gap + total 2.74x/1.12x vs 0.7x; boot PASS); legacy stays default; i52 = N5/N6/N7 fix wave + N8 ratification.
+**Last updated:** 2026-08-14 -- i52 (D-0143..45): #44 0.4.0 (N5+N6) shipped + folded under the first N7 close-refold; N8 ratified as amended (D-0144); legacy default; next = the i53 gate-staging decision.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

@@ -171,3 +171,4 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0142 | 2026-08-14 | locked | i51 fresh PCB gate under N4 bars = NO-GO (floor-b constraint gap 1.0 + total 2.74x/1.12x A vs 0.7x; boot PASS; void clean); legacy default; i52 = N5 prose-granularity + N6 canon + N7 close-currency + N8 re-run re-freeze |
 | D-0143 | 2026-08-14 | provisional | i52 scoped: N5+N6 #44 lane dispatched; N7 close-time re-fold ADOPTED; N8 re-run re-freeze staged for Nicholas ratification |
 | D-0144 | 2026-08-14 | locked | N8 ratified AS AMENDED: C pin Opus 4.8 Extra (mismatch=STOP pre-C; Fable-5 escalation only pre-frozen); dual retrieval/model-visible counters; two-class scope guard |
+| D-0145 | 2026-08-14 | locked | i52 CLOSED: #44 0.4.0 accepted (N5 section/card + N6 canon); first N7 close-refold = the final i52 commit; fresh two-class gate stageable i53+ |
