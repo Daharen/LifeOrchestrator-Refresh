@@ -7,28 +7,15 @@
   },
   {
    "kind": "other",
-   "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md"
-  },
-  {
-   "kind": "other",
    "ref": "core-docs/SEALED_CHECK_47.md"
-  },
-  {
-   "kind": "other",
-   "ref": "core-docs/START_HERE.md"
   }
  ],
  "frontier": {
   "candidates": [
    {
-    "gate": "SEALED -- open only at i>=54 (D-0132)",
-    "item": "SEALED_CHECK_47 evaluation",
+    "gate": "OPEN (D-0147; M-03 mandate DEFERRED)",
+    "item": "SEALED_CHECK_47 SP3 doc-budget regression -- ARCHITECTURE_MAP over 15KB; basis + gate-blind-spot reconcile; re-run to archive the seal",
     "pointer": "core-docs/SEALED_CHECK_47.md"
-   },
-   {
-    "gate": "deferred D-0134 / D-0141",
-    "item": "PB-7 knowledge-surface re-layer (bounded-hot + indexed-cold)",
-    "pointer": "core-docs/PROCESS_BACKLOG.md"
    },
    {
     "gate": "deferred D-0134",
@@ -41,13 +28,18 @@
     "pointer": "core-docs/PROCESS_BACKLOG.md"
    },
    {
-    "gate": "efficiency follow-on (D-0146 F-i53-eff)",
-    "item": "steer PCB retrieval to section:/card: fetches over whole-doc opens on prose tasks",
+    "gate": "i55 lane (D-0141; Nicholas priority)",
+    "item": "PB-7 knowledge-surface re-layer (bounded-hot + indexed-cold across DECISION_LOG/CURRENT_STATE/index + PCB/memory engines); design-first -> red-team",
+    "pointer": "core-docs/PROCESS_BACKLOG.md"
+   },
+   {
+    "gate": "i55 lane (D-0147)",
+    "item": "standing per-session retrieval-byte monitor (make the gate's A/B efficiency number a per-wave measurement)",
     "pointer": "modules/44-project-map/eval/results/I53_RESULTS.md"
    },
    {
-    "gate": "review_due i54 (D-0137)",
-    "item": "AUDIT_PIPELINE next_increment (the audit front-step; design-first -> red-team)",
+    "gate": "review_due i56 (D-0147)",
+    "item": "AUDIT_PIPELINE next_increment (raw-prompt FRONT step; design-first -> red-team)",
     "pointer": "core-docs/AUDIT_PIPELINE.md s5"
    },
    {
@@ -56,12 +48,16 @@
     "pointer": "widgets/08-live-run-audit-pathway"
    }
   ],
-  "derived_from": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md s4 + DECISION_LOG D-0146 at the i53 close.",
-  "next_iteration": 54,
-  "summary": "i53 = the fresh two-class migration gate GO (D-0146); the PCB BOOT_PACKET is now the DEFAULT orchestrator bootstrap. NEXT = i54: evaluate SEALED_CHECK_47 (opens i>=54) FIRST, then the AUDIT_PIPELINE next_increment review co-scheduled with it (D-0137)."
+  "derived_from": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md s4 + DECISION_LOG D-0147 at the i54 close.",
+  "next_iteration": 55,
+  "summary": "i54 CLOSED: SEALED_CHECK_47 evaluated (integrity MATCH; 6/7 PASS, SP3 doc-budget FAIL) -> file RETAINED, M-03 reconcile mandate PROPOSED but DEFERRED by Nicholas; AUDIT review done, review_due i54->i56 (D-0147). NEXT = i55: PB-7 knowledge-surface re-layer (token-endurance; design-first -> red-team, Opus) + a standing per-session retrieval-byte monitor (Sonnet)."
  },
- "iteration": 53,
+ "iteration": 54,
  "open_rulings": [
+  {
+   "ref": "decision:D-0132",
+   "text": "SEALED_CHECK_47 (D-0132) SP3 doc-budget regression OPEN, recorded D-0147: 4 core-docs over budget_KB x1000 by wc-c (ARCHITECTURE_MAP genuinely over both bases; 3 others CRLF-artifact, under the enforced LF-blob gate); the M-03 reconcile mandate was proposed but DEFERRED by Nicholas; the sealed file is retained until SP3 re-passes"
+  },
   {
    "ref": "decision:D-0134",
    "text": "widgets/08 poser explain-window cannot be closed after the fact -- fix at the next w08 touch (a UI change: the D-0064 live-GUI confirm cycle applies)"
@@ -69,7 +65,7 @@
  ],
  "phase": {
   "ref": "doc:core-docs/CURRENT_STATE.md",
-  "text": "Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; i53 migration gate GO (D-0146) -> the PCB BOOT_PACKET is now the DEFAULT orchestrator bootstrap (legacy handoff = fallback)."
+  "text": "Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; PCB BOOT_PACKET is the DEFAULT orchestrator bootstrap (D-0146; legacy handoff = fallback). i54: SEALED_CHECK_47 evaluated (SP3 doc-budget regression open, M-03 mandate deferred); NEXT = PB-7 token-endurance re-layer + a retrieval-byte monitor."
  },
  "prohibitions": [
   {
@@ -91,11 +87,6 @@
    "authority": "decision:D-0119",
    "status": "live",
    "text": "No orchestrator-driven external/frontier AI sessions; frontier material is human-couriered; in-session cloud subagents ARE permitted"
-  },
-  {
-   "authority": "decision:D-0132",
-   "status": "live",
-   "text": "SEALED_CHECK_47 stays SEALED -- evaluate ONLY at iteration >= 54, after any due report, BEFORE wave work"
   }
  ],
  "schema": "lifeorch.map_overlay/0.1"
