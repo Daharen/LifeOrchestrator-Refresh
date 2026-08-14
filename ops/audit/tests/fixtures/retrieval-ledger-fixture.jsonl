@@ -1,0 +1,8 @@
+{"kind":"boot_packet","target":"modules/44-project-map/generated/BOOT_PACKET.md","bytes":17265}
+{"kind":"section","target":"core-docs/DOC_PROTOCOL.md#2. The doc set","bytes":2600}
+{"kind":"card","target":"module:44/project.map","bytes":1600}
+{"kind":"query","target":"entity:module:36/artifact.search","bytes":1900}
+{"kind":"whole_doc_open","target":"core-docs/AUDIT_PIPELINE.md","bytes":20384}
+
+{"kind":"whole_doc_open","target":"core-docs/DECISION_LOG.md","bytes":638000}
+{"kind":"whole_doc_open","target":"core-docs/START_HERE.md","bytes":5423,"note":"boot orientation"}

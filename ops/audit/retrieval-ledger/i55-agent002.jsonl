@@ -1,0 +1,14 @@
+{"kind":"whole_doc_open","target":"core-docs/fanout/FANOUT_AGENT_002.md","bytes":4907}
+{"kind":"whole_doc_open","target":"core-docs/CURRENT_STATE.md","bytes":34319}
+{"kind":"whole_doc_open","target":"core-docs/DOC_PROTOCOL.md","bytes":12091}
+{"kind":"whole_doc_open","target":"core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md","bytes":24093}
+{"kind":"whole_doc_open","target":"ops/audit/gen-doc-health.py","bytes":17646}
+{"kind":"whole_doc_open","target":"modules/44-project-map/eval/results/I53_RESULTS.md","bytes":9457}
+{"kind":"whole_doc_open","target":"ops/audit/README.md","bytes":3778}
+{"kind":"whole_doc_open","target":"ops/audit/tests/test_gen_doc_health_hook.py","bytes":4858}
+{"kind":"boot_packet","target":"modules/44-project-map/generated/BOOT_PACKET.md","bytes":17753}
+{"kind":"whole_doc_open","target":"modules/44-project-map/eval/results/EFFICIENCY-i53.md","bytes":4210}
+{"kind":"whole_doc_open","target":"modules/00-bootstrap-executor/exec-job.sh","bytes":5613}
+{"kind":"whole_doc_open","target":"modules/00-bootstrap-executor/Invoke-DevShip.ps1","bytes":17044}
+{"kind":"whole_doc_open","target":"ops/run-tests.bat","bytes":303}
+{"kind":"whole_doc_open","target":"ops/gen-doc-health.bat","bytes":241}

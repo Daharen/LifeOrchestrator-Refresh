@@ -58,3 +58,58 @@ python ops/audit/tests/test_gen_doc_health_hook.py
 ```
 
 Pure stdlib (`unittest` + a throwaway real git repo per test, no fixtures outside these files).
+
+## gen-retrieval-monitor.py -- standing per-wave retrieval-byte monitor (i55, PB-7 observability half)
+
+Turns the migration gate's one-shot A/B charged-retrieval-byte number (D-0146 F-i53-eff; the byte-charging
+method in `modules/44-project-map/eval/results/I53_RESULTS.md` + `EFFICIENCY-i53.md`) into a STANDING
+per-wave measurement: one row per close in `ops/out/retrieval-bytes-log.jsonl`, mirroring
+`gen-doc-health.py`'s row-per-close pattern. Read-only over its input; writes nothing but the appended row.
+
+It does not observe retrieval itself (an agent's opens aren't filesystem state the way doc sizes are) -- it
+rolls up a session's self-reported LEDGER (one JSON line per open; the RETRIEVAL PROTOCOL: "RECORD every
+open in your ledger"). The rollup arithmetic is deterministic (sums + a fraction), no model judgement.
+
+```
+python ops/audit/gen-retrieval-monitor.py --ledger <path> --iteration <N> [--date YYYY-MM-DD]
+                                           [--repo PATH] [--out-dir PATH]
+```
+
+**Ledger schema** (JSONL, one open per line, written by the agent as it works):
+`{"kind": "boot_packet"|"section"|"card"|"query"|"whole_doc_open", "target": "<id/path/query form>",
+"bytes": <int > 0>, "note": "<optional>"}`. `boot_packet` = the PCB BOOT_PACKET.md read (N4 BOOT bar
+20,000 B). `section`/`card`/`query` = a bounded `project_map.py query --q` fetch -- the retrieval the
+RETRIEVAL PROTOCOL steers agents toward. `whole_doc_open` = a full-file ingest, charged its on-disk byte
+size. Unknown keys/kind, a non-object line, or a non-positive-int `bytes` are FAIL-CLOSED: the whole run
+rejects (exit 1) and nothing is appended -- a bad ledger must not silently mis-count.
+
+**Output row:** `{date, iteration, boot_packet_bytes, total_charged_bytes, whole_doc_open_bytes,
+bounded_query_bytes, bounded_fraction, whole_doc_opens[{target,bytes,warnings?}], n_queries,
+boot_packet_bar{limit_bytes,status}, warnings[{target,bytes,reasons}], ledger_entries, ledger_source}`.
+`bounded_fraction` = bounded-query bytes / total charged bytes (null when total is 0). A `whole_doc_open` of
+a re-layer-eligible cumulative doc (`DECISION_LOG.md`/`DECISION_LOG_INDEX.md`) or of anything > 40,000 B
+(the DOC_PROTOCOL s2 re-layer trigger) is a WARN in `warnings`, never a reject -- exit code stays 0.
+
+**Exit codes:** `0` row emitted; `1` ledger content rejected (fail-closed, nothing written); `2` usage/I-O
+error (e.g. ledger file not found).
+
+**Run at wave close, alongside `gen-doc-health.py`** (see `FANOUT_ORCHESTRATOR_HANDOFF.md` s4 wave loop):
+after the wave's per-session ledgers land under `ops/audit/retrieval-ledger/i<N>-<worker>.jsonl`, run this
+script once per ledger (or a merged per-wave ledger) with `--iteration <N>`. `ops/gen-retrieval-monitor.bat`
+is the click-to-run wrapper (mirrors `ops/gen-doc-health.bat`). First real row: i55, FANOUT_AGENT_002's own
+construction session -- `ops/audit/retrieval-ledger/i55-agent002.jsonl` (14 opens, all `whole_doc_open` +
+one `boot_packet`, 0 bounded queries; `bounded_fraction=0.0`). Honest first finding: this build session
+reproduced F-i53-eff's pattern -- it defaulted to whole-doc opens (including of the BOOT_PACKET itself)
+rather than `section:`/`card:` fetches, even though PB-7/i53 both flag bounded fetches as the cheaper path.
+No WARN fired (nothing here is a cumulative doc or over 40 KB) but the 0% bounded fraction is the kind of
+drift this monitor exists to catch early, wave over wave, rather than only at the next migration gate.
+
+### Tests
+
+```
+python ops/audit/tests/test_retrieval_byte_monitor.py
+```
+
+Pure stdlib (`unittest` + a checked-in fixture ledger at `ops/audit/tests/fixtures/retrieval-ledger-fixture.jsonl`,
+covering all 5 kinds, a blank-line skip, and a double-WARN case). Includes a double-run byte-identical gate
+(two independent runs against the same fixture ledger produce the identical row).
