@@ -121,10 +121,11 @@ total-guard ladder degrades -- section 3 (SYSTEM AT A GLANCE) hard-degrades firs
 OPERATIONS compress to level 1, then to its **min floor** (level 2 = one collapsed pointer line that
 still names each canon slug and one descent pointer). Boot-critical canon compresses but never vanishes.
 
-## Query set (closed, WO s3.6; i49 adds `section` + `entity --fields` serve)
+## Query set (closed, WO s3.6; i49 adds `section` + `entity --fields`; i52 extends `section` + adds `card`)
 
 `entity:<id>` | `edges:<id>` | `redges:<id>` | `evidence:<id>` | `deeper:<id>[:kind]` |
-`section:<id>#<heading>` | `stale` | `alias:<text>` | `changed-since --paths-file <f>` (the caller
+`section:<id>#<heading>` (i52: also `section:doc:<path>#<sel>` and `section:<id>:<kind>#<sel>`) |
+`card:<id>` | `stale` | `alias:<text>` | `changed-since --paths-file <f>` (the caller
 precomputes the changed-path list with `git diff --name-only <sha>`, keeping git out of the worker,
 RT1-F21). Anything else is `UNSUPPORTED_QUERY`. The closed verb set is a SINGLE machine-readable
 declaration (`QUERY_VERBS`) that BOTH gates the dispatcher AND renders the BOOT_PACKET RETRIEVAL
@@ -201,7 +202,9 @@ granularity, so a thorough boot does bounded queries instead of grepping the raw
   the exact heading text after the leading `#`s, whitespace-normalized (collapsed + stripped) on both
   sides, case-sensitive; the section spans that heading line to the next heading of the SAME-OR-
   SHALLOWER level (so nested sub-headings are included) or EOF. The body is BOUNDED to
-  `SECTION_FETCH_MAX` (8000) bytes (`truncated:true` when clipped). **Target resolution (N1(3)):** an
+  `SECTION_FETCH_MAX` (6600) bytes (`truncated:true` when clipped; the cap keeps the whole query
+  OUTPUT envelope <= 8,000 B -- the i49 doc said "(8000)", a doc error corrected at i52; the CODE
+  constant was 6600 at i49 and is unchanged). **Target resolution (N1(3)):** an
   authored `deeper[kind=schema-notes]` PATH pointer is preferred (the section fetch is that pointer's
   natural resolution); otherwise the target is `modules/<dir>/SCHEMA_NOTES.md` derived from harvest.
   **Refusals reuse the EXISTING closed codes:** an unresolved id, a module with no SCHEMA_NOTES, or a
@@ -218,6 +221,74 @@ F3). An overlay with NO rich candidates renders BYTE-IDENTICAL to 0.2.0. The fro
 to the section-4 soft budget (levels 0=full, 1=trim, 2=one collapsed count+gates line) and has a
 documented **total-guard ladder position: it degrades AFTER section 3 and BEFORE OPERATIONS** -- so
 OPERATIONS still degrades LAST, and the packet stays <= 20,000 B HARD.
+
+### Doc-section + card granularity (i52 N5, D-0142 F1)
+
+The i51 gate showed the T1 answer living in PROSE governing docs (AUDIT_PIPELINE cadence header /
+s5 / s6; the LRAP design digest; the w08 WORK_ORDER follow-ons) that the PCB served only as
+whole-doc opens. N5 extends the EXISTING `section:` verb -- no new query names -- to three target
+classes, and adds `card:<id>`:
+
+**`section:` targets (resolution order per FORM, not guesswork):**
+
+1. **Bare form on a non-doc entity** (`section:<id>#<sel>`): the i49 SCHEMA_NOTES resolution,
+   **byte-identical** (deeper[schema-notes] pointer preferred, else harvested
+   `modules/<dir>/SCHEMA_NOTES.md`). An ATX-matched result carries EXACTLY the 0.3.0 keys.
+2. **Bare form on a `doc:` entity** (`section:doc:<repo-path>#<sel>`): the doc's OWN file -- the id
+   key IS the repo path (core-docs AND mapped research docs). Result marks `target:"doc-entity"`.
+3. **Deeper-pointer form** (`section:<id>:<kind>#<sel>`, mirrors `deeper:<id>[:kind]`): serves the
+   file behind the entity's typed `deeper[]` pointer. **Closed serve kinds**
+   `SECTION_SERVE_KINDS = readme|research|schema-notes|work-order`; any other deeper kind refuses
+   `UNSUPPORTED_QUERY` (they are pointer classes, not servable files). When several pointers of the
+   kind exist, the **lexicographically-first path ref** serves (deeper[] is canonically
+   (kind,ref)-sorted, so this is the file order -- deterministic). Result marks
+   `target:"deeper[<kind>]"`. Short forms compose (`section:widget:90:work-order#...`).
+
+**Selector precedence:** the ATX exact-heading match runs FIRST (i49 semantics, unchanged). When NO
+ATX heading matches, a **bold-label fallback** runs: a line-leading `**<bold text>**` paragraph
+matches when the selector equals its LABEL = the bold text up to the first `(` or `:` (whitespace-
+normalized, case-sensitive; the full bold text also matches); the block spans that line to the next
+ATX heading of ANY level, the next bold-label line, or EOF; first match wins. This makes governing-
+doc TOP blocks -- e.g. `section:doc:core-docs/AUDIT_PIPELINE.md#Cadence header` -- query-servable
+(the i51 T1 cluster's highest-value bytes are exactly such a block). A bold-label result carries
+`selector:"bold-label"` + `level:0`; a fetch that matches neither refuses the existing
+`DANGLING_REF`. All targets: repo-READ-ONLY, CRLF->LF sha-stamped, body bounded to
+`SECTION_FETCH_MAX` with the head+tail clip marker.
+
+**`card:<id>`** (needs `--harvest`; `--map` only, no repo reads) serves ONE rendered L1 card,
+**content-matching the committed plane file by construction**: the plane `L1_CARDS_*` files and the
+card query BOTH render through the single `_l1_card_lines()` source (test-asserted block-equal
+against the golden plane file). Includes the STALE marker (hence `--harvest`); result carries
+`{id, group, plane_file, harvest_commit, bytes, truncated, text}`; body bounded to `CARD_FETCH_MAX`
+(5000). Short forms resolve with the `resolved` echo; an unknown id refuses `DANGLING_REF`; missing
+`--harvest` refuses `UNSUPPORTED_QUERY`. An agent never opens a 31 KB plane file for one card.
+
+### OPERATIONS canon extension + open_rulings render (i52 N6, D-0142 F3/K10)
+
+`claims/i52-n6-canon-claims.json` (by `PCB-N5N6-i52`; ingested by the orchestrator at fold) extends
+the boot canon with four `ops:boot-*` entities, each evidence-pointed at its owner doc: the
+**D-0064 rule AT FULL STRENGTH** (ANY UI change needs a HUMAN live-GUI confirm BEFORE it is called
+done -- no softening; the i51 B-arm relaxed this to "ship not blocked"), the **K5 doc budgets +
+fail-closed commit gate** (DOC_PROTOCOL s2; `ops/audit/doc-commit-gate.py` REFUSES violating
+core-doc commits), the **mandate-02 SUNSET state** (NO live process mandate; SEALED_CHECK_47 armed,
+opens i>=54; the M2-A gate + PB triggers + cadence headers + monitor SURVIVE the sunset), and the
+**NON-OPTIONAL red-team gate** for audit increments (design-first -> red-team-gated; A3+ mandatory;
+D-0126 poser = the one recorded exception). The claims file also maps the LRAP design digest as a
+`doc:` entity (unlocking its N5 section fetch) and adds the `decision:D-0064` meta stub.
+
+**Render changes:** the OVERLAY section now renders **every `open_rulings[]` entry with its ref**
+(`- <text> (<ref>)` under `OPEN RULINGS`) -- the K10 drop was a rider present in overlay/state.json
+yet absent from the packet. Ladder position: like PROHIBITIONS, open rulings are NEVER
+ladder-degraded; only frontier candidates trim inside section 4. `SECTION_BUDGETS["ops"]` rose
+**2000 -> 3000** so all 9 canon one_lines render VERBATIM at level 0 (at 2000 the level-1 trim
+would truncate canon at 96 chars and could cut the D-0064 phrasing); OPERATIONS keeps its
+**degrades-LAST** total-guard position and the 20,000 B packet HARD cap is unchanged.
+
+**Canon content tests (the i48 CD-1 pattern, extended):** every canon ops one_line is asserted
+VERBATIM in the golden BOOT_PACKET (single-sourced from the claims file, so fixture and fold cannot
+drift), plus named required sub-tokens AND a forbidden-token list; a negative test renders a
+softened D-0064 phrasing ("ship not blocked...") and MUST FAIL the canon check. The fixture overlay
+carries an open ruling so the rulings render path is golden-tested.
 
 ### RETRIEVAL PROTOCOL verb table (i49 N3)
 

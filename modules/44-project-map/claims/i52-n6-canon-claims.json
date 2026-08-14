@@ -1,0 +1,190 @@
+{
+ "at_commit": "26e5261cd1bed495737c1edd03eb1b91cc9489e5",
+ "by": "PCB-N5N6-i52",
+ "entities": [
+  {
+   "confidence": "established",
+   "display_name": "D-0064",
+   "id": "decision:D-0064",
+   "ns": "decision",
+   "one_line": "i11 Verification Console UX ship -- the live-GUI-confirm lesson source: mock/API gates missed a rendered-UI defect found only by human GUI use.",
+   "sources": [
+    {
+     "at_commit": "26e5261cd1bed495737c1edd03eb1b91cc9489e5",
+     "by": "PCB-N5N6-i52",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "2026-08-08-i45-lrap-design.md",
+   "id": "doc:core-docs/research/2026-08-08-i45-lrap-design.md",
+   "ns": "doc",
+   "one_line": "LRAP i45 build design digest (w08): pipeline spine, four-lane render, per-step HONESTY MAP (s3a), poser + acceptance -- the T1 prose cluster's design source.",
+   "sources": [
+    {
+     "at_commit": "26e5261cd1bed495737c1edd03eb1b91cc9489e5",
+     "by": "PCB-N5N6-i52",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/research/2026-08-08-i45-lrap-design.md",
+     "sha256": null
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "decision",
+     "ref": "decision:D-0125"
+    },
+    {
+     "kind": "other",
+     "ref": "core-docs/AUDIT_PIPELINE.md"
+    }
+   ],
+   "display_name": "Audit-increment red-team gate (non-optional)",
+   "id": "ops:boot-audit-redteam-gate",
+   "ns": "ops",
+   "one_line": "Audit increments are design-first -> red-team-gated, NEVER OPTIONAL; A3+ (enters/pauses the pipeline) gates mandatory; the D-0126 poser was the one exception.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "26e5261cd1bed495737c1edd03eb1b91cc9489e5",
+     "by": "PCB-N5N6-i52",
+     "fields": [
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "core-docs/AUDIT_PIPELINE.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "decision",
+     "ref": "decision:D-0117"
+    },
+    {
+     "kind": "other",
+     "ref": "ops/audit/doc-commit-gate.py"
+    }
+   ],
+   "display_name": "Doc budgets + fail-closed commit gate (K5)",
+   "id": "ops:boot-doc-budgets",
+   "ns": "ops",
+   "one_line": "DOC_PROTOCOL s2 doc budgets are ENFORCED: the fail-closed pre-commit gate ops/audit/doc-commit-gate.py REFUSES violating core-doc commits (M2-A/PB-1, D-0117).",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "26e5261cd1bed495737c1edd03eb1b91cc9489e5",
+     "by": "PCB-N5N6-i52",
+     "fields": [
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "core-docs/DOC_PROTOCOL.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "26e5261cd1bed495737c1edd03eb1b91cc9489e5",
+     "by": "PCB-N5N6-i52",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "ops/audit/doc-commit-gate.py",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "decision",
+     "ref": "decision:D-0132"
+    },
+    {
+     "kind": "other",
+     "ref": "core-docs/SEALED_CHECK_47.md"
+    }
+   ],
+   "display_name": "Mandate-02 sunset state (K6)",
+   "id": "ops:boot-mandate-sunset",
+   "ns": "ops",
+   "one_line": "Mandate-02 is SUNSET -- NO live process mandate; SEALED_CHECK_47 armed, opens i>=54; the M2-A commit gate + PB triggers + cadence headers + monitor SURVIVE.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "26e5261cd1bed495737c1edd03eb1b91cc9489e5",
+     "by": "PCB-N5N6-i52",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/CURRENT_STATE.md",
+     "sha256": null
+    },
+    {
+     "at_commit": "26e5261cd1bed495737c1edd03eb1b91cc9489e5",
+     "by": "PCB-N5N6-i52",
+     "fields": [
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "core-docs/SEALED_CHECK_47.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "decision",
+     "ref": "decision:D-0064"
+    }
+   ],
+   "display_name": "UI live-GUI confirm rule (D-0064)",
+   "id": "ops:boot-ui-live-confirm",
+   "ns": "ops",
+   "one_line": "D-0064 FULL STRENGTH: ANY UI change needs a HUMAN live-GUI confirm BEFORE it is called done -- no softening; mock/API gates miss rendered-UI defects.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "26e5261cd1bed495737c1edd03eb1b91cc9489e5",
+     "by": "PCB-N5N6-i52",
+     "fields": [
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "core-docs/CURRENT_STATE.md",
+     "sha256": null
+    }
+   ],
+   "status": "mvp-complete"
+  }
+ ],
+ "relationships": [],
+ "schema": "lifeorch.map_claims/0.1"
+}

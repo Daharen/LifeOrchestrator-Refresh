@@ -5,6 +5,16 @@
     "gamma-widget"
    ],
    "confidence": "established",
+   "deeper": [
+    {
+     "kind": "research",
+     "ref": "core-docs/research/2026-08-08-i45-lrap-design.md"
+    },
+    {
+     "kind": "work-order",
+     "ref": "widgets/90-gamma/WORK_ORDER.md"
+    }
+   ],
    "display_name": "gamma",
    "id": "widget:90/gamma",
    "ns": "widget",
@@ -16,6 +26,7 @@
      "by": "lane-B-i46",
      "fields": [
       "aliases",
+      "deeper",
       "one_line",
       "plane_primary",
       "status"

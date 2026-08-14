@@ -2,6 +2,81 @@
  "items": [
   {
    "confidence": "established",
+   "deeper": [
+    {
+     "kind": "decision",
+     "ref": "decision:D-0125"
+    },
+    {
+     "kind": "other",
+     "ref": "core-docs/AUDIT_PIPELINE.md"
+    }
+   ],
+   "display_name": "Audit-increment red-team gate (non-optional)",
+   "id": "ops:boot-audit-redteam-gate",
+   "ns": "ops",
+   "one_line": "Audit increments are design-first -> red-team-gated, NEVER OPTIONAL; A3+ (enters/pauses the pipeline) gates mandatory; the D-0126 poser was the one exception.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "26e5261cd1bed495737c1edd03eb1b91cc9489e5",
+     "by": "PCB-N5N6-i52",
+     "fields": [
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "core-docs/AUDIT_PIPELINE.md",
+     "sha256": "ef722cbe8a834e614b704e1ee589c62305ddcebffab0092c9fbadb09a5a2b26b"
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "deeper": [
+    {
+     "kind": "decision",
+     "ref": "decision:D-0117"
+    },
+    {
+     "kind": "other",
+     "ref": "ops/audit/doc-commit-gate.py"
+    }
+   ],
+   "display_name": "Doc budgets + fail-closed commit gate (K5)",
+   "id": "ops:boot-doc-budgets",
+   "ns": "ops",
+   "one_line": "DOC_PROTOCOL s2 doc budgets are ENFORCED: the fail-closed pre-commit gate ops/audit/doc-commit-gate.py REFUSES violating core-doc commits (M2-A/PB-1, D-0117).",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "26e5261cd1bed495737c1edd03eb1b91cc9489e5",
+     "by": "PCB-N5N6-i52",
+     "fields": [
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "core-docs/DOC_PROTOCOL.md",
+     "sha256": "2e8587d959c4c9e2aab39d7c59307100b65004d0496a95795ba5995803ef0dbd"
+    },
+    {
+     "at_commit": "26e5261cd1bed495737c1edd03eb1b91cc9489e5",
+     "by": "PCB-N5N6-i52",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "ops/audit/doc-commit-gate.py",
+     "sha256": "c57b8f42d88cd502f862ec331670b4b970014caa94484451f7d5d7ec7703dbb2"
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
    "display_name": "boot fold smoke",
    "id": "ops:boot-fold-smoke",
    "ns": "ops",
@@ -48,6 +123,48 @@
   },
   {
    "confidence": "established",
+   "deeper": [
+    {
+     "kind": "decision",
+     "ref": "decision:D-0132"
+    },
+    {
+     "kind": "other",
+     "ref": "core-docs/SEALED_CHECK_47.md"
+    }
+   ],
+   "display_name": "Mandate-02 sunset state (K6)",
+   "id": "ops:boot-mandate-sunset",
+   "ns": "ops",
+   "one_line": "Mandate-02 is SUNSET -- NO live process mandate; SEALED_CHECK_47 armed, opens i>=54; the M2-A commit gate + PB triggers + cadence headers + monitor SURVIVE.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "26e5261cd1bed495737c1edd03eb1b91cc9489e5",
+     "by": "PCB-N5N6-i52",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/CURRENT_STATE.md",
+     "sha256": "89d380d9a8c75ffb2dedfb51574e8e8832cf6464314002adaf58ecd38075dfec"
+    },
+    {
+     "at_commit": "26e5261cd1bed495737c1edd03eb1b91cc9489e5",
+     "by": "PCB-N5N6-i52",
+     "fields": [
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "core-docs/SEALED_CHECK_47.md",
+     "sha256": "89dc7ead1df9900cfe0b00827ede113dc36bafc361f1cbab88d965f27f3eb54c"
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
    "display_name": "boot orphan discipline",
    "id": "ops:boot-orphan-discipline",
    "ns": "ops",
@@ -71,12 +188,11 @@
   },
   {
    "confidence": "established",
-   "display_name": "boot ship verify",
+   "display_name": "ship verify",
    "id": "ops:boot-ship-verify",
    "ns": "ops",
    "one_line": "Ship via dev.ship (sha256 + AST + tests, FAIL-CLOSED, named files only); VERIFY the real HEAD with NATIVE git; never git add -A.",
    "plane_primary": "capability",
-   "skeleton": false,
    "sources": [
     {
      "at_commit": "goldensha0000000000000000000000000000000",
@@ -94,12 +210,40 @@
   },
   {
    "confidence": "established",
-   "display_name": "boot wave clamps",
+   "deeper": [
+    {
+     "kind": "decision",
+     "ref": "decision:D-0064"
+    }
+   ],
+   "display_name": "UI live-GUI confirm rule (D-0064)",
+   "id": "ops:boot-ui-live-confirm",
+   "ns": "ops",
+   "one_line": "D-0064 FULL STRENGTH: ANY UI change needs a HUMAN live-GUI confirm BEFORE it is called done -- no softening; mock/API gates miss rendered-UI defects.",
+   "plane_primary": "capability",
+   "sources": [
+    {
+     "at_commit": "26e5261cd1bed495737c1edd03eb1b91cc9489e5",
+     "by": "PCB-N5N6-i52",
+     "fields": [
+      "deeper",
+      "one_line",
+      "plane_primary",
+      "status"
+     ],
+     "ref": "core-docs/CURRENT_STATE.md",
+     "sha256": "89d380d9a8c75ffb2dedfb51574e8e8832cf6464314002adaf58ecd38075dfec"
+    }
+   ],
+   "status": "mvp-complete"
+  },
+  {
+   "confidence": "established",
+   "display_name": "wave clamps",
    "id": "ops:boot-wave-clamps",
    "ns": "ops",
    "one_line": "Wave clamps: <=1 GPU worker HARD; 1 GPU + 2 CPU => MaxParallel 3; workers run docs:[]; only the GPU lane edits models.json.",
    "plane_primary": "capability",
-   "skeleton": false,
    "sources": [
     {
      "at_commit": "goldensha0000000000000000000000000000000",

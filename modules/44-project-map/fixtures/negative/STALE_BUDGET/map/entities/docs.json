@@ -18,6 +18,40 @@
    ]
   },
   {
+   "display_name": "AUDIT_PIPELINE.md",
+   "id": "doc:core-docs/AUDIT_PIPELINE.md",
+   "ns": "doc",
+   "one_line": "Core doc AUDIT_PIPELINE.md (fixture).",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/AUDIT_PIPELINE.md",
+     "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    }
+   ]
+  },
+  {
+   "display_name": "CURRENT_STATE.md",
+   "id": "doc:core-docs/CURRENT_STATE.md",
+   "ns": "doc",
+   "one_line": "Core doc CURRENT_STATE.md (fixture).",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/CURRENT_STATE.md",
+     "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    }
+   ]
+  },
+  {
    "display_name": "DECISION_LOG_INDEX.md",
    "id": "doc:core-docs/DECISION_LOG_INDEX.md",
    "ns": "doc",
@@ -65,6 +99,41 @@
      ],
      "ref": "core-docs/PROCESS_MANDATE.md",
      "sha256": "9c12b0d25cb9e9a688f143374ba1ac339efaf3c7d320d74a6404a939df02969f"
+    }
+   ]
+  },
+  {
+   "display_name": "SEALED_CHECK_47.md",
+   "id": "doc:core-docs/SEALED_CHECK_47.md",
+   "ns": "doc",
+   "one_line": "Core doc SEALED_CHECK_47.md (fixture).",
+   "sources": [
+    {
+     "at_commit": "goldensha0000000000000000000000000000000",
+     "by": "harvest_v1",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/SEALED_CHECK_47.md",
+     "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    }
+   ]
+  },
+  {
+   "confidence": "established",
+   "display_name": "2026-08-08-i45-lrap-design.md",
+   "id": "doc:core-docs/research/2026-08-08-i45-lrap-design.md",
+   "ns": "doc",
+   "one_line": "LRAP i45 build design digest (w08): pipeline spine, four-lane render, per-step HONESTY MAP (s3a), poser + acceptance -- the T1 prose cluster's design source.",
+   "sources": [
+    {
+     "at_commit": "26e5261cd1bed495737c1edd03eb1b91cc9489e5",
+     "by": "PCB-N5N6-i52",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/research/2026-08-08-i45-lrap-design.md",
+     "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
     }
    ]
   }

@@ -666,7 +666,8 @@ def test_n3_verbtable():
     # the dispatcher recognizes EXACTLY the declared verbs (a declared verb never reads as 'unknown verb')
     probe = {"entity": "entity:module:90", "edges": "edges:module:90", "redges": "redges:module:90",
              "evidence": "evidence:module:90", "deeper": "deeper:module:90", "alias": "alias:#90",
-             "section": "section:module:90#x", "stale": "stale", "changed-since": "changed-since"}
+             "section": "section:module:90#x", "card": "card:module:90",
+             "stale": "stale", "changed-since": "changed-since"}
     accepted = []
     for v in P.QUERY_VERB_TOKENS:
         rc, env, _ = cli(["query", "--map", gmap, "--q", probe[v]])
@@ -679,12 +680,215 @@ def test_n3_verbtable():
         "--harvest" in proto and "--fields" in proto and "--repo" in proto and "section:" in proto, "")
 
 
+# --------------------------------------------------------------- i52 N5 doc-section / card ----
+def test_n5_docsection():
+    """N5 (D-0142 F1): the section: verb serves doc: entities + deeper[]-pointer targets, bounded.
+    Cloud acceptance probes replay the REAL i51 T1-cluster selector shapes against stand-ins."""
+    gmap = os.path.join(FIX, "golden-map")
+    repo = os.path.join(FIX, "repo")
+    harvest = os.path.join(FIX, "harvest.json")
+
+    def sq(expr):
+        raw = _cli_raw(["query", "--map", gmap, "--q", expr, "--repo", repo, "--harvest", harvest])
+        return json.loads(raw), len(raw.encode("utf-8"))
+
+    # (a1) doc-entity form + BOLD-LABEL selector: the cadence header (NOT an ATX heading)
+    e, nb = sq("section:doc:core-docs/AUDIT_PIPELINE.md#Cadence header")
+    s = e.get("result", {}).get("section", {})
+    rec("n5-docsection", "cadence-header-bold-label-serves",
+        e["status"] == "ok" and "FRONTSTEP-SENTINEL" in s.get("text", "") and "next_increment" in s.get("text", ""),
+        str(e.get("error"))[:120])
+    rec("n5-docsection", "cadence-header-marks-target+selector",
+        s.get("target") == "doc-entity" and s.get("selector") == "bold-label" and s.get("level") == 0, str({k: s.get(k) for k in ("target", "selector", "level")}))
+    rec("n5-docsection", "cadence-header-block-excludes-body", "## 0." not in s.get("text", ""), "")
+    rec("n5-docsection", "cadence-envelope<=8000B(acceptance-a)", nb <= 8000, "bytes=%d" % nb)
+    # (a2)/(a3) ATX sections of the doc entity (the REAL s5/s6 heading texts)
+    e5, nb5 = sq("section:doc:core-docs/AUDIT_PIPELINE.md#5. Cadence + upkeep (how this stays alive without becoming a tax)")
+    rec("n5-docsection", "s5-atx-serves", e5["status"] == "ok" and "CADENCE-S5-SENTINEL" in e5["result"]["section"]["text"], str(e5.get("error"))[:120])
+    rec("n5-docsection", "s5-no-selector-key(atx)", "selector" not in e5["result"]["section"] and e5["result"]["section"].get("target") == "doc-entity", "")
+    e6, nb6 = sq("section:doc:core-docs/AUDIT_PIPELINE.md#6. Anti-spiral guardrails (carried from the packet; binding)")
+    rec("n5-docsection", "s6-atx-serves", e6["status"] == "ok" and "GUARDRAIL-S6-SENTINEL" in e6["result"]["section"]["text"], str(e6.get("error"))[:120])
+    rec("n5-docsection", "s5+s6-envelopes<=8000B", nb5 <= 8000 and nb6 <= 8000, "s5=%d s6=%d" % (nb5, nb6))
+    # (a4) research doc entity (mapped via the N6 claims -> golden): the honesty-map section
+    e3, nb3 = sq("section:doc:core-docs/research/2026-08-08-i45-lrap-design.md#3a. The per-step x per-lane HONESTY MAP (fixed HERE, not deferred to the worker -- F3)")
+    rec("n5-docsection", "research-doc-honesty-map-serves",
+        e3["status"] == "ok" and "HONESTY-MAP-SENTINEL" in e3["result"]["section"]["text"] and nb3 <= 8000,
+        "bytes=%d err=%s" % (nb3, str(e3.get("error"))[:100]))
+    # (a5) deeper-pointer form: the w08-shape follow-ons block via widget deeper[work-order]
+    e4, nb4 = sq("section:widget:90/gamma:work-order#Follow-ons (not this session)")
+    s4 = e4.get("result", {}).get("section", {})
+    rec("n5-docsection", "deeper-work-order-follow-ons-serves",
+        e4["status"] == "ok" and "follow-on ALPHA" in s4.get("text", "") and s4.get("target") == "deeper[work-order]",
+        str(e4.get("error"))[:120])
+    rec("n5-docsection", "deeper-envelope<=8000B", nb4 <= 8000, "bytes=%d" % nb4)
+    # short form + kind composes; resolved echoed
+    e4s, _ = sq("section:widget:90:work-order#Follow-ons (not this session)")
+    rec("n5-docsection", "short-form+kind-resolves", e4s["status"] == "ok" and e4s["result"].get("resolved") == "widget:90/gamma", str(e4s["result"].get("resolved")))
+    # deeper[research] kind serve
+    e4r, _ = sq("section:widget:90/gamma:research#3a. The per-step x per-lane HONESTY MAP (fixed HERE, not deferred to the worker -- F3)")
+    rec("n5-docsection", "deeper-research-serves", e4r["status"] == "ok" and "HONESTY-MAP-SENTINEL" in e4r["result"]["section"]["text"], str(e4r.get("error"))[:100])
+    # i49 byte-identity pin: an ATX module SCHEMA_NOTES fetch carries EXACTLY the 0.3.0 key set
+    repo2, hp2 = _mk_section_repo()
+    raw = _cli_raw(["query", "--map", gmap, "--q", "section:module:90/alpha.tool#3. ranking", "--repo", repo2, "--harvest", hp2])
+    es = json.loads(raw)
+    keys = sorted(es["result"]["section"].keys())
+    rec("n5-docsection", "i49-schema-notes-keyset-byte-identical",
+        es["status"] == "ok" and keys == sorted(["path", "sha256", "heading", "level", "harvest_commit", "bytes", "truncated", "text"]),
+        "keys=%s" % keys)
+    # negatives (existing codes only)
+    for expr, code, nm in [
+            ("section:doc:core-docs/GHOST.md#x", "DANGLING_REF", "unmapped-doc"),
+            ("section:doc:core-docs/AUDIT_PIPELINE.md#No Such Heading", "DANGLING_REF", "missing-heading-doc"),
+            ("section:module:90/alpha.tool:work-order#x", "DANGLING_REF", "no-pointer-of-kind"),
+            ("section:widget:90/gamma:decision#x", "UNSUPPORTED_QUERY", "kind-not-servable")]:
+        en, _ = sq(expr)
+        rec("n5-docsection", "%s->%s" % (nm, code), en["status"] == "error" and en["error"]["code"] == code, str(en.get("error"))[:100])
+    rc, env, _ = cli(["query", "--map", gmap, "--q", "section:doc:core-docs/AUDIT_PIPELINE.md#Cadence header", "--harvest", harvest])
+    rec("n5-docsection", "doc-form-no-repo->UNSUPPORTED_QUERY", env["status"] == "error" and env["error"]["code"] == "UNSUPPORTED_QUERY", "")
+
+
+def _plane_card_block(plane_file, rid):
+    txt = P.read_text(os.path.join(FIX, "golden-generated", plane_file))
+    blocks = txt.split("\n## ")
+    for b in blocks[1:]:
+        if b.startswith(rid + "\n"):
+            return ("## " + b).rstrip("\n")
+    return None
+
+
+def test_n5_card():
+    """N5 (D-0142 F1): card:<id> serves ONE rendered L1 card, content-matching the committed
+    plane file (single-source _l1_card_lines), bounded -- never a 31 KB plane-file open."""
+    gmap = os.path.join(FIX, "golden-map")
+    harvest = os.path.join(FIX, "harvest.json")
+    for rid, group, short in [("module:90/alpha.tool", "modules", "module:90"),
+                              ("widget:90/gamma", "widgets", "widget:90")]:
+        raw = _cli_raw(["query", "--map", gmap, "--q", "card:%s" % rid, "--harvest", harvest])
+        e = json.loads(raw); nb = len(raw.encode("utf-8"))
+        c = e.get("result", {}).get("card", {})
+        rec("n5-card", "%s-serves" % rid, e["status"] == "ok" and c.get("group") == group
+            and c.get("plane_file") == "L1_CARDS_%s.md" % group, str(e.get("error"))[:100])
+        rec("n5-card", "%s-envelope<=6000B(acceptance-b)" % rid, nb <= 6000, "bytes=%d" % nb)
+        want = _plane_card_block("L1_CARDS_%s.md" % group, rid)
+        rec("n5-card", "%s-content-matches-plane-file" % rid, want is not None and c.get("text", "").rstrip("\n") == want,
+            "served=%r vs plane=%r" % (str(c.get("text"))[:60], str(want)[:60]))
+        rec("n5-card", "%s-full-id-keyset" % rid, sorted(e["result"].keys()) == ["card", "q"], str(sorted(e["result"].keys())))
+        es = json.loads(_cli_raw(["query", "--map", gmap, "--q", "card:%s" % short, "--harvest", harvest]))
+        rec("n5-card", "%s-short-form-resolves" % short, es["status"] == "ok" and es["result"].get("resolved") == rid, str(es["result"].get("resolved")))
+    # negatives
+    rc, env, _ = cli(["query", "--map", gmap, "--q", "card:module:99", "--harvest", harvest])
+    rec("n5-card", "unknown-id->DANGLING_REF", env["status"] == "error" and env["error"]["code"] == "DANGLING_REF", str(env.get("error")))
+    rc, env, _ = cli(["query", "--map", gmap, "--q", "card:module:90"])
+    rec("n5-card", "no-harvest->UNSUPPORTED_QUERY", env["status"] == "error" and env["error"]["code"] == "UNSUPPORTED_QUERY", str(env.get("error")))
+
+
+# --------------------------------------------------------------- i52 N6 canon assertions ------
+def _n6_claims():
+    return json.loads(P.read_text(os.path.join(MOD, "claims", "i52-n6-canon-claims.json")))
+
+
+# The i48 CD-1 pattern, extended: EVERY N6 canon assertion is string-asserted against the packet.
+# Required = each canon ops one_line VERBATIM (single-sourced from the claims file) + the named
+# load-bearing sub-tokens; forbidden = softened-D-0064 phrasings a future render must never carry.
+N6_REQUIRED_TOKENS = [
+    "HUMAN live-GUI confirm BEFORE it is called done",   # D-0064 full strength
+    "no softening",
+    "REFUSES violating core-doc commits",                 # K5 fail-closed gate
+    "DOC_PROTOCOL s2",
+    "doc-commit-gate.py",
+    "Mandate-02 is SUNSET",                               # K6 sunset state
+    "NO live process mandate",
+    "SEALED_CHECK_47 armed, opens i>=54",
+    "SURVIVE",
+    "design-first -> red-team-gated",                     # K9 non-optional red-team gate
+    "NEVER OPTIONAL",
+]
+N6_FORBIDDEN_TOKENS = ["ship not blocked", "not blocked on", "ship-not-blocked", "confirm later"]
+
+
+def n6_canon_findings(packet_text, claims=None):
+    """Return a list of canon failures (empty == packet carries the full-strength canon)."""
+    fails = []
+    claims = claims or _n6_claims()
+    for rec_ in claims["entities"]:
+        if rec_["id"].startswith("ops:boot-"):
+            if rec_["one_line"] not in packet_text:
+                fails.append("one_line-missing:%s" % rec_["id"])
+    for tok in N6_REQUIRED_TOKENS:
+        if tok not in packet_text:
+            fails.append("required-token-missing:%s" % tok)
+    for tok in N6_FORBIDDEN_TOKENS:
+        if tok in packet_text:
+            fails.append("forbidden-token-present:%s" % tok)
+    return fails
+
+
+def test_n6_canon():
+    gmap = os.path.join(FIX, "golden-map")
+    harvest = json.loads(P.read_text(os.path.join(FIX, "harvest.json")))
+    bp = P.read_text(os.path.join(FIX, "golden-generated", "BOOT_PACKET.md"))
+    # (c) the golden packet carries EVERY canon assertion
+    fails = n6_canon_findings(bp)
+    rec("n6-canon", "golden-packet-carries-every-canon-assertion", not fails, str(fails))
+    # every canon line is pointer-backed inside OPERATIONS
+    ops_sec = bp.split("## OPERATIONS", 1)[1].split("\n## ", 1)[0] if "## OPERATIONS" in bp else ""
+    canon_lines = [ln for ln in ops_sec.splitlines() if ln.startswith("- ")]
+    rec("n6-canon", "canon-lines-pointer-backed(>=4)", len(canon_lines) >= 4 and all("[" in ln and "]" in ln for ln in canon_lines), "n=%d" % len(canon_lines))
+    # (c) >= 1 rendered open_ruling with its ref
+    rec("n6-canon", "open-ruling-rendered-with-ref",
+        "OPEN RULINGS" in bp and "gamma explain window cannot be closed after the fact" in bp and "(decision:D-9002)" in bp, "")
+    # OPERATIONS held level 0 (no ops ladder step) so canon one_lines are verbatim, never truncated
+    model = P.load_map(gmap)
+    vr = P.validate(model, harvest, is_real=True)
+    _, _, ladder, _, _, _ = P._build_boot_packet(model, harvest, set(vr["stale_entities"]), vr["load_bearing"])
+    rec("n6-canon", "ops-level-0-no-truncation", not any("OPERATIONS" in step for step in ladder), str(ladder))
+    # ingest roundtrip of the SHIPPED claims file: strip the canon -> ingest -> present + idempotent
+    work = tempfile.mkdtemp(prefix="pm-n6-")
+    m = os.path.join(work, "m")
+    shutil.copytree(gmap, m)
+    P.write_lf(os.path.join(m, "entities", "ops.json"),
+               P.dumps_map({"schema": P.SCHEMA_ENTITIES, "kind": "entities", "items": []}))
+    for fn, drop in (("meta.json", "decision:D-0064"), ("docs.json", "doc:core-docs/research/2026-08-08-i45-lrap-design.md")):
+        fp = os.path.join(m, "entities", fn)
+        doc = json.loads(P.read_text(fp))
+        doc["items"] = [it for it in doc["items"] if it.get("id") != drop]
+        P.write_lf(fp, P.dumps_map(doc))
+    cf = os.path.join(MOD, "claims", "i52-n6-canon-claims.json")
+    res = P.op_ingest_claims(m, cf, harvest, None)
+    rec("n6-canon", "shipped-claims-ingest-upserts(6)", res["entities_upserted"] == 6, str(res))
+    d1 = _map_digest(m)
+    P.op_ingest_claims(m, cf, harvest, None)
+    rec("n6-canon", "shipped-claims-ingest-idempotent", _map_digest(m) == d1, "")
+    out = tempfile.mkdtemp(prefix="pm-n6r-")
+    P.op_render(m, harvest, out, check=False, draft=False)
+    bp2 = P.read_text(os.path.join(out, "BOOT_PACKET.md"))
+    rec("n6-canon", "post-ingest-render-carries-canon", not n6_canon_findings(bp2), str(n6_canon_findings(bp2))[:200])
+    # NEGATIVE: a softened D-0064 phrasing FAILS the canon assertions
+    m2 = os.path.join(work, "m2")
+    shutil.copytree(gmap, m2)
+    fp = os.path.join(m2, "entities", "ops.json")
+    doc = json.loads(P.read_text(fp))
+    for it in doc["items"]:
+        if it["id"] == "ops:boot-ui-live-confirm":
+            it["one_line"] = "D-0064: UI live-GUI confirm is advisory; ship not blocked on it; confirm later at a convenient touch."
+    P.write_lf(fp, P.dumps_map(doc))
+    model2 = P.load_map(m2)
+    vr2 = P.validate(model2, harvest, is_real=True)
+    body2, _, _, _, _, _ = P._build_boot_packet(model2, harvest, set(vr2["stale_entities"]), vr2["load_bearing"])
+    soft = n6_canon_findings(body2)
+    rec("n6-canon", "softened-D-0064-FAILS-canon-check",
+        any(f.startswith("required-token-missing:HUMAN live-GUI confirm") for f in soft)
+        and any(f.startswith("forbidden-token-present:") for f in soft), str(soft)[:200])
+    shutil.rmtree(work, ignore_errors=True)
+    shutil.rmtree(out, ignore_errors=True)
+
+
 def main():
     for t in (test_golden, test_determinism, test_negatives, test_drift,
               test_parse_budgets_parity, test_ingest, test_reaffirm_fmt_changed,
               test_shortform, test_evidence_provenance, test_operations, test_ops_roundtrip,
               test_mandate_absent, test_n1_purpose, test_n1_section, test_n2_frontier,
-              test_n3_verbtable):
+              test_n3_verbtable, test_n5_docsection, test_n5_card, test_n6_canon):
         try:
             t()
         except Exception as e:

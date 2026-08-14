@@ -1,6 +1,24 @@
 {
  "items": [
   {
+   "confidence": "established",
+   "display_name": "D-0064",
+   "id": "decision:D-0064",
+   "ns": "decision",
+   "one_line": "i11 Verification Console UX ship -- the live-GUI-confirm lesson source: mock/API gates missed a rendered-UI defect found only by human GUI use.",
+   "sources": [
+    {
+     "at_commit": "26e5261cd1bed495737c1edd03eb1b91cc9489e5",
+     "by": "PCB-N5N6-i52",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/DECISION_LOG_INDEX.md",
+     "sha256": "308c3a25935182ef13481605c740d7784d6f330b89b5c1b30bef76af38e404bd"
+    }
+   ]
+  },
+  {
    "display_name": "D-9001",
    "doctrine": true,
    "id": "decision:D-9001",

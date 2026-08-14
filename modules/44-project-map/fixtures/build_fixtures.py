@@ -62,11 +62,20 @@ def build_repo():
     # widget
     w(_p("widgets/90-gamma/README.md"), "# gamma widget\n")
     w(_p("widgets/90-gamma/launch.bat"), "@echo off\n")
+    w(_p("widgets/90-gamma/WORK_ORDER.md"), _GAMMA_WO)
     # core-docs
     w(_p("core-docs/DOC_PROTOCOL.md"), _DOC_PROTOCOL)
     w(_p("core-docs/DECISION_LOG_INDEX.md"), _DINDEX)
     w(_p("core-docs/PROCESS_MANDATE.md"), _MANDATE)
     w(_p("core-docs/ARCHITECTURE_MAP.md"), _ARCH)
+    # i52 N5/N6 stand-ins: the REAL i52 claims file (claims/i52-n6-canon-claims.json) references
+    # these repo paths, and the N5 acceptance probes replay the REAL selector shapes against them
+    # (bold-label cadence header; s5/s6 ATX sections; the research honesty-map; the w08 follow-ons).
+    w(_p("core-docs/CURRENT_STATE.md"), _CURRENT_STATE)
+    w(_p("core-docs/SEALED_CHECK_47.md"), _SEALED)
+    w(_p("core-docs/AUDIT_PIPELINE.md"), _AUDIT)
+    w(_p("core-docs/research/2026-08-08-i45-lrap-design.md"), _LRAP)
+    w(_p("ops/audit/doc-commit-gate.py"), _GATE_STUB)
 
 
 def _p(rel):
@@ -114,6 +123,77 @@ _ARCH = """# ARCHITECTURE_MAP (fixture)
 - **38** Visual-only action executor -- deterministic input injection.
 - **44** Synthetic screen and asset generator -- image generation family.
 """
+
+_GAMMA_WO = """# WORK ORDER - Widget 90: gamma (fixture)
+
+## Purpose
+
+Fixture widget work order.
+
+## Follow-ons (not this session)
+
+- follow-on ALPHA: extend the gamma audit lane.
+- follow-on BETA: the deferred render polish.
+"""
+
+_CURRENT_STATE = """# CURRENT_STATE (fixture)
+
+Mock/API gates MISS rendered-UI defects -- any UI change needs a human live-GUI confirm before it
+is called done (D-0064).
+"""
+
+_SEALED = """# SEALED_CHECK_47 (fixture)
+
+SEALED -- armed; opens i>=54. Predicates elsewhere.
+"""
+
+_AUDIT = """# AUDIT_PIPELINE (fixture) -- design TARGET, staged
+
+**Status:** ADOPTED governing target doc (fixture stand-in).
+
+**Cadence header (orchestrator maintains by replacement -- the PROCESS_MANDATE countdown pattern):**
+- `last_reviewed: i45`
+- `review_due: i54`
+- `current_tier: A1 + read-only A2 + LRAP v1`
+- `next_increment (D-0127): FRONTSTEP-SENTINEL -- the raw-prompt FRONT step; then the LIVE ride-along; then the OUTPUT side. Each design-first -> red-team-gated`
+
+## 0. Purpose
+
+Fixture purpose body.
+
+## 5. Cadence + upkeep (how this stays alive without becoming a tax)
+
+1. At every wave scoping: is review_due reached? CADENCE-S5-SENTINEL.
+2. When due or triggered: update the cadence header + next_increment BY REPLACEMENT.
+
+## 6. Anti-spiral guardrails (carried from the packet; binding)
+
+Non-displacement; read-only by default; GUARDRAIL-S6-SENTINEL: every increment through A2 is a
+reader; anything that pauses or enters the pipeline (A3+) is design-first + red-team-gated.
+"""
+
+_LRAP = """# Live-Run Audit Pathway (LRAP) -- i45 build design (fixture stand-in)
+
+## 0. What i45 builds
+
+Fixture scope body.
+
+## 3a. The per-step x per-lane HONESTY MAP (fixed HERE, not deferred to the worker -- F3)
+
+| step | lane | honesty |
+|---|---|---|
+| 1 | INPUT | HONESTY-MAP-SENTINEL verbatim |
+
+## 4. Descend-on-anomaly
+
+Not 3a.
+"""
+
+_GATE_STUB = '''#!/usr/bin/env python3
+"""Fixture stand-in for ops/audit/doc-commit-gate.py (the fail-closed core-doc commit gate)."""
+def refuse(violations):
+    return bool(violations)
+'''
 
 _GDH_STUB = '''#!/usr/bin/env python3
 import os, re
@@ -166,12 +246,14 @@ def build_golden(harvest):
                  "Alpha capability tool; first-line deterministic worker in the fixture."))
     E.append(mod("91", "beta", "beta.tool", "memory", "mvp-complete", "deterministic", False,
                  "Beta memory substrate; persists and serves the alpha store."))
-    # widget
+    # widget (i52 N5: typed deeper[] pointers -- the section:<id>:<kind># serve targets)
     E.append({"id": "widget:90/gamma", "ns": "widget", "display_name": "gamma", "one_line":
               "Gamma observability widget; audits beta and invokes alpha.",
               "plane_primary": "observability", "status": "mvp-complete", "aliases": ["gamma-widget"],
               "confidence": "established",
-              "sources": [_src("widgets/90-gamma/README.md", inv, ["one_line", "plane_primary", "status", "aliases"], "lane-B-i46")]})
+              "deeper": [{"kind": "work-order", "ref": "widgets/90-gamma/WORK_ORDER.md"},
+                         {"kind": "research", "ref": "core-docs/research/2026-08-08-i45-lrap-design.md"}],
+              "sources": [_src("widgets/90-gamma/README.md", inv, ["one_line", "plane_primary", "status", "aliases", "deeper"], "lane-B-i46")]})
     # planes
     for p in P.PLANES:
         E.append({"id": "plane:%s" % p, "ns": "plane", "display_name": p.title() + " plane",
@@ -205,6 +287,49 @@ def build_golden(harvest):
               "one_line": "P0-1 activation is prohibited until the gate is independently ratified.",
               "sources": [_src("decision:D-9002", inv, ["one_line"], "orchestrator-i46")]})
 
+    # ---- boot-ops canon in the golden map. i48 GENERATOR GAP CLOSED (i52): the committed golden
+    # map carried the 5 i48 boot-ops entities (the CD-lane ingested its fixture claims into the
+    # golden after building), but this generator did not create them -- a from-scratch rebuild
+    # silently LOST them. Both canon sets now inject here, single-sourced from their claims files:
+    #   - fixtures/i48-ops-canon-claims.fixture.json  (the i48 CD-1 wave canon, fixture-sourced)
+    #   - claims/i52-n6-canon-claims.json             (the REAL i52 N6 canon; stand-in files added
+    #     to the fixture repo at the claimed paths, so the SHIPPED file injects verbatim)
+    # SINGLE-SOURCE: golden canon one_lines ARE the claims one_lines, so the canon content tests
+    # assert exactly what the orchestrator ingests at fold (no drift).
+    # The 3 i48 canon entities the .fixture.json does NOT carry (they were added to the committed
+    # golden directly at the i48 CD lane) -- reproduced verbatim from the committed golden map:
+    for cid, disp, one, ref in [
+            ("ops:boot-fold-smoke", "boot fold smoke",
+             "D-0077: a schema producer+consumer pair split across parallel workers requires the orchestrator cross-module fold smoke before close.",
+             "modules/91-beta/README.md"),
+            ("ops:boot-lease-order", "boot lease order",
+             "Lease order: acquire gpu -> git -> doc and release in reverse; the single git lease serializes every commit across the wave.",
+             "core-docs/DOC_PROTOCOL.md"),
+            ("ops:boot-orphan-discipline", "boot orphan discipline",
+             "Orphan discipline: launch persistent llama-servers DETACHED and reap them before finalize; assert 0 UNMANAGED orphans every wave.",
+             "modules/90-alpha/README.md")]:
+        E.append({"id": cid, "ns": "ops", "display_name": disp, "one_line": one,
+                  "plane_primary": "capability", "status": "mvp-complete", "skeleton": False,
+                  "confidence": "established",
+                  "sources": [_src(ref, inv, ["one_line", "plane_primary", "status"], "cd-lane-i48")]})
+    import copy as _copy
+    for claims_path in (os.path.join(FIX, "i48-ops-canon-claims.fixture.json"),
+                        os.path.join(MOD, "claims", "i52-n6-canon-claims.json")):
+        with open(claims_path, encoding="utf-8") as fh:
+            cl = json.load(fh)
+        for rec in cl["entities"]:
+            rec = _copy.deepcopy(rec)
+            for s in rec.get("sources", []):
+                ref = s.get("ref", "")
+                if P._ref_is_path(ref):
+                    path = ref.split("#", 1)[0]
+                    if path not in inv:
+                        print("FIXTURE ERROR: claims path %r not in fixture inventory (%s)"
+                              % (path, os.path.basename(claims_path)))
+                        sys.exit(1)
+                    s["sha256"] = inv[path]
+            E.append(rec)
+
     def edge(fr, ty, to, by="lane-B-i46"):
         return {"from": fr, "type": ty, "to": to,
                 "sources": [_src("decision:D-9001", inv, ["*"], by)]}
@@ -230,7 +355,10 @@ def build_golden(harvest):
         "mandate": {"id": "02", "sunset_iteration": "47", "state": "ACTIVE"},
         "prohibitions": [{"text": "No P0-1 activation until ratified", "authority": "decision:D-9002",
                           "status": "live"}],
-        "open_rulings": [],
+        # i52 N6 (K10): the fixture overlay carries an open ruling (real-shape parity with the w08
+        # window-close rider) so the OPEN RULINGS render path is golden-tested.
+        "open_rulings": [{"ref": "decision:D-9002",
+                          "text": "gamma explain window cannot be closed after the fact -- fix rides the next gamma touch"}],
         "boot_read": [{"kind": "contract", "ref": "contract:skill-contract"},
                       {"kind": "decision", "ref": "decision:D-9001"}],
     }
@@ -410,9 +538,14 @@ def build_negatives(harvest):
 
     # STALE_BUDGET: >20% of entities carry a stale field, NONE load-bearing (else STALE_LOAD_BEARING).
     # PROCESS_MANDATE doc is load-bearing (frontier.derived_from refs it), so exclude it.
+    # i52: the golden grew (canon + stand-in docs), so the target set grew with it to stay >20%.
     e, r, o = base()
     stale_targets = {"doc:core-docs/DOC_PROTOCOL.md", "doc:core-docs/DECISION_LOG_INDEX.md",
-                     "doc:core-docs/ARCHITECTURE_MAP.md", "widget:90/gamma"}
+                     "doc:core-docs/ARCHITECTURE_MAP.md", "widget:90/gamma",
+                     "doc:core-docs/CURRENT_STATE.md", "doc:core-docs/SEALED_CHECK_47.md",
+                     "doc:core-docs/AUDIT_PIPELINE.md",
+                     "doc:core-docs/research/2026-08-08-i45-lrap-design.md",
+                     "ops:boot-ui-live-confirm", "ops:boot-doc-budgets"}
     for x in e:
         if x["id"] in stale_targets:
             for s in x["sources"]:

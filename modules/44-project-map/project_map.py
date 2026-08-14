@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: ascii -*-
-"""project.map 0.1.0 -- the Project Comprehension Bootstrap (PCB) mechanism (i46, module:44).
+"""project.map 0.4.0 -- the Project Comprehension Bootstrap (PCB) mechanism (i46, module:44).
 
 Deterministic stdlib-only worker (Python 3.10-compatible). Harvests mechanical repo facts,
 validates the canonical map state fail-closed, idempotently ingests evidence-pointed claims via a
@@ -29,7 +29,7 @@ SCHEMA_ENTITIES = "lifeorch.project_map/0.1"
 SCHEMA_OVERLAY = "lifeorch.map_overlay/0.1"
 SCHEMA_CLAIMS = "lifeorch.map_claims/0.1"
 SKILL_ID = "project.map"
-SKILL_VERSION = "0.3.0"
+SKILL_VERSION = "0.4.0"
 CONTRACT_VERSION = "0.2"
 WORK_ORDER_SHA256 = "439261078ffeb0169e22de4829e9024081b50470187d78901dd9f2479a550725"
 KB = 1000
@@ -39,6 +39,14 @@ BOOT_PACKET_HARD = 20000
 # the 478,784 B raw-harvest grep); a SCHEMA_NOTES section fetch body is capped (vs the whole file).
 FIELD_SERVE_MAX = 4800
 SECTION_FETCH_MAX = 6600
+# N5 (i52, D-0142 F1): a card: body is capped so the query envelope stays <= 6000 B (vs opening a
+# whole 31,488 B L1_CARDS_modules.md plane file for ONE card).
+CARD_FETCH_MAX = 5000
+# N5: the closed set of deeper[] kinds the section: verb serves via the section:<id>:<kind>#<sel>
+# form (WO i52: min work-order|research|readme; schema-notes included for uniformity with the
+# bare form). Other deeper kinds (decision/contract/failure/test/trace/other) are pointer classes,
+# not section-servable files, and refuse UNSUPPORTED_QUERY.
+SECTION_SERVE_KINDS = ("readme", "research", "schema-notes", "work-order")
 
 # ---- closed namespace / enum tables (WO s2) -------------------------------------------------
 NS_ENUM = (
@@ -1107,7 +1115,11 @@ DRAFT_BANNER = "<!-- DRAFT-STALE: draft render under runtime/; NOT canonical; do
 # 20,000-byte packet TOTAL (op_render / PACKET_OVER_BUDGET). The i48 OPERATIONS section carries the
 # boot-critical wave canon: it has its own budget "ops" AND is the LAST section the total-guard ladder
 # degrades -- at maximum degradation it compresses to a single pointer line but never vanishes.
-SECTION_BUDGETS = {"1": 2500, "2": 800, "3": 9000, "4": 3000, "ops": 2000, "5": 2200, "6": 2500}
+# "ops" raised 2000 -> 3000 at i52 (N6): the OPERATIONS canon gained the D-0064 live-GUI-confirm,
+# K5 doc-budget/commit-gate, mandate-02-sunset, and audit-red-team-gate lines (9 boot-* members);
+# at 2000 the level-1 trim would truncate canon one_lines at 96 chars and could soften D-0064.
+# The HARD packet total stays 20,000 B; OPERATIONS still degrades LAST (documented ladder).
+SECTION_BUDGETS = {"1": 2500, "2": 800, "3": 9000, "4": 3000, "ops": 3000, "5": 2200, "6": 2500}
 OPS_BOOT_PREFIX = "boot-"   # ops entities whose key starts with this render into OPERATIONS (i48 CD-1)
 
 
@@ -1284,6 +1296,17 @@ def _build_overlay_section(model, cand_level=0):
             s4.append("PROHIBITIONS (mandatory):")
             for pr in ov["prohibitions"]:
                 s4.append("- [%s] %s (%s)" % (pr.get("status"), _trunc(pr.get("text"), 156), pr.get("authority")))
+        # N6 (i52, D-0142 F3/K10): open_rulings[] render into the packet -- the w08 rider was IN
+        # overlay/state.json yet ABSENT from the rendered packet, so a PCB-booted agent missed it.
+        # EVERY ruling renders with its ref; like prohibitions, rulings are never ladder-degraded
+        # (only frontier candidates trim -- documented ladder position).
+        if ov.get("open_rulings"):
+            s4.append("OPEN RULINGS (riders -- every ruling with its ref):")
+            for orr in ov["open_rulings"]:
+                if isinstance(orr, dict):
+                    s4.append("- %s (%s)" % (_trunc(orr.get("text"), 156), orr.get("ref")))
+                else:
+                    s4.append("- %s" % _trunc(orr, 156))
         for br in ov.get("boot_read", []) or []:
             ref = br.get("ref") if isinstance(br, dict) else br
             s4.append("boot_read: %s" % ref)
@@ -1421,6 +1444,59 @@ def _freshness_line(stale_ct, uncertain_ct, total, tree_at, map_state_at=None, d
         tag, stale_ct, uncertain_ct, total, tree_at, ms, sync)
 
 
+# N5 (i52): the SINGLE L1-card line renderer. BOTH the L1_CARDS_* plane files AND the card:<id>
+# query render through THIS function, so a served card is content-matching the committed plane file
+# by construction (test-asserted). Pure function of (record, edge maps, stale set); deterministic.
+L1_CARD_GROUPS = {"modules": ("module",), "widgets": ("widget",),
+                  "infra": ("plane", "arch", "contract", "doc", "store", "ops", "future",
+                            "decision", "mandate", "pb", "iteration", "wave")}
+
+
+def _l1_group_for(rid):
+    ns = _ns_of(rid)
+    for g, nss in L1_CARD_GROUPS.items():
+        if ns in nss:
+            return g
+    return "infra"
+
+
+def _l1_card_lines(r, outbound, inbound, stale_set):
+    lines = []
+    rid = r["id"]
+    lines.append("## %s" % rid)
+    lines.append("- display_name: %s" % r.get("display_name"))
+    if r.get("aliases"):
+        lines.append("- aliases: %s" % ", ".join(sorted(r["aliases"])))
+    lines.append("- planes: primary=%s secondary=%s" % (r.get("plane_primary", "-"), ",".join(r.get("planes_secondary", []) or []) or "-"))
+    lines.append("- status: %s  version: %s" % (r.get("status", "-"), r.get("version", "-")))
+    lines.append("- one_line: %s" % r.get("one_line"))
+    if r.get("purpose"):
+        lines.append("- purpose: %s" % _trunc(r.get("purpose"), 300))
+    for fld in ("inputs", "outputs", "state_owned", "audit_surfaces"):
+        if r.get(fld):
+            lines.append("- %s: %s" % (fld, _stable(r[fld])))
+    if r.get("authority_level"):
+        lines.append("- authority_level: %s" % r["authority_level"])
+    det = r.get("determinism")
+    if det is not None or r.get("parallel_safe") is not None:
+        lines.append("- side-effects: determinism=%s parallel_safe=%s requirements=%s" % (det, r.get("parallel_safe"), _stable(r.get("requirements")) if r.get("requirements") else "-"))
+    oute = outbound.get(rid, [])
+    ine = inbound.get(rid, [])
+    if oute:
+        lines.append("- edges out: %s" % "; ".join(sorted("%s->%s" % (e["type"], e["to"]) for e in oute)))
+    if ine:
+        lines.append("- edges in: %s" % "; ".join(sorted("%s<-%s" % (e["type"], e["from"]) for e in ine)))
+    if r.get("plane_primary"):
+        lines.append("- member-of (derived): %s" % ", ".join(["plane:" + r["plane_primary"]] + ["plane:" + p for p in (r.get("planes_secondary") or [])]))
+    for d in r.get("deeper", []) or []:
+        lines.append("- deeper[%s]: %s" % (d.get("kind"), d.get("ref")))
+    if r.get("confidence"):
+        lines.append("- confidence: %s%s" % (r["confidence"], (" -- " + r.get("note", "")) if r.get("note") else ""))
+    if rid in stale_set:
+        lines.append("- STALE: one or more fields need reaffirm")
+    return lines
+
+
 def _render_views(model, harvest, draft=False):
     ents = model.entities
     at = harvest.get("at_commit", "?") if harvest else "?"
@@ -1476,38 +1552,8 @@ def _render_views(model, harvest, draft=False):
     for gname, pred in groups.items():
         lines = [header, fresh, "", "# L1 CARDS -- %s" % gname, ""]
         for r in sorted([x for x in ents.values() if pred(x)], key=lambda r: r["id"]):
-            rid = r["id"]
-            lines.append("## %s" % rid)
-            lines.append("- display_name: %s" % r.get("display_name"))
-            if r.get("aliases"):
-                lines.append("- aliases: %s" % ", ".join(sorted(r["aliases"])))
-            lines.append("- planes: primary=%s secondary=%s" % (r.get("plane_primary", "-"), ",".join(r.get("planes_secondary", []) or []) or "-"))
-            lines.append("- status: %s  version: %s" % (r.get("status", "-"), r.get("version", "-")))
-            lines.append("- one_line: %s" % r.get("one_line"))
-            if r.get("purpose"):
-                lines.append("- purpose: %s" % _trunc(r.get("purpose"), 300))
-            for fld in ("inputs", "outputs", "state_owned", "audit_surfaces"):
-                if r.get(fld):
-                    lines.append("- %s: %s" % (fld, _stable(r[fld])))
-            if r.get("authority_level"):
-                lines.append("- authority_level: %s" % r["authority_level"])
-            det = r.get("determinism")
-            if det is not None or r.get("parallel_safe") is not None:
-                lines.append("- side-effects: determinism=%s parallel_safe=%s requirements=%s" % (det, r.get("parallel_safe"), _stable(r.get("requirements")) if r.get("requirements") else "-"))
-            oute = outbound.get(rid, [])
-            ine = inbound.get(rid, [])
-            if oute:
-                lines.append("- edges out: %s" % "; ".join(sorted("%s->%s" % (e["type"], e["to"]) for e in oute)))
-            if ine:
-                lines.append("- edges in: %s" % "; ".join(sorted("%s<-%s" % (e["type"], e["from"]) for e in ine)))
-            if r.get("plane_primary"):
-                lines.append("- member-of (derived): %s" % ", ".join(["plane:" + r["plane_primary"]] + ["plane:" + p for p in (r.get("planes_secondary") or [])]))
-            for d in r.get("deeper", []) or []:
-                lines.append("- deeper[%s]: %s" % (d.get("kind"), d.get("ref")))
-            if r.get("confidence"):
-                lines.append("- confidence: %s%s" % (r["confidence"], (" -- " + r.get("note", "")) if r.get("note") else ""))
-            if rid in stale_set:
-                lines.append("- STALE: one or more fields need reaffirm")
+            # N5: single-source card render -- the card: query serves THESE bytes (content-match).
+            lines.extend(_l1_card_lines(r, outbound, inbound, stale_set))
             lines.append("")
         files["L1_CARDS_%s.md" % gname] = "\n".join(lines) + "\n"
     # ALIASES
@@ -1716,7 +1762,8 @@ QUERY_VERBS = (
     {"verb": "redges", "form": "redges:<id>", "returns": "inbound edges to <id>"},
     {"verb": "evidence", "form": "evidence:<id>", "returns": "the entity sources[]; with --harvest each is provenance/currency-marked"},
     {"verb": "deeper", "form": "deeper:<id>[:kind]", "returns": "typed descend pointers (kind in readme|work-order|schema-notes|contract|decision|failure|research|test|trace|other)"},
-    {"verb": "section", "form": "section:<id>#<heading>", "returns": "one named heading section from the entity SCHEMA_NOTES.md (needs --repo + --harvest; bounded); resolves a deeper[schema-notes] pointer"},
+    {"verb": "section", "form": "section:<id>#<heading>", "returns": "one named section, bounded (needs --repo + --harvest): entity SCHEMA_NOTES.md; a doc: entity's OWN file (core-docs + research); or section:<id>:<kind>#<h> via a deeper[] pointer (kind readme|research|schema-notes|work-order); ATX heading exact, else a bold-label block (e.g. Cadence header)"},
+    {"verb": "card", "form": "card:<id>", "returns": "ONE rendered L1 card for the entity, content-matching the committed L1_CARDS_* plane file (needs --harvest; bounded) -- never open a whole plane file for one card"},
     {"verb": "alias", "form": "alias:<text>", "returns": "the entity id(s) an alias or number resolves to"},
     {"verb": "stale", "form": "stale", "returns": "entities carrying a stale field (needs --harvest)"},
     {"verb": "changed-since", "form": "changed-since --paths-file <f>", "returns": "entities whose sources/deeper touch a path in <f>"},
@@ -1827,22 +1874,88 @@ def _extract_heading_section(text, heading_sel):
     return "\n".join(lines[start:end]), level, htext
 
 
-def _fetch_schema_note_section(q, cid, heading, harvest, model, repo):
-    """N1 (kills F3/F1 deep narrative): bounded, deterministic fetch of ONE named SCHEMA_NOTES
-    heading section. Repo-READ-ONLY (like harvest); CRLF->LF sha-stamped. Refuses an unresolved
-    module OR an unknown heading with the EXISTING DANGLING_REF (no new error codes)."""
+_BOLD_LABEL_RE = re.compile(r"^\*\*(.+?)\*\*")
+
+
+def _extract_bold_label_section(text, label_sel):
+    """N5 fallback selector: governing docs carry load-bearing TOP blocks that are BOLD-LABEL
+    paragraphs, not ATX headings (e.g. AUDIT_PIPELINE's `**Cadence header (...):**` block). When no
+    ATX heading matches, a line-leading `**<label>...**` paragraph matches by its LABEL = the bold
+    text up to the first '(' or ':' (whitespace-normalized, case-sensitive; the full bold text also
+    matches). The block spans that line to the next ATX heading of ANY level, the next bold-label
+    line, or EOF. First match wins (deterministic). Returns (text, 0, normalized-label) or None."""
+    want = " ".join(str(label_sel).split())
+    lines = text.split("\n")
+    start = None
+    htext = None
+    for i, ln in enumerate(lines):
+        m = _BOLD_LABEL_RE.match(ln)
+        if not m:
+            continue
+        full_label = " ".join(m.group(1).split())
+        short_label = " ".join(re.split(r"[(:]", m.group(1), 1)[0].split())
+        if want in (short_label, full_label):
+            start, htext = i, short_label
+            break
+    if start is None:
+        return None
+    end = len(lines)
+    for j in range(start + 1, len(lines)):
+        if re.match(r"^#{1,6}\s+", lines[j]) or _BOLD_LABEL_RE.match(lines[j]):
+            end = j
+            break
+    return "\n".join(lines[start:end]), 0, htext
+
+
+def _section_target_rel(cid, kind, harvest, model):
+    """N5 target resolution for section:. Returns (repo-relative path | None, target-label).
+    - kind form (section:<id>:<kind>#..): the entity's deeper[] pointers of that kind whose ref is a
+      PATH; the lexicographically-first ref serves (deeper[] is canonically (kind,ref)-sorted).
+    - bare form on a doc: entity: the doc's OWN file (the id key IS the repo path).
+    - bare form on any other entity: the i49 SCHEMA_NOTES resolution, byte-identical (deeper
+      [schema-notes] pointer preferred, else harvested modules/<dir>/SCHEMA_NOTES.md)."""
+    rec = model.entities.get(cid, {}) if model else {}
+    if kind:
+        refs = sorted(str(d.get("ref", "")).split("#", 1)[0]
+                      for d in (rec.get("deeper", []) or [])
+                      if isinstance(d, dict) and d.get("kind") == kind
+                      and isinstance(d.get("ref"), str) and _ref_is_path(str(d.get("ref"))))
+        refs = [r for r in refs if r]
+        if not refs:
+            return None, "deeper[%s]" % kind
+        return refs[0], "deeper[%s]" % kind
+    if _ns_of(cid) == "doc":
+        return cid.split(":", 1)[1], "doc-entity"
+    return _schema_notes_rel_for(cid, harvest, model), "schema-notes"
+
+
+def _fetch_doc_section(q, cid, heading, harvest, model, repo, kind=None):
+    """N1+N5 (kills F1 deep narrative + prose raw-open dominance): bounded, deterministic fetch of
+    ONE named section from (i49) the entity's SCHEMA_NOTES.md -- byte-identical -- and (i52 N5) any
+    mapped doc: entity's own file or a deeper[]-pointer target (SECTION_SERVE_KINDS). Repo-READ-ONLY
+    (like harvest); CRLF->LF sha-stamped. Selector: ATX exact heading first (i49 semantics), else the
+    bold-label fallback. Refusals reuse the EXISTING closed codes (DANGLING_REF / UNSUPPORTED_QUERY);
+    no new error codes."""
     if not repo:
         raise Refuse("UNSUPPORTED_QUERY", "section fetch requires --repo (repo-read-only source)")
     if harvest is None:
         raise Refuse("UNSUPPORTED_QUERY", "section fetch requires --harvest (to locate SCHEMA_NOTES)")
-    rel = _schema_notes_rel_for(cid, harvest, model)
+    rel, target = _section_target_rel(cid, kind, harvest, model)
     if not rel:
+        if kind:
+            raise Refuse("DANGLING_REF", "no deeper[%s] path pointer on %r" % (kind, cid))
         raise Refuse("DANGLING_REF", "no SCHEMA_NOTES.md for %r (module unresolved or has none)" % cid)
     full = os.path.join(repo, rel.replace("/", os.sep))
     if not os.path.isfile(full):
-        raise Refuse("DANGLING_REF", "SCHEMA_NOTES path %r does not exist in the tree" % rel)
+        if target == "schema-notes":
+            raise Refuse("DANGLING_REF", "SCHEMA_NOTES path %r does not exist in the tree" % rel)
+        raise Refuse("DANGLING_REF", "section target %r (%s) does not exist in the tree" % (rel, target))
     text = read_text(full)
     got = _extract_heading_section(text, heading)
+    selector = "atx"
+    if got is None:
+        got = _extract_bold_label_section(text, heading)
+        selector = "bold-label"
     if got is None:
         raise Refuse("DANGLING_REF", "heading %r not found in %s" % (heading, rel))
     sec, level, htext = got
@@ -1856,10 +1969,16 @@ def _fetch_schema_note_section(q, cid, heading, harvest, model, repo):
         head_n = (budget * 3) // 5
         tail_n = budget - head_n
         sec = b[:head_n].decode("utf-8", "ignore") + marker + (b[-tail_n:].decode("utf-8", "ignore") if tail_n else "")
-    return {"q": q, "entity": cid,
-            "section": {"path": rel, "sha256": sha256_norm(text), "heading": htext, "level": level,
-                        "harvest_commit": harvest.get("at_commit"),
-                        "bytes": len(sec.encode("utf-8")), "truncated": truncated, "text": sec}}
+    section = {"path": rel, "sha256": sha256_norm(text), "heading": htext, "level": level,
+               "harvest_commit": harvest.get("at_commit"),
+               "bytes": len(sec.encode("utf-8")), "truncated": truncated, "text": sec}
+    # i49 byte-identity: an ATX-matched schema-notes fetch carries EXACTLY the 0.3.0 keys. The NEW
+    # serve classes (doc-entity / deeper[kind] targets; bold-label matches) mark themselves.
+    if target != "schema-notes":
+        section["target"] = target
+    if selector != "atx":
+        section["selector"] = selector
+    return {"q": q, "entity": cid, "section": section}
 
 
 def op_query(map_dir, q, harvest=None, paths_file=None, fields=None, repo=None):
@@ -1957,13 +2076,56 @@ def op_query(map_dir, q, harvest=None, paths_file=None, fields=None, repo=None):
         # N1: fetch ONE named heading section from the entity SCHEMA_NOTES.md (repo-READ-ONLY,
         # bounded). Form section:<id>#<exact-heading>. Natural resolution of a
         # deeper[kind=schema-notes] pointer. Needs --repo + --harvest.
+        # N5 (i52): the SAME verb also serves (a) a mapped doc: entity's OWN file
+        # (section:doc:<path>#<sel>) and (b) a deeper[]-pointer target via
+        # section:<id>:<kind>#<sel> with kind in SECTION_SERVE_KINDS; ATX heading first,
+        # bold-label fallback. No new query names, no new error codes.
         if "#" not in arg:
             raise Refuse("UNSUPPORTED_QUERY", "section requires the form section:<id>#<heading>")
         eid, heading = arg.split("#", 1)
+        kind = None
+        if ":" in eid:
+            head, tail = eid.rsplit(":", 1)
+            if tail in DEEPER_KINDS and head:
+                if tail not in SECTION_SERVE_KINDS:
+                    raise Refuse("UNSUPPORTED_QUERY",
+                                 "section deeper-kind %r not servable (closed set: %s)"
+                                 % (tail, "|".join(SECTION_SERVE_KINDS)))
+                eid, kind = head, tail
         cid, was_short = resolve_query_id(eid, model)
         if cid is None:
             raise Refuse("DANGLING_REF", "no such entity for section %r" % eid)
-        return _resolved_key(_fetch_schema_note_section(q, cid, heading, harvest, model, repo), cid, was_short)
+        return _resolved_key(_fetch_doc_section(q, cid, heading, harvest, model, repo, kind), cid, was_short)
+    if verb == "card":
+        # N5 (i52, kills F1's plane-file open): serve ONE rendered L1 card, content-matching the
+        # committed L1_CARDS_* plane file (both render through _l1_card_lines). Needs --harvest
+        # (the STALE marker is part of the card contract). Bounded to CARD_FETCH_MAX.
+        if harvest is None:
+            raise Refuse("UNSUPPORTED_QUERY", "card requires --harvest (stale marking is part of the card)")
+        cid, was_short = resolve_query_id(arg, model)
+        if cid is None:
+            raise Refuse("DANGLING_REF", "no such entity %r for card" % arg)
+        vr = validate(model, harvest, is_real=True)
+        stale_set = set(vr["stale_entities"])
+        outbound, inbound = {}, {}
+        for e in model.edges:
+            outbound.setdefault(e.get("from"), []).append(e)
+            inbound.setdefault(e.get("to"), []).append(e)
+        text = "\n".join(_l1_card_lines(ents[cid], outbound, inbound, stale_set))
+        group = _l1_group_for(cid)
+        plane_file = "L1_CARDS_%s.md" % group
+        b = text.encode("utf-8")
+        truncated = len(b) > CARD_FETCH_MAX
+        if truncated:
+            marker = "\n...[clipped: %d/%d B; full card in %s]...\n" % (CARD_FETCH_MAX, len(b), plane_file)
+            budget = max(0, CARD_FETCH_MAX - len(marker.encode("utf-8")))
+            head_n = (budget * 3) // 5
+            tail_n = budget - head_n
+            text = b[:head_n].decode("utf-8", "ignore") + marker + (b[-tail_n:].decode("utf-8", "ignore") if tail_n else "")
+        return _resolved_key({"q": q, "card": {
+            "id": cid, "group": group, "plane_file": plane_file,
+            "harvest_commit": harvest.get("at_commit"),
+            "bytes": len(text.encode("utf-8")), "truncated": truncated, "text": text}}, cid, was_short)
     if verb == "alias":
         hits = []
         for rid, r in ents.items():
@@ -2074,6 +2236,25 @@ def op_selftest():
     assert QUERY_VERB_TOKENS == tuple(v["verb"] for v in QUERY_VERBS)
     assert "section" in QUERY_VERB_TOKENS and "entity" in QUERY_COLON_VERBS and "stale" not in QUERY_COLON_VERBS
     lines.append("SELFTEST_QUERYVERBS_OK")
+    # i52 N5: doc-section targets + bold-label fallback + the card verb
+    _txt = ("# T\n\n**Cadence header (maintained by replacement):**\n- `a: 1`\n- `b: 2`\n\n"
+            "## 5. Cadence\n\nbody5.\n\n## 6. Guards\n\nbody6.\n")
+    _g = _extract_bold_label_section(_txt, "Cadence header")
+    assert _g is not None and "`a: 1`" in _g[0] and "## 5." not in _g[0] and _g[1] == 0
+    assert _extract_heading_section(_txt, "5. Cadence")[0].strip().endswith("body5.")
+    _m2 = MapModel()
+    _m2.entities = {"doc:core-docs/X.md": {"id": "doc:core-docs/X.md", "ns": "doc"},
+                    "widget:08/w": {"id": "widget:08/w", "ns": "widget",
+                                    "deeper": [{"kind": "work-order", "ref": "widgets/08-w/WORK_ORDER.md"}]}}
+    assert _section_target_rel("doc:core-docs/X.md", None, None, _m2) == ("core-docs/X.md", "doc-entity")
+    assert _section_target_rel("widget:08/w", "work-order", None, _m2) == ("widgets/08-w/WORK_ORDER.md", "deeper[work-order]")
+    assert _section_target_rel("widget:08/w", "research", None, _m2)[0] is None
+    assert "card" in QUERY_COLON_VERBS and "card" in QUERY_VERB_TOKENS
+    lines.append("SELFTEST_SECTION_TARGETS_OK")
+    _cl = _l1_card_lines({"id": "module:90/x", "display_name": "x", "one_line": "one."}, {}, {}, set())
+    assert _cl[0] == "## module:90/x" and any(ln.startswith("- one_line: one.") for ln in _cl)
+    assert _l1_group_for("module:90/x") == "modules" and _l1_group_for("ops:boot-x") == "infra"
+    lines.append("SELFTEST_CARD_OK")
     return {"ok": True, "checks": lines}
 
 

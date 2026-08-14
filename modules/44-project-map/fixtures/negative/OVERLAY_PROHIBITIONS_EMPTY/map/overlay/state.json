@@ -22,7 +22,12 @@
   "state": "ACTIVE",
   "sunset_iteration": "47"
  },
- "open_rulings": [],
+ "open_rulings": [
+  {
+   "ref": "decision:D-9002",
+   "text": "gamma explain window cannot be closed after the fact -- fix rides the next gamma touch"
+  }
+ ],
  "phase": {
   "ref": "doc:core-docs/PROCESS_MANDATE.md",
   "text": "i46 fixture close; PCB build."
