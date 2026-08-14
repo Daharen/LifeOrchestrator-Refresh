@@ -168,3 +168,4 @@ labels; full detail is in `DECISION_LOG.md`.
 | D-0139 | 2026-08-12 | locked | i49 patch: DECISION_LOG_INDEX GROWTH-EXEMPT (per-row density guards, no whole-file cap); i49-compressed rows restored; decision re-layer deferred (PB-6) |
 | D-0140 | 2026-08-12 | locked | i50 N4 bars RE-FROZEN (D-0140): s7 = abs boot (packet<=20KB+canon) + total B<=0.7xA on query-output + void on PCB-insufficiency; gate stageable, legacy default |
 | D-0141 | 2026-08-12 | locked | Cap exhaustion on a cumulative surface triggers re-layering, not indefinite compression; one program PB-7 (PCB horizontal + memory vertical; subsumes PB-6) |
+| D-0142 | 2026-08-14 | locked | i51 fresh PCB gate under N4 bars = NO-GO (floor-b constraint gap 1.0 + total 2.74x/1.12x A vs 0.7x; boot PASS; void clean); legacy default; i52 = N5 prose-granularity + N6 canon + N7 close-currency + N8 re-run re-freeze |

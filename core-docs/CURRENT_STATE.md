@@ -29,11 +29,11 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
   lever shipped i39 (D-0108; hpr ~2x; guaranteed+packet recall stay 1e6).
   Arc detail: the index; per-module state: `MODULE_ROADMAP.md`.
 - **P0-1 action-authorization gate (#43): `build_status=build_complete | p0_1_gate_status=PASS | activation_status=prohibited`.** #43 0.6.0 (`10d0d1e`, i42) is a RATIFIED DESIGN pass -- round-5 independent review PASS -> s7 `p0_1_gate_status=pass` (D-0118, M2-D, pack `6bb613ea`; arc detail D-0116/18). Verified x2 byte-identical (364/364; bundle `3b5d62f4`); A06 denies every authentic packet; `non_execution:true` holds. **Activation stays PROHIBITED** -- a design pass, NOT an activation grant.
-- **i47-i50 (D-0132..D-0140):** mandate-02 SUNSET (YES; SEALED_CHECK_47 armed, open i>=54) and the migration gate = **CONDITIONAL** (quality PASS, efficiency VOID via RT2-F9); i48 shipped **#44 `project.map` 0.2.0** (CD-1 canon + CD-3 queries), the i48 re-check FAILED on economics (D-0136, B 1.24x A), **i49 shipped 0.3.0** (N1 narrative queries + N2 frontier + N3 verb table; D-0138; fold VALIDATE 0), and **i50 RATIFIED the N4 bar re-freeze (D-0140):** the s7 efficiency rules re-frozen -- absolute boot (`packet <= 20,000 B` + CD-1 canon) + total `B <= 0.7 x A` on query-output accounting + void on PCB-insufficiency. **A fresh gate is now STAGEABLE but not yet run, so the LEGACY handoff stays the default bootstrap until it runs + passes.**
+- **i47-i51 (D-0132..D-0142):** mandate-02 SUNSET (YES; SEALED_CHECK_47 armed, open i>=54); the i47 gate = **CONDITIONAL**; i48 shipped **#44 0.2.0** (CD-1+CD-3) but its re-check FAILED (D-0136, B 1.24x A); **i49 shipped 0.3.0** (N1+N2+N3; D-0138); **i50 RATIFIED the N4 bar re-freeze (D-0140)** (absolute boot + 0.7xA total on query-output + insufficiency void); and **i51 RAN the fresh gate (T1; full A/B/C1/C2) = NO-GO (D-0142):** quality floor (b) breached (B constraint 3.0 v 4.0, both adjudicators) + TOTAL missed (2.74x/1.12x A vs 0.7x; BOOT PASS). **LEGACY stays the default bootstrap; i52 = the N5-N8 fix wave.**
 - **FROZEN / deferred (D-0080):** durable-supervisor / warm-pool hardening (D-0079 GATE-NO stands; classic
   detached-warm is the trusted default); generator upgrades; `video.interpret` + live composition; deep
   real-time perception (arch 27-49); broad training.
-- **Fan-out loop:** 48 iterations run via `orchestrate.fanout` #30 over `res.lease` #29; workers hand-dispatched
+- **Fan-out loop:** 51 iterations run via `orchestrate.fanout` #30 over `res.lease` #29; workers hand-dispatched
   into fresh Cowork sessions. Ledger + wave model: **`FANOUT_ORCHESTRATOR_HANDOFF.md`**.
 - **Boundary (D-0051, amended by D-0080):** the orchestrator never drives another *external/frontier* AI session
   (human-couriered only); a deterministic LOCAL coordinator IS authorized to spawn local contexts (Priority 10).
@@ -137,7 +137,7 @@ registry facts: `TOOL_MODEL_REGISTRY.md`. Roster (all MVP-complete unless noted)
 - **Widgets (native + `launch.bat`, D-0038):** 01 Local Agent Console · 02 Module Launcher · 03 Verification
   Console (durable verdicts, D-0065) · 04 Fan-out Wave Dashboard (live-GUI confirm DONE) · 05 Provenance Map
   (audit tier A1) · 06 Compile Trace Console (audit A1) · 07 Audit Timeline+Tournament (audit A2) · 08 Live-Run Audit Pathway (LRAP, i45). Widgets
-  05/06/07 live-GUI DONE (i43); Widget 08 SHIPPED + verified 87/0/0, NOT yet phenomenological (D-0125; P9 open; poser SHIPPED D-0127; live-click confirm PENDING D-0129).
+  05/06/07 live-GUI DONE (i43); Widget 08 SHIPPED + verified 87/0/0, NOT yet phenomenological (D-0125; P9 open; poser SHIPPED; live-click CONFIRMED; window-close defect rides next w08 touch -- D-0134).
 
 **Phase A complete** (0-25 + 00.1; #26 deferred); generator track complete; **Phase B Widgets 01-08 shipped;
 Phase C video spine front half built; memory subsystem #35-#43 built, Tier-1 accepted.**
@@ -343,7 +343,7 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 - **`-Profile max` 9B arg-gen returns non-JSON** (`arg_parse_failed`) — floor is the reliable path (D-0046).
 - **The executor file-lock crash root cause was never reproduced** — self-healed, not explained.
 - **Widget 03 `model.gateway` GPU live-GUI pass still open** (since D-0060).
-- **Audit surface -- LRAP v1 NOT phenomenological (D-0125):** P9 open; poser SHIPPED (D-0127; live-click PENDING D-0129); next = front-step/ride-along/output (`core-docs/AUDIT_PIPELINE.md`).
+- **Audit surface -- LRAP v1 NOT phenomenological (D-0125):** P9 open; poser SHIPPED (live-click CONFIRMED D-0134; window-close defect rides next w08 touch); next = front-step/ride-along/output (`core-docs/AUDIT_PIPELINE.md`).
 - **Portability:** `$PwshPath` defaults across ~15 model-bound entrypoints; core-infra (00.1 + `ops/*.bat`);
   interpreter paths #15/#16; model-bound F: literals — each its own follow-on wave (D-0069).
 - **Generator upgrades (D-0068 leads):** image Z-Image-Turbo Q8 (needs stable-diffusion.cpp), music ACE-Step,
@@ -355,13 +355,13 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ## Next expected action
 
-**i50 (D-0140):** the N4 migration-gate bar re-freeze RATIFIED (Nicholas). The frozen `I47_EVAL_PACKET` s7 efficiency rules -- dead post-CD-1 (D-0136 F1/F2/F4) -- are replaced for the next gate run: BOOT absolute (`packet <= 20,000 B` + CD-1 canon; retires the unreachable 0.5xA ratio), TOTAL `B <= 0.7 x A` counting query-OUTPUT bytes for #44-query content (credits N1), VOID on PCB-insufficiency (corroboration counts, does not void; void-(b) retired). s1-s6 + quality floors unchanged; packet untouched. Record: `modules/44-project-map/eval/results/N4_BAR_REFREEZE.md`.
+**i51 (D-0142):** the fresh legacy-vs-PCB gate RAN under the D-0140 bars (T1; full A/B/C1/C2; EVAL_SHA `ef70a57`) -> **NO-GO**: quality floor (b) breached (B constraint 3.0 v 4.0, both adjudicators) + TOTAL missed under both accountings (2.74x/1.12x A vs 0.7x; BOOT PASS; VOID clean). Mechanisms F1-F4: prose-governing docs not query-granular; map stale at doc-only closes; packet canon gaps; unfrozen accounting conventions. Record: `modules/44-project-map/eval/results/I51_RESULTS.md`.
 
-**NEXT = i51:** stage + run the fresh legacy-vs-PCB gate against the D-0140 bars (now licensable; projected ~0.35 x A) -- OR a deferred-menu pick; until it runs + passes, legacy stays default. Deferred (D-0134): #40 beam-width (i48 A/B packs = design input); M2-C/FO-3 decision re-layer (PB-6); AUDIT (i54, D-0137); PB-2. P0-1 FROZEN; SEALED_CHECK_47 sealed (open i>=54).
+**NEXT = i52 (Nicholas directive: fix this iteration's issues, move toward GO):** ONE #44 coding lane ships **N5** (doc-section/`card:` query granularity) + **N6** (OPERATIONS canon extension per I51_RESULTS s7); the orchestrator lands **N7** (close-time #44 re-fold, incl. doc-only closes) + stages **N8** (re-run re-freeze: two-class task pool + accounting conventions; NICHOLAS RATIFICATION). Then a fresh gate stages. Deferred (D-0134): #40 beam-width (i48+i51 packs = design input); M2-C/FO-3 re-layer (PB-7); AUDIT (i54, D-0137); PB-2. P0-1 FROZEN; SEALED_CHECK_47 sealed (open i>=54).
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades; `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-12 -- i50 (D-0140): N4 migration-gate bar re-freeze RATIFIED; s7 efficiency rules re-frozen (absolute boot + total B<=0.7xA on query-output + void on PCB-insufficiency); fresh gate stageable (not run); legacy stays default.
+**Last updated:** 2026-08-14 -- i51 (D-0142): fresh PCB gate NO-GO (floor-b constraint gap + total 2.74x/1.12x vs 0.7x; boot PASS); legacy stays default; i52 = N5/N6/N7 fix wave + N8 ratification.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*
