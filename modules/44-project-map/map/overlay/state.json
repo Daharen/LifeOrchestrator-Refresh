@@ -1,5 +1,5 @@
 {
- "at_commit": "fbc76f6fc14647cbf1e0dbd7764a9f0d78555595",
+ "at_commit": "fbc76fc14647cbf1e0dbd7764a9f0d78555595",
  "boot_read": [
   {
    "kind": "other",
@@ -18,6 +18,16 @@
     "pointer": "core-docs/SEALED_CHECK_47.md"
    },
    {
+    "gate": "i56 lane (D-0149; Nicholas priority)",
+    "item": "PB-6 decision re-layer BUILD -- NEW #45 decision.intel producer (record_kind=decision, s8 fields) + the #40 compile_relevant_decisions verb; two CPU lanes, D-0077 pair; design-first -> red-team DONE (i55)",
+    "pointer": "core-docs/research/2026-08-14-pb6-decision-record-schema.md"
+   },
+   {
+    "gate": "reviewed i56 (D-0147); next review_due i58",
+    "item": "AUDIT_PIPELINE next_increment (raw-prompt FRONT step; design-first -> red-team) -- no spare lane at i56 (both CPU lanes = PB-6), bumped +2",
+    "pointer": "core-docs/AUDIT_PIPELINE.md s5"
+   },
+   {
     "gate": "deferred D-0134",
     "item": "#40 context.compile beam-WIDTH follow-on (i48+i51 packs = input)",
     "pointer": "MODULE_ROADMAP.md #40"
@@ -28,31 +38,16 @@
     "pointer": "core-docs/PROCESS_BACKLOG.md"
    },
    {
-    "gate": "i55 lane (D-0141; Nicholas priority)",
-    "item": "PB-7 knowledge-surface re-layer (bounded-hot + indexed-cold across DECISION_LOG/CURRENT_STATE/index + PCB/memory engines); design-first -> red-team",
-    "pointer": "core-docs/PROCESS_BACKLOG.md"
-   },
-   {
-    "gate": "i55 lane (D-0147)",
-    "item": "standing per-session retrieval-byte monitor (make the gate's A/B efficiency number a per-wave measurement)",
-    "pointer": "modules/44-project-map/eval/results/I53_RESULTS.md"
-   },
-   {
-    "gate": "review_due i56 (D-0147)",
-    "item": "AUDIT_PIPELINE next_increment (raw-prompt FRONT step; design-first -> red-team)",
-    "pointer": "core-docs/AUDIT_PIPELINE.md s5"
-   },
-   {
     "gate": "rides next w08 touch (D-0134)",
     "item": "w08 explain-window-close defect",
     "pointer": "widgets/08-live-run-audit-pathway"
    }
   ],
-  "derived_from": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md s4 + DECISION_LOG D-0147 at the i54 close.",
-  "next_iteration": 55,
-  "summary": "i54 CLOSED: SEALED_CHECK_47 evaluated (integrity MATCH; 6/7 PASS, SP3 doc-budget FAIL) -> file RETAINED, M-03 reconcile mandate PROPOSED but DEFERRED by Nicholas; AUDIT review done, review_due i54->i56 (D-0147). NEXT = i55: PB-7 knowledge-surface re-layer (token-endurance; design-first -> red-team, Opus) + a standing per-session retrieval-byte monitor (Sonnet)."
+  "derived_from": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md s4 + DECISION_LOG D-0149 at the i55 close; overlay refreshed at i56 scoping.",
+  "next_iteration": 56,
+  "summary": "i55 CLOSED (D-0149): PB-7 knowledge-surface re-layer DESIGNED (Opus inline; a 3-adversary red-team confirmed 3 breaks -> a hardened ruleset; first increment = PB-6) + the retrieval-byte monitor SHIPPED (99cb32b, Sonnet). NEXT = i56: PB-6 decision re-layer BUILD -- a new #45 decision.intel producer (record_kind=decision, s8 fields) + the #40 compile_relevant_decisions verb (two CPU lanes, D-0077 pair); boot stops ingesting DECISION_LOG_INDEX whole at fold. AUDIT review_due i56 done (bumped to i58)."
  },
- "iteration": 54,
+ "iteration": 55,
  "open_rulings": [
   {
    "ref": "decision:D-0132",
@@ -65,7 +60,7 @@
  ],
  "phase": {
   "ref": "doc:core-docs/CURRENT_STATE.md",
-  "text": "Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; PCB BOOT_PACKET is the DEFAULT orchestrator bootstrap (D-0146; legacy handoff = fallback). i54: SEALED_CHECK_47 evaluated (SP3 doc-budget regression open, M-03 mandate deferred); NEXT = PB-7 token-endurance re-layer + a retrieval-byte monitor."
+  "text": "Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; PCB BOOT_PACKET is the DEFAULT orchestrator bootstrap (D-0146; legacy handoff = fallback). i55 CLOSED (D-0149): PB-7 re-layer DESIGNED (3-adversary red-team -> hardened ruleset; first increment PB-6) + retrieval-byte monitor SHIPPED; NEXT = i56: PB-6 decision re-layer BUILD."
  },
  "prohibitions": [
   {
