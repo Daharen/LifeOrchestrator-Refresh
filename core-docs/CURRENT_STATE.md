@@ -355,13 +355,13 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ## Next expected action
 
-**i54 CLOSED (D-0147):** SEALED_CHECK_47 evaluated (opened i>=54; integrity MATCH; 6/7 PASS, **SP3 doc-budget FAIL**: ARCHITECTURE_MAP 16.3KB blob > 15KB genuine + 3 docs over only on the wc-c/CRLF basis vs the enforced LF-blob gate). NOT all-pass -> file RETAINED; **M-03 reconcile mandate PROPOSED, DEFERRED by Nicholas** (priority = PB-7). AUDIT review done -> `review_due` i54->i56. Hygiene: close-refold `-Harvest` restamp fix + worker-template retrieval rail + boot_read trim (CURRENT_STATE+SEALED_CHECK_47).
+**i55 CLOSED (D-0149):** two lanes. **PB-7 knowledge-surface re-layer DESIGNED** (Opus, inline per D-0119; `research/2026-08-14-pb7-relayer-design*.md`): ONE program over the PCB #44 (horizontal) + memory #35-43 (vertical); a 3-adversary red-team confirmed 3 breaks in the naive HOT rule -> a hardened ruleset (binding_scope exemption + demote-on-enforcement + partial-supersession + per-commit currency); first increment = PB-6. **Retrieval-byte monitor SHIPPED** (`99cb32b`, Sonnet): one `retrieval-bytes-log.jsonl` row/close; first row bounded_fraction=0.0 (reproduced F-i53-eff). GitHub mirror pushed to canonical.
 
-**NEXT = i55: PB-7 knowledge-surface re-layer** (D-0141; bounded-hot + indexed-cold across DECISION_LOG/CURRENT_STATE/index + PCB/memory engines; design-first -> red-team, Opus lane) **+ a standing per-session retrieval-byte monitor** (Sonnet lane). SP3 stays OPEN (M-03 deferred). Deferred (D-0134): #40 beam-width * PB-2. P0-1 activation FROZEN.
+**NEXT = i56: PB-6 build** -- the designed first PB-7 increment (a producer -> typed `decision` records in #36 with the hardened fields + a compile-relevant-set verb via #40/#37; boot stops ingesting DECISION_LOG_INDEX whole). AUDIT review_due i56 (D-0147) rides; SP3/M-03 STAYS OPEN (deferred); #40 beam-width * PB-2 deferred (D-0134). P0-1 activation FROZEN.
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades; `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-14 -- i54 + D-0148 follow-on: SEALED_CHECK_47 evaluated (SP3 FAIL, M-03 deferred, file retained); AUDIT review_due i56; close-refold FULLY repaired (-Harvest + reaffirm_batch one-process, clobber killed); FANOUT_AGENT_001 = PB-7 READY; next = i55 PB-7 re-layer + retrieval-byte monitor.
+**Last updated:** 2026-08-14 -- i55 CLOSED (D-0149): PB-7 re-layer DESIGNED (3-adversary red-team -> hardened ruleset; first increment PB-6) + retrieval-byte monitor SHIPPED 99cb32b; GitHub mirror pushed; next = i56 PB-6 build.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

@@ -4,14 +4,14 @@
 - **Slot:** FANOUT_AGENT_002
 - **Status:** EMPTY
 - **Wave / iteration:** -- (fill at wave scoping; plan id `fo-<N>-<id>` once planned)
-- **Lane:** -- (convention: 001 GPU / 002 CPU / 003 coding)
+- **Lane:** -- (convention: 001 GPU / 002 CPU / 002 coding)
 - **Worker id / label:** --
 - **Module/area (exclusive):** --
 - **GPU:** false (set true ONLY if this is the wave single GPU worker)
 - **Docs:** `[]`
 
 ## Mission
-_EMPTY -- no unit assigned._ Fill from the candidate menu in `core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md` section 4 (i47 = the mandate-02 sunset report + the FROZEN legacy-vs-PCB migration-gate experiment per `modules/44-project-map/eval/I47_EVAL_PACKET.md`; the experiment's A/B/C dispatches come from the PACKET, not this slot system). Paste the `plan`-emitted worker prompt (or a tight summary + a pointer when over the 8 KB budget); mirror it.
+_EMPTY -- no unit assigned._ Fill from the candidate menu in `core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md` section 4 (i53: the fresh two-class migration gate is Nicholas-staged eval work, not a worker unit; coding candidates live in the s4 deferred menu). Paste the `plan`-emitted worker prompt (or a tight summary + a pointer to the emitted copy when over the 8 KB budget); mirror it.
 
 ## Unit (the full worker prompt)
 _pending -- filled at wave scoping._
