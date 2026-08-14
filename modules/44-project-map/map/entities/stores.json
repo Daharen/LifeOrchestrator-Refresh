@@ -239,6 +239,14 @@
        "by": "orchestrator-i52"
       },
       {
+       "at_commit": "fbc76f6fc14647cbf1e0dbd7764a9f0d78555595",
+       "by": "orchestrator-i53"
+      },
+      {
+       "at_commit": "fbc76f6fc14647cbf1e0dbd7764a9f0d78555595",
+       "by": "orchestrator-i53"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -252,7 +260,7 @@
       }
      ],
      "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
-     "sha256": "182db0eac4d83459c016b8df1a001989a9d2e98fac14502ac8d28f71416ef415"
+     "sha256": "1b62071ed2ea611124793d72c1b05c397557f59b05196da709b4b58d45751a51"
     }
    ]
   },
@@ -287,6 +295,14 @@
        "by": "orchestrator-i52"
       },
       {
+       "at_commit": "fbc76f6fc14647cbf1e0dbd7764a9f0d78555595",
+       "by": "orchestrator-i53"
+      },
+      {
+       "at_commit": "fbc76f6fc14647cbf1e0dbd7764a9f0d78555595",
+       "by": "orchestrator-i53"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -300,7 +316,7 @@
       }
      ],
      "ref": "core-docs/CURRENT_STATE.md",
-     "sha256": "f74c3cf2bcb7be601fbc90a377529313c57492d3a1ecca13a5f8544f5b5a3b31"
+     "sha256": "b71b7ca618fa9df74f54cdfb6623fad7cfa48e05ab3dadf83ec964b7120f7477"
     }
    ]
   },
@@ -335,6 +351,14 @@
        "by": "orchestrator-i52"
       },
       {
+       "at_commit": "fbc76f6fc14647cbf1e0dbd7764a9f0d78555595",
+       "by": "orchestrator-i53"
+      },
+      {
+       "at_commit": "fbc76f6fc14647cbf1e0dbd7764a9f0d78555595",
+       "by": "orchestrator-i53"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -348,7 +372,7 @@
       }
      ],
      "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
-     "sha256": "182db0eac4d83459c016b8df1a001989a9d2e98fac14502ac8d28f71416ef415"
+     "sha256": "1b62071ed2ea611124793d72c1b05c397557f59b05196da709b4b58d45751a51"
     }
    ]
   },

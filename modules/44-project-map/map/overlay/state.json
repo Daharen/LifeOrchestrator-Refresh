@@ -1,5 +1,5 @@
 {
- "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
+ "at_commit": "fbc76f6fc14647cbf1e0dbd7764a9f0d78555595",
  "boot_read": [
   {
    "kind": "other",
@@ -26,18 +26,13 @@
     "pointer": "core-docs/SEALED_CHECK_47.md"
    },
    {
-    "gate": "STAGEABLE (N8 ratified D-0144; N5-N7 landed i52)",
-    "item": "fresh two-class migration gate: T-map + T-prose under the N4 bars + the N8 protocol",
-    "pointer": "modules/44-project-map/eval/results/N8_RERUN_REFREEZE.md"
-   },
-   {
     "gate": "deferred D-0134 / D-0141",
-    "item": "PB-7 knowledge-surface re-layer (subsumes PB-6): bounded-hot + indexed-cold",
+    "item": "PB-7 knowledge-surface re-layer (bounded-hot + indexed-cold)",
     "pointer": "core-docs/PROCESS_BACKLOG.md"
    },
    {
     "gate": "deferred D-0134",
-    "item": "#40 context.compile beam-WIDTH follow-on (i48 + i51 packs = design input)",
+    "item": "#40 context.compile beam-WIDTH follow-on (i48+i51 packs = input)",
     "pointer": "MODULE_ROADMAP.md #40"
    },
    {
@@ -46,21 +41,26 @@
     "pointer": "core-docs/PROCESS_BACKLOG.md"
    },
    {
-    "gate": "review_due i54 (D-0137 override)",
-    "item": "AUDIT_PIPELINE next_increment (front-step + ride-along + output side)",
+    "gate": "efficiency follow-on (D-0146 F-i53-eff)",
+    "item": "steer PCB retrieval to section:/card: fetches over whole-doc opens on prose tasks",
+    "pointer": "modules/44-project-map/eval/results/I53_RESULTS.md"
+   },
+   {
+    "gate": "review_due i54 (D-0137)",
+    "item": "AUDIT_PIPELINE next_increment (the audit front-step; design-first -> red-team)",
     "pointer": "core-docs/AUDIT_PIPELINE.md s5"
    },
    {
-    "gate": "rides next w08 touch (D-0134 live-GUI cycle)",
+    "gate": "rides next w08 touch (D-0134)",
     "item": "w08 explain-window-close defect",
     "pointer": "widgets/08-live-run-audit-pathway"
    }
   ],
-  "derived_from": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md s4 at the i52 docs-close commit (D-0145).",
-  "next_iteration": 53,
-  "summary": "i52 closed the D-0142 fix set: N5-N7 LANDED, N8 RATIFIED (D-0144). The fresh migration gate is STAGEABLE: run it under the D-0140/N4 bars + the D-0144/N8 protocol; GO requires every bar met on BOTH tasks. Else the deferred menu (D-0134)."
+  "derived_from": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md s4 + DECISION_LOG D-0146 at the i53 close.",
+  "next_iteration": 54,
+  "summary": "i53 = the fresh two-class migration gate GO (D-0146); the PCB BOOT_PACKET is now the DEFAULT orchestrator bootstrap. NEXT = i54: evaluate SEALED_CHECK_47 (opens i>=54) FIRST, then the AUDIT_PIPELINE next_increment review co-scheduled with it (D-0137)."
  },
- "iteration": 52,
+ "iteration": 53,
  "open_rulings": [
   {
    "ref": "decision:D-0134",
@@ -69,7 +69,7 @@
  ],
  "phase": {
   "ref": "doc:core-docs/CURRENT_STATE.md",
-  "text": "Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; i51 gate NO-GO -> i52 shipped the N5-N8 fix set (project.map 0.4.0); legacy default."
+  "text": "Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; i53 migration gate GO (D-0146) -> the PCB BOOT_PACKET is now the DEFAULT orchestrator bootstrap (legacy handoff = fallback)."
  },
  "prohibitions": [
   {
