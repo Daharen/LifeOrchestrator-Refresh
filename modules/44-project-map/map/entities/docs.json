@@ -89,6 +89,10 @@
        "by": "orchestrator-i52"
       },
       {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
+      },
+      {
        "at_commit": "b4b46069dfe3804a35bb5031c57a33b9a333c767",
        "by": "orchestrator-close"
       },
@@ -138,6 +142,10 @@
       {
        "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
        "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
       },
       {
        "at_commit": "b4b46069dfe3804a35bb5031c57a33b9a333c767",
@@ -215,6 +223,10 @@
        "by": "orchestrator-i52"
       },
       {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
+      },
+      {
        "at_commit": "b4b46069dfe3804a35bb5031c57a33b9a333c767",
        "by": "orchestrator-close"
       },
@@ -236,7 +248,7 @@
       }
      ],
      "ref": "core-docs/DOC_PROTOCOL.md",
-     "sha256": "1f220b0d55391605e431f4310c162518c2c0cd37f21a1d539ab80adc05604756"
+     "sha256": "a3122de409771434d79a7e7b586fef32405df2f366ba1df7d38ad52601b326a0"
     },
     {
      "at_commit": "d7619b41d2742ab8f309e4af908a71ff919ad935",
@@ -263,6 +275,10 @@
        "by": "orchestrator-i52"
       },
       {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
+      },
+      {
        "at_commit": "b4b46069dfe3804a35bb5031c57a33b9a333c767",
        "by": "orchestrator-close"
       },
@@ -284,6 +300,23 @@
       }
      ],
      "ref": "doc:core-docs/AUDIT_PIPELINE.md"
+    }
+   ]
+  },
+  {
+   "display_name": "COLD_BOOT_CARD.md",
+   "id": "doc:core-docs/COLD_BOOT_CARD.md",
+   "ns": "doc",
+   "one_line": "COLD_BOOT_CARD.md -- generator-independent recovery survivor: identity + SoT rule + count-asserted doc list + pinned constraints + read order",
+   "sources": [
+    {
+     "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+     "by": "orchestrator-i59-close",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/COLD_BOOT_CARD.md",
+     "sha256": "cecad27b50d5c1ad3c8d06f86f75595a2773d18f52db92b5a09ac075f07a6256"
     }
    ]
   },
@@ -346,6 +379,10 @@
        "by": "orchestrator-i57-close"
       },
       {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
+      },
+      {
        "at_commit": "b4b46069dfe3804a35bb5031c57a33b9a333c767",
        "by": "orchestrator-close"
       },
@@ -379,7 +416,7 @@
       }
      ],
      "ref": "core-docs/CURRENT_STATE.md",
-     "sha256": "86e8b6063038c04ae75b6bdc17c9519c47d14ba524925460bfdfb9a09108b54d"
+     "sha256": "3afb87eb955463d6821e6178bc5e9691e8b00b565b489d5fd814cd8809fbf95c"
     }
    ]
   },
@@ -425,6 +462,10 @@
        "by": "orchestrator-i57-close"
       },
       {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
+      },
+      {
        "at_commit": "b4b46069dfe3804a35bb5031c57a33b9a333c767",
        "by": "orchestrator-close"
       },
@@ -458,7 +499,7 @@
       }
      ],
      "ref": "core-docs/DECISION_LOG.md",
-     "sha256": "6a2a7544689b80455da05bfe10102d3af5e6a6685ad65292a788b98db3f2d3f9"
+     "sha256": "7c92b21518486d60263061c45f9efaa6a2bd264f8aba2fbb6704672dac2f934b"
     }
    ]
   },
@@ -504,6 +545,10 @@
        "by": "orchestrator-i57-close"
       },
       {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
+      },
+      {
        "at_commit": "b4b46069dfe3804a35bb5031c57a33b9a333c767",
        "by": "orchestrator-close"
       },
@@ -537,7 +582,7 @@
       }
      ],
      "ref": "core-docs/DECISION_LOG_INDEX.md",
-     "sha256": "539d60a15152564aca572c4120224cda128554d58178cfe05b374b68b51b4367"
+     "sha256": "b486abaaf6bb3c367c69b198f20475d461cf4e9771ca85dabaefa84b3330177f"
     }
    ]
   },
@@ -567,6 +612,10 @@
        "by": "orchestrator-i52"
       },
       {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -580,7 +629,7 @@
       }
      ],
      "ref": "core-docs/DOC_PROTOCOL.md",
-     "sha256": "1f220b0d55391605e431f4310c162518c2c0cd37f21a1d539ab80adc05604756"
+     "sha256": "a3122de409771434d79a7e7b586fef32405df2f366ba1df7d38ad52601b326a0"
     }
    ]
   },
@@ -626,6 +675,10 @@
        "by": "orchestrator-i57-close"
       },
       {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
+      },
+      {
        "at_commit": "b4b46069dfe3804a35bb5031c57a33b9a333c767",
        "by": "orchestrator-close"
       },
@@ -659,7 +712,7 @@
       }
      ],
      "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
-     "sha256": "8f9a81dadfd6769d3245378639c1f72dc412e941700f3b60a51f2e46226a288a"
+     "sha256": "dd6adec1c20ad60003c8b570779cf35f05be22116652e173b4fcf9647844c2cd"
     }
    ]
   },
@@ -693,6 +746,10 @@
        "by": "orchestrator-i52"
       },
       {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -706,7 +763,7 @@
       }
      ],
      "ref": "core-docs/DOC_PROTOCOL.md",
-     "sha256": "1f220b0d55391605e431f4310c162518c2c0cd37f21a1d539ab80adc05604756"
+     "sha256": "a3122de409771434d79a7e7b586fef32405df2f366ba1df7d38ad52601b326a0"
     },
     {
      "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
@@ -729,6 +786,10 @@
        "by": "orchestrator-i52"
       },
       {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -742,7 +803,7 @@
       }
      ],
      "ref": "core-docs/DOC_PROTOCOL.md",
-     "sha256": "1f220b0d55391605e431f4310c162518c2c0cd37f21a1d539ab80adc05604756"
+     "sha256": "a3122de409771434d79a7e7b586fef32405df2f366ba1df7d38ad52601b326a0"
     },
     {
      "at_commit": "seed",
@@ -762,6 +823,10 @@
       {
        "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
        "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
       },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
@@ -797,6 +862,10 @@
       {
        "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
        "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
       },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
@@ -833,6 +902,10 @@
       {
        "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
        "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
       },
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
@@ -987,12 +1060,16 @@
        "by": "orchestrator-i57-close"
       },
       {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
+      },
+      {
        "at_commit": "b4b46069dfe3804a35bb5031c57a33b9a333c767",
        "by": "orchestrator-close"
       }
      ],
      "ref": "core-docs/PROCESS_BACKLOG.md",
-     "sha256": "4e23e9ff7a021ad5ab220c96c7e4f02893eb25cae3ec4d5db90bb483bcc7fbe5"
+     "sha256": "96eb604980b708f79f7a3c9a18f5fe150360d45e5b61a882330820181f8696b9"
     }
    ]
   },
@@ -1054,10 +1131,14 @@
       {
        "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
        "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
       }
      ],
      "ref": "core-docs/DOC_PROTOCOL.md",
-     "sha256": "1f220b0d55391605e431f4310c162518c2c0cd37f21a1d539ab80adc05604756"
+     "sha256": "a3122de409771434d79a7e7b586fef32405df2f366ba1df7d38ad52601b326a0"
     },
     {
      "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
@@ -1075,6 +1156,10 @@
       {
        "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
        "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
       }
      ],
      "ref": "core-docs/SEALED_CHECK_47.md",
@@ -1096,6 +1181,10 @@
       {
        "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
        "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
       }
      ],
      "ref": "core-docs/SEALED_CHECK_47.md",
@@ -1116,6 +1205,10 @@
       {
        "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
        "by": "orchestrator-i52"
+      },
+      {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
       }
      ],
      "ref": "doc:core-docs/SEALED_CHECK_47.md"
@@ -1143,7 +1236,7 @@
    "display_name": "START_HERE.md",
    "id": "doc:core-docs/START_HERE.md",
    "ns": "doc",
-   "one_line": "START_HERE.md -- routing: what to read, what you may modify, session checklist",
+   "one_line": "START_HERE.md -- boot kernel: verify/rebuild/open routing (stable, hand-maintained, no changing state)",
    "sources": [
     {
      "at_commit": "seed",
@@ -1157,6 +1250,10 @@
        "by": "orchestrator-i57-close"
       },
       {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
+      },
+      {
        "at_commit": "fbc76f6fc14647cbf1e0dbd7764a9f0d78555595",
        "by": "orchestrator-i53"
       },
@@ -1166,7 +1263,25 @@
       }
      ],
      "ref": "core-docs/START_HERE.md",
-     "sha256": "2bbba931015dc5fe19f3b82611f5915c719c1fed4ec4cb9e5d40bedc87e1bfac"
+     "sha256": "a67abf33ef6d2377443d2940f31a05ce8b4f8eb44ce37842b79f46fd82e7df0d"
+    },
+    {
+     "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+     "by": "orchestrator-i59-close",
+     "fields": [
+      "one_line"
+     ],
+     "ref": "core-docs/START_HERE.md",
+     "sha256": "a67abf33ef6d2377443d2940f31a05ce8b4f8eb44ce37842b79f46fd82e7df0d"
+    },
+    {
+     "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+     "by": "orchestrator-i59-close",
+     "fields": [
+      "*"
+     ],
+     "note": "override: i59 root migration: START_HERE.md is now the boot kernel; COLD_BOOT_CARD.md added (D-0154)",
+     "ref": "doc:core-docs/START_HERE.md"
     }
    ]
   },

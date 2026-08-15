@@ -117,6 +117,10 @@
        "by": "orchestrator-i52"
       },
       {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -130,7 +134,7 @@
       }
      ],
      "ref": "core-docs/DOC_PROTOCOL.md",
-     "sha256": "1f220b0d55391605e431f4310c162518c2c0cd37f21a1d539ab80adc05604756"
+     "sha256": "a3122de409771434d79a7e7b586fef32405df2f366ba1df7d38ad52601b326a0"
     }
    ]
   },
@@ -267,6 +271,10 @@
        "by": "orchestrator-i57-close"
       },
       {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
+      },
+      {
        "at_commit": "b4b46069dfe3804a35bb5031c57a33b9a333c767",
        "by": "orchestrator-close"
       },
@@ -300,7 +308,7 @@
       }
      ],
      "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
-     "sha256": "8f9a81dadfd6769d3245378639c1f72dc412e941700f3b60a51f2e46226a288a"
+     "sha256": "dd6adec1c20ad60003c8b570779cf35f05be22116652e173b4fcf9647844c2cd"
     }
    ]
   },
@@ -347,6 +355,10 @@
        "by": "orchestrator-i57-close"
       },
       {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
+      },
+      {
        "at_commit": "b4b46069dfe3804a35bb5031c57a33b9a333c767",
        "by": "orchestrator-close"
       },
@@ -380,7 +392,7 @@
       }
      ],
      "ref": "core-docs/CURRENT_STATE.md",
-     "sha256": "86e8b6063038c04ae75b6bdc17c9519c47d14ba524925460bfdfb9a09108b54d"
+     "sha256": "3afb87eb955463d6821e6178bc5e9691e8b00b565b489d5fd814cd8809fbf95c"
     }
    ]
   },
@@ -427,6 +439,10 @@
        "by": "orchestrator-i57-close"
       },
       {
+       "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+       "by": "orchestrator-i59-close"
+      },
+      {
        "at_commit": "b4b46069dfe3804a35bb5031c57a33b9a333c767",
        "by": "orchestrator-close"
       },
@@ -460,7 +476,7 @@
       }
      ],
      "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
-     "sha256": "8f9a81dadfd6769d3245378639c1f72dc412e941700f3b60a51f2e46226a288a"
+     "sha256": "dd6adec1c20ad60003c8b570779cf35f05be22116652e173b4fcf9647844c2cd"
     }
    ]
   },

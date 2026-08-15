@@ -23,21 +23,16 @@
     "pointer": "MODULE_ROADMAP.md #40 / PROCESS_BACKLOG PB-2 / widgets/08-live-run-audit-pathway"
    },
    {
-    "gate": "i59 -- root migration (D-0152, AMENDED by D-0153 s8 rule 1)",
-    "item": "START_HERE -> a stable ~0.5-1 KB bootstrap kernel (verify/rebuild the PCB + open the generated packet; NO iteration/active-work/roster/changing state) AND a generator-INDEPENDENT cold-boot card (the kernel alone is insufficient -- CB1) + register a uniform rebuild interface; the PCB packet = the first fully-owned generated front door",
-    "pointer": "core-docs/research/2026-08-15-i58-front-door-hardened.md + DECISION_LOG D-0152/D-0153"
-   },
-   {
-    "gate": "i60+ class migration (folds in the boot-wiring follow-ons)",
-    "item": "migrate CURRENT_STATE interior / handoff-ledger / module+tool catalogs / backlogs / gotchas / tests / research incrementally, each design-first -> red-team-gated with the s8 build requirements; #36 query-level bounded load + static plane-map + ops:boot-decision-retrieval canon fold in here",
-    "pointer": "core-docs/research/2026-08-15-i58-universal-front-door-contract.md"
+    "gate": "i60 -- first CLASS migration (D-0153 s8; the root migrated i59/D-0154)",
+    "item": "migrate a cumulative surface (CURRENT_STATE interior / handoff ledger / catalogs / backlogs / gotchas / tests / research) to a bounded GENERATED front door carrying the s8 build requirements (pin-the-unrecoverable, task-match keys, classifier oracle, frozen-replayed synopsis, compile epoch, two-phase close); each design-first -> red-team-gated + passing the ops/frontdoor/frontdoor-gate.py migration gate; the renderer slim-ladder is removed during migration",
+    "pointer": "core-docs/research/2026-08-15-i59-root-migration-hardened.md + DECISION_LOG D-0154"
    }
   ],
-  "derived_from": "core-docs/CURRENT_STATE.md + DECISION_LOG D-0152/D-0153 at the i58 close; overlay advanced + frontier redirected to i59 (D-0153); standing_constraints refreshed at the N7 close-refold.",
-  "next_iteration": 59,
-  "summary": "i58 CLOSED (D-0153): the universal derived-front-door contract FROZEN + 3-adversary red-teamed (7 breaks -> hardened s8 AUTHORITATIVE); i59 AMENDED = START_HERE kernel + a generator-independent cold-boot card. NEXT = i59 root migration; then i60+ class-by-class."
+  "derived_from": "core-docs/CURRENT_STATE.md + DECISION_LOG D-0154 at the i59 close; overlay advanced 58->59 + frontier redirected to i60; standing_constraints refreshed at the N7 close-refold.",
+  "next_iteration": 60,
+  "summary": "i59 CLOSED (D-0154): the ROOT front-door migration SHIPPED -- START_HERE boot KERNEL + COLD_BOOT_CARD (generator-independent recovery survivor) + ops/frontdoor uniform rebuild interface + the migration gate (3-adversary red-teamed; architecture HELD, 13 gaps folded). NEXT = i60 = the first class migration; then class-by-class."
  },
- "iteration": 58,
+ "iteration": 59,
  "open_rulings": [
   {
    "ref": "decision:D-0132",
@@ -50,7 +45,7 @@
  ],
  "phase": {
   "ref": "doc:core-docs/CURRENT_STATE.md",
-  "text": "Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; PCB BOOT_PACKET is the DEFAULT orchestrator bootstrap (D-0146). i58 CLOSED (D-0153): the universal derived-front-door contract FROZEN + 3-adversary red-teamed (hardened s8 authoritative; i59 AMENDED = START_HERE kernel + a generator-independent cold-boot card). NEXT = i59 = the root migration, then i60+ class-by-class. AUDIT review_due i60 NON-DISPLACING."
+  "text": "Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; PCB BOOT_PACKET is the DEFAULT orchestrator bootstrap (D-0146). i59 CLOSED (D-0154): the ROOT front-door migration SHIPPED -- START_HERE boot KERNEL + COLD_BOOT_CARD (generator-independent recovery survivor) + ops/frontdoor uniform rebuild interface + the migration gate (3-adversary red-teamed; architecture HELD, 13 gaps folded). NEXT = i60 = the first class migration, then i60+ class-by-class. AUDIT review_due i60 NON-DISPLACING."
  },
  "prohibitions": [
   {

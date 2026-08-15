@@ -1,0 +1,14 @@
+{
+ "schema": "lifeorch.map_claims/0.1",
+ "by": "orchestrator-i59-close",
+ "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93",
+ "entities": [
+  {"id": "doc:core-docs/COLD_BOOT_CARD.md", "ns": "doc", "display_name": "COLD_BOOT_CARD.md",
+   "one_line": "COLD_BOOT_CARD.md -- generator-independent recovery survivor: identity + SoT rule + count-asserted doc list + pinned constraints + read order",
+   "sources": [{"ref": "core-docs/COLD_BOOT_CARD.md", "sha256": null, "fields": ["one_line"], "by": "orchestrator-i59-close", "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93"}]},
+  {"id": "doc:core-docs/START_HERE.md", "ns": "doc",
+   "one_line": "START_HERE.md -- boot kernel: verify/rebuild/open routing (stable, hand-maintained, no changing state)",
+   "sources": [{"ref": "core-docs/START_HERE.md", "sha256": null, "fields": ["one_line"], "by": "orchestrator-i59-close", "at_commit": "9bb9a196e1e8c09b4a87b52a4b95b970cabeec93"}]}
+ ],
+ "relationships": []
+}
