@@ -472,6 +472,7 @@ def build_record(namespace, ingest_run_id, ingested_through, entry, index_row, v
         "binding_scope": binding_scope,
         "enforced_by": enforced_by,
         "ingested_through": ingested_through,
+        "lifecycle": status,
         "synopsis": None,
         "index_state_raw": idx_state or None,
         "log_state_raw": state_body,
@@ -499,6 +500,13 @@ def build_record(namespace, ingest_run_id, ingested_through, entry, index_row, v
     for ref in edges_info["derives_from_research"]:
         child_edges.append({"edge_type": "derives_from", "external": True, "external_ref": ref, "target_record_id": None})
 
+    # D-0077 seam fix (i56): the ENVELOPE status must conform to #36 artifact.search STATUS_ENUM
+    # {current, superseded, deleted, *_stale, unverified} -- it has NO `folded`/`closed`. Map the
+    # edge-driven lifecycle onto that enum (folded/closed -> superseded); the precise lifecycle is
+    # preserved LOSSLESSLY in payload.lifecycle + the folded_into/superseded_by edges, and the #40 verb
+    # demotes on the full-demotion EDGE, not the raw status string.
+    envelope_status = status if status in (STATUS_CURRENT, STATUS_SUPERSEDED) else STATUS_SUPERSEDED
+
     rec = {
         "schema": RECORD_SCHEMA,
         "record_id": record_id,
@@ -506,7 +514,7 @@ def build_record(namespace, ingest_run_id, ingested_through, entry, index_row, v
         "record_kind": RECORD_KIND,
         "namespace": namespace,
         "content_hash": content_hash,
-        "status": status,
+        "status": envelope_status,
         "authority_level": AUTHORITY_LEVEL,
         "sensitivity_class": SENSITIVITY,
         "valid_from": None,

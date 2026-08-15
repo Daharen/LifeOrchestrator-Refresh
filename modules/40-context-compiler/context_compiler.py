@@ -3939,18 +3939,31 @@ def _load_decision_pool_from_catalog(args):
         spec = importlib.util.spec_from_file_location("lifeorch_artifact_search_i56", lib_path)
         A = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(A)
-        res = A.run({"op": "search", "db": db_path, "query": args.get("query_text") or "",
-                    "k": int(args.get("catalog_k") or 500), "mode": "fts",
-                    "filters": {"record_kind": "decision", "namespace": "decisions"}})
+        # D-0077 seam fix (i56): load the decision POOL via `list-records` (NOT an FTS `search` -- the
+        # verb retrieves by module/plane/recency signals, not a text query, so an empty/absent query_text
+        # must still return the full candidate pool). The verb then applies its own s8 filtering + selpol
+        # ranking. A bounded query-scoped LOAD is a named follow-on; the compiled OUTPUT is already top_k.
+        res = A.run({"op": "list-records", "db": db_path,
+                     "filters": {"record_kind": "decision", "namespace": "decisions"},
+                     "limit": int(args.get("catalog_k") or 100000)})
+        recs = (res.get("result") or {}).get("records") or []
+        # a record is FULLY demoted (cold) if it carries a full-demotion edge -- superseded_by / folded /
+        # closed -- on EITHER side (#36 ingest may reorient producer child-edges to parent-edges).
+        _FULL_DEMOTE = {"superseded_by", "folded_into", "folded", "closed_by", "closed"}
         pool = []
-        for hit in (res.get("result") or {}).get("hits", []) or []:
-            attrs = hit.get("attrs") or {}
+        for r in recs:
+            attrs = r.get("attrs") or {}
             rec = dict(attrs)
-            rec.setdefault("decision_id", hit.get("record_id"))
-            rec.setdefault("record_version_id", hit.get("record_version_id"))
-            rec.setdefault("namespace", hit.get("namespace"))
-            rec.setdefault("source_span", {"path": hit.get("source_path"),
-                                           "start": hit.get("span_start"), "end": hit.get("span_end")})
+            rec.setdefault("decision_id", attrs.get("decision_id") or r.get("record_id"))
+            rec["record_version_id"] = r.get("record_version_id")
+            rec["namespace"] = r.get("namespace")
+            rec["status"] = r.get("status")
+            rec["source_span"] = r.get("source_span") or {}
+            full = [e.get("dst_ref") or e.get("target_record_id")
+                    for e in ((r.get("parent_edges") or []) + (r.get("child_edges") or []))
+                    if (e.get("edge_kind") or e.get("edge_type")) in _FULL_DEMOTE]
+            if full:
+                rec["superseded_by"] = full
             pool.append(rec)
         return pool, "catalog:%s" % os.path.abspath(db_path), None
     except Exception as e:  # noqa: BLE001 -- catalog wiring is best-effort off this session; never crash
