@@ -281,7 +281,7 @@ vectors by embedding_space_id) + retriever-0.2 hits (span provenance) + the Tier
 docs-corpus onboarding (mandate-02 M2-C re-layer path); upper-level Bloom saturation is #40-beam-width-bound
 (a #40 follow-on, NOT #36).
 
-**37 `retrieval.eval`** — MVP complete (selpol 1.2.0 + eval 0.8.0; i25→i36; D-0082/86/89/91/96/100/102). The
+**37 `retrieval.eval`** — MVP complete (selpol 1.2.0 + eval 0.8.1, i40 PB-5 D-0111/D-0112; i25→i36 build; D-0082/86/89/91/96/100/102). The
 canonical `selpol_rrf_v1` selection-policy library (CONTEXT_PACKET_CONTRACT s4 pins it); the retrieval-quality
 benchmark (recall@K/MRR/stale/provenance); hierarchy-eval; the RUNNABLE ~200MB Tier-1 rehearsal harness
 (op `rehearsal`, wired_descend drives #40's public port READ-ONLY; s10 criteria; FULL_CORPUS_RECIPE).
@@ -343,12 +343,11 @@ entities + typed `deeper[]` pointers, ATX-exact + bold-label fallback), `card:<i
 verb table single-sourced, dispatcher-asserted. OPERATIONS canon test-asserted (i48 CD-1 + i52 N6);
 overlay `open_rulings[]` rendered. Built ALONGSIDE the legacy handoff (control); gates: i47 CONDITIONAL
 (D-0133) -> i48 re-check FAIL (D-0136) -> i51 fresh gate NO-GO (D-0142) -> the i52 N5-N8 fix set LANDED;
-**legacy default until a gate PASSES both N8 task classes** (records + frozen bars/protocol under
-`eval/results/`). **Follow-ons:** FO-1 richer changed-since (git-driven touch lists); FO-2
+**i53 fresh two-class gate GO (D-0146): the PCB BOOT_PACKET is the DEFAULT orchestrator bootstrap; legacy handoff = FALLBACK** (gate records + frozen bars/protocol under `eval/results/`). **Follow-ons:** FO-1 richer changed-since (git-driven touch lists); FO-2
 CURRENT_STATE.json generated from the overlay (post-pass); FO-3 map->#36 records (the M2-C re-layer build);
 FO-4 shared-identity flow map->memory->packet->authz->audit (directive s13); FO-5 doc-gate rows if views
 promote into core-docs; **FO-6 entrypoint `-Action query` `-Repo` passthrough (pre-existing i49 gap,
-worker-flagged i52: entrypoint-mediated `section:` refuses; the packet documents the direct-python path)**.
+worker-flagged i52: entrypoint-mediated `section:` refuses; the packet documents the direct-python path)**. **i59 reconciliation placement (D-0155): FO-6 -> i60 (pulled forward -- it obstructs use of the built architecture); FO-1/FO-2/FO-3 feed the i62-i67 close transaction + the i68-i69 current-work family; FO-4/FO-5 land with the first semantic migration; all evidence-dependency-ordered. FO-3 stays routed here (re-layer plan).**
 
 ## Widgets (Phase B, `widgets/`)
 

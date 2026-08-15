@@ -23,12 +23,10 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
   `MEMORY_CONTRACT.md` (v0.1.1 + A1-A6) + `CONTEXT_PACKET_CONTRACT.md` (0.2 + i32/i33/i34 + s9 R-1).
 - **Memory subsystem BUILT + Tier-1 ACCEPTED.** Waves i25-i39 shipped #35 embedding.local, #36 artifact.search
   (now **0.7.0**, fast-beam ranking), #37 retrieval.eval (eval 0.8.0 + the Tier-1 rehearsal harness), #38
-  repo.intel, #39 episode.record 0.1.1, #40 context.compiler (now **0.9.0**: hierarchy port + R-1 router +
-  working-memory hydration), #41 skill.card 0.2.0, #42 working.memory 0.1.0. **Project `tier1_accepted` = TRUE**
-  (i36, D-0102: 11/11 s10 criteria over a distinct 6-package foreign corpus at 100x leaf span).
-  Per-module state: `MODULE_ROADMAP.md`.
+  repo.intel, #39 episode.record 0.1.1, #40 context.compiler (now **0.10.0**: + compile_relevant_decisions bounded decision-pool, i56), #41 skill.card 0.2.0, #42 working.memory 0.1.0. **Project `tier1_accepted` = TRUE**
+  (i36, D-0102: 11/11 s10 over a distinct 6-package foreign corpus at 100x leaf span). Per-module: `MODULE_ROADMAP.md`.
 - **P0-1 action-authorization gate (#43): `build_status=build_complete | p0_1_gate_status=PASS | activation_status=prohibited`.** #43 0.6.0 (`10d0d1e`, i42) is a RATIFIED DESIGN pass -- round-5 independent review PASS -> s7 `p0_1_gate_status=pass` (D-0118, M2-D, pack `6bb613ea`; arc detail D-0116/18). Verified x2 byte-identical (364/364); `non_execution:true` holds. **Activation stays PROHIBITED** (a design pass, not a grant).
-- **i47-i58 (D-0132..D-0153) -- the PCB + front-door arc (detail = the D-entries + handoff ledger):** mandate-02 SUNSET (SEALED_CHECK_47 armed, i>=54); #44 built 0.2.0->0.4.0; **i53 GO (D-0146): the PCB BOOT_PACKET is the DEFAULT bootstrap, legacy handoff = fallback;** i55-i57 PB-6 decision re-layer COMPLETE; **i58 universal front-door contract FROZEN + red-teamed -> hardened s8 (D-0153).**
+- **i47-i58 (D-0132..D-0153) -- PCB + front-door arc (detail = D-entries + handoff ledger):** mandate-02 SUNSET (SEALED_CHECK_47 armed i>=54); #44 0.2.0->0.4.0; **i53 GO (D-0146): PCB BOOT_PACKET is the DEFAULT bootstrap, legacy = fallback;** i55-i57 PB-6 re-layer COMPLETE; **i58 universal front-door contract FROZEN + red-teamed -> hardened s8 (D-0153).**
 - **FROZEN / deferred (D-0080):** durable-supervisor / warm-pool hardening (D-0079 GATE-NO stands; classic
   detached-warm is the trusted default); generator upgrades; `video.interpret` + live composition; deep
   real-time perception (arch 27-49); broad training.
@@ -68,12 +66,11 @@ Design + rationale: **`ADAPTIVE_RESOURCE_GOVERNOR.md`**. Runtime facts:
   reasoning ON and it returns empty content at `finish=length`.
 - **The 27B is RETAINED but validated IMPRACTICAL (D-0061):** no Qwen3.5-27B quant fits GPU-bound on 11 GB —
   confirmed by the couriered frontier report (`core-docs/research/2026-07-28-frontier-local-model-selection.md`).
-  Reachable via `-Model` / the X0 rung only; the resident 9B is the effective top rung.
+  Reachable via `-Model` / X0 only; the resident 9B = top rung.
 - **Decision floor = mid (3B)**; strong is GENERATION-only.
 - Warm multi-model pool: Stage-1.1 hardened (i15, D-0068) + a **DURABLE gateway supervisor (i16, D-0069, skill
   0.4.0; hardened 0.6.0 i23, D-0078) — still DEFAULT-OFF** (see Known failures): `WARM_POOL_DESIGN.md` §6/9/10.
-  Measured: one ~7 GB model fits the GPU at a time; swap GPU-upload-bound (~1.6 s->3B, ~4.1 s->9B); same-model
-  reuse ~1 ms; all GGUFs (28.5 GiB) fit 64 GB RAM.
+  Measured: one ~7 GB model fits the GPU at a time; swap GPU-upload-bound (~1.6 s->3B, ~4.1 s->9B); same-model reuse ~1 ms.
 
 ## Repo / working dirs
 
@@ -240,7 +237,7 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 | #37 retrieval.eval | **0.8.1 (i40, PB-5 closed): WIRED_STRUCTURAL_DIGEST re-pinned (d0d54aba..e450); version single-source (skill.json) + permanent -Live envelope==manifest assertion (proven-to-fire); full suite ALL PASS on-device x2 (worker + orchestrator; VERSION-TRUTH x6; rehearsal 9/9 + hierarchy 11/11; digests cross-env identical)** | `6c7269d` | 08-06 |
 | #38 repo.intel | 65/65 pwsh + 37/37 python + 65/65 -Live | `cd53565` | 08-01 |
 | #39 episode.record | 0.1.1: 123/123 cloud + 123/123 -Live | `3dab699` | 08-02 |
-| #40 context.compiler | **0.9.0 (i38): working_memory hydrated from #42 (conjunctive ns fail-closed; state_version in identity; flat byte-identical to 0.8.0); 42/42 owned + full regression (322/322 + i35 32/32 + router 35/35 + i34 38/38)** | `52a0381` | 08-05 |
+| #40 context.compiler | **0.10.0 (i56, D-0150): compile_relevant_decisions verb (bounded decision-pool) on the i38 0.9.0 wm-hydration base; D-0077 fold smoke fixed 2 seam breaks; 149/149 ingest + regression green** | `184966f` | 08-14 |
 | #41 skill.card | 0.2.0: 81/81 python + 85/85 -Live | `54c2e79` | 08-03 |
 | #42 working.memory | 0.1.0: 30/30 + 30/30 live + 14/14 pwsh | `601a2db` | 08-05 |
 | #43 action.authz | **0.6.0 (i42): the 3 round-4 exact closures (F5/F4/F2 -- seam detail D-0116/18); suite x2 exit 0 byte-identical (364/364, mutations 69/69, fuzzer 400/0, oracle 152 not_run=0, role 30/30, completion 21/21, views 64/64); empty-dir self-verify VERIFIED (3b5d62f4); taxonomy=`pass` (D-0118 round-5 PASS, pack 6bb613ea; activation prohibited)** | `10d0d1e` | 08-08 |
@@ -357,11 +354,11 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 **i59 CLOSED (D-0154): the ROOT migration SHIPPED.** START_HERE is now a stable ~1 KB hand-maintained boot KERNEL (Mode A packet / rebuild-once / Mode B card; NO changing state); NEW `COLD_BOOT_CARD.md` = the generator-INDEPENDENT survivor (identity + SoT + count-asserted 23-doc list + 7 pinned never-spill constraints + read order); NEW `ops/frontdoor/` = the uniform rebuild interface (`registry.json` + `Rebuild-FrontDoors.ps1` + `frontdoor-gate.py`) + the migration gate. 3-adversary red-teamed (D-0119; architecture HELD, 13 gaps folded: fail-closed-by-DETECTION close, near-frozen card, pinned survivor slot); driver proven GREEN (root-pcb 0-stale). Frozen: `research/2026-08-15-i59-root-migration-*.md`. No module code.
 
-**NEXT = i60 -- the first CLASS migration (D-0153 s8):** migrate a cumulative surface (CURRENT_STATE interior / handoff ledger / catalogs / backlogs / gotchas / tests / research) to a bounded GENERATED front door carrying the s8 build requirements, design-first -> red-team-gated + passing the `frontdoor-gate.py` migration gate. AUDIT review_due i60 NON-DISPLACING. SP3/M-03 OPEN; P0-1 FROZEN; #40 beam-width * PB-2 * w08 (D-0134).
+**NEXT = i60 -- bounded-ingest + control-plane hardening (D-0155 reconciliation; NOT a class migration):** prove + ENFORCE bounded bootstrap/retrieval on fresh work (close F-i53-eff -- bounded `card:`/`section:` the easy default; a whole-doc open needs an explicit reason), repair FO-6, make retrieval measurement automatic, produce a bounded manager view, treat SP3/M-03 + stale version/test claims as explicit TRUTH questions (no silent activation). The first PB-7 class migration DEFERS to i68. Rolling i60-i79 roadmap: `research/2026-08-15-i59-roadmap-reconciliation.md`. AUDIT review_due i62; P0-1 FROZEN; #40 beam-width / PB-2 / w08 (D-0134).
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades; `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-15 -- i59 CLOSED (D-0154): the ROOT migration -- START_HERE boot KERNEL + `COLD_BOOT_CARD.md` + `ops/frontdoor/` uniform rebuild interface (3-adversary red-teamed; architecture held, 13 gaps folded; driver proven green); next = i60 first class migration.
+**Last updated:** 2026-08-15 -- i59 CLOSED (D-0154, ROOT migration) + RECONCILED (D-0155): control-plane truth reconciled + i60-i79 rolling roadmap; **i60 = bounded-ingest + control-plane hardening** (NOT a class migration; that -> i68); no core logic changed.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*
