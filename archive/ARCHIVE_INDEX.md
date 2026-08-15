@@ -128,3 +128,5 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 | archive/fanout-agents/i55-001.md | i55 lane-1 brief (PB-7 knowledge-surface re-layer DESIGN; design-first -> red-team, Opus) | 2026-08-14 | D-0149 |
 | archive/fanout-agents/i55-002.md | i55 lane-2 brief (standing per-wave retrieval-byte monitor; shipped 99cb32b, Sonnet) | 2026-08-14 | D-0149 |
 | archive/handoffs/2026-08-15-FANOUT_ORCHESTRATOR_HANDOFF-i58.md | outgoing FANOUT_ORCHESTRATOR_HANDOFF snapshot (i57-close state, rewritten in place at the i58 close) | 2026-08-15 | D-0153 |
+| archive/doc-snapshots/2026-08-15/START_HERE.md | the pre-migration START_HERE routing doc (5961 B), snapshotted before the i59 kernel reduction | 2026-08-15 | D-0154 |
+| archive/handoffs/2026-08-15-FANOUT_ORCHESTRATOR_HANDOFF-i59.md | the outgoing FANOUT_ORCHESTRATOR_HANDOFF snapshot (i58-close state, rewritten in place at the i59 close) | 2026-08-15 | D-0154 |

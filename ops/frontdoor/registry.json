@@ -1,0 +1,24 @@
+{
+  "schema": "lifeorch.frontdoor_registry/0.1",
+  "note": "Uniform rebuild interface (i59, hardened s8 rule 1). The START_HERE boot kernel names ONE verb; this registry lists every migrated front-door class + how to rebuild/verify it. A class migrates ONLY after it registers a conformant entry here AND Rebuild-FrontDoors.ps1 rebuilds it green (the migration gate). Tokens {ENTRY}{REPO}{MAP}{GENERATED}{HARVEST} are substituted by the driver.",
+  "kmax_core_docs": 30,
+  "pin_max": 12,
+  "classes": [
+    {
+      "class_id": "root-pcb",
+      "migrated_in": "i59",
+      "boot_read": true,
+      "boot_read_artifact": "modules/44-project-map/generated/BOOT_PACKET.md",
+      "entry": "modules/44-project-map/Invoke-ProjectMap.ps1",
+      "map": "modules/44-project-map/map",
+      "generated": "modules/44-project-map/generated",
+      "harvest": { "cmd": "{ENTRY}", "args": ["-Action", "harvest", "-Repo", "{REPO}", "-Out", "{HARVEST}"] },
+      "rebuild": [
+        { "cmd": "{ENTRY}", "args": ["-Action", "validate", "-Map", "{MAP}", "-Harvest", "{HARVEST}"] },
+        { "cmd": "{ENTRY}", "args": ["-Action", "render", "-Map", "{MAP}", "-Harvest", "{HARVEST}", "-Out", "{GENERATED}"] },
+        { "cmd": "{ENTRY}", "args": ["-Action", "render", "-Map", "{MAP}", "-Harvest", "{HARVEST}", "-Out", "{GENERATED}", "-Check"] }
+      ],
+      "verify": { "cmd": "{ENTRY}", "args": ["-Action", "verify", "-Map", "{MAP}", "-Harvest", "{HARVEST}"] }
+    }
+  ]
+}

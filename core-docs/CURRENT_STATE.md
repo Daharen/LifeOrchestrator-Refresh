@@ -25,16 +25,15 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
   (now **0.7.0**, fast-beam ranking), #37 retrieval.eval (eval 0.8.0 + the Tier-1 rehearsal harness), #38
   repo.intel, #39 episode.record 0.1.1, #40 context.compiler (now **0.9.0**: hierarchy port + R-1 router +
   working-memory hydration), #41 skill.card 0.2.0, #42 working.memory 0.1.0. **Project `tier1_accepted` = TRUE**
-  (i36, D-0102: 11/11 s10 criteria over a distinct 6-package foreign corpus at 100x leaf span). Fast-beam recall
-  lever shipped i39 (D-0108; hpr ~2x; guaranteed+packet recall stay 1e6).
-  Arc detail: the index; per-module state: `MODULE_ROADMAP.md`.
-- **P0-1 action-authorization gate (#43): `build_status=build_complete | p0_1_gate_status=PASS | activation_status=prohibited`.** #43 0.6.0 (`10d0d1e`, i42) is a RATIFIED DESIGN pass -- round-5 independent review PASS -> s7 `p0_1_gate_status=pass` (D-0118, M2-D, pack `6bb613ea`; arc detail D-0116/18). Verified x2 byte-identical (364/364; bundle `3b5d62f4`); A06 denies every authentic packet; `non_execution:true` holds. **Activation stays PROHIBITED** -- a design pass, NOT an activation grant.
-- **i47-i52 (D-0132..D-0145):** mandate-02 SUNSET (SEALED_CHECK_47 armed, open i>=54); i47 gate CONDITIONAL; i48 #44 0.2.0 (re-check FAILED, D-0136); i49 0.3.0 (N1-N3); i50 N4 bars re-frozen (D-0140); **i51 fresh gate NO-GO (D-0142:** floor-b constraint gap 1.0 + total 2.74x/1.12x A vs 0.7x; boot PASS); **i52 = the fix wave CLOSED (D-0143..45): #44 0.4.0 (N5 doc-section/card granularity + N6 canon + open_rulings render), N7 close-refold ADOPTED + first-run, N8 re-run protocol RATIFIED AS AMENDED (D-0144). i53 = the fresh two-class gate RAN -> GO (D-0146): the PCB BOOT_PACKET is now the DEFAULT orchestrator bootstrap; legacy handoff = fallback.**
+  (i36, D-0102: 11/11 s10 criteria over a distinct 6-package foreign corpus at 100x leaf span).
+  Per-module state: `MODULE_ROADMAP.md`.
+- **P0-1 action-authorization gate (#43): `build_status=build_complete | p0_1_gate_status=PASS | activation_status=prohibited`.** #43 0.6.0 (`10d0d1e`, i42) is a RATIFIED DESIGN pass -- round-5 independent review PASS -> s7 `p0_1_gate_status=pass` (D-0118, M2-D, pack `6bb613ea`; arc detail D-0116/18). Verified x2 byte-identical (364/364); `non_execution:true` holds. **Activation stays PROHIBITED** (a design pass, not a grant).
+- **i47-i58 (D-0132..D-0153) -- the PCB + front-door arc (detail = the D-entries + handoff ledger):** mandate-02 SUNSET (SEALED_CHECK_47 armed, i>=54); #44 built 0.2.0->0.4.0; **i53 GO (D-0146): the PCB BOOT_PACKET is the DEFAULT bootstrap, legacy handoff = fallback;** i55-i57 PB-6 decision re-layer COMPLETE; **i58 universal front-door contract FROZEN + red-teamed -> hardened s8 (D-0153).**
 - **FROZEN / deferred (D-0080):** durable-supervisor / warm-pool hardening (D-0079 GATE-NO stands; classic
   detached-warm is the trusted default); generator upgrades; `video.interpret` + live composition; deep
   real-time perception (arch 27-49); broad training.
-- **Fan-out loop:** 53 iterations run via `orchestrate.fanout` #30 over `res.lease` #29; workers hand-dispatched
-  into fresh Cowork sessions. Ledger + wave model: **`FANOUT_ORCHESTRATOR_HANDOFF.md`**.
+- **Fan-out loop:** 59 iterations via `orchestrate.fanout` #30 over `res.lease` #29; workers hand-dispatched into
+  fresh Cowork sessions. Ledger + wave model: **`FANOUT_ORCHESTRATOR_HANDOFF.md`**.
 - **Boundary (D-0051, amended by D-0080):** the orchestrator never drives another *external/frontier* AI session
   (human-couriered only); a deterministic LOCAL coordinator IS authorized to spawn local contexts (Priority 10).
   In-session cloud subagents are PERMITTED inside the boundary (D-0119); frontier access stays human-couriered.
@@ -248,6 +247,7 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 | widgets/05 / 06 / 07 | 100/100+STA 8/8 · 85/85+98/98 -Live (STA 9/9) · 81 cloud + 93 -Live (STA 8/8) — live-GUI confirm DONE i43 | `3ad71d3`/`c912854`/`855c242` | 08-05..08 |
 | widgets/08 LRAP | **87/0/0 -Live (i45): read-only replay pathway; every SELFTEST_*_OK (incl. RECONCILE/DESCEND/INTERACT/READONLY/LAYOUT); five-fixture machine classify 0 FP/FN (mis-route->s3, dropped->s4, wrong-record->s6, clean+quirk consistent); byte-identical re-render; read-only + i33 sanitization fail-closed; real #40 render; orchestrator INDEPENDENT re-verify** | `a88e177`/`6028b9c` | 08-08 |
 | #44 project.map | **0.4.0 (i52): 169/169 x3 interpreters + pwsh + on-box; negatives 33/33; N5 replays 1.4-2.7 KB vs 9.8-31.5 KB raw; canon string-asserted; verb-table==dispatcher; fold VALIDATE 0; -Live Folded green** | `c6c58a8` | 08-14 |
+| ops/frontdoor (i59) | `Rebuild-FrontDoors.ps1 -VerifyOnly` root-pcb 0-stale GREEN (18033 B) via executor; non-vacuity floor + `frontdoor-gate.py` PASS | i59 | 08-15 |
 | D-0077 cross-module folds | i34 smoke 38/38 · i36 Tier-1 11/11 (`tier1_accepted=TRUE`) · i38/i39 18/18 · i40/i41 fold-i39 exit 0 · **i42: fold-i39 vs 0.6.0 exit 0 + i34 38/38 + the independent #43 suite x2 byte-identical (3b5d62f4); i45: widgets/08 pinned 06/07 adapter + cross-widget contract test green in the independent -Live 87/0/0** | `runtime/smoke-i34.py`/`fold-i39.py` | 08-08 |
 
 ## Known failures / gotchas
@@ -355,13 +355,13 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ## Next expected action
 
-**i58 CLOSED (D-0153):** the universal derived-front-door contract FROZEN + 3-adversary red-teamed (7 breaks, 2 ratification-blocking) -> hardened s8 authoritative. Frozen set: `research/2026-08-15-i58-*.md` (contract + redteam + hardened). No module code. Detail: D-0153.
+**i59 CLOSED (D-0154): the ROOT migration SHIPPED.** START_HERE is now a stable ~1 KB hand-maintained boot KERNEL (Mode A packet / rebuild-once / Mode B card; NO changing state); NEW `COLD_BOOT_CARD.md` = the generator-INDEPENDENT survivor (identity + SoT + count-asserted 23-doc list + 7 pinned never-spill constraints + read order); NEW `ops/frontdoor/` = the uniform rebuild interface (`registry.json` + `Rebuild-FrontDoors.ps1` + `frontdoor-gate.py`) + the migration gate. 3-adversary red-teamed (D-0119; architecture HELD, 13 gaps folded: fail-closed-by-DETECTION close, near-frozen card, pinned survivor slot); driver proven GREEN (root-pcb 0-stale). Frozen: `research/2026-08-15-i59-root-migration-*.md`. No module code.
 
-**NEXT = i59 -- the root migration (D-0152, AMENDED by D-0153 s8 rule 1).** START_HERE -> a ~0.5-1 KB bootstrap KERNEL (verify/rebuild the PCB + open the packet; no changing state) AND a generator-INDEPENDENT cold-boot card (the kernel alone is insufficient -- CB1) + a uniform rebuild interface; the PCB packet = the first fully-owned generated front door. Then i60+ = class-by-class (CURRENT_STATE interior, handoff ledger, catalogs, backlogs, gotchas, tests, research); the renderer slim-ladder is removed during migration. SP3/M-03 OPEN; P0-1 FROZEN; #40 beam-width * PB-2 * w08 (D-0134).
+**NEXT = i60 -- the first CLASS migration (D-0153 s8):** migrate a cumulative surface (CURRENT_STATE interior / handoff ledger / catalogs / backlogs / gotchas / tests / research) to a bounded GENERATED front door carrying the s8 build requirements, design-first -> red-team-gated + passing the `frontdoor-gate.py` migration gate. AUDIT review_due i60 NON-DISPLACING. SP3/M-03 OPEN; P0-1 FROZEN; #40 beam-width * PB-2 * w08 (D-0134).
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades; `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-15 -- i58 CLOSED (D-0153): the universal derived-front-door contract FROZEN + 3-adversary red-teamed (7 breaks -> hardened s8 authoritative); i59 AMENDED (START_HERE kernel + a generator-independent cold-boot card); AUDIT review_due i58->i60; next = i59 root migration.
+**Last updated:** 2026-08-15 -- i59 CLOSED (D-0154): the ROOT migration -- START_HERE boot KERNEL + `COLD_BOOT_CARD.md` + `ops/frontdoor/` uniform rebuild interface (3-adversary red-teamed; architecture held, 13 gaps folded; driver proven green); next = i60 first class migration.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

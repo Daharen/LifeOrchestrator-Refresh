@@ -20,7 +20,8 @@ describe NOW and stay ingestable whole; history is never deleted, it moves to la
 
 | doc | owns | budget |
 |---|---|---|
-| START_HERE.md | routing: what to read, what you may modify, session checklist | 6 KB |
+| START_HERE.md | boot kernel: verify/rebuild/open routing (stable, hand-maintained, NO changing state) -- D-0154 | 2 KB |
+| COLD_BOOT_CARD.md | generator-independent recovery survivor: identity + SoT rule + count-asserted doc list + pinned constraints + generator-free read order (fixed-slot) -- D-0154 | 5 KB |
 | FANOUT_ORCHESTRATOR_HANDOFF.md | THE one live handoff: orchestrator ops + current frontier | 24 KB |
 | CURRENT_STATE.md | reality NOW: phase, active work, box, deps, models, tests table, live gotchas | 34 KB |
 | DECISION_LOG.md | append-only rationale | no cap (indexed; tool-pull only) |
@@ -41,11 +42,12 @@ describe NOW and stay ingestable whole; history is never deleted, it moves to la
 | MEMORY_BENCHMARK.md | the memory-quality + foreign-corpus validation architecture: corpora, independent mutation/withholding harness, executable + hidden ground truth, lifecycle measures | 14 KB |
 | ADAPTIVE_RESOURCE_GOVERNOR.md | governor design + measured truth | 22 KB |
 | MODULE_WORK_ORDER_TEMPLATE.md | work-order template | 4 KB |
-| DOC_PROTOCOL.md | this contract | 12 KB |
+| DOC_PROTOCOL.md | this contract | 14 KB |
 | research/&lt;date&gt;-*.md | dated research digests | 10 KB each |
 | fanout/FANOUT_AGENT_*.md | worker-brief template + numbered slots | 8 KB each |
 | modules/44-project-map/map/** | PCB canonical map state (machine-validated JSON; judgment enters ONLY via validated claims; D-0130) | no cap (module-gated) |
 | modules/44-project-map/generated/** | PCB derived views incl. BOOT_PACKET (GENERATED, never hand-edited; drift-checked) | no cap (packet <=20 KB via #44 tests) |
+| ops/frontdoor/** | uniform rebuild interface (registry.json + Rebuild-FrontDoors.ps1 + frontdoor-gate.py); the migration gate (D-0154) | no cap (ops-gated) |
 
 Budgets = actual size at adoption rounded up with ~10-15% headroom. **A budget rises only via a new
 D-entry naming the current-truth content that needs the room** -- never by silently editing this table.
@@ -53,6 +55,8 @@ D-entry naming the current-truth content that needs the room** -- never by silen
 **Over-budget action ("you bust it, you slim it"):** the session whose edit pushes a doc over budget slims
 it in that same session -- snapshot the pre-slim doc to `archive/doc-snapshots/<date>/`, compress history to
 D-refs, re-check size. Check sizes at every mirror: `wc -c core-docs/*.md` (device_bash) takes seconds. **Mechanized i42 (D-0117):** the fail-closed `ops/audit/doc-commit-gate.py` pre-commit gate enforces these s2 budgets + the s3 accretion rules at commit time. **Cumulative classes re-layer, not slim (D-0141):** for an inherently cumulative surface (PB-7) repeated cap pressure is a RE-LAYER TRIGGER, not indefinite compression -- bound the hot view, do not degrade it; genuinely read-whole artifacts still slim.
+
+**Front-door law (i59 migration, D-0152/D-0153/D-0154; authority `research/2026-08-15-i58-front-door-*.md` hardened s8 + `research/2026-08-15-i59-root-migration-*.md`):** every cumulative hot surface migrates, class by class, to a bounded GENERATED front door that SPILLS to its lossless raw backing (never compresses); raw docs stay canonical but stop being the ordinary read path. The **root** migrated at i59: START_HERE is now a stable hand-maintained boot **kernel** and `COLD_BOOT_CARD.md` is the generator-INDEPENDENT recovery survivor -- {kernel + card} is the closed recovery set. Every migrated class registers under the **uniform rebuild interface** (`ops/frontdoor/registry.json`; the kernel names ONE O(1) rebuild verb); a class the uniform verb cannot rebuild green MAY NOT migrate (the **migration gate**). Each i60+ class migration is design-first -> red-team-gated and passes the fail-closed `ops/frontdoor/frontdoor-gate.py` close-step. The renderer slim-ladder is the named anti-pattern to remove/re-tune across the migration.
 
 ## 3. Accretion rules (hot docs)
 
@@ -113,7 +117,11 @@ D-refs, re-check size. Check sizes at every mirror: `wc -c core-docs/*.md` (devi
   one exception is a dispatch instruction aimed at a Project-only session (`claude/fanout/...`).
 - Mirror map: `CURRENT_STATE.md`, `DECISION_LOG.md`, `MODULE_ROADMAP.md`, `TOOL_MODEL_REGISTRY.md`,
   `REVIEW_QUEUE.md`, `PROJECT_DIRECTION.md`, `SKILL_CONTRACT.md`, `MODULE_WORK_ORDER_TEMPLATE.md`,
-  `START_HERE.md` -> Project top-level. `FANOUT_ORCHESTRATOR_HANDOFF.md`, `ARCHITECTURE_MAP.md`,
+  `START_HERE.md`, `COLD_BOOT_CARD.md` -> Project top-level (the boot kernel + its generator-independent
+  survivor -- a desktop-less session's Mode-B entry). The orchestrator also writes `claude/MIRROR_MANIFEST.md`
+  at close ({close-id, mirrored docs, per-doc content-hash}) so a Project-only session can detect a partial or
+  stale mirror by comparing the card's `as_of` close-id against the manifest without disk access (D-0154).
+  `FANOUT_ORCHESTRATOR_HANDOFF.md`, `ARCHITECTURE_MAP.md`,
   `ADAPTIVE_RESOURCE_GOVERNOR.md`, `DOC_PROTOCOL.md`, `PROCESS_BACKLOG.md`, `PROCESS_MANDATE.md`, `DECISION_LOG_INDEX.md`, `MEMORY_CONTRACT.md`, `CONTEXT_PACKET_CONTRACT.md`, `MEMORY_ARCHITECTURE.md`, `MEMORY_BENCHMARK.md`, `AUDIT_PIPELINE.md` -> `claude/` (the Project
   places new agent-written docs under `claude/`). `research/*` -> `claude/research/`.
   `fanout/*` -> `claude/fanout/`. `archive/` -> NOT mirrored.
