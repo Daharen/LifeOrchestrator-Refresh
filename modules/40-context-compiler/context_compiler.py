@@ -1,7 +1,29 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-context_compiler.py -- Life Orchestrator Module 40 (skill `context.compile` 0.9.0)
+context_compiler.py -- Life Orchestrator Module 40 (skill `context.compile` 0.10.0)
+
+The Collective Agent's context-packet compiler (directive Priority 4 / section 8). DETERMINISTIC,
+CPU-only, NO model, NO network. Turns a task descriptor into a versioned, token-budgeted, SAFE,
+self-describing `lifeorch.context_packet/0.2` artifact the coordinator hands a disposable model.
+
+0.10 (i56 PB-6 -- FANOUT_AGENT_002, D-0149) adds the `compile_relevant_decisions` VERB (a NEW `op`
+key; every existing op stays byte-for-byte UNTOUCHED). Frozen contract:
+core-docs/research/2026-08-14-pb6-decision-record-schema.md s4; predicate:
+research/2026-08-14-pb7-relayer-design-2.md s8 (AUTHORITATIVE over its s4 naive HOT rule). Routes
+candidate ranking through #37's canonical `selpol_rrf_v1` (P1-1/D-0089 -- NO new retrieval
+architecture); applies ONLY the s8 hardened predicate (binding_scope exemption, demote-on-enforcement,
+a budgeted standing-constraint ROOT view that SPILLS never compresses, `partially_superseded_by`
+conservative retention, per-commit `ingested_through` currency) as deterministic code. Off-machine this
+worker tests against FIXTURE `record_kind=decision` records (`decision_pool` injected, mirroring the
+retriever-injection pattern elsewhere in this module) since the PB-6 producer lane (FANOUT_AGENT_001)
+is a parallel-isolated session with no shared #36 catalog; a `catalog_db_path` -Live path exists
+(`_load_decision_pool_from_catalog`) but is UNPROVEN here -- the real producer -> #36 -> verb seam
+proves at the orchestrator D-0077 fold smoke (frozen contract s5). Gate:
+tests/test_i56_compile_relevant_decisions.py (F1/F3/F4 + double-run byte-identity). Non-goals: no
+#36/#37 change (READ-ONLY); no real-catalog proof (deferred to fold); no PB-6 producer (FANOUT_AGENT_001,
+lane A); no core-doc edits (`docs:[]`).
+
 
 The Collective Agent's context-packet compiler (directive Priority 4 / section 8). DETERMINISTIC,
 CPU-only, NO model, NO network. Turns a task descriptor into a versioned, token-budgeted, SAFE,
@@ -344,8 +366,8 @@ else:
     CLASSIFIER_POLICY_SOURCE = "local_offmachine_replica_pending_37_canonical"
 
 WORKER_NAME = "context_compiler.py"
-WORKER_VERSION = "0.9.0"
-COMPILER_VERSION = "0.9.0"
+WORKER_VERSION = "0.10.0"
+COMPILER_VERSION = "0.10.0"
 PACKET_SCHEMA = "lifeorch.context_packet/0.2"  # UNCHANGED at i38 -- working-memory hydration is ADDITIVE over 0.2
 EXPANSION_SCHEMA = "lifeorch.context_expansion/0.2"
 
@@ -3748,7 +3770,325 @@ class NamespaceClosureError(CompilerError):
         self.effective = list(effective or [])
         self.detail = detail
 
-OPS = {"compile": op_compile, "normalize": op_normalize, "expand": op_expand}
+# ------------------------------------------------------------------------------------------------
+# i56 (PB-6, D-0149 -- FANOUT_AGENT_002): "compile the task-relevant decision set" VERB.
+# Frozen contract: core-docs/research/2026-08-14-pb6-decision-record-schema.md s4 (the s8 hardened
+# predicate in research/2026-08-14-pb7-relayer-design-2.md SUPERSEDES the s4 naive HOT rule). Routes
+# candidate ranking through #37's canonical selpol_rrf_v1 (P1-1/D-0089 -- ONE selection owner; NO new
+# retrieval architecture) and applies ONLY the s8 predicate on top (deterministic code, not judgement,
+# per the frozen contract s6). ADDITIVE: a new `OPS` key + new functions only -- every existing op
+# (compile/normalize/expand) is byte-for-byte UNTOUCHED.
+#
+# The verb consumes `record_kind=decision` records shaped by the PB-6 producer (FANOUT_AGENT_001, a
+# parallel-isolated lane -- D-0077 producer/consumer split). Lane A's real records do not exist in this
+# worker's session, so this build+tests against FIXTURE decision records conforming EXACTLY to the
+# frozen s3 field table (tests/test_i56_compile_relevant_decisions.py); the real cross-module seam
+# (real producer -> real #36 catalog -> this verb) proves at the orchestrator D-0077 fold smoke (the
+# frozen contract s5).
+# ------------------------------------------------------------------------------------------------
+
+DECISION_VERB_VERSION = "0.1.0"
+DECISION_VERB_ID = "compile_relevant_decisions"
+
+STANDING_BINDING_SCOPES = frozenset(["standing_prohibition", "invariant"])
+DECISION_FULL_SUPERSESSION_STATUSES = frozenset(["superseded", "folded", "closed"])
+GLOBAL_QUESTION_MARKERS = ("did we ever", "have we ever", "oscillat")
+
+def _decision_is_standing(rec):
+    """s8 rule 1: binding_scope in {standing_prohibition, invariant} -- exempt from recency/relevance
+    demotion; leaves hot only via explicit repeal/full-supersession OR rule 2 (enforcement)."""
+    return rec.get("binding_scope") in STANDING_BINDING_SCOPES
+
+def _decision_in_force(rec):
+    """s8 rule 4 (the F3 defense): a record carrying a `partially_superseded_by` edge and NO full
+    `superseded_by`/fold/close edge stays `status=current` (conservative over-inclusion -- bounded,
+    non-misleading, never silent loss) REGARDLESS of a naive raw-status read. Demote to COLD only on a
+    FULL supersession/fold/close edge. A terminal raw status with no supporting edge is a producer
+    anomaly -- treated conservatively as still in-force rather than silently dropped (design s6)."""
+    status = rec.get("status")
+    has_full_supersession = bool(rec.get("superseded_by"))
+    if status in DECISION_FULL_SUPERSESSION_STATUSES:
+        # a FULL supersession/fold/close edge -> properly demoted; a terminal status with NO supporting
+        # edge is a producer anomaly -- conservatively treated as still in-force (never silent loss).
+        return not has_full_supersession
+    return True
+
+def _decision_enforced(rec):
+    eb = rec.get("enforced_by")
+    return isinstance(eb, str) and eb.strip().lower() not in ("", "none")
+
+def _decision_hot(rec):
+    """s8 rule 2 (demote-on-enforcement, 'honest retirement'): a prohibition/gotcha stays hot only while
+    `enforced_by=none`; once bound to a deterministic gate it demotes to COLD carrying `enforced_by=<gate>`.
+    Predicate: hot <=> in-force AND enforced_by=none AND (standing-exempt OR cross_session_scope OR
+    recurrence>=k). Standing records (rule 1) are exempt from the recurrence/cross-session gate but NOT
+    from this enforcement demotion -- rule 1 names rule 2 as its own exception."""
+    if not _decision_in_force(rec):
+        return False
+    if _decision_enforced(rec):
+        return False
+    if _decision_is_standing(rec):
+        return True
+    return bool(rec.get("cross_session_scope")) or int(rec.get("recurrence") or 0) >= int(rec.get("recurrence_k") or 1)
+
+def _decision_category(rec):
+    planes = rec.get("planes") or []
+    if planes:
+        return str(planes[0])
+    mods = rec.get("affected_modules") or []
+    if mods:
+        return str(mods[0])
+    return "uncategorized"
+
+def _decision_source_span(rec):
+    return rec.get("source_span") or {}
+
+def _decision_hit_for_selpol(rec, idx):
+    """Adapt a typed decision record into the minimal retriever-0.2-ish hit shape `selpol.select()`
+    consumes -- rank=index+1 (frozen verb-contract clause: selpol NEVER re-sorts; the pool is pre-ordered
+    deterministically before this call)."""
+    span = _decision_source_span(rec)
+    return {
+        "record_id": rec.get("decision_id"),
+        "record_version_id": rec.get("record_version_id") or rec.get("decision_id"),
+        "record_kind": "decision",
+        "namespace": rec.get("namespace") or "decisions",
+        "source_path": span.get("path") or "DECISION_LOG.md",
+        # span_start/span_end give selpol's display-dedup a PER-DECISION key (its dedup fallback is
+        # source_path+span when no chunk_content_hash is carried) -- without these every decision sharing
+        # DECISION_LOG.md as source_path would collide into ONE display cluster (a real i56 build-time bug
+        # caught by this worker's own F3 fixture: two distinct decisions were silently merged).
+        "span_start": span.get("start"), "span_end": span.get("end"),
+        "rank": idx + 1,
+        "authority_level": rec.get("authority"),
+        "text": rec.get("title") or "",
+        "_decision": rec,
+    }
+
+def _is_global_decision_question(args, query_text):
+    """C4 (frozen contract s4): global/full-history questions are the EXPLICIT slow path -- never a fast
+    query."""
+    if bool(args.get("global_question")):
+        return True
+    if str(args.get("action_class") or "").strip().lower() in ("global", "oscillation", "full_history"):
+        return True
+    q = (query_text or "").strip().lower()
+    return any(m in q for m in GLOBAL_QUESTION_MARKERS)
+
+def _decision_relevance_match(rec, modules, planes):
+    if not modules and not planes:
+        return True
+    rec_mods = set(rec.get("affected_modules") or [])
+    rec_planes = set(rec.get("planes") or [])
+    return bool(rec_mods & set(modules)) or bool(rec_planes & set(planes))
+
+def _standing_root_view(standing_records, budget_categories):
+    """s8 rule 3: pin the ROOT synopsis + child-category pointers + an ASSERTED COUNT (completeness
+    PROVED without every leaf); below the budget cut SPILL to a cold `deeper:*:prohibition` query --
+    spill, never compress. The `asserted_count` covers the FULL in-force standing set regardless of the
+    budget cut -- a truncation must NEVER be silent (F1)."""
+    in_force = [r for r in standing_records if _decision_in_force(r)]
+    by_category = {}
+    for r in sorted(in_force, key=lambda r: (r.get("decision_id") or "")):
+        cat = _decision_category(r)
+        by_category.setdefault(cat, []).append(r)
+    categories_sorted = sorted(by_category.keys())
+    pinned_categories = []
+    spilled_categories = []
+    for i, cat in enumerate(categories_sorted):
+        members = by_category[cat]
+        entry = {
+            "category": cat,
+            "count": len(members),
+            "member_decision_ids": sorted(r.get("decision_id") for r in members),
+            "hot": sorted(r.get("decision_id") for r in members if _decision_hot(r)),
+            "enforced": sorted(r.get("decision_id") for r in members if _decision_enforced(r)),
+        }
+        if budget_categories is not None and i >= budget_categories:
+            spilled_categories.append({"category": cat, "count": len(members),
+                                       "deeper_query": "deeper:%s:prohibition" % cat})
+        else:
+            pinned_categories.append(entry)
+    asserted_count = len(in_force)
+    synopsis = ("%d standing prohibition/invariant decision(s) in force across %d categor%s"
+               % (asserted_count, len(categories_sorted), "y" if len(categories_sorted) == 1 else "ies"))
+    return {
+        "synopsis": synopsis,
+        "asserted_count": asserted_count,
+        "categories": pinned_categories,
+        "spilled_categories": spilled_categories,
+        "spilled": len(spilled_categories) > 0,
+    }
+
+def _load_decision_pool_from_catalog(args):
+    """-Live path (UNPROVEN in this session -- no lane-A-produced catalog exists here; the real seam
+    proves at the orchestrator D-0077 fold, frozen contract s5). Lazily imports #36 by a resolved
+    portable path (the i35/i38 pattern); missing/unimportable #36 or catalog is NEVER a crash -- only a
+    warning + an empty pool (fail-soft, distinct from the P0-1 namespace fail-CLOSED path, since this is
+    availability, not authorization)."""
+    db_path = args.get("catalog_db_path")
+    if not db_path:
+        return [], "none", None
+    try:
+        here = os.path.dirname(os.path.abspath(__file__))
+        lib_path = os.environ.get("LIFEORCH_ARTIFACT_SEARCH_PATH") or os.path.normpath(
+            os.path.join(here, os.pardir, "36-artifact-search", "artifact_search.py"))
+        if not os.path.isfile(lib_path):
+            return [], "catalog_unavailable", ("catalog_db_path given but #36 artifact_search.py not "
+                                               "found at %r" % lib_path)
+        spec = importlib.util.spec_from_file_location("lifeorch_artifact_search_i56", lib_path)
+        A = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(A)
+        res = A.run({"op": "search", "db": db_path, "query": args.get("query_text") or "",
+                    "k": int(args.get("catalog_k") or 500), "mode": "fts",
+                    "filters": {"record_kind": "decision", "namespace": "decisions"}})
+        pool = []
+        for hit in (res.get("result") or {}).get("hits", []) or []:
+            attrs = hit.get("attrs") or {}
+            rec = dict(attrs)
+            rec.setdefault("decision_id", hit.get("record_id"))
+            rec.setdefault("record_version_id", hit.get("record_version_id"))
+            rec.setdefault("namespace", hit.get("namespace"))
+            rec.setdefault("source_span", {"path": hit.get("source_path"),
+                                           "start": hit.get("span_start"), "end": hit.get("span_end")})
+            pool.append(rec)
+        return pool, "catalog:%s" % os.path.abspath(db_path), None
+    except Exception as e:  # noqa: BLE001 -- catalog wiring is best-effort off this session; never crash
+        return [], "catalog_error", ("catalog load failed (%s: %s) -- falling back to an empty pool"
+                                     % (type(e).__name__, e))
+
+def op_compile_relevant_decisions(args, warnings):
+    """PB-6 (i56/FANOUT_AGENT_002) -- the 'compile the task-relevant decision set' VERB.
+    Frozen contract: core-docs/research/2026-08-14-pb6-decision-record-schema.md s4; predicate:
+    research/2026-08-14-pb7-relayer-design-2.md s8 (AUTHORITATIVE over its own s4 naive rule).
+
+    INPUT: {modules[], planes[], recency_window, action_class?, query_text?}, plus either
+    `decision_pool` (an injected fixture list of typed decision records -- the off-machine path used by
+    this worker's own tests, since lane A's real records do not exist in this session) or
+    `catalog_db_path` (the -Live #36 path, UNPROVEN here -- see _load_decision_pool_from_catalog),
+    `canonical_head` (the git SHA to check `ingested_through` currency against -- s8 rule 5), and
+    `top_k` / `standing_budget_categories` (budget knobs).
+
+    OUTPUT: a bounded top-k task-relevant `current` decision set (supersession-aware, current-only by
+    default) PLUS the ALWAYS-included standing-constraint ROOT view (rule 3) with its asserted count,
+    each row expandable to its `source_span`. Global/full-history questions return a slow-path marker
+    (C4) and never attempt a fast compile.
+    """
+    modules = [str(m) for m in (args.get("modules") or [])]
+    planes = [str(p) for p in (args.get("planes") or [])]
+    recency_window = args.get("recency_window")
+    action_class = args.get("action_class")
+    query_text = args.get("query_text") or ""
+    canonical_head = args.get("canonical_head")
+    top_k = int(args.get("top_k") or args.get("k") or 20)
+    standing_budget_categories = args.get("standing_budget_categories")
+    if standing_budget_categories is not None:
+        standing_budget_categories = int(standing_budget_categories)
+
+    if _is_global_decision_question(args, query_text):
+        return {
+            "verb": DECISION_VERB_ID, "verb_version": DECISION_VERB_VERSION,
+            "compile_status": "slow_path", "slow_path": True,
+            "reason": ("global_or_full_history_question (C4) -- the explicit slow path, "
+                      "never attempted as a fast query per the frozen contract s4"),
+        }, []
+
+    pool = args.get("decision_pool")
+    if pool is not None:
+        pool_source = "injected_fixture"
+    else:
+        pool, pool_source, load_warning = _load_decision_pool_from_catalog(args)
+        if load_warning:
+            warnings.append(load_warning)
+    pool = pool or []
+
+    # ---- s8 rule 5: per-commit currency -- NEVER silently serve stale-as-current ----
+    currentness = "current"
+    current_as_of = canonical_head
+    ingested_throughs = sorted(set(str(r.get("ingested_through")) for r in pool
+                                   if r.get("ingested_through") is not None))
+    stale = bool(canonical_head is not None and ingested_throughs
+                and any(ih != str(canonical_head) for ih in ingested_throughs))
+    if stale:
+        currentness = "stale"
+        current_as_of = ingested_throughs[0] if len(ingested_throughs) == 1 else ingested_throughs
+        k_appends = args.get("uningested_append_count")
+        warnings.append(
+            "currentness=stale: ingested_through %r != canonical_head %r -- degraded to 'current as of "
+            "<SHA>' (K=%r un-ingested appends), NEVER served as current (s8 rule 5)"
+            % (ingested_throughs, canonical_head, k_appends))
+
+    standing_records = [r for r in pool if _decision_is_standing(r)]
+    ordinary_records = [r for r in pool if not _decision_is_standing(r)]
+
+    standing_view = _standing_root_view(standing_records, standing_budget_categories)
+
+    # ---- ordinary task-relevant candidate pool: current-only default (F3-safe via _decision_in_force) ----
+    relevant = [r for r in ordinary_records
+               if _decision_in_force(r) and _decision_relevance_match(r, modules, planes)]
+    relevant_sorted = sorted(relevant, key=lambda r: (r.get("decision_id") or ""))
+    hits = [_decision_hit_for_selpol(r, i) for i, r in enumerate(relevant_sorted)]
+
+    descriptor = {"query_class": "current_state",
+                 "salient_terms": derive_terms(query_text, 32) if query_text else []}
+    # NOTE: current_only/effective_current filtering is NOT re-delegated to selpol here -- the frozen
+    # contract's own s8 predicate (via _decision_in_force, applied above) is the authority for decision
+    # currency; selpol is reused ONLY for its deterministic ranking (P1-1/D-0089 -- one selection owner
+    # for SCORING, not for this domain's bespoke currency rules).
+    params = {"allowed_namespaces": None, "dedup_display": True}
+    if hits:
+        sel = selpol.select(hits, descriptor, params=params)
+        ranked_hits = sel.get("selected") or []
+    else:
+        sel = {"selected": [], "policy_id": selpol.POLICY_ID,
+              "policy_version": getattr(selpol, "POLICY_VERSION", None), "omission_manifest": []}
+        ranked_hits = []
+
+    bounded = ranked_hits[:top_k]
+    compiled_rows = []
+    for h in bounded:
+        rec = h["_decision"]
+        compiled_rows.append({
+            "decision_id": rec.get("decision_id"),
+            "title": rec.get("title"),
+            "status": "current" if _decision_in_force(rec) else rec.get("status"),
+            "binding_scope": rec.get("binding_scope"),
+            "enforced_by": rec.get("enforced_by") or "none",
+            "hot": _decision_hot(rec),
+            "affected_modules": rec.get("affected_modules") or [],
+            "planes": rec.get("planes") or [],
+            "partially_superseded_by": rec.get("partially_superseded_by") or [],
+            "supersedes": rec.get("supersedes") or [],
+            "selection_rank": h.get("selection_rank"),
+            "selection_score": h.get("selection_score"),
+            "source_span": _decision_source_span(rec),
+        })
+
+    payload = {
+        "verb": DECISION_VERB_ID,
+        "verb_version": DECISION_VERB_VERSION,
+        "compile_status": "ok",
+        "currentness": currentness,
+        "current_as_of": current_as_of,
+        "input": {"modules": modules, "planes": planes, "recency_window": recency_window,
+                  "action_class": action_class, "query_text": query_text},
+        "standing_constraint_root_view": standing_view,
+        "compiled_decisions": compiled_rows,
+        "compiled_count": len(compiled_rows),
+        "omission_manifest": sel.get("omission_manifest", []),
+        "selection_policy_id": sel.get("policy_id"),
+        "selection_policy_version": sel.get("policy_version"),
+        "pool_source": pool_source,
+        "pool_count": len(pool),
+    }
+    payload["compiled_set_digest"] = sha256_of_obj({
+        "standing": standing_view, "rows": compiled_rows,
+        "currentness": currentness, "current_as_of": current_as_of})
+    return payload, []
+
+
+OPS = {"compile": op_compile, "normalize": op_normalize, "expand": op_expand,
+       "compile_relevant_decisions": op_compile_relevant_decisions}
 
 def run(args):
     """Execute one op. Returns {ok, op, result, worker, warnings, artifacts}. Importable for tests."""

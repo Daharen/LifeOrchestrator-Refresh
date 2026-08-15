@@ -1,4 +1,41 @@
-# Work Order: Context Compiler (`context.compile`) 0.7.0 -- i35 CONSUMER WIRING (REAL hierarchy_port into the PUBLIC artifact_search path)
+# Work Order: Context Compiler (`context.compile`) 0.10.0 -- i56 PB-6 `compile_relevant_decisions` VERB (FANOUT_AGENT_002)
+
+### i56 delta (D-0149, PB-6) -- NEW `compile_relevant_decisions` VERB, ADDITIVE (module semver 0.9.0 -> 0.10.0; `context_packet/0.2` schema/contract_version UNCHANGED -- this op emits no packet)
+**Frozen governing doc:** `core-docs/research/2026-08-14-pb6-decision-record-schema.md` (s4 = this lane's
+verb spec; the s8 hardened predicate in `research/2026-08-14-pb7-relayer-design-2.md` is AUTHORITATIVE
+over the doc's own s4 naive rule). This is the FANOUT_AGENT_002 (i56) lane of PB-6 -- the retrieval-verb
+half of a D-0077 producer/consumer split; FANOUT_AGENT_001 (lane A, a separate parallel worker) owns the
+producer that ingests `DECISION_LOG.md` into `record_kind=decision` #36 records. A NEW `op` key
+(`compile_relevant_decisions`) in the SAME `context_compiler.py`/`skill.json` -- `compile`/`normalize`/
+`expand` are byte-for-byte UNCHANGED (proven: the owned suite re-runs 322/322 + 32/32 + 34/34 + 42/42,
+zero re-baselines). Full interpretation: `SCHEMA_NOTES.md` **s21**.
+
+Compiles `{modules[], planes[], recency_window, action_class?, query_text?}` into a bounded top-k
+task-relevant `current` decision set (supersession-aware, current-only default) plus the
+ALWAYS-included standing-constraint ROOT view (rule 3: pinned root synopsis + child-category pointers +
+an asserted COUNT that survives any budget cut via a `deeper:*:prohibition` spill, never a silent drop
+or compression). Implements the s8 hardened predicate as deterministic code (rule 1 binding_scope
+exemption / rule 2 demote-on-enforcement / rule 4 `partially_superseded_by` conservative retention /
+rule 5 per-commit `ingested_through` currency degrade to `currentness=stale`); routes ordinary-decision
+RANKING through #37's canonical `selpol_rrf_v1` (P1-1/D-0089 reuse -- NO new retrieval architecture),
+while decision CURRENCY stays this domain's own s8 rules (selpol is not re-asked to adjudicate a
+vocabulary it doesn't have). Global/full-history questions (C4) short-circuit to a slow-path marker
+before any pool load. Off-machine, this worker's own session has no lane-A-produced #36 catalog, so
+build+test runs entirely against an injected `decision_pool` fixture (a standing_prohibition, a
+gate-enforced invariant, a partial-supersession pair, a full-supersession control, and a stale-
+`ingested_through` case) -- a real build-time bug (a display-dedup collision that silently dropped one
+side of a partial-supersession pair -- exactly an F3 failure) was caught by this worker's own F3 gate
+and fixed by carrying each record's `source_span` into its selpol hit. **Gate:**
+`tests/test_i56_compile_relevant_decisions.py` 30/30 (F1 asserted-count-survives-budget, rule-2
+demote-on-enforcement, F3 partial-supersession survival, F4 stale-currency degrade, C4 slow-path,
+double-run + pool-order-independent byte-identity, empty/absent-pool fail-soft, OPS-surface +
+existing-op regression) + the UNCHANGED owned suite (460/460 total). **Deferred (flagged, not claimed
+done):** the -Live `catalog_db_path` path through a REAL #36 catalog is UNPROVEN in this session (no
+lane-A catalog exists here) -- the real producer -> #36 -> verb seam is the orchestrator's D-0077 fold
+smoke (frozen contract s5), per the FANOUT_AGENT_002 brief's rails. **Non-goals:** no PB-6 producer
+(lane A); no `recency_window` hard filter yet (accepted + echoed, not load-bearing); no
+`deeper:*:prohibition` cold-query resolution (the verb emits the pointer only); no core-doc edits
+(`docs:[]`); no #36/#37 change (imported READ-ONLY).
 
 **Contract targeted:** `CONTEXT_PACKET_CONTRACT.md` `context_packet/0.2` with **s4 PINNED (D-0089)** + the
 **i32 amendment (D-0092)** + the **i33 amendment (D-0096)** + the **i34 amendment (D-0098)** +

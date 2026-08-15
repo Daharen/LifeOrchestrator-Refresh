@@ -928,3 +928,113 @@ mirrors); NO promotion / write / lifecycle op from #40; NO change to the flat/le
 `non_execution:true` UNCHANGED (working memory is STATE, never execution authority). Proven off-machine over a REAL
 #42 store + a REAL #36 tree by the OWNED gate `tests/test_i38_working_memory.py` (42/42) + regression: i37 router
 (34/34) + i35 public-port (32/32) + i34 smoke (38/38) + the shipped suite (322/322) + #42's own tests (30/30).
+## s21 -- i56 (PB-6, D-0149 -- FANOUT_AGENT_002): the `compile_relevant_decisions` VERB (the full interpretation, REQUIRED for the orchestrator D-0077 fold)
+
+**Frozen contract:** `core-docs/research/2026-08-14-pb6-decision-record-schema.md` s4 (the ONE governing
+design doc this lane + the PB-6 producer lane, FANOUT_AGENT_001, both build against per FANOUT_ORCHESTRATOR_HANDOFF
+s8). The s4 verb-contract clause names the s8 hardened predicate in `research/2026-08-14-pb7-relayer-design-2.md`
+as AUTHORITATIVE over its own naive `HOT iff current AND in-window` text -- s21 below interprets the s8 rules,
+not the naive rule.
+
+**Shape.** A NEW `op` key (`compile_relevant_decisions`) alongside `compile`/`normalize`/`expand` in the SAME
+`context_compiler.py` worker -- NOT a new module, NOT a new retrieval architecture. It is purely ADDITIVE: the
+`OPS` dispatch table gained one key; every byte of the existing three ops is untouched (proven by the unchanged
+322/322 + 32/32 + 34/34 + 42/42 owned suites re-running green after this change with ZERO re-baselines).
+
+**Input.** `{modules[], planes[], recency_window, action_class?, query_text?}` per the frozen contract, plus this
+worker's own injection/currency/budget knobs: `decision_pool` (an injected fixture list of typed
+`record_kind=decision` records -- see below), `catalog_db_path` (the -Live #36 path, UNPROVEN in this session),
+`canonical_head` (the git SHA `ingested_through` is checked against), `uningested_append_count`, `top_k` (default
+20), `standing_budget_categories`, `global_question`. See `skill.json` inputs for the full list.
+
+**Pool source (why fixtures, not a real catalog).** The PB-6 producer (FANOUT_AGENT_001) is a PARALLEL,
+isolated-session lane per the D-0077 producer/consumer split -- its real records do not exist in THIS worker's
+session. `decision_pool` mirrors the retriever-injection pattern the rest of #40 already uses off-machine (mock
+0.2 hits from a fixture); `_load_decision_pool_from_catalog` is the -Live counterpart (lazy-imports #36 by a
+resolved portable path, the i35/i38 pattern; missing/unimportable #36 or catalog -> an empty pool + a warning,
+NEVER a crash -- fail-SOFT availability, distinct from the P0-1 fail-CLOSED namespace path). **The real
+producer -> #36 catalog -> this verb seam is UNTESTED here by design -- it is the orchestrator's D-0077 fold
+smoke (frozen contract s5), which this worker's report flags as the one deferred proof.**
+
+**The s8 predicate, as implemented (deterministic code, not judgement -- design s6):**
+- **Rule 1 (`_decision_is_standing`).** `binding_scope in {standing_prohibition, invariant}` records are
+  partitioned OUT of the ordinary ranked pool entirely and ALWAYS routed into the standing-constraint root view
+  (below), regardless of relevance/recency signals -- the exemption IS the partition, not a scoring boost.
+- **Rule 2 (`_decision_hot` / `_decision_enforced`).** `hot <=> in-force AND enforced_by=none AND
+  (standing-exempt OR cross_session_scope OR recurrence>=k)`. A standing record is exempt from the
+  recurrence/cross-session gate (rule 1) but NOT from this enforcement gate -- rule 1's own text names rule 2 as
+  its exception. An enforced standing record (`enforced_by=<gate>`) is demoted OUT of `hot[]` but stays a member
+  of its category and counts toward `asserted_count` -- "demoted", per the frozen contract, means dropped from
+  the hot BUDGET, never dropped from the COUNT.
+- **Rule 3 (`_standing_root_view`).** The ROOT view carries `synopsis` (a deterministic count/category
+  sentence), `asserted_count` (over the FULL in-force standing set, independent of any budget cut --
+  `standing_budget_categories` never changes this number), `categories[]` (pinned, up to the budget), and
+  `spilled_categories[]` (`{category, count, deeper_query: "deeper:<category>:prohibition"}` for the remainder).
+  **Own gate test F1 asserts `sum(pinned counts) + sum(spilled counts) == asserted_count` under a
+  `standing_budget_categories=1` cut against a 2-category fixture -- nothing vanishes, the deficit always carries
+  a `deeper:` pointer.** Categories are `planes[0]` else `affected_modules[0]` else `"uncategorized"` (the
+  bounded-fanout category key; a future PB-7 increment may swap this for a real PCB plane map without changing
+  the asserted-count contract).
+- **Rule 4 (`_decision_in_force`, the F3 defense).** A record carrying `partially_superseded_by` and NO
+  `superseded_by` stays `status=current` REGARDLESS of its raw `status` field -- conservative over-inclusion,
+  the opposite failure mode of silent loss. A record with a full `superseded_by` (or fold/close) edge is properly
+  excluded from the current-only default. A terminal raw `status` with NO supporting edge (a producer anomaly) is
+  conservatively treated as still in-force -- "never silent loss" (design s6) outranks "trust the status field."
+  **Own gate test F3 fixtures a real partial-supersession pair (D-0050 partially_superseded_by D-0143) alongside
+  a real full-supersession control (D-0040 superseded_by D-0143) and asserts the predecessor survives while the
+  control is excluded.**
+- **Rule 5 (per-commit currency).** Every record in the injected pool carries `ingested_through` (identical for
+  all records in one real ingest run, per the frozen contract s3); the verb compares the SET of distinct
+  `ingested_through` values against the caller-supplied `canonical_head`. A mismatch sets `currentness=stale`,
+  `current_as_of=<the pool's ingested_through>` (never the caller's canonical_head -- that would silently imply
+  currency), and appends an explicit warning naming both SHAs + the optional K. **This worker does NOT perform
+  incremental re-ingestion itself** (that is the producer's / doc-commit-gate's job per the frozen contract s6);
+  it only refuses to misrepresent staleness as currency. **Own gate test F4 asserts both directions (fresh stays
+  `current`; a mismatched HEAD degrades to `stale` with the correct `current_as_of`).**
+
+**Ranking (P1-1/D-0089 reuse, NOT reimplementation).** The in-force, relevance-matched ordinary pool (rule 4 +
+a `modules[]`/`planes[]` intersection filter) is adapted into the minimal retriever-0.2-ish hit shape
+`selpol.select()` expects (`_decision_hit_for_selpol`) and ranked via #37's canonical `selpol_rrf_v1` -- the ONE
+selection owner, imported exactly as `compile`/`expand` already do (`_load_canonical_selpol`, module-load time).
+`current_only`/`effective_current` filtering is deliberately NOT re-delegated to selpol: decision currency is
+this domain's own s8 rule set (already applied via `_decision_in_force` before the hits are built), so selpol is
+used ONLY for its deterministic ranking stages (fusion/authority/diversity/dedup), never re-asked to adjudicate
+currency it does not have the vocabulary for. **A real build-time bug was caught by this discipline: the initial
+hit adapter omitted `span_start`/`span_end`, so every decision (all sharing `source_path=DECISION_LOG.md`)
+collided into ONE selpol display-dedup cluster and only one of a partial-supersession pair survived selection --
+exactly the F3 failure mode the frozen contract exists to prevent. Fixed by carrying each record's real
+`source_span` start/end into the hit (selpol's dedup fallback key is `source_path+span` absent a
+`chunk_content_hash`) -- the F3 gate test now catches a regression of this class.**
+
+**C4 global/full-history questions.** `_is_global_decision_question` checks an explicit `global_question` flag,
+`action_class in {global, oscillation, full_history}`, or a lowercased-text marker match (`"did we ever"`,
+`"have we ever"`, `"oscillat"`) and short-circuits to `{compile_status: "slow_path", slow_path: true, reason}`
+BEFORE any pool load or ranking -- never attempted as a fast query, per the frozen contract s4.
+
+**Determinism.** No wall-clock, no randomness, no model. `compiled_set_digest = sha256_of_obj({standing, rows,
+currentness, current_as_of})` (canonical JSON, sorted keys). Own gate test asserts (a) identical input ->
+byte-identical output across two runs, and (b) a REORDERED but content-identical `decision_pool` produces the
+SAME digest (the compile sorts every partition by `decision_id` before hitting selpol, so input order never
+leaks into the result) -- the frozen contract's "byte-identity over the compiled set for identical records +
+identical query" clause, verified two ways.
+
+**Non-goals (this increment).** No PB-6 producer (FANOUT_AGENT_001, lane A -- a separate parallel worker); no
+proof of the real `catalog_db_path` -Live path (no lane-A catalog exists in this session -- deferred to the
+orchestrator D-0077 fold, frozen contract s5); no `deeper:*:prohibition` cold-query IMPLEMENTATION (the verb
+emits the pointer; resolving it is a later PB-7 increment / an existing #40 hierarchy-descend concern); no
+`recency_window` HARD filter yet (accepted + echoed in `input`, not yet load-bearing -- reserved for a future
+increment once a real corpus proves the signal is needed); no core-doc edits (`docs:[]`); no change to #36/#37
+(imported READ-ONLY, exactly as `compile` already does). `non_execution:true` / P0-1 are UNTOUCHED -- this verb
+returns evidence-shaped decision rows, never control/action authority, and does not participate in the packet
+`evidence[]`/`control_plane` machinery at all (it is a standalone op, not a packet region).
+
+**Gate.** `tests/test_i56_compile_relevant_decisions.py` -- 30/30 (F1 asserted-count-survives-budget, rule-2
+demote-on-enforcement, F3 partial-supersession survival + full-supersession exclusion, F4 stale-currency
+degrade, C4 slow-path routing, double-run + pool-order-independent byte-identity, empty/absent-pool
+fail-soft, and an explicit OPS-surface + existing-op byte-identity regression check) + the UNCHANGED owned
+suite (`context_compiler_tests.py` 322/322, `test_i35_public_port.py` 32/32, `test_i37_router_stage_trace.py`
+34/34, `test_i38_working_memory.py` 42/42) -- 460/460 total, 0 re-baselines. `skill.json` `0.9.0 -> 0.10.0`
+(`purpose` addendum + 12 new additive `inputs` entries + the `op` enum description extended;
+`contract_version` UNCHANGED at 0.8 -- this verb does not emit a `context_packet` and is not part of packet
+assembly). `-Live` / the real producer+catalog fold smoke: **DEFERRED to the orchestrator** (frozen contract s5)
+-- flagged, not silently claimed done, per D-0107/D-0109.

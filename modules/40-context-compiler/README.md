@@ -1,4 +1,20 @@
-# Module 40 -- context.compile (Context Compiler) 0.8.0
+# Module 40 -- context.compile (Context Compiler) 0.10.0
+
+> **i56 (PB-6, D-0149 -- FANOUT_AGENT_002) -- the `compile_relevant_decisions` VERB.** A NEW `op`
+> (purely ADDITIVE -- `compile`/`normalize`/`expand` byte-for-byte unchanged) that compiles a bounded
+> task-relevant set of `record_kind=decision` records (modules/planes/recency/action_class/query_text
+> signals) routed through #37's canonical `selpol_rrf_v1` for ranking (P1-1/D-0089, no new retrieval
+> architecture), per the FROZEN CONTRACT `core-docs/research/2026-08-14-pb6-decision-record-schema.md`
+> s4 + the s8 hardened predicate in `research/2026-08-14-pb7-relayer-design-2.md` (binding_scope
+> exemption, demote-on-enforcement, a budgeted standing-constraint ROOT view that SPILLS -- never
+> compresses -- below its category budget while its `asserted_count` stays exact, `partially_superseded_by`
+> conservative retention, per-commit `ingested_through` currency that degrades to `currentness=stale`
+> rather than ever serving a stale record as current). Off-machine tests against an injected
+> `decision_pool` fixture (the PB-6 producer, FANOUT_AGENT_001, is a parallel-isolated session -- its
+> real #36 records do not exist here); the real producer->#36->verb seam is the orchestrator's D-0077
+> fold smoke (frozen contract s5), DEFERRED and flagged, not claimed done. Gate:
+> `tests/test_i56_compile_relevant_decisions.py` (30/30) + the unchanged owned suite (322/322 + 32/32 +
+> 34/34 + 42/42 = 460/460, 0 re-baselines). Full interpretation: `SCHEMA_NOTES.md` **s21**.
 
 > **i37 (R-1, D-0101/D-0103) -- the multi-channel query ROUTER, BORN INSTRUMENTED.** The last un-routed
 > retrieval seam: the i32 `query_class` stub + `DESCEND_QUERY_CLASSES` become a real DETERMINISTIC VERSIONED
@@ -223,6 +239,10 @@ repeats on real #36 hits).
 - **normalize** -- task descriptor -> the deterministic query set (used by the `-Live` retriever seam).
 - **expand** (8.5) -- packet + an expansion request -> an IMMUTABLE `context_expansion/0.2` delta with
   bounded additional evidence WITH provenance + a LOCKED corpus snapshot + a depth bound. NOT a live loop.
+- **compile_relevant_decisions** (i56/PB-6) -- `{modules[], planes[], recency_window, action_class?,
+  query_text?}` (+ `decision_pool` fixture injection or `catalog_db_path` -Live) -> a bounded
+  task-relevant decision set + the always-included standing-constraint ROOT view. See `SCHEMA_NOTES.md`
+  **s21**. NOT part of `context_packet/0.2` -- a standalone op, no packet region.
 
 ## Retriever seam
 The deterministic worker never calls another process; the retriever is INJECTED.
@@ -257,6 +277,7 @@ python tests/context_compiler_tests.py                 # 322 assertions (accepta
 python tests/test_i35_public_port.py                   # 32/32 -- the REAL #36 hierarchy-port via the PUBLIC artifact_search path
 python tests/test_i37_router_stage_trace.py            # 35/35 -- i37 (R-1) the multi-channel router + born-instrumented stage-trace, over a REAL #36 tree
 pwsh   tests/Invoke-ContextCompilerTests.ps1           # entrypoint end-to-end (mock; incl. -Route)
+python tests/test_i56_compile_relevant_decisions.py    # 30/30 -- i56 the compile_relevant_decisions verb (F1/rule-2/F3/F4/C4/determinism/regression)
 pwsh   tests/Invoke-ContextCompilerTests.ps1 -DbPath <#36 catalog> -RepoRoot <repo>   # -Live
 ```
 
