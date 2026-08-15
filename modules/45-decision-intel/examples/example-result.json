@@ -1,0 +1,99 @@
+{
+  "schema": "lifeorch.skill.result/0.1",
+  "skill_id": "decision.intel",
+  "skill_version": "0.1.0",
+  "contract_version": "0.2",
+  "invocation_id": "EXAMPLE-0000-0000-0000-000000000000",
+  "status": "partial",
+  "started_at_utc": "2026-08-15T00:00:00.0000000Z",
+  "finished_at_utc": "2026-08-15T00:00:00.2500000Z",
+  "duration_ms": 250,
+  "inputs_digest": "sha256:example",
+  "result": {
+    "op": "index",
+    "namespace": "decisions",
+    "total_records": 149,
+    "record_kind": "decision",
+    "counts_by_status": {
+      "current": 142,
+      "folded": 2,
+      "superseded": 5
+    },
+    "counts_by_binding_scope": {
+      "invariant": 49,
+      "ordinary": 52,
+      "standing_prohibition": 48
+    },
+    "records_digest": "c1ca95eb6f7da0835c04d0c90df864d27e623e12ec3a7333afb8ca6de6ff5245",
+    "validation": {
+      "checked": 149,
+      "error_count": 0,
+      "errors": [],
+      "ok": true
+    },
+    "edge_summary": {
+      "external": 49,
+      "resolved_internal": 18,
+      "total": 67
+    },
+    "coverage": {
+      "extra_records_without_index_row": [],
+      "index_row_count": 149,
+      "log_entry_count": 149,
+      "missing_records_for_index_rows": [],
+      "ok": true,
+      "schema": "lifeorch.decision_intel.coverage/0.1",
+      "span_resolution_ok": true
+    },
+    "ambiguous_count": 18,
+    "ambiguous": [
+      {
+        "decision_id": "D-0004",
+        "flags": [
+          "no_affected_modules_found"
+        ]
+      },
+      {
+        "decision_id": "D-0006",
+        "flags": [
+          "no_affected_modules_found"
+        ]
+      },
+      {
+        "decision_id": "D-0007",
+        "flags": [
+          "no_affected_modules_found"
+        ]
+      },
+      {
+        "note": "... truncated for this example file"
+      }
+    ],
+    "unresolved_supersession_targets": [],
+    "ingest_run_id": "ingest_65c7fe9110527460abc41efb",
+    "runtime_ms": 250,
+    "worker": {
+      "name": "decision.intel",
+      "version": "0.1.0",
+      "python": "3.11.15"
+    }
+  },
+  "confidence": null,
+  "artifacts": [
+    {
+      "path": "C:\\...\\runtime\\artifacts\\EXAMPLE\\records.jsonl",
+      "kind": "jsonl",
+      "bytes": 123456,
+      "sha256": "example"
+    }
+  ],
+  "model_provenance": [],
+  "diagnostics": {
+    "log": "stderr.txt",
+    "artifact_dir": "C:\\...\\runtime\\artifacts\\EXAMPLE"
+  },
+  "warnings": [
+    "18 decision(s) flagged ambiguous (see summary.md)"
+  ],
+  "error": null
+}
