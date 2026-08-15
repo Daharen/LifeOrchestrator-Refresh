@@ -23,31 +23,21 @@
     "pointer": "MODULE_ROADMAP.md #40 / PROCESS_BACKLOG PB-2 / widgets/08-live-run-audit-pathway"
    },
    {
-    "gate": "i58 -- PB-7 trigger FIRED i57 (D-0152)",
-    "item": "the universal derived-front-door wave -- FREEZE + RED-TEAM the universal front-door contract: raw docs stay the lossless backing but stop being the ordinary read path; every hot surface -> a bounded GENERATED front door that SPILLS to cold, never compresses (the renderer slim-ladder is the anti-pattern to remove)",
-    "pointer": "core-docs/research/2026-08-12-knowledge-surface-relayer-program.md + DECISION_LOG D-0152"
-   },
-   {
-    "gate": "i58 cadence check (D-0147; review_due i58) -- NON-DISPLACING",
-    "item": "AUDIT_PIPELINE review_due i58 -- run the required cadence check; the audit increment is explicitly non-displacing (the bootstrap-surface failure outranks it)",
-    "pointer": "core-docs/AUDIT_PIPELINE.md s5"
-   },
-   {
-    "gate": "i59 -- root migration (after the i58 freeze)",
-    "item": "START_HERE -> a stable ~0.5-1 KB bootstrap kernel (verify/rebuild the PCB + open the generated packet; no iteration/active-work/module-roster/changing state) + the PCB packet as the first generated front door",
-    "pointer": "core-docs/START_HERE.md + DECISION_LOG D-0152"
+    "gate": "i59 -- root migration (D-0152, AMENDED by D-0153 s8 rule 1)",
+    "item": "START_HERE -> a stable ~0.5-1 KB bootstrap kernel (verify/rebuild the PCB + open the generated packet; NO iteration/active-work/roster/changing state) AND a generator-INDEPENDENT cold-boot card (the kernel alone is insufficient -- CB1) + register a uniform rebuild interface; the PCB packet = the first fully-owned generated front door",
+    "pointer": "core-docs/research/2026-08-15-i58-front-door-hardened.md + DECISION_LOG D-0152/D-0153"
    },
    {
     "gate": "i60+ class migration (folds in the boot-wiring follow-ons)",
-    "item": "migrate CURRENT_STATE / handoff/frontier / module+tool catalogs / backlogs / gotchas / tests / research incrementally; #36 query-level bounded load + static plane-map + ops:boot-decision-retrieval canon fold in here",
-    "pointer": "core-docs/research/2026-08-15-i57-pb6-boot-wiring-contract.md"
+    "item": "migrate CURRENT_STATE interior / handoff-ledger / module+tool catalogs / backlogs / gotchas / tests / research incrementally, each design-first -> red-team-gated with the s8 build requirements; #36 query-level bounded load + static plane-map + ops:boot-decision-retrieval canon fold in here",
+    "pointer": "core-docs/research/2026-08-15-i58-universal-front-door-contract.md"
    }
   ],
-  "derived_from": "core-docs/CURRENT_STATE.md + DECISION_LOG D-0151/D-0152 at the i57 close; overlay advanced + standing_constraints refreshed at the N7 close-refold; i58 redirected to the universal derived-front-door wave (D-0152).",
-  "next_iteration": 58,
-  "summary": "i57 CLOSED (D-0151): PB-6 boot-wiring SHIPPED (d16cdc0) -> PB-6 COMPLETE (standing #36 decision catalog + overlay STANDING CONSTRAINTS root view + bounded load + catalog-path gate; boot stops whole-ingesting DECISION_LOG_INDEX). NEXT = i58 = the universal derived-front-door wave (PB-7 trigger FIRED i57 -- START_HERE crossed its 6 KB cap at close; D-0152): i58 freezes + red-teams the universal derived-front-door contract (every cumulative hot surface -> a bounded GENERATED front door that SPILLS to cold, never compresses; the renderer slim-ladder is the anti-pattern, G5); i59 = root migration (START_HERE -> a stable ~0.5-1 KB bootstrap kernel + the PCB packet); i60+ migrate CURRENT_STATE / handoff / catalogs / backlogs / gotchas / tests / research incrementally. AUDIT review_due i58 = cadence check only, NON-DISPLACING. Boot-wiring named follow-ons (#36 query-level bounded load; static plane-map; ops:boot-decision-retrieval canon) fold into the migration. SP3/M-03 OPEN; P0-1 FROZEN."
+  "derived_from": "core-docs/CURRENT_STATE.md + DECISION_LOG D-0152/D-0153 at the i58 close; overlay advanced + frontier redirected to i59 (D-0153); standing_constraints refreshed at the N7 close-refold.",
+  "next_iteration": 59,
+  "summary": "i58 CLOSED (D-0153): the universal derived-front-door contract FROZEN + 3-adversary red-teamed (7 breaks -> hardened s8 AUTHORITATIVE); i59 AMENDED = START_HERE kernel + a generator-independent cold-boot card. NEXT = i59 root migration; then i60+ class-by-class."
  },
- "iteration": 57,
+ "iteration": 58,
  "open_rulings": [
   {
    "ref": "decision:D-0132",
@@ -60,7 +50,7 @@
  ],
  "phase": {
   "ref": "doc:core-docs/CURRENT_STATE.md",
-  "text": "Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; PCB BOOT_PACKET is the DEFAULT orchestrator bootstrap (D-0146). i57 CLOSED (D-0151): PB-6 boot-wiring SHIPPED -> PB-6 COMPLETE (standing #36 decision catalog + overlay STANDING CONSTRAINTS root view + bounded load + catalog-path gate). NEXT = i58 = the universal derived-front-door wave (PB-7 trigger FIRED i57, D-0152): freeze + red-team the universal front-door contract -- raw docs stay lossless backing but stop being the ordinary read path. AUDIT review_due i58 NON-DISPLACING."
+  "text": "Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; PCB BOOT_PACKET is the DEFAULT orchestrator bootstrap (D-0146). i58 CLOSED (D-0153): the universal derived-front-door contract FROZEN + 3-adversary red-teamed (hardened s8 authoritative; i59 AMENDED = START_HERE kernel + a generator-independent cold-boot card). NEXT = i59 = the root migration, then i60+ class-by-class. AUDIT review_due i60 NON-DISPLACING."
  },
  "prohibitions": [
   {
@@ -86,7 +76,7 @@
  ],
  "schema": "lifeorch.map_overlay/0.1",
  "standing_constraints": {
-  "asserted_count": 96,
+  "asserted_count": 97,
   "categories": [
    {
     "category": "audio",
@@ -111,9 +101,9 @@
    },
    {
     "category": "memory",
-    "count": 37,
+    "count": 38,
     "enforced": 6,
-    "hot": 31,
+    "hot": 32,
     "pointer": "deeper:memory:prohibition"
    },
    {
@@ -153,12 +143,12 @@
    }
   ],
   "enforced_count": 15,
-  "hot_count": 81,
-  "ingested_through": "99e28a070367fe7361412addb0b29736d16d94a1",
+  "hot_count": 82,
+  "ingested_through": "b4b46069dfe3804a35bb5031c57a33b9a333c767",
   "source": "modules/45-decision-intel/runtime/standing-catalog/decisions.sqlite",
   "spill_pointer": "deeper:*:prohibition",
   "spilled": false,
   "spilled_categories": [],
-  "synopsis": "96 standing prohibition/invariant decision(s) in force across 9 categories"
+  "synopsis": "97 standing prohibition/invariant decision(s) in force across 9 categories"
  }
 }
