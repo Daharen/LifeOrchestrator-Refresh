@@ -18,16 +18,6 @@
     "pointer": "core-docs/SEALED_CHECK_47.md"
    },
    {
-    "gate": "i56 lane (D-0149; Nicholas priority)",
-    "item": "PB-6 decision re-layer BUILD -- NEW #45 decision.intel producer (record_kind=decision, s8 fields) + the #40 compile_relevant_decisions verb; two CPU lanes, D-0077 pair; design-first -> red-team DONE (i55)",
-    "pointer": "core-docs/research/2026-08-14-pb6-decision-record-schema.md"
-   },
-   {
-    "gate": "reviewed i56 (D-0147); next review_due i58",
-    "item": "AUDIT_PIPELINE next_increment (raw-prompt FRONT step; design-first -> red-team) -- no spare lane at i56 (both CPU lanes = PB-6), bumped +2",
-    "pointer": "core-docs/AUDIT_PIPELINE.md s5"
-   },
-   {
     "gate": "deferred D-0134",
     "item": "#40 context.compile beam-WIDTH follow-on (i48+i51 packs = input)",
     "pointer": "MODULE_ROADMAP.md #40"
@@ -38,16 +28,26 @@
     "pointer": "core-docs/PROCESS_BACKLOG.md"
    },
    {
+    "gate": "i57 lane (D-0150; Nicholas priority)",
+    "item": "PB-6 boot-wiring -- a STANDING #36 decision catalog refreshed each close + the boot OVERLAY standing-constraint ROOT view (asserted count + child-category pointers, spill-to-cold) + boot STOPS ingesting DECISION_LOG_INDEX whole + a bounded pool load + a catalog-path test; ONE Opus 4.8 Extra lane (core-infra single-worker wave)",
+    "pointer": "core-docs/research/2026-08-14-pb7-relayer-design-2.md s7-s9 + research/2026-08-14-pb6-decision-record-schema.md s4"
+   },
+   {
+    "gate": "reviewed i56 (D-0147); review_due i58",
+    "item": "AUDIT_PIPELINE next_increment (raw-prompt FRONT step; design-first -> red-team)",
+    "pointer": "core-docs/AUDIT_PIPELINE.md s5"
+   },
+   {
     "gate": "rides next w08 touch (D-0134)",
     "item": "w08 explain-window-close defect",
     "pointer": "widgets/08-live-run-audit-pathway"
    }
   ],
-  "derived_from": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md s4 + DECISION_LOG D-0149 at the i55 close; overlay refreshed at i56 scoping.",
-  "next_iteration": 56,
-  "summary": "i55 CLOSED (D-0149): PB-7 knowledge-surface re-layer DESIGNED (Opus inline; a 3-adversary red-team confirmed 3 breaks -> a hardened ruleset; first increment = PB-6) + the retrieval-byte monitor SHIPPED (99cb32b, Sonnet). NEXT = i56: PB-6 decision re-layer BUILD -- a new #45 decision.intel producer (record_kind=decision, s8 fields) + the #40 compile_relevant_decisions verb (two CPU lanes, D-0077 pair); boot stops ingesting DECISION_LOG_INDEX whole at fold. AUDIT review_due i56 done (bumped to i58)."
+  "derived_from": "core-docs/CURRENT_STATE.md 'Next expected action' + DECISION_LOG D-0150 at the i56 close; overlay advanced at the i57 opening (the N7 close-refold the i56 close deferred -- #45 map entity authored, #40 version reconciled, currency swept).",
+  "next_iteration": 57,
+  "summary": "i56 CLOSED (D-0150): PB-6 decision re-layer BUILT -- #45 decision.intel deterministic producer (DECISION_LOG.md -> 149 typed record_kind=decision records) + #40 compile_relevant_decisions verb 0.10.0 (routed via #40+#37); the mandatory D-0077 fold smoke caught+fixed 2 real producer<->#36<->verb seam breaks (producer status-enum vs the #36 STATUS_ENUM; verb catalog loader via list-records) -> the seam is PROVEN green (149/149 ingest). NEXT = i57: PB-6 boot-wiring -- a STANDING #36 decision catalog refreshed each close + the boot OVERLAY carrying the standing-constraint ROOT view (asserted count + child-category pointers, spill-to-cold) + boot STOPS ingesting DECISION_LOG_INDEX whole (the payoff) + a bounded pool load + a catalog-path test; ONE Opus 4.8 Extra lane (core-infra, single-worker wave). AUDIT review_due i58; SP3/M-03 OPEN (deferred); P0-1 activation FROZEN."
  },
- "iteration": 55,
+ "iteration": 56,
  "open_rulings": [
   {
    "ref": "decision:D-0132",
@@ -60,7 +60,7 @@
  ],
  "phase": {
   "ref": "doc:core-docs/CURRENT_STATE.md",
-  "text": "Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; PCB BOOT_PACKET is the DEFAULT orchestrator bootstrap (D-0146; legacy handoff = fallback). i55 CLOSED (D-0149): PB-7 re-layer DESIGNED (3-adversary red-team -> hardened ruleset; first increment PB-6) + retrieval-byte monitor SHIPPED; NEXT = i56: PB-6 decision re-layer BUILD."
+  "text": "Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; PCB BOOT_PACKET is the DEFAULT orchestrator bootstrap (D-0146; legacy handoff = fallback). i56 CLOSED (D-0150): PB-6 decision re-layer BUILT (#45 decision.intel producer + #40 compile_relevant_decisions verb 0.10.0; the mandatory D-0077 fold smoke caught+fixed 2 seam breaks -> producer->#36->verb seam PROVEN). NEXT = i57: PB-6 boot-wiring."
  },
  "prohibitions": [
   {
