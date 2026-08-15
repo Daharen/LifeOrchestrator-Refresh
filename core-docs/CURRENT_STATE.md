@@ -355,13 +355,13 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ## Next expected action
 
-**i56 CLOSED (D-0150):** PB-6 decision re-layer BUILT. **#45 `decision.intel` 0.1.0** (`6a2142e`, the #38-shaped producer: DECISION_LOG.md -> 149 typed `decision` records) + **#40 `compile_relevant_decisions` verb 0.10.0** (`184966f`, over #40+#37). The mandatory **D-0077 fold smoke caught+fixed 2 real seam breaks** (status-enum reject + FTS-vs-list-records), `206bdd39` -- the producer<->#36<->verb seam is PROVEN green (149/149 ingest; F1 count-no-drop; F3/F4/C4). AUDIT discharged at scoping (review_due->i58).
+**i57 CLOSED (D-0151):** PB-6 boot-wiring SHIPPED -- **PB-6 COMPLETE**. `ops/refresh-decision-catalog.py` (D1 standing #36 decision catalog refreshed each close) + #44 overlay `standing_constraints` ROOT view + the BOOT_PACKET `STANDING CONSTRAINTS` line (D2) + #40 bounded pool load (D4) + the catalog-path gate (D5 24/24). Boot stops whole-ingesting `DECISION_LOG_INDEX` (D3). Real 653 KB log: asserted_count=94 == an independent count (0 drop, F1); BOOT_PACKET <20 KB (G1); i56 30/30 + #44 169/169 (no regression); P0-1 evidence-only (G6). dev.ship `d16cdc0`.
 
-**NEXT = i57: PB-6 boot-wiring** -- a STANDING #36 decision catalog refreshed each close + the boot OVERLAY carrying the standing-constraint ROOT view + boot stops ingesting DECISION_LOG_INDEX whole (the payoff); +bounded pool load + a catalog-path test. SP3/M-03 OPEN (deferred); #40 beam-width * PB-2 deferred (D-0134). P0-1 activation FROZEN.
+**NEXT = i58 (Nicholas picks):** AUDIT review_due i58 * PB-7 next surface (design target B/C: CURRENT_STATE sub-registries / index-of-index) * boot-wiring named follow-ons (#36 query-level bounded load; static plane-map; the `ops:boot-decision-retrieval` canon entity). SP3/M-03 OPEN (deferred); P0-1 activation FROZEN; #40 beam-width * PB-2 * w08 deferred (D-0134).
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades; `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-14 -- i56 CLOSED (D-0150): PB-6 re-layer BUILT (#45 decision.intel producer + #40 verb 0.10.0); the D-0077 fold smoke caught+fixed 2 seam breaks -> producer->#36->verb seam PROVEN green; next = i57 PB-6 boot-wiring.
+**Last updated:** 2026-08-15 -- i57 CLOSED (D-0151): PB-6 boot-wiring SHIPPED (standing #36 catalog + overlay ROOT view + bounded load + catalog-path gate 24/24); PB-6 COMPLETE; boot stops whole-ingesting DECISION_LOG_INDEX; next = i58 (AUDIT review + PB-7 next surface).
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

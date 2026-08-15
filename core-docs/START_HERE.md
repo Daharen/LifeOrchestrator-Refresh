@@ -56,8 +56,9 @@ git, and `archive/` (indexed by `archive/ARCHIVE_INDEX.md`). There is exactly ON
 - `MODULE_ROADMAP.md` -- build order + your module's entry (do not ingest whole).
 - `SKILL_CONTRACT.md` -- creating or modifying a skill.
 - `TOOL_MODEL_REGISTRY.md` -- selecting/invoking a tool or model.
-- `DECISION_LOG_INDEX.md` -- the one-row-per-decision index; pull the specific `D-00NN` entry from
-  `DECISION_LOG.md` only when it bears on your task (never ingest the whole log).
+- `DECISION_LOG_INDEX.md` -- the COLD one-row-per-decision routing catalog (growth-exempt, D-0139); NOT a
+  boot whole-open. Live standing constraints come from the BOOT_PACKET OVERLAY **STANDING CONSTRAINTS** root
+  view + `compile_relevant_decisions` (#40) (PB-6 boot-wiring i57); pull a `D-00NN` span from `DECISION_LOG.md` when it bears on your task.
 - `DOC_PROTOCOL.md` -- before editing any core doc.
 - `MODULE_WORK_ORDER_TEMPLATE.md` -- authoring a new work order.
 - `REVIEW_QUEUE.md` -- producing or consuming flagged/low-confidence items.
