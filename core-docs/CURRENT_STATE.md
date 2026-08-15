@@ -355,13 +355,13 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ## Next expected action
 
-**i57 CLOSED (D-0151):** PB-6 boot-wiring SHIPPED -- **PB-6 COMPLETE** (`d16cdc0`): standing #36 decision catalog + #44 overlay `standing_constraints` ROOT view + BOOT_PACKET line + #40 bounded load + catalog-path gate (24/24); boot stops whole-ingesting `DECISION_LOG_INDEX` (D3). Metrics + follow-ons: D-0151.
+**i58 CLOSED (D-0153):** the universal derived-front-door contract FROZEN + 3-adversary red-teamed (7 breaks, 2 ratification-blocking) -> hardened s8 authoritative. Frozen set: `research/2026-08-15-i58-*.md` (contract + redteam + hardened). No module code. Detail: D-0153.
 
-**NEXT = i58 -- the universal derived-front-door wave (PB-7 TRIGGER FIRED i57, D-0152).** START_HERE crossing its 6 KB cap at close fired PB-7: hot surfaces become bounded GENERATED front doors that SPILL, never compress (renderer slim-ladder = anti-pattern). i58 = freeze + red-team the universal front-door contract; i59 = root migration (START_HERE -> ~0.5-1 KB bootstrap kernel + the PCB packet); i60+ migrate the remaining hot surfaces (D-0152). AUDIT review_due i58 = cadence check only, NON-DISPLACING. SP3/M-03 OPEN; P0-1 FROZEN; #40 beam-width * PB-2 * w08 (D-0134).
+**NEXT = i59 -- the root migration (D-0152, AMENDED by D-0153 s8 rule 1).** START_HERE -> a ~0.5-1 KB bootstrap KERNEL (verify/rebuild the PCB + open the packet; no changing state) AND a generator-INDEPENDENT cold-boot card (the kernel alone is insufficient -- CB1) + a uniform rebuild interface; the PCB packet = the first fully-owned generated front door. Then i60+ = class-by-class (CURRENT_STATE interior, handoff ledger, catalogs, backlogs, gotchas, tests, research); the renderer slim-ladder is removed during migration. SP3/M-03 OPEN; P0-1 FROZEN; #40 beam-width * PB-2 * w08 (D-0134).
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades; `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-15 -- i57 CLOSED (D-0151): PB-6 boot-wiring SHIPPED (standing #36 catalog + overlay ROOT view + bounded load + catalog-path gate 24/24); PB-6 COMPLETE; boot stops whole-ingesting DECISION_LOG_INDEX; next = i58 (the universal derived-front-door wave; PB-7 trigger fired, D-0152).
+**Last updated:** 2026-08-15 -- i58 CLOSED (D-0153): the universal derived-front-door contract FROZEN + 3-adversary red-teamed (7 breaks -> hardened s8 authoritative); i59 AMENDED (START_HERE kernel + a generator-independent cold-boot card); AUDIT review_due i58->i60; next = i59 root migration.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

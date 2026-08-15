@@ -127,3 +127,4 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 | archive/handoffs/2026-08-14-FANOUT_ORCHESTRATOR_HANDOFF-i55.md | the outgoing i54-shaped live handoff snapshotted at the i55 close | 2026-08-14 | D-0149 |
 | archive/fanout-agents/i55-001.md | i55 lane-1 brief (PB-7 knowledge-surface re-layer DESIGN; design-first -> red-team, Opus) | 2026-08-14 | D-0149 |
 | archive/fanout-agents/i55-002.md | i55 lane-2 brief (standing per-wave retrieval-byte monitor; shipped 99cb32b, Sonnet) | 2026-08-14 | D-0149 |
+| archive/handoffs/2026-08-15-FANOUT_ORCHESTRATOR_HANDOFF-i58.md | outgoing FANOUT_ORCHESTRATOR_HANDOFF snapshot (i57-close state, rewritten in place at the i58 close) | 2026-08-15 | D-0153 |
