@@ -127,7 +127,7 @@ registry facts: `TOOL_MODEL_REGISTRY.md`. Roster (all MVP-complete unless noted)
   artifact.search **0.7.0** (SQLite catalog + FTS5 + record envelope + Tier-1 hierarchy nodes + `get-record` +
   fast-beam shortlist/descend ranking) · #37 retrieval.eval **0.8.1** (selpol 1.2.0 canonical `selpol_rrf_v1`; eval
   wired-descend; the ~200MB Tier-1 rehearsal harness; version single-source + permanent drift assertion, i40) · #38 repo.intel
-  0.1.0 (typed-record producer) · #39 episode.record 0.1.1 · #40 context.compiler **0.9.0** (three-region
+  0.1.0 (typed-record producer) · #39 episode.record 0.1.1 · #40 context.compiler **0.10.0** (three-region
   context_packet/0.2; hierarchy port; R-1 born-instrumented router; working-memory hydration; flat compile
   byte-identical back to 0.7.0) · #41 skill.card 0.2.0 · #42 working.memory 0.1.0 (per-task store, CAS heads,
   ns isolation) · **#43 action.authz 0.4.0** (P0-1 deny-by-default reference monitor + injection suite;
@@ -355,13 +355,13 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ## Next expected action
 
-**i55 CLOSED (D-0149):** two lanes. **PB-7 knowledge-surface re-layer DESIGNED** (Opus, inline per D-0119; `research/2026-08-14-pb7-relayer-design*.md`): ONE program over the PCB #44 (horizontal) + memory #35-43 (vertical); a 3-adversary red-team confirmed 3 breaks in the naive HOT rule -> a hardened ruleset (binding_scope exemption + demote-on-enforcement + partial-supersession + per-commit currency); first increment = PB-6. **Retrieval-byte monitor SHIPPED** (`99cb32b`, Sonnet): one `retrieval-bytes-log.jsonl` row/close; first row bounded_fraction=0.0 (reproduced F-i53-eff). GitHub mirror pushed to canonical.
+**i56 CLOSED (D-0150):** PB-6 decision re-layer BUILT. **#45 `decision.intel` 0.1.0** (`6a2142e`, the #38-shaped producer: DECISION_LOG.md -> 149 typed `decision` records) + **#40 `compile_relevant_decisions` verb 0.10.0** (`184966f`, over #40+#37). The mandatory **D-0077 fold smoke caught+fixed 2 real seam breaks** (status-enum reject + FTS-vs-list-records), `206bdd39` -- the producer<->#36<->verb seam is PROVEN green (149/149 ingest; F1 count-no-drop; F3/F4/C4). AUDIT discharged at scoping (review_due->i58).
 
-**NEXT = i56: PB-6 build** -- the designed first PB-7 increment (a producer -> typed `decision` records in #36 with the hardened fields + a compile-relevant-set verb via #40/#37; boot stops ingesting DECISION_LOG_INDEX whole). AUDIT review_due i56 (D-0147) rides; SP3/M-03 STAYS OPEN (deferred); #40 beam-width * PB-2 deferred (D-0134). P0-1 activation FROZEN.
+**NEXT = i57: PB-6 boot-wiring** -- a STANDING #36 decision catalog refreshed each close + the boot OVERLAY carrying the standing-constraint ROOT view + boot stops ingesting DECISION_LOG_INDEX whole (the payoff); +bounded pool load + a catalog-path test. SP3/M-03 OPEN (deferred); #40 beam-width * PB-2 deferred (D-0134). P0-1 activation FROZEN.
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades; `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-14 -- i55 CLOSED (D-0149): PB-7 re-layer DESIGNED (3-adversary red-team -> hardened ruleset; first increment PB-6) + retrieval-byte monitor SHIPPED 99cb32b; GitHub mirror pushed; next = i56 PB-6 build.
+**Last updated:** 2026-08-14 -- i56 CLOSED (D-0150): PB-6 re-layer BUILT (#45 decision.intel producer + #40 verb 0.10.0); the D-0077 fold smoke caught+fixed 2 seam breaks -> producer->#36->verb seam PROVEN green; next = i57 PB-6 boot-wiring.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

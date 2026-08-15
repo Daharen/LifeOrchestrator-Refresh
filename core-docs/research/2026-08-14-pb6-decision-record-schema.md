@@ -31,7 +31,7 @@ NOT write the catalog DB -- **#36 owns storage; the orchestrator feeds the artif
 - `namespace` = `decisions` (single namespace for this class).
 - `record_id` = `dec_<NNNN>` from the canonical D-number (e.g. `dec_0149`). Stable across re-ingest.
 - `record_version_id` = content+source derived (s2 determinism), NEVER wall-clock.
-- `status` (envelope enum) mapping: `current` | `superseded` | `folded` | `closed` (see s3 demotion).
+- `status`: the ENVELOPE status conforms to the #36 STATUS_ENUM (current/superseded/deleted/*_stale/unverified -- NO folded/closed); the lifecycle {current|superseded|folded|closed} maps on (folded/closed -> superseded), kept losslessly in `payload.lifecycle` + edges; the verb demotes on the EDGE (D-0150).
 - `content_hash` over the record's canonical field bytes (s2).
 
 ## 2. Determinism contract (inherit #38 verbatim -- READ FIRST)

@@ -298,7 +298,7 @@ recorder + the failure-signature seam; stages in `episode.body.stage_sequence` +
 **Follow-ons:** auto-recording from the executor/orchestrator paths; failure clustering; PB-2 delegation-
 decision events as episode stages (D-0101).
 
-**40 `context.compiler`** — MVP complete **0.9.0** (i29→i38; D-0086/87/91/98/100/104/106). Deterministic
+**40 `context.compiler`** — MVP complete **0.10.0** (i29→i38; D-0086/87/91/98/100/104/106). Deterministic
 three-region `context_packet/0.2` (control/evidence separation; disposition; consumer profile; identity/
 lineage); imports the canonical selpol; the Tier-1 shortlist-and-descend PLAN + safe pruning + the REAL
 hierarchy_port on the PUBLIC `-Retriever artifact_search` path (SEAM1 hydration + SEAM2 prune-cert); the
@@ -328,6 +328,8 @@ F1/F7 CLOSED (the manifest-derived pack rule proven), 3 seam findings -> the 0.6
 **Follow-ons (activation-gating, staged):** real Windows permit-store IPC/ACL/CAS + crash recovery; per-tool
 reparse/ADS/junction profiles; production store formats; freshness relaxation; the real
 `non_execution=false` transition; timing-channel hardening; rollback.
+
+**45 `decision.intel`** — MVP complete **0.1.0** (i56, D-0150; NEW). Deterministic, CPU-only, stdlib-only #38-shaped PRODUCER: `DECISION_LOG.md`(+index) -> 149 typed `record_kind=decision` envelope artifacts (binding_scope/enforced_by/ingested_through + supersession/fold edges; edge-driven status mapped to #36 STATUS_ENUM, lifecycle in payload); emit+validate only (#36 ingests at fold, the #38->#36 D-0077 pattern). First PB-7/PB-6 increment; the `compile_relevant_decisions` READ verb is #40 0.10.0. The producer->#36->verb seam is PROVEN (D-0077 smoke); boot-wiring (standing catalog + overlay root view) = i57. `6a2142e` + seam fix `206bdd39`.
 
 **44 `project.map`** — MVP complete **0.4.0** (i52 D-0145; 0.3.0 i49 D-0138; 0.2.0 i48 D-0135; i46 base
 D-0130/D-0131; Nicholas's comprehension/bootstrap reconstruction directive). The Project Comprehension
