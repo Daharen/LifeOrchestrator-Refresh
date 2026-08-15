@@ -1,0 +1,13 @@
+{"kind":"boot_packet","target":"modules/44-project-map/generated/BOOT_PACKET.md","bytes":18040}
+{"kind":"whole_doc_open","target":"core-docs/CURRENT_STATE.md","bytes":34337}
+{"kind":"whole_doc_open","target":"core-docs/SEALED_CHECK_47.md","bytes":2559}
+{"kind":"whole_doc_open","target":"core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md","bytes":23923}
+{"kind":"whole_doc_open","target":"core-docs/PROCESS_BACKLOG.md","bytes":7893}
+{"kind":"whole_doc_open","target":"core-docs/START_HERE.md","bytes":5961}
+{"kind":"whole_doc_open","target":"core-docs/DOC_PROTOCOL.md","bytes":12091}
+{"kind":"whole_doc_open","target":"core-docs/research/2026-08-12-knowledge-surface-relayer-program.md","bytes":9062}
+{"kind":"whole_doc_open","target":"core-docs/research/2026-08-14-pb7-relayer-design.md","bytes":9958}
+{"kind":"whole_doc_open","target":"core-docs/research/2026-08-14-pb7-relayer-design-2.md","bytes":10000}
+{"kind":"whole_doc_open","target":"core-docs/research/2026-08-15-i57-pb6-boot-wiring-contract.md","bytes":7590}
+{"kind":"whole_doc_open","target":"core-docs/DECISION_LOG.md","bytes":61169,"note":"tail read (D-0139..D-0152) + index tail, not the whole 661KB log"}
+{"kind":"whole_doc_open","target":"core-docs/AUDIT_PIPELINE.md","bytes":2100,"note":"cadence header (first 40 lines)"}
