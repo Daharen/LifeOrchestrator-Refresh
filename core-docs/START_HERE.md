@@ -3,7 +3,7 @@
 **You are a fresh Claude instance joining Life Orchestrator (near-term "local skills" track).**
 Read this first. It routes you; it does not contain the project's substance.
 
-> **ACTIVE WORK:** the fan-out loop (53 iterations run). **Orchestrator boot = the PCB (D-0146, i53 migration GO).**
+> **Orchestrator boot = the PCB (D-0146).**
 > If you are the **fan-out orchestrator** working on disk, boot from
 > `modules/44-project-map/generated/BOOT_PACKET.md` FIRST -- run its step-0 (`project_map.py verify` /
 > `query stale`), then expand by progressive disclosure (L0 map -> L1 `card:` -> L2 `section:`/`--q` queries).
@@ -11,7 +11,6 @@ Read this first. It routes you; it does not contain the project's substance.
 > gotchas the packet points into) and the context for Project-mirror / desktop-less sessions that cannot reach
 > the generated packet. If you are a dispatched **worker**, read the brief you were pointed at
 > (`core-docs/fanout/FANOUT_AGENT_00N.md` / Project `claude/fanout/`) and execute exactly that unit.
-> Live status: the PCB overlay + `CURRENT_STATE.md`.
 
 ## What this project is (one line)
 

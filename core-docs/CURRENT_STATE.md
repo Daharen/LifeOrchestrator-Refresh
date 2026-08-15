@@ -355,13 +355,13 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ## Next expected action
 
-**i57 CLOSED (D-0151):** PB-6 boot-wiring SHIPPED -- **PB-6 COMPLETE**. `ops/refresh-decision-catalog.py` (D1 standing #36 decision catalog refreshed each close) + #44 overlay `standing_constraints` ROOT view + the BOOT_PACKET `STANDING CONSTRAINTS` line (D2) + #40 bounded pool load (D4) + the catalog-path gate (D5 24/24). Boot stops whole-ingesting `DECISION_LOG_INDEX` (D3). Real 653 KB log: asserted_count=94 == an independent count (0 drop, F1); BOOT_PACKET <20 KB (G1); i56 30/30 + #44 169/169 (no regression); P0-1 evidence-only (G6). dev.ship `d16cdc0`.
+**i57 CLOSED (D-0151):** PB-6 boot-wiring SHIPPED -- **PB-6 COMPLETE** (`d16cdc0`): standing #36 decision catalog + #44 overlay `standing_constraints` ROOT view + BOOT_PACKET line + #40 bounded load + catalog-path gate (24/24); boot stops whole-ingesting `DECISION_LOG_INDEX` (D3). Metrics + follow-ons: D-0151.
 
-**NEXT = i58 (Nicholas picks):** AUDIT review_due i58 * PB-7 next surface (design target B/C: CURRENT_STATE sub-registries / index-of-index) * boot-wiring named follow-ons (#36 query-level bounded load; static plane-map; the `ops:boot-decision-retrieval` canon entity). SP3/M-03 OPEN (deferred); P0-1 activation FROZEN; #40 beam-width * PB-2 * w08 deferred (D-0134).
+**NEXT = i58 -- the universal derived-front-door wave (PB-7 TRIGGER FIRED i57, D-0152).** START_HERE crossing its 6 KB cap at close fired PB-7: hot surfaces become bounded GENERATED front doors that SPILL, never compress (renderer slim-ladder = anti-pattern). i58 = freeze + red-team the universal front-door contract; i59 = root migration (START_HERE -> ~0.5-1 KB bootstrap kernel + the PCB packet); i60+ migrate the remaining hot surfaces (D-0152). AUDIT review_due i58 = cadence check only, NON-DISPLACING. SP3/M-03 OPEN; P0-1 FROZEN; #40 beam-width * PB-2 * w08 (D-0134).
 
 **Standing (still open):** FROZEN/deferred per D-0080 (supervisor/warm-pool D-0079 GATE-NO; generator upgrades; `video.interpret` + live composition; deep real-time perception; broad training).
 
 ---
 
-**Last updated:** 2026-08-15 -- i57 CLOSED (D-0151): PB-6 boot-wiring SHIPPED (standing #36 catalog + overlay ROOT view + bounded load + catalog-path gate 24/24); PB-6 COMPLETE; boot stops whole-ingesting DECISION_LOG_INDEX; next = i58 (AUDIT review + PB-7 next surface).
+**Last updated:** 2026-08-15 -- i57 CLOSED (D-0151): PB-6 boot-wiring SHIPPED (standing #36 catalog + overlay ROOT view + bounded load + catalog-path gate 24/24); PB-6 COMPLETE; boot stops whole-ingesting DECISION_LOG_INDEX; next = i58 (the universal derived-front-door wave; PB-7 trigger fired, D-0152).
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*
