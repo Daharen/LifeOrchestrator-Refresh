@@ -23,14 +23,14 @@
     "pointer": "MODULE_ROADMAP.md #40 / PROCESS_BACKLOG PB-2 / widgets/08-live-run-audit-pathway"
    },
    {
-    "gate": "i60 -- first CLASS migration (D-0153 s8; the root migrated i59/D-0154)",
-    "item": "migrate a cumulative surface (CURRENT_STATE interior / handoff ledger / catalogs / backlogs / gotchas / tests / research) to a bounded GENERATED front door carrying the s8 build requirements (pin-the-unrecoverable, task-match keys, classifier oracle, frozen-replayed synopsis, compile epoch, two-phase close); each design-first -> red-team-gated + passing the ops/frontdoor/frontdoor-gate.py migration gate; the renderer slim-ladder is removed during migration",
-    "pointer": "core-docs/research/2026-08-15-i59-root-migration-hardened.md + DECISION_LOG D-0154"
+    "gate": "i60 -- bounded-ingest + control-plane hardening (D-0155; NOT a class migration -- that DEFERS to i68)",
+    "item": "prove + ENFORCE bounded bootstrap/retrieval on fresh work (close F-i53-eff -- bounded card:/section: the easy default, a whole-doc open needs a reason); make retrieval measurement automatic; repair FO-6 (-Action query -Repo passthrough); produce a bounded generated manager/program projection from canonical state; treat SP3/M-03 + stale version/test claims as explicit TRUTH questions (no silent activation)",
+    "pointer": "core-docs/research/2026-08-15-i59-roadmap-reconciliation.md + DECISION_LOG D-0155"
    }
   ],
-  "derived_from": "core-docs/CURRENT_STATE.md + DECISION_LOG D-0154 at the i59 close; overlay advanced 58->59 + frontier redirected to i60; standing_constraints refreshed at the N7 close-refold.",
+  "derived_from": "core-docs/CURRENT_STATE.md + DECISION_LOG D-0154/D-0155 at the i59 close+reconciliation; overlay frontier redirected to i60 = bounded-ingest + control-plane hardening (D-0155); standing_constraints refreshed at the N7 close-refold.",
   "next_iteration": 60,
-  "summary": "i59 CLOSED (D-0154): the ROOT front-door migration SHIPPED -- START_HERE boot KERNEL + COLD_BOOT_CARD (generator-independent recovery survivor) + ops/frontdoor uniform rebuild interface + the migration gate (3-adversary red-teamed; architecture HELD, 13 gaps folded). NEXT = i60 = the first class migration; then class-by-class."
+  "summary": "i59 CLOSED (D-0154, ROOT migration) + RECONCILED (D-0155): control-plane truth reconciled + the i60-i79 rolling roadmap. NEXT = i60 = bounded-ingest + control-plane hardening (prove/enforce the bootstrap, close F-i53-eff, repair FO-6, a bounded manager view); the first PB-7 class migration DEFERS to i68."
  },
  "iteration": 59,
  "open_rulings": [
@@ -45,7 +45,7 @@
  ],
  "phase": {
   "ref": "doc:core-docs/CURRENT_STATE.md",
-  "text": "Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; PCB BOOT_PACKET is the DEFAULT orchestrator bootstrap (D-0146). i59 CLOSED (D-0154): the ROOT front-door migration SHIPPED -- START_HERE boot KERNEL + COLD_BOOT_CARD (generator-independent recovery survivor) + ops/frontdoor uniform rebuild interface + the migration gate (3-adversary red-teamed; architecture HELD, 13 gaps folded). NEXT = i60 = the first class migration, then i60+ class-by-class. AUDIT review_due i60 NON-DISPLACING."
+  "text": "Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; PCB BOOT_PACKET is the DEFAULT orchestrator bootstrap (D-0146). i59 CLOSED (D-0154, ROOT front-door migration) + RECONCILED (D-0155): control-plane truth reconciled + the i60-i79 rolling roadmap. NEXT = i60 = bounded-ingest + control-plane hardening (NOT a class migration; the first class migration DEFERS to i68). AUDIT review_due i62 NON-DISPLACING."
  },
  "prohibitions": [
   {

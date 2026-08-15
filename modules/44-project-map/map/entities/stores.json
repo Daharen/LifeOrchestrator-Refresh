@@ -43,10 +43,14 @@
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "ff40c89ac10616160a20381dc4f73b4529efb838",
+       "by": "orchestrator-i59-recon"
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "cc2ba376f62caa5bf949693546d894af62b9dde2965776c87ef5740f0747be07"
+     "sha256": "c4047503bdb368d94bad77fe3ff779fa91ab677c411afa1bb60245460aecf3e2"
     },
     {
      "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
@@ -83,10 +87,14 @@
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "ff40c89ac10616160a20381dc4f73b4529efb838",
+       "by": "orchestrator-i59-recon"
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "cc2ba376f62caa5bf949693546d894af62b9dde2965776c87ef5740f0747be07"
+     "sha256": "c4047503bdb368d94bad77fe3ff779fa91ab677c411afa1bb60245460aecf3e2"
     }
    ]
   },
@@ -181,10 +189,14 @@
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "ff40c89ac10616160a20381dc4f73b4529efb838",
+       "by": "orchestrator-i59-recon"
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "cc2ba376f62caa5bf949693546d894af62b9dde2965776c87ef5740f0747be07"
+     "sha256": "c4047503bdb368d94bad77fe3ff779fa91ab677c411afa1bb60245460aecf3e2"
     },
     {
      "at_commit": "80b260ec275b057aa83a554593f2b035d9f8e2f1",
@@ -221,10 +233,14 @@
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "ff40c89ac10616160a20381dc4f73b4529efb838",
+       "by": "orchestrator-i59-recon"
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "cc2ba376f62caa5bf949693546d894af62b9dde2965776c87ef5740f0747be07"
+     "sha256": "c4047503bdb368d94bad77fe3ff779fa91ab677c411afa1bb60245460aecf3e2"
     }
    ]
   },
@@ -305,10 +321,14 @@
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "ff40c89ac10616160a20381dc4f73b4529efb838",
+       "by": "orchestrator-i59-recon"
       }
      ],
      "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
-     "sha256": "dd6adec1c20ad60003c8b570779cf35f05be22116652e173b4fcf9647844c2cd"
+     "sha256": "8dd49c586480e2981a101c022a2a55c67a902a8bcf6568574a5caf5a3b4d7fb1"
     }
    ]
   },
@@ -389,10 +409,14 @@
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "ff40c89ac10616160a20381dc4f73b4529efb838",
+       "by": "orchestrator-i59-recon"
       }
      ],
      "ref": "core-docs/CURRENT_STATE.md",
-     "sha256": "3afb87eb955463d6821e6178bc5e9691e8b00b565b489d5fd814cd8809fbf95c"
+     "sha256": "1ecf83234d60ef84051f5758eda949e93f2ba17ccace704cfe25437fef4bb2bb"
     }
    ]
   },
@@ -473,10 +497,14 @@
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "ff40c89ac10616160a20381dc4f73b4529efb838",
+       "by": "orchestrator-i59-recon"
       }
      ],
      "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
-     "sha256": "dd6adec1c20ad60003c8b570779cf35f05be22116652e173b4fcf9647844c2cd"
+     "sha256": "8dd49c586480e2981a101c022a2a55c67a902a8bcf6568574a5caf5a3b4d7fb1"
     }
    ]
   },
@@ -521,10 +549,14 @@
       {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
+      },
+      {
+       "at_commit": "ff40c89ac10616160a20381dc4f73b4529efb838",
+       "by": "orchestrator-i59-recon"
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "cc2ba376f62caa5bf949693546d894af62b9dde2965776c87ef5740f0747be07"
+     "sha256": "c4047503bdb368d94bad77fe3ff779fa91ab677c411afa1bb60245460aecf3e2"
     }
    ]
   }
