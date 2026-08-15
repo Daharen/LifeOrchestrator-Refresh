@@ -297,3 +297,38 @@ table from the single `QUERY_VERBS` tuple (every verb incl. `section`, the `enti
 the `--harvest`/`--repo`/`--fields` modifiers, each with a one-line what-it-returns). The same tuple
 gates `op_query`, so the packet's documented interface can never drift from the dispatcher (kills F4).
 
+### Standing-constraint root view -- overlay + render + validate (i57 PB-6 boot-wiring, D2)
+
+The overlay gains an OPTIONAL `standing_constraints` object -- the catalog-derived, count-asserted source
+of truth for live constraints (design `-2.md` s8 rule 3; F1). It is COMPUTED by the close step
+(`ops/refresh-decision-catalog.py`) from the standing #36 decision catalog via the #40
+`compile_relevant_decisions` verb (the render stays PURE -- it emits, never computes), and carries:
+`asserted_count` (the FULL in-force standing set -- completeness proved without every leaf; G2), the
+`hot_count`/`enforced_count` split (rule 2 demote-on-enforcement -- a gate-bound constraint is COUNTED but
+machine-prevented, so the session need not CARRY it), `categories[]` = `{category,count,hot,enforced,
+pointer}` child-category pointers (each `pointer` a bounded cold `deeper:<cat>:prohibition` query, NOT an
+entity id -- so `standing_constraints` is deliberately EXCLUDED from `_overlay_ref_ids`), `spilled` +
+`spill_pointer` + `spilled_categories[]` (below the budget cut it SPILLS to cold, never compresses -- G5),
+plus `ingested_through` + `source`.
+
+The interpretation reconciled here (documented, not silent): the frozen contract D2 prose names the count
+predicate `binding_scope in {standing_prohibition,invariant} AND status=current AND enforced_by=none`; the
+i56-built verb (REUSED, never forked) instead asserts the FULL in-force standing count and exposes the
+`enforced_by=none` HOT subset per category. This module carries BOTH -- `asserted_count` is the complete
+in-force set (so "no binding constraint is ever silently absent", G2), and `hot_count` is exactly the
+contract's `enforced_by=none` live-carried subset -- so completeness is provable AND the rule-2 retirement
+is honest. The independent-count F1 gate (D5(b)) checks BOTH numbers against a direct catalog scan.
+
+**Render (`_build_overlay_section`):** when `standing_constraints.asserted_count` is present, the OVERLAY
+emits one line ABOVE the pinned `prohibitions[]` subset:
+`STANDING CONSTRAINTS: <asserted_count> in-force (<hot> hot / <enforced> gate-enforced) -- <cat(count), ...>;
+expand via <spill_pointer>`. Gated on the field, so an overlay WITHOUT it renders BYTE-IDENTICAL to the
+prior version (existing golden packets unaffected). The line is a handful of bytes and keeps the packet
+<= the 20,000 B HARD cap. `prohibitions[]` is unchanged (the always-pinned top-severity subset).
+
+**Validate:** `standing_constraints` is ADDITIVE + fail-closed. The F1 silent-drop guard at the map layer:
+`asserted_count` MUST equal `sum(categories[].count) + sum(spilled_categories[].count)` (a truncated
+categories list can never understate the live set without failing validate -> render refuses); a `spilled`
+view with no `spill_pointer` also fails. Both REUSE the CLOSED `OVERLAY_DANGLING` code (an overlay-integrity
+violation) -- the error table stays closed (no new code). An ABSENT field yields no findings (back-compat).
+

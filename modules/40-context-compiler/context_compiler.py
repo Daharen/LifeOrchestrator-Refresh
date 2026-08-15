@@ -3920,12 +3920,42 @@ def _standing_root_view(standing_records, budget_categories):
         "spilled": len(spilled_categories) > 0,
     }
 
+# ---- D4 (i57 PB-6 boot-wiring): BOUNDED pool load ----------------------------------------------
+# The i56 seam-fix left a NAMED TODO ("a bounded query-scoped LOAD is a named follow-on"). i57 closes it.
+# DECISION_POOL_ORDINARY_CAP is the documented top-k / hierarchy cap on the ORDINARY current-decision
+# fanout. The COMPLETENESS-critical standing set (binding_scope in {standing_prohibition, invariant}) is
+# NEVER capped -- it is kept WHOLE so the standing asserted_count stays complete (F1: a binding constraint
+# must never be silently dropped). Overridable per-call via args["ordinary_pool_cap"] (the D5 catalog-path
+# test drives the cap small to prove the bound bites WITHOUT ever dropping a standing record).
+DECISION_POOL_ORDINARY_CAP = 256
+
+def _decision_recency_key(rec):
+    """Deterministic newest-first ordering for the bounded ordinary fanout: (date, iteration, decision_id).
+    Missing date/iteration sort OLDEST (a dated/iterated recent decision always outranks an undated one)."""
+    date = rec.get("date") or ""
+    try:
+        it = int(rec.get("iteration"))
+    except (TypeError, ValueError):
+        it = -1
+    return (date, it, rec.get("decision_id") or "")
+
 def _load_decision_pool_from_catalog(args):
-    """-Live path (UNPROVEN in this session -- no lane-A-produced catalog exists here; the real seam
-    proves at the orchestrator D-0077 fold, frozen contract s5). Lazily imports #36 by a resolved
-    portable path (the i35/i38 pattern); missing/unimportable #36 or catalog is NEVER a crash -- only a
-    warning + an empty pool (fail-soft, distinct from the P0-1 namespace fail-CLOSED path, since this is
-    availability, not authorization)."""
+    """The -Live #36 catalog load for the decision pool. Lazily imports #36 by a resolved portable path
+    (the i35/i38 pattern); a missing/unimportable #36 or catalog is NEVER a crash -- only a warning + an
+    empty pool (fail-soft availability, distinct from the P0-1 namespace fail-CLOSED path).
+
+    D4 (i57 PB-6 boot-wiring) -- the load is BOUNDED, not whole-catalog (closing the i56 named TODO):
+      (1) `status=current` at the #36 query drops the superseded/folded/closed GROWTH TAIL -- the part of
+          DECISION_LOG.md that grows without bound as decisions are revised -- AND is the F4/s8-rule-5
+          currency-correct load (a fully-demoted record is never a live candidate).
+      (2) The ordinary current pool is capped by RECENCY to DECISION_POOL_ORDINARY_CAP (the documented
+          top-k / hierarchy cap); the verb then relevance-filters + selpol-ranks WITHIN the bounded pool.
+      (3) The STANDING set (binding_scope in {standing_prohibition, invariant}) is kept WHOLE -- never
+          capped -- so the asserted_count is complete (F1). Standing is bounded BY CONSTRUCTION (s8 rules
+          1-3: enforcement-demotion + overlay spill), not by this cap.
+    A recency/relevance-ordered or binding_scope-filtered `list-records` at #36 (so the cap bites AT the
+    query, not post-load) is a NAMED #36 follow-on; today #36 list-records orders by record_id and filters
+    only kind/namespace/status, so the recency cap is applied here after a current-only load."""
     db_path = args.get("catalog_db_path")
     if not db_path:
         return [], "none", None
@@ -3939,12 +3969,10 @@ def _load_decision_pool_from_catalog(args):
         spec = importlib.util.spec_from_file_location("lifeorch_artifact_search_i56", lib_path)
         A = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(A)
-        # D-0077 seam fix (i56): load the decision POOL via `list-records` (NOT an FTS `search` -- the
-        # verb retrieves by module/plane/recency signals, not a text query, so an empty/absent query_text
-        # must still return the full candidate pool). The verb then applies its own s8 filtering + selpol
-        # ranking. A bounded query-scoped LOAD is a named follow-on; the compiled OUTPUT is already top_k.
+        # (1) current-only load: BOUNDED, not whole-catalog (superseded/folded/closed never enter the pool).
         res = A.run({"op": "list-records", "db": db_path,
-                     "filters": {"record_kind": "decision", "namespace": "decisions"},
+                     "filters": {"record_kind": "decision", "namespace": "decisions",
+                                 "status": "current"},
                      "limit": int(args.get("catalog_k") or 100000)})
         recs = (res.get("result") or {}).get("records") or []
         # a record is FULLY demoted (cold) if it carries a full-demotion edge -- superseded_by / folded /
@@ -3965,7 +3993,16 @@ def _load_decision_pool_from_catalog(args):
             if full:
                 rec["superseded_by"] = full
             pool.append(rec)
-        return pool, "catalog:%s" % os.path.abspath(db_path), None
+        # (2)+(3) bounded fanout: STANDING whole (F1) + ORDINARY capped by recency (documented cap).
+        cap = args.get("ordinary_pool_cap")
+        cap = int(cap) if cap is not None else DECISION_POOL_ORDINARY_CAP
+        standing = [r for r in pool if _decision_is_standing(r)]
+        ordinary = [r for r in pool if not _decision_is_standing(r)]
+        ordinary_bounded = sorted(ordinary, key=_decision_recency_key, reverse=True)[:cap]
+        bounded = standing + ordinary_bounded
+        src = ("catalog:%s [bounded current-only: %d standing (whole, F1) + %d/%d ordinary (recency cap %d)]"
+               % (os.path.abspath(db_path), len(standing), len(ordinary_bounded), len(ordinary), cap))
+        return bounded, src, None
     except Exception as e:  # noqa: BLE001 -- catalog wiring is best-effort off this session; never crash
         return [], "catalog_error", ("catalog load failed (%s: %s) -- falling back to an empty pool"
                                      % (type(e).__name__, e))

@@ -1038,3 +1038,25 @@ suite (`context_compiler_tests.py` 322/322, `test_i35_public_port.py` 32/32, `te
 `contract_version` UNCHANGED at 0.8 -- this verb does not emit a `context_packet` and is not part of packet
 assembly). `-Live` / the real producer+catalog fold smoke: **DEFERRED to the orchestrator** (frozen contract s5)
 -- flagged, not silently claimed done, per D-0107/D-0109.
+
+### i57 PB-6 boot-wiring (D4): the catalog LOAD is BOUNDED (closing the i56 named TODO)
+
+i56 shipped `_load_decision_pool_from_catalog` with an explicit named follow-on: "a bounded query-scoped
+LOAD is a named follow-on; the compiled OUTPUT is already top_k" (it loaded the WHOLE catalog,
+`list-records ... limit=100000`). i57 (frozen contract `research/2026-08-15-i57-pb6-boot-wiring-contract.md`
+s1 D4) closes it: the LOAD is now bounded, not whole-catalog, in three moves --
+(1) **current-only at the #36 query** (`filters.status=current`): drops the superseded/folded/closed GROWTH
+    TAIL -- the part of `DECISION_LOG.md` that grows without bound as decisions are revised -- and is the
+    F4 / s8-rule-5 currency-correct load (a fully-demoted record is never a live candidate);
+(2) **`DECISION_POOL_ORDINARY_CAP` (256, override `args["ordinary_pool_cap"]`)** caps the ORDINARY current
+    fanout by RECENCY (`_decision_recency_key` = newest (date, iteration, decision_id) first); the verb then
+    relevance-filters + selpol-ranks WITHIN the bounded pool;
+(3) the **STANDING set** (`binding_scope in {standing_prohibition,invariant}`) is kept **WHOLE** -- never
+    capped -- so the `asserted_count` is complete (F1: a binding constraint is never silently dropped).
+    Standing is bounded BY CONSTRUCTION (s8 rules 1-3: enforcement-demotion + overlay spill), not by the cap.
+The verb's `standing_constraint_root_view` (asserted_count / categories / hot / enforced / spill) is
+UNCHANGED -- only the LOAD that feeds it is bounded, so the i56 gate stays 30/30 (the injected-`decision_pool`
+fixture path is untouched). **Named #36 follow-on:** a recency/relevance-ordered or `binding_scope`-filtered
+`list-records` at #36 (so the cap bites AT the query, not post-load); today #36 orders by `record_id` and
+filters only kind/namespace/status. New gate: `tests/test_i57_boot_wiring_catalog_path.py` (the REAL
+producer -> #36 -> verb catalog path, 24/24, fail-closed).

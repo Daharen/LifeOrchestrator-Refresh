@@ -845,6 +845,33 @@ def validate(model, harvest, is_real=True):
             elif auth in insup and pr.get("status") == "live":
                 add("OVERLAY_DANGLING", w, "live prohibition authority %s has an inbound supersedes edge" % auth)
 
+        # standing_constraints root view (i57 PB-6 boot-wiring, D2) -- ADDITIVE + fail-closed. The F1
+        # silent-drop guard AT THE MAP LAYER: asserted_count MUST equal pinned + spilled member totals,
+        # so a truncated categories list can never understate the live standing set without failing
+        # validate (-> render refuses). Reuses the CLOSED OVERLAY_DANGLING code (an overlay-integrity
+        # violation); the error table stays closed (no new code). Absent field -> no findings (back-compat).
+        sc = ov.get("standing_constraints")
+        if sc is not None:
+            if not isinstance(sc, dict):
+                add("OVERLAY_DANGLING", w, "standing_constraints must be an object")
+            else:
+                cats = sc.get("categories") or []
+                spilled = sc.get("spilled_categories") or []
+                try:
+                    pinned_total = sum(int(c.get("count") or 0) for c in cats)
+                    spilled_total = sum(int(c.get("count") or 0) for c in spilled)
+                    asserted = int(sc.get("asserted_count"))
+                    if pinned_total + spilled_total != asserted:
+                        add("OVERLAY_DANGLING", w,
+                            "standing_constraints asserted_count %d != pinned %d + spilled %d (F1 silent-drop guard)"
+                            % (asserted, pinned_total, spilled_total))
+                except (TypeError, ValueError):
+                    add("OVERLAY_DANGLING", w,
+                        "standing_constraints asserted_count / category counts must be integers")
+                if sc.get("spilled") and not sc.get("spill_pointer"):
+                    add("OVERLAY_DANGLING", w,
+                        "standing_constraints spilled but carries no spill_pointer (spill, never silently compress)")
+
     return {"findings": F, "warnings": warnings, "stale_entities": sorted(stale_entities),
             "load_bearing": lb}
 
@@ -1268,6 +1295,26 @@ def _candidate_line(c, level):
     return "- [%s] %s" % (gate, _trunc(item, 70))
 
 
+def _standing_constraints_line(sc):
+    """i57 PB-6 boot-wiring (D2): the standing-constraint ROOT view line for the BOOT_PACKET OVERLAY.
+    Renders the ASSERTED COUNT + the hot/gate-enforced split + child-category pointers + the spill
+    pointer, so a booting session learns its live constraints from ONE bounded line -- it no longer
+    whole-ingests DECISION_LOG_INDEX.md for them (D3). Deterministic; a pure function of the overlay
+    field the close step computed from the standing #36 catalog."""
+    asserted = sc.get("asserted_count")
+    hot = sc.get("hot_count")
+    enf = sc.get("enforced_count")
+    cats = [c for c in (sc.get("categories") or []) if isinstance(c, dict)]
+    cat_str = ", ".join("%s(%s)" % (c.get("category"), c.get("count")) for c in cats)
+    spill_ptr = sc.get("spill_pointer") or "deeper:*:prohibition"
+    split = ""
+    if hot is not None and enf is not None:
+        split = " (%s hot / %s gate-enforced)" % (hot, enf)
+    head = "STANDING CONSTRAINTS: %s in-force%s" % (asserted, split)
+    body = (" -- %s" % _trunc(cat_str, 300)) if cat_str else ""
+    return "%s%s; expand via %s" % (head, body, spill_ptr)
+
+
 def _build_overlay_section(model, cand_level=0):
     """OVERLAY section (BOOT_PACKET s4). N2: renders the orchestrator-authored frontier CANDIDATES
     (item + gate/status token + pointer) at handoff-s4 usefulness so task-scoping needs no legacy
@@ -1292,6 +1339,13 @@ def _build_overlay_section(model, cand_level=0):
                 s4.append("FRONTIER CANDIDATES (task-scoping; gate/status + pointer):")
                 for c in rich:
                     s4.append(_candidate_line(c, cand_level))
+        # i57 PB-6 boot-wiring (D2): the standing-constraint ROOT view -- the catalog-derived,
+        # count-asserted source of truth for live constraints (F1: completeness proved without every
+        # leaf). Rendered ABOVE the pinned prohibitions[] subset. Gated on the field, so an overlay
+        # without it renders BYTE-IDENTICAL to the prior version (existing golden packets unaffected).
+        sc = ov.get("standing_constraints")
+        if isinstance(sc, dict) and sc.get("asserted_count") is not None:
+            s4.append(_standing_constraints_line(sc))
         if ov.get("prohibitions"):
             s4.append("PROHIBITIONS (mandatory):")
             for pr in ov["prohibitions"]:
