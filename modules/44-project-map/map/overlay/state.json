@@ -13,8 +13,8 @@
  "frontier": {
   "candidates": [
    {
-    "gate": "OPEN (D-0147; M-03 mandate DEFERRED)",
-    "item": "SEALED_CHECK_47 SP3 doc-budget regression -- re-run to archive the seal",
+    "gate": "OPEN (D-0147/D-0156; M-03 mandate DEFERRED -- NOT licensed)",
+    "item": "SEALED_CHECK_47 SP3 doc-budget regression -- i60 re-evaluated (D-0156): integrity VERIFIES intact, SP3 still FAILS (ARCHITECTURE_MAP over); seal retained",
     "pointer": "core-docs/SEALED_CHECK_47.md"
    },
    {
@@ -23,20 +23,20 @@
     "pointer": "MODULE_ROADMAP.md #40 / PROCESS_BACKLOG PB-2 / widgets/08-live-run-audit-pathway"
    },
    {
-    "gate": "i60 -- bounded-ingest + control-plane hardening (D-0155; NOT a class migration -- that DEFERS to i68)",
-    "item": "prove + ENFORCE bounded bootstrap/retrieval on fresh work (close F-i53-eff -- bounded card:/section: the easy default, a whole-doc open needs a reason); make retrieval measurement automatic; repair FO-6 (-Action query -Repo passthrough); produce a bounded generated manager/program projection from canonical state; treat SP3/M-03 + stale version/test claims as explicit TRUTH questions (no silent activation)",
-    "pointer": "core-docs/research/2026-08-15-i59-roadmap-reconciliation.md + DECISION_LOG D-0155"
+    "gate": "i61 -- bounded-ingest ADOPTION proof + hardening (D-0156; NOT a class migration -- that DEFERS to i68)",
+    "item": "prove bounded-by-default on a fresh PCB-booted session with machine-verified retrieval evidence (close F-i53-eff); ACTIVATE the fail-closed close-path gate ENFORCEMENT (i60 shipped retrieve.ps1 + monitor --gate observe-only); resolve/accept the enforcement residuals (zero-bounded floor vs meaningful fraction; self-reported ledger; query-string artifact reconciliation)",
+    "pointer": "core-docs/research/2026-08-16-i60-bounded-ingest-design.md + DECISION_LOG D-0156"
    }
   ],
-  "derived_from": "core-docs/CURRENT_STATE.md + DECISION_LOG D-0154/D-0155 at the i59 close+reconciliation; overlay frontier redirected to i60 = bounded-ingest + control-plane hardening (D-0155); standing_constraints refreshed at the N7 close-refold.",
-  "next_iteration": 60,
-  "summary": "i59 CLOSED (D-0154, ROOT migration) + RECONCILED (D-0155): control-plane truth reconciled + the i60-i79 rolling roadmap. NEXT = i60 = bounded-ingest + control-plane hardening (prove/enforce the bootstrap, close F-i53-eff, repair FO-6, a bounded manager view); the first PB-7 class migration DEFERS to i68."
+  "derived_from": "core-docs/CURRENT_STATE.md + DECISION_LOG D-0156 at the i60 close; overlay frontier redirected to i61 = bounded-ingest ADOPTION proof + hardening (D-0156); standing_constraints unchanged (D-0156 adds no prohibition).",
+  "next_iteration": 61,
+  "summary": "i60 CLOSED (D-0156): bounded-ingest + control-plane hardening DELIVERED (A/B/C/D shipped; E recorded; SP3 FAIL -> seal retained, M-03 NOT licensed). NEXT = i61 = bounded-ingest ADOPTION proof + hardening (F-i53-eff OPEN; fail-closed gate ENFORCEMENT deferred i61); the first PB-7 class migration DEFERS to i68."
  },
- "iteration": 59,
+ "iteration": 60,
  "open_rulings": [
   {
    "ref": "decision:D-0132",
-   "text": "SEALED_CHECK_47 (D-0132) SP3 doc-budget regression OPEN, recorded D-0147: 4 core-docs over budget_KB x1000 by wc-c (ARCHITECTURE_MAP genuinely over both bases; 3 others CRLF-artifact, under the enforced LF-blob gate); the M-03 reconcile mandate was proposed but DEFERRED by Nicholas; the sealed file is retained until SP3 re-passes"
+   "text": "SEALED_CHECK_47 (D-0132) SP3 doc-budget regression OPEN, re-evaluated i60 (D-0156): integrity VERIFIES intact (unedited since i47); SP1/SP2/SP4/SP5/SP6/SP7 PASS, SP3 FAILS (ARCHITECTURE_MAP 16496 > 15000; the two grandfathered docs pass at ceiling); the M-03 reconcile mandate remains DEFERRED -- NOT licensed; the sealed file is retained until SP3 re-passes"
   },
   {
    "ref": "decision:D-0134",
@@ -45,7 +45,7 @@
  ],
  "phase": {
   "ref": "doc:core-docs/CURRENT_STATE.md",
-  "text": "Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; PCB BOOT_PACKET is the DEFAULT orchestrator bootstrap (D-0146). i59 CLOSED (D-0154, ROOT front-door migration) + RECONCILED (D-0155): control-plane truth reconciled + the i60-i79 rolling roadmap. NEXT = i60 = bounded-ingest + control-plane hardening (NOT a class migration; the first class migration DEFERS to i68). AUDIT review_due i62 NON-DISPLACING."
+  "text": "Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; PCB BOOT_PACKET is the DEFAULT orchestrator bootstrap (D-0146). i60 CLOSED (D-0156): bounded-ingest + control-plane hardening DELIVERED (A/B/C/D). NEXT = i61 = bounded-ingest ADOPTION proof + hardening (NOT a class migration; the first class migration DEFERS to i68). AUDIT review_due i62 NON-DISPLACING."
  },
  "prohibitions": [
   {
