@@ -24,13 +24,13 @@
    },
    {
     "gate": "i61 -- bounded-ingest ADOPTION proof + hardening (D-0156; NOT a class migration -- that DEFERS to i68)",
-    "item": "prove bounded-by-default on a fresh PCB-booted session with machine-verified retrieval evidence (close F-i53-eff); ACTIVATE the fail-closed close-path gate ENFORCEMENT (i60 shipped retrieve.ps1 + monitor --gate observe-only); resolve/accept the enforcement residuals (zero-bounded floor vs meaningful fraction; self-reported ledger; query-string artifact reconciliation)",
+    "item": "prove bounded-by-default on a fresh PCB-booted session with machine-verified retrieval evidence (close F-i53-eff); RAISE the wired fail-closed close-path gate from the zero-bounded floor (D-0157, ACTIVE i60: ops/close-refold.ps1 -Ledger runs gen-retrieval-monitor --gate + aborts a zero-bounded close) to a meaningful bounded fraction; resolve/accept the enforcement residuals (zero-bounded floor vs meaningful fraction; self-reported ledger; query-string artifact reconciliation)",
     "pointer": "core-docs/research/2026-08-16-i60-bounded-ingest-design.md + DECISION_LOG D-0156"
    }
   ],
   "derived_from": "core-docs/CURRENT_STATE.md + DECISION_LOG D-0156 at the i60 close; overlay frontier redirected to i61 = bounded-ingest ADOPTION proof + hardening (D-0156); standing_constraints unchanged (D-0156 adds no prohibition).",
   "next_iteration": 61,
-  "summary": "i60 CLOSED (D-0156): bounded-ingest + control-plane hardening DELIVERED (A/B/C/D shipped; E recorded; SP3 FAIL -> seal retained, M-03 NOT licensed). NEXT = i61 = bounded-ingest ADOPTION proof + hardening (F-i53-eff OPEN; fail-closed gate ENFORCEMENT deferred i61); the first PB-7 class migration DEFERS to i68."
+  "summary": "i60 CLOSED (D-0156): bounded-ingest + control-plane hardening DELIVERED (A/B/C/D shipped; E recorded; SP3 FAIL -> seal retained, M-03 NOT licensed). NEXT = i61 = bounded-ingest ADOPTION proof + hardening (F-i53-eff OPEN; the fail-closed retrieval gate is WIRED into the close path, D-0157, zero-floor active i60, fraction raise i61); the first PB-7 class migration DEFERS to i68."
  },
  "iteration": 60,
  "open_rulings": [
