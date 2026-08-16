@@ -719,6 +719,10 @@
        "by": "orchestrator-close"
       },
       {
+       "at_commit": "ec270b304b582e6f8edec592654cc7f5c4cba0c7",
+       "by": "orchestrator-i59-recon"
+      },
+      {
        "at_commit": "f8ca7e6674b125b8702a4c12bedebb0e940b1549",
        "by": "orchestrator-close"
       },
@@ -748,7 +752,7 @@
       }
      ],
      "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
-     "sha256": "8dd49c586480e2981a101c022a2a55c67a902a8bcf6568574a5caf5a3b4d7fb1"
+     "sha256": "40979471df081d09914b6cf1993e5927d5430c4789c0caddf0512d93a7db4348"
     }
    ]
   },
@@ -1040,6 +1044,10 @@
        "by": "orchestrator-i52"
       },
       {
+       "at_commit": "ec270b304b582e6f8edec592654cc7f5c4cba0c7",
+       "by": "orchestrator-i59-recon"
+      },
+      {
        "at_commit": "fea1fd92645bc25e2151b6594877f0763aa212dc",
        "by": "orchestrator-i46-close"
       },
@@ -1057,7 +1065,7 @@
       }
      ],
      "ref": "core-docs/MODULE_ROADMAP.md",
-     "sha256": "c4047503bdb368d94bad77fe3ff779fa91ab677c411afa1bb60245460aecf3e2"
+     "sha256": "93919ae1282cfdf04ff18a859cac62107d7b84ac350db74681e147938ea3bf9d"
     }
    ]
   },
