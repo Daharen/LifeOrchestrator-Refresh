@@ -113,8 +113,9 @@ if ($Ledger -and (Test-Path -LiteralPath $Ledger)) {
   $grc = $LASTEXITCODE
   $rowTxt = (Get-Content -Raw $gout -ErrorAction SilentlyContinue)
   if ($grc -ne 0) { throw "RETRIEVAL GATE FAILED (exit $grc): zero bounded queries alongside whole-doc opens -- bounded retrieval not adopted this session. Row: $rowTxt" }
-  $row = $rowTxt | ConvertFrom-Json
-  Write-Output ("close-refold: retrieval-gate PASS gate={0} bounded_fraction={1} boot_packet={2}B" -f $row.gate.status, $row.bounded_fraction, $row.boot_packet_bytes)
+  $jsonLine = ($rowTxt -split "`r?`n" | Where-Object { $_.TrimStart().StartsWith('{') } | Select-Object -First 1)
+  try { $row = $jsonLine | ConvertFrom-Json; Write-Output ("close-refold: retrieval-gate PASS gate={0} bounded_fraction={1} boot_packet={2}B" -f $row.gate.status, $row.bounded_fraction, $row.boot_packet_bytes) }
+  catch { Write-Output "close-refold: retrieval-gate PASS (monitor exit 0); row summary unparsed" }
 } else {
   Write-Output 'close-refold: retrieval-gate SKIPPED (no -Ledger provided)'
 }
