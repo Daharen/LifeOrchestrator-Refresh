@@ -331,7 +331,7 @@ reparse/ADS/junction profiles; production store formats; freshness relaxation; t
 
 **45 `decision.intel`** — MVP complete **0.1.0** (i56, D-0150; NEW). Deterministic, CPU-only, stdlib-only #38-shaped PRODUCER: `DECISION_LOG.md`(+index) -> 149 typed `record_kind=decision` envelope artifacts (binding_scope/enforced_by/ingested_through + supersession/fold edges; edge-driven status mapped to #36 STATUS_ENUM, lifecycle in payload); emit+validate only (#36 ingests at fold, the #38->#36 D-0077 pattern). First PB-7/PB-6 increment; the `compile_relevant_decisions` READ verb is #40 0.10.0. The producer->#36->verb seam is PROVEN (D-0077 smoke); boot-wiring (standing catalog + overlay root view) = i57. `6a2142e` + seam fix `206bdd39`.
 
-**44 `project.map`** — MVP complete **0.4.0** (i52 D-0145; 0.3.0 i49 D-0138; 0.2.0 i48 D-0135; i46 base
+**44 `project.map`** — MVP complete **0.4.1** (i60 D-0156 FO-6 e4c4fdde; i52 D-0145; 0.3.0 i49 D-0138; 0.2.0 i48 D-0135; i46 base
 D-0130/D-0131; Nicholas's comprehension/bootstrap reconstruction directive). The Project Comprehension
 Bootstrap (PCB): deterministic stdlib-Python+pwsh compiler over canonical JSON map state (closed namespaces
 `module:`/`widget:`/`arch:`/`plane:`/`contract:`/`doc:`/`store:`/..., per-FIELD provenance,
@@ -346,7 +346,7 @@ overlay `open_rulings[]` rendered. Built ALONGSIDE the legacy handoff (control);
 **i53 fresh two-class gate GO (D-0146): the PCB BOOT_PACKET is the DEFAULT orchestrator bootstrap; legacy handoff = FALLBACK** (gate records + frozen bars/protocol under `eval/results/`). **Follow-ons:** FO-1 richer changed-since (git-driven touch lists); FO-2
 CURRENT_STATE.json generated from the overlay (post-pass); FO-3 map->#36 records (the M2-C re-layer build);
 FO-4 shared-identity flow map->memory->packet->authz->audit (directive s13); FO-5 doc-gate rows if views
-promote into core-docs; **FO-6 entrypoint `-Action query` `-Repo` passthrough (pre-existing i49 gap,
+promote into core-docs; **FO-6 DONE (i60 D-0156, e4c4fdde): entrypoint `-Action query` `-Repo` passthrough SHIPPED -- the wrapper now emits --repo for non-harvest actions (was a pre-existing i49 gap,
 worker-flagged i52: entrypoint-mediated `section:` refuses; the packet documents the direct-python path)**. **i59 reconciliation placement (D-0155): FO-6 -> i60 (pulled forward -- it obstructs use of the built architecture); FO-1/FO-2/FO-3 feed the i62-i67 close transaction + the i68-i69 current-work family; FO-4/FO-5 land with the first semantic migration; all evidence-dependency-ordered. FO-3 stays routed here (re-layer plan).**
 
 ## Widgets (Phase B, `widgets/`)
