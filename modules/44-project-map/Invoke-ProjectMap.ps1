@@ -105,6 +105,7 @@ if ($Action -eq 'harvest') {
   $argv.AddRange([string[]]@('--repo', $Repo, '--at-commit', $AtCommit, '--dirty', ($facts.dirty.ToString().ToLower())))
   if ($Out) { $argv.AddRange([string[]]@('--out', $Out)) }
 } else {
+  if ($Repo)     { $argv.AddRange([string[]]@('--repo', $Repo)) }
   if ($Map)      { $argv.AddRange([string[]]@('--map', $Map)) }
   if ($Harvest)  { $argv.AddRange([string[]]@('--harvest', $Harvest)) }
   if ($Out)      { $argv.AddRange([string[]]@('--out', $Out)) }

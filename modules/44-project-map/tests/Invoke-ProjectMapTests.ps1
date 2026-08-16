@@ -31,6 +31,31 @@ Write-Host "== project.map cloud suite =="
 $cloud = $LASTEXITCODE
 if ($cloud -ne 0) { Write-Error "cloud suite FAILED ($cloud)"; exit $cloud }
 
+# FO-6 (i60, D-0155): the wrapper's non-harvest argv branch used to drop -Repo, so query --q
+# section:/card:/evidence: --harvest could not resolve repo-backed content through the entrypoint.
+# Spawn the wrapper as a REAL child process (not via `&` in-process) -- Invoke-ProjectMap.ps1 ends in
+# `exit`, which would tear down this test process if invoked in-process.
+Write-Host "== project.map wrapper argv (FO-6: query -Repo passthrough) =="
+$fo6Wrapper = Join-Path $root 'Invoke-ProjectMap.ps1'
+$fo6PwshCmd = Get-Command pwsh -ErrorAction SilentlyContinue
+$fo6PwshExe = if ($fo6PwshCmd) { $fo6PwshCmd.Source } else { 'pwsh' }
+$fo6Repo = Join-Path ([System.IO.Path]::GetTempPath()) ('pm-fo6-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+
+$fo6Out = & $fo6PwshExe -NoProfile -File $fo6Wrapper -Action query -Repo $fo6Repo -Q 'entity:module:44' 2>&1 | Out-String
+$fo6Needle = "--repo $fo6Repo"
+if ($fo6Out -notlike "*$fo6Needle*") {
+  Write-Error "FO-6 REGRESSION: wrapper argv echo for 'query -Repo' is missing '$fo6Needle'.`n---- wrapper output ----`n$fo6Out"
+  exit 1
+}
+
+# backward compatibility: omitting -Repo must NOT emit --repo (provider-guarded, only when $Repo is set)
+$fo6OutNoRepo = & $fo6PwshExe -NoProfile -File $fo6Wrapper -Action query -Q 'entity:module:44' 2>&1 | Out-String
+if ($fo6OutNoRepo -like '*--repo*') {
+  Write-Error "FO-6 REGRESSION: wrapper argv echo emits --repo even though -Repo was not supplied.`n---- wrapper output ----`n$fo6OutNoRepo"
+  exit 1
+}
+Write-Host "FO-6 OK: query -Repo passthrough present; omitted-Repo case unchanged"
+
 if ($Live) {
   if (-not $Repo) { $Repo = (Resolve-Path (Join-Path $root '..\..')).Path }  # repo root two levels up
   Write-Host "== -Live full-repo smoke (RepoState=$RepoState) against $Repo =="
