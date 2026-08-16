@@ -33,7 +33,7 @@ pre-consolidation full text → `archive/`. Per-module params/artifacts → `mod
 > GATE-NO stands; classic detached-warm is the trusted default), generators, `video.interpret` + live
 > composition, real-time perception (27-49), broad training.
 >
-> **Executed i25-i39 (one line each; detail = the D-entry):** Wave 1 substrate #35/#36/#37 (i25, D-0082) ->
+> **Executed i25-i40 (one line each; detail = the D-entry):** Wave 1 substrate #35/#36/#37 (i25, D-0082) ->
 > MEMORY_CONTRACT freeze (i26, D-0083) -> Wave 2 records #36 0.2.0 + NEW #38/#39 (i27, D-0084; settled i28,
 > D-0085/A1) -> Wave 3 NEW #40 + #37 0.2.0 + NEW #41 (i29, D-0086) -> context_packet/0.2 hardening (i30,
 > D-0087/88) -> selpol settle (i31, D-0089/91) -> Tier-0 seam repairs: ns-closure + supersession (i32/i33,
@@ -42,7 +42,7 @@ pre-consolidation full text → `archive/`. Per-module params/artifacts → `mod
 > ACTION_AUTHORIZATION_CONTRACT freeze (D-0103) + the R-1 router #40 0.8.0 + NEW #43 P0-1 monitor (i37,
 > D-0104) -> the P0-1 full-gate build #43 0.2.0 + #40 0.9.0 wm-hydration + NEW widgets/06 (i38, D-0105/06;
 > pass over-claimed -> walked back, D-0107) -> the gate-completion build #43 0.3.0 + #36 0.7.0 fast-beam +
-> NEW widgets/07 (i39, D-0108; pass over-claimed again -> walked back, D-0109). **i40 in flight:** #43 0.4.0
+> NEW widgets/07 (i39, D-0108; pass over-claimed again -> walked back, D-0109). **i40 (DONE, D-0110/D-0111):** #43 0.4.0
 > exact closures + #37 reconcile (D-0111); mandate-01 sunset -> mandate 02 (D-0110).
 >
 > 2080 Ti = build target, RTX PRO 6000 = horizon. Live status: `CURRENT_STATE.md`.
@@ -285,8 +285,8 @@ docs-corpus onboarding (mandate-02 M2-C re-layer path); upper-level Bloom satura
 canonical `selpol_rrf_v1` selection-policy library (CONTEXT_PACKET_CONTRACT s4 pins it); the retrieval-quality
 benchmark (recall@K/MRR/stale/provenance); hierarchy-eval; the RUNNABLE ~200MB Tier-1 rehearsal harness
 (op `rehearsal`, wired_descend drives #40's public port READ-ONLY; s10 criteria; FULL_CORPUS_RECIPE).
-**IN FLIGHT (i40 Lane B, PB-5/D-0108):** the WIRED_STRUCTURAL_DIGEST re-pin + the manifest-version single
-source of truth (skill.json 0.8.0 vs envelope 0.7.0 literals) + a permanent -Live drift assertion.
+**AS-BUILT (DONE, i40 Lane B, PB-5 closed, D-0111/D-0112):** the WIRED_STRUCTURAL_DIGEST re-pin + the manifest-version single
+source of truth (skill.json vs envelope literals) + a permanent -Live drift assertion -> #37 0.8.1 -Live FULLY GREEN.
 **Follow-ons:** scheduled rehearsal re-runs; corpus growth per FULL_CORPUS_RECIPE.
 
 **38 `repo.intel`** — MVP complete 0.1.0 (i27, D-0084). Deterministic typed-record PRODUCER
