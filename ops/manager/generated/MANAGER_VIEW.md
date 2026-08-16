@@ -4,9 +4,9 @@ purpose: observability + steering for Nicholas over canonical map state -- NOT a
 snapshot: 2026-08-16
 
 ## ITERATION + PHASE
-iteration: 59 (frontier -> 60)
-phase: Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; PCB BOOT_PACKET is the DEFAULT orchestrator bootstrap (D-0146). i59 CLOSED (D-0154, ROOT front-door migration) + RECONCILED (D-0155): control-plane truth reconciled + the i60-i79 rolling roadmap. NEXT = i60 = bounded-ingest + control-plane hardening (NOT a class migration; the first class migration DEFERS to i68). AUDIT review_due i62 NON-DISPLACING.
-frontier (one line): i59 CLOSED (D-0154, ROOT migration) + RECONCILED (D-0155): control-plane truth reconciled + the i60-i79 rolling roadmap. NEXT = i60 = bounded-ingest + control-plane hardening (prove/enforce the bootstrap, close F-i53-eff, repair FO-6, a bounded manager view); the first PB-7 class migration DEFERS to i68.
+iteration: 60 (frontier -> 61)
+phase: Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; PCB BOOT_PACKET is the DEFAULT orchestrator bootstrap (D-0146). i60 CLOSED (D-0156): bounded-ingest + control-plane hardening DELIVERED (A/B/C/D). NEXT = i61 = bounded-ingest ADOPTION proof + hardening (NOT a class migration; the first class migration DEFERS to i68). AUDIT review_due i62 NON-DISPLACING.
+frontier (one line): i60 CLOSED (D-0156): bounded-ingest + control-plane hardening DELIVERED (A/B/C/D shipped; E recorded; SP3 FAIL -> seal retained, M-03 NOT licensed). NEXT = i61 = bounded-ingest ADOPTION proof + hardening (F-i53-eff OPEN; fail-closed gate ENFORCEMENT deferred i61); the first PB-7 class migration DEFERS to i68.
 
 ## PER-PLANE STATUS ROLLUP
 plane: memory (15) -- mvp-complete=10 | no-status=5
@@ -16,16 +16,16 @@ plane: authority (6) -- mvp-complete=2 | design-only=1 | no-status=3
 plane: observability (7) -- mvp-complete=6 | no-status=1
 
 ## FRONTIER CANDIDATES
-- [OPEN (D-0147; M-03 mandate DEFERRED)] SEALED_CHECK_47 SP3 doc-budget regression -- re-run to archive the seal -> core-docs/SEALED_CHECK_47.md
+- [OPEN (D-0147/D-0156; M-03 mandate DEFERRED -- NOT licensed)] SEALED_CHECK_47 SP3 doc-budget regression -- i60 re-evaluated (D-0156): integrity VERIFIES intact, SP3 still FAILS (ARCHITECTURE_MAP over); seal retained -> core-docs/SEALED_CHECK_47.md
 - [deferred D-0134] #40 context.compile beam-WIDTH follow-on * PB-2 * the w08 explain-window-close defect -> MODULE_ROADMAP.md #40 / PROCESS_BACKLOG PB-2 / widgets/08-live-run-audit-pathway
-- [i60 -- bounded-ingest + control-plane hardening (D-0155; NOT a class migration -- that DEFERS to i68)] prove + ENFORCE bounded bootstrap/retrieval on fresh work (close F-i53-eff -- bounded card:/section: the easy default, a whole-doc open needs a reason); make r… -> core-docs/research/2026-08-15-i59-roadmap-reconciliation.md + DECISION_LOG D-0155
+- [i61 -- bounded-ingest ADOPTION proof + hardening (D-0156; NOT a class migration -- that DEFERS to i68)] prove bounded-by-default on a fresh PCB-booted session with machine-verified retrieval evidence (close F-i53-eff); ACTIVATE the fail-closed close-path gate ENF… -> core-docs/research/2026-08-16-i60-bounded-ingest-design.md + DECISION_LOG D-0156
 
 ## OPEN PROCESS_BACKLOG ROWS (6)
 - PB-2: Reserved delegation seam: a DELEGATION_PROTOCOL + bounded delegation-index + subagent brief templates for recurring JUDGMENT doc-hygiene. RESERVE now, BUILD only if licensed. + (D-0101): any spawn em… | trigger: LICENSED (D-0119) -> build per this row when >=3 recurring judgment-hygiene tasks hold + a spare lane (non-displacing).
 - PB-3: Hold the hot docs under budget -- the acute i40 slim DONE (185%->96% etc; snapshots archive/doc-snapshots/2026-08-06/); since i42 the M2-A gate holds it MECHANICALLY at commit (mandate 02 SUNSET i47,… | trigger: Monitor row at each close (the gate holds commits); a >40 KB doc -> re-layer plan (FO-3); SEALED_CHECK_47 SP3/SP4 at i>=54.
 - PB-4: AUDIT_PIPELINE increment (D-0101): tier A2 read-only SHIPPED (widgets/05/06/07; live-GUI CONFIRMED i43, D-0120); PROMOTED to core-docs/AUDIT_PIPELINE.md i44 (D-0121); LRAP v1 = NEW widgets/08 SHIPPED… | trigger: Every wave scoping: review_due reached OR a tier-gate flipped OR a new artifact class appeared; if a lane is spare, scope ONE increment; else bump review_due 1…
 - PB-7: Knowledge Surface Re-layer program (D-0141; DESIGN DONE i55/D-0149; PB-6 decision increment COMPLETE i57/D-0151; universal derived-front-door contract FROZEN + red-teamed i58/D-0153; ROOT migrated i5… | trigger: i59 ROOT migrated (D-0154). i59 RECONCILED (D-0155): the first additional CLASS migration DEFERS i60->i68 -- until bounded-ingest is ADOPTED (F-i53-eff satisfi…
-- PB-8: Bounded-ingest ADOPTION + control-plane hardening (D-0155; the i60-i61 block): make bounded card:/section: the easy DEFAULT + close F-i53-eff (a whole-doc open needs an explicit reason); make retriev… | trigger: i60 (committed next work); F-i53-eff stays OPEN until observed bounded-by-default on representative tasks.
+- PB-8: Bounded-ingest ADOPTION + control-plane hardening (D-0155/D-0156): i60 DELIVERED A/B/C/D -- ops/retrieval/retrieve.ps1 bounded-query affordance (easy path = measured path) + gen-retrieval-monitor --g… | trigger: i61 (adoption proof + hardening); F-i53-eff OPEN until machine-verified bounded-by-default.
 - PB-9: The resumable close TRANSACTION -- Frontier Agent in the Deterministic Loop (D-0155; the i62-i67 block): ONE manifest-driven close (appends / replacements / section edits / view rebuilds / validators… | trigger: i62 (after bounded-ingest lands); design-first -> red-team at i62.
 
 ## PROHIBITIONS + OPEN RULINGS + SEALED_CHECK
@@ -34,7 +34,7 @@ live prohibitions: 4 | open rulings: 2
 - [live] FROZEN: generator upgrades, video.interpret + live composition, deep real-time perception, broad training (decision:D-0080)
 - [live] P0-1 / action.authz ACTIVATION prohibited -- the ratified gate result is a DESIGN pass only; non_execution:true holds (decision:D-0118)
 - [live] No orchestrator-driven external/frontier AI sessions; frontier material is human-couriered; in-session cloud subagents ARE permitted (decision:D-0119)
-SP3/M-03/SEALED_CHECK_47 status: SEALED_CHECK_47 (D-0132) SP3 doc-budget regression OPEN, recorded D-0147: 4 core-docs over budget_KB x1000 by wc-c (ARCHITECTURE_MAP genuinely over both bases; 3 others CRLF-artifact, under the enforced LF-blob gate); the M-03 reconcile ma… (pointer: core-docs/SEALED_CHECK_47.md)
+SP3/M-03/SEALED_CHECK_47 status: SEALED_CHECK_47 (D-0132) SP3 doc-budget regression OPEN, re-evaluated i60 (D-0156): integrity VERIFIES intact (unedited since i47); SP1/SP2/SP4/SP5/SP6/SP7 PASS, SP3 FAILS (ARCHITECTURE_MAP 16496 > 15000; the two grandfathered docs pass at… (pointer: core-docs/SEALED_CHECK_47.md)
 
 ## COUNTS
 COUNTS: modules=47 | planes=5 | open_pb=6

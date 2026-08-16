@@ -1,0 +1,11 @@
+{"kind": "boot_packet", "target": "modules/44-project-map/generated/BOOT_PACKET.md", "bytes": 18036, "note": "boot"}
+{"kind": "whole_doc_open", "target": "core-docs/CURRENT_STATE.md", "bytes": 33999}
+{"kind": "whole_doc_open", "target": "core-docs/SEALED_CHECK_47.md", "bytes": 2559}
+{"kind": "whole_doc_open", "target": "core-docs/research/2026-08-15-i59-roadmap-reconciliation.md", "bytes": 8356}
+{"kind": "whole_doc_open", "target": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md", "bytes": 23715}
+{"kind": "whole_doc_open", "target": "core-docs/PROCESS_BACKLOG.md", "bytes": 7994}
+{"kind": "whole_doc_open", "target": "modules/30-orchestrate-fanout/runtime/workers-i48.json", "bytes": 9960}
+{"kind": "whole_doc_open", "target": "core-docs/fanout/FANOUT_AGENT_TEMPLATE.md", "bytes": 3375}
+{"kind": "section", "target": "section:doc:core-docs/AUDIT_PIPELINE.md#Cadence header", "bytes": 2428, "note": "cross-lane smoke, via retrieve.ps1"}
+{"kind": "query", "target": "alias:DOC_PROTOCOL.md", "bytes": 180}
+{"kind": "query", "target": "entity:module:44/project.map", "bytes": 338}
