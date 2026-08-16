@@ -58,8 +58,8 @@ file byte-identical to its i47 creation commit 53c211f). SP1/SP2/SP4/SP5/SP6/SP7
 1. F-i53-eff stays OPEN until a fresh PCB-booted session does representative tasks bounded-by-default and leaves
    machine-verified retrieval evidence. 2. The gate enforces a ZERO-bounded floor, not a meaningful fraction.
 3. Some ledger properties remain self-reported. 4. Artifact reconciliation is query-string based, not
-   session/commit-identity bound. 5. Fail-closed close-path ENFORCEMENT is DEFERRED to i61 -- this close runs
-   the gate in observe/measure mode; i60 is NOT auto-enforcing bounded retrieval. 6. MANAGER_VIEW ops/frontdoor
+   session/commit-identity bound. 5. The fail-closed close-path retrieval gate is WIRED + ACTIVE (i60, D-0157: ops/close-refold.ps1
+   -Ledger runs gen-retrieval-monitor --gate + ABORTS a zero-bounded close); i61 raises the zero-floor to a meaningful fraction. 6. MANAGER_VIEW ops/frontdoor
    class-registration is an optional i61 follow-on.
 
 ## Source pointers

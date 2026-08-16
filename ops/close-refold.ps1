@@ -19,7 +19,11 @@ param(
   [ValidateSet('verify','fold')][string]$Mode = 'verify',
   [string]$Repo = 'C:\Users\just_\LifeOrchestrator-Refresh',
   [string]$By = 'orchestrator-close',
-  [string]$ReaffirmSpec = ''
+  [string]$ReaffirmSpec = '',
+  [string]$Ledger = '',
+  [int]$Iteration = 0,
+  [string[]]$ArtifactsDirs = @('modules\44-project-map\runtime\artifacts','modules\30-orchestrate-fanout\runtime\artifacts'),
+  [string]$GateOutDir = ''
 )
 $ErrorActionPreference = 'Stop'
 Set-Location $Repo
@@ -91,6 +95,29 @@ if ($envR.status -ne 'ok') { throw "render refused: $($envR.error.code)" }
 if ($LASTEXITCODE -ne 0) { throw "render -Check crashed (exit $LASTEXITCODE)" }
 $envC = Get-Content -Raw (Join-Path $work 'env-check.json') | ConvertFrom-Json
 if ($envC.status -ne 'ok') { throw "render -Check drift: $($envC.error.code)" }
+
+# 6b. RETRIEVAL GATE (i60, D-0157): wire gen-retrieval-monitor --gate FAIL-CLOSED into the close path.
+#     A session that whole-opened docs with ZERO bounded queries CANNOT close (the zero-bounded floor;
+#     i61 raises it to a meaningful bounded fraction). Also emits the standing retrieval-bytes-log row.
+#     Backward-compatible: skipped when -Ledger is not provided.
+if ($Ledger -and (Test-Path -LiteralPath $Ledger)) {
+  $pyG = @((Get-Command python3 -ErrorAction SilentlyContinue), (Get-Command python -ErrorAction SilentlyContinue)) |
+    Where-Object { $_ -and ($_.Source -notmatch 'WindowsApps') }
+  $pyG = if ($pyG) { @($pyG)[0].Source } else { 'python' }
+  $mon = Join-Path $Repo 'ops\audit\gen-retrieval-monitor.py'
+  $god = if ($GateOutDir) { $GateOutDir } else { Join-Path $Repo 'ops\out' }
+  $adArgs = New-Object System.Collections.Generic.List[string]
+  foreach ($d in $ArtifactsDirs) { $adArgs.Add('--artifacts-dir'); $adArgs.Add($d) }
+  $gout = Join-Path $work 'env-retrieval-gate.json'
+  & $pyG $mon --ledger $Ledger --iteration $Iteration --gate --out-dir $god @adArgs 1> $gout 2> (Join-Path $work 'e-gate.err')
+  $grc = $LASTEXITCODE
+  $rowTxt = (Get-Content -Raw $gout -ErrorAction SilentlyContinue)
+  if ($grc -ne 0) { throw "RETRIEVAL GATE FAILED (exit $grc): zero bounded queries alongside whole-doc opens -- bounded retrieval not adopted this session. Row: $rowTxt" }
+  $row = $rowTxt | ConvertFrom-Json
+  Write-Output ("close-refold: retrieval-gate PASS gate={0} bounded_fraction={1} boot_packet={2}B" -f $row.gate.status, $row.bounded_fraction, $row.boot_packet_bytes)
+} else {
+  Write-Output 'close-refold: retrieval-gate SKIPPED (no -Ledger provided)'
+}
 
 $pkt = Join-Path $genD 'BOOT_PACKET.md'
 $pktBytes = if (Test-Path $pkt) { (Get-Item $pkt).Length } else { -1 }
