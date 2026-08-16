@@ -90,8 +90,34 @@ boot_packet_bar{limit_bytes,status}, warnings[{target,bytes,reasons}], ledger_en
 a re-layer-eligible cumulative doc (`DECISION_LOG.md`/`DECISION_LOG_INDEX.md`) or of anything > 40,000 B
 (the DOC_PROTOCOL s2 re-layer trigger) is a WARN in `warnings`, never a reject -- exit code stays 0.
 
-**Exit codes:** `0` row emitted; `1` ledger content rejected (fail-closed, nothing written); `2` usage/I-O
-error (e.g. ledger file not found).
+**Exit codes:** `0` row emitted; `1` ledger content rejected OR `--gate` tripped (fail-closed, nothing
+written); `2` usage/I-O error (e.g. ledger file not found).
+
+**i60 (PB-8, II-BOUND-i60) additions** -- both opt-in; a default invocation is byte-identical to the i55
+schema, so every test above still holds:
+
+- `--gate` (FAIL-CLOSED): reject (exit 1, machine reason `zero_bounded_opens` on stdout, nothing written)
+  when `whole_doc_open_bytes > 0 AND bounded_query_bytes == 0` -- a session that whole-opened docs but
+  issued zero bounded queries can no longer close green. An empty or no-whole-doc ledger does not trip; a
+  passing gate appends the row with a `"gate":{"status":"pass"}` field. The orchestrator wires `--gate`
+  into the ops wave-close.
+- `--artifacts-dir DIR` (repeatable): cross-check the ledger against the `result.json` query artifacts
+  project.map persists per query. Scans `<DIR>/*/result.json`; a bounded ledger target with no matching
+  query artifact => `unbacked`, a query artifact with no matching ledger target => `unrecorded`. Both are
+  surfaced in a `cross_check` row field, never dropped, WARN-level (exit code unchanged). Point it at the
+  CURRENT wave's roots (`modules/30-orchestrate-fanout/runtime/artifacts`,
+  `modules/44-project-map/runtime/artifacts`); over the full historical pile `unrecorded` is expected noise.
+
+```
+python ops/audit/gen-retrieval-monitor.py --ledger <path> --iteration <N> --gate \
+       --artifacts-dir modules/30-orchestrate-fanout/runtime/artifacts \
+       --artifacts-dir modules/44-project-map/runtime/artifacts
+```
+
+The bounded ledger entries are now written AUTOMATICALLY by `ops/retrieval/retrieve.ps1` (i60 increment A),
+which charges each bounded query its canonical query-result-payload byte size -- the easy retrieval path is
+the measured path. Tests: `python ops/audit/tests/test_retrieval_gate_crosscheck.py` (gate + cross-check),
+`pwsh -File ops/retrieval/tests/Invoke-RetrieveTests.ps1` (the affordance).
 
 **Run at wave close, alongside `gen-doc-health.py`** (see `FANOUT_ORCHESTRATOR_HANDOFF.md` s4 wave loop):
 after the wave's per-session ledgers land under `ops/audit/retrieval-ledger/i<N>-<worker>.jsonl`, run this
