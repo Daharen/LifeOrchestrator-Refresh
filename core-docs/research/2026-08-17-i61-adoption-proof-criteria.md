@@ -85,3 +85,29 @@ exactly the fixed-boot-cost artifact the discretionary metric is designed to exc
 ledger, invalid iteration, zero-bounded-alongside-whole-opens, sub-threshold fraction (never mutating the
 tree). RETAINED: whole-doc self-report (bounded side artifact-corroborated, unbacked=0); cross-session
 `unrecorded` (WARN; needs per-session artifact scoping, a future increment).
+
+## RESULT (i61 re-close, D-0160) -- PASS [rigorously session-bound; supersedes the D-0158 RESULT above]
+
+The D-0159 reopen required binding the proof to THIS trial/session/HEAD (not query strings across accumulated
+artifacts). Re-run against HEAD `97001714` (the corrected i61-in-progress HEAD; clean tree): BEFORE its first
+repository read, a genuinely fresh in-session subagent sha256-sealed an IMMUTABLE trial manifest
+(`ops/audit/retrieval-ledger/i61-trial2-manifest.json` + `.sha256`: trial_id i61-trial2, fresh session identity,
+target_head 97001714, trial_epoch 60 vs close_iteration 61, frozen theta 0.80, frozen Q1-Q6, ledger path, a
+SESSION-UNIQUE artifact root). It then booted from the boot packet and answered Q1-Q6 BOUNDED-BY-DEFAULT via
+`retrieve.ps1 -ArtifactRoot` (5 status=ok queries; 3 `section:`, 2 `card:`).
+
+Machine judgment on the REAL session ledger (`ops/audit/retrieval-ledger/i61-trial2.jsonl`):
+- `gen-retrieval-monitor --gate --min-bounded-fraction 0.80`: gate **PASS**; `discretionary_bounded_fraction`
+  **1.0 >= 0.80** (bounded 12077 B; whole_doc **0 B -- ZERO whole-document opens**); `n_queries` 5; boot bar pass.
+  Raw `bounded_fraction` 0.4009 (packet included) -- the fixed-boot-cost artifact the discretionary metric excludes.
+- `ops/audit/trial-binding-check.py` (session-scoped ownership, NOT query-string): **bound=true** -- manifest
+  immutable (sha256 == sealed sidecar == boot_packet ledger note), `target_head` == actual HEAD, 5 artifacts
+  scanned all `harvest_commit` == target_head (no foreign-HEAD), every bounded ledger target backed by a session
+  artifact (**unbacked=0**), n_bounded 5. A wrong-HEAD negative control REJECTS (proves HEAD-specific binding).
+
+Close-rejection tests on the real ledger fail closed: sub-threshold (0.7512 < 0.80), zero-bounded alongside
+whole-opens (`zero_bounded_opens`), malformed, and missing -- each rejects, never mutating the tree; the real
+ledger passes. Suites green natively (94 python + 41 retrieve.ps1 Pester). ALL frozen criteria met => **F-i53-eff
+CLOSED (D-0160)**. The fresh context's own Q1-Q6 answers + planning report: `research/2026-08-17-i61-trial2-fresh-answers.md`.
+RESOLVED: the query-string reconciliation residual (evidence now session-scoped + ownership-verified). RETAINED:
+whole-doc reads are self-reported in general -- moot here (zero whole-doc opens; bounded side unbacked=0).

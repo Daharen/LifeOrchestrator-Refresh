@@ -1,0 +1,6 @@
+{"kind":"boot_packet","target":"modules/44-project-map/generated/BOOT_PACKET.md","bytes":18050,"note":"i61-trial2 fresh-context adoption trial boot; manifest_sha256:d781e5d9ce30b2240f574205d3d73683d82d00fb9e8e691a278c67cee2cf4d3a"}
+{"bytes":1976,"kind":"section","target":"section:doc:core-docs/COLD_BOOT_CARD.md#PINNED CONSTRAINTS -- 7 as of i60 (never-spill; safety-critical / irreversible -- carried inline so Mode B never drops them)"}
+{"bytes":5912,"kind":"section","target":"section:doc:core-docs/PROCESS_BACKLOG.md#Open"}
+{"bytes":1018,"kind":"card","target":"card:module:44"}
+{"bytes":1231,"kind":"card","target":"card:module:30"}
+{"bytes":1940,"kind":"section","target":"section:doc:core-docs/AUDIT_PIPELINE.md#5. Cadence + upkeep (how this stays alive without becoming a tax)"}

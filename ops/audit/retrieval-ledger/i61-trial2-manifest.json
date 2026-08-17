@@ -1,0 +1,51 @@
+{
+ "artifact_root": "modules/44-project-map/runtime/trial-artifacts/i61-trial2",
+ "boot_packet_bytes": 18050,
+ "boot_packet_path": "modules/44-project-map/generated/BOOT_PACKET.md",
+ "close_iteration": 61,
+ "created_before_first_read": true,
+ "harvest_path": "modules/44-project-map/runtime/trial2/harvest.json",
+ "ledger_path": "ops/audit/retrieval-ledger/i61-trial2.jsonl",
+ "note": "IMMUTABLE pre-registered manifest for the i61 F-i53-eff fresh-context bounded-ingest ADOPTION re-proof (D-0159). Sealed before the trial's first orientation read. Every BOUNDED ledger target is backed by a session-unique query artifact under artifact_root; every artifact carries harvest_commit==target_head. Validated by ops/audit/trial-binding-check.py.",
+ "session_identity": {
+  "agent_marker": "i61-trial2-fresh-subagent-run1",
+  "role": "fresh-context adoption-trial subagent (i61 F-i53-eff re-proof, D-0159)",
+  "trial_session_uuid": "3b514f2a-a467-4a1b-86d9-2bd16e1c4e42"
+ },
+ "target_head": "97001714046e163aab1fb3851aa4a5a12dba5ebd",
+ "tasks": [
+  {
+   "id": "Q1",
+   "kind": "orientation",
+   "prompt": "current iteration, next iteration, and the one-line frontier -- from the boot packet"
+  },
+  {
+   "id": "Q2",
+   "kind": "orientation",
+   "prompt": "the live PINNED prohibition on P0-1 / action.authz activation -- bounded fetch"
+  },
+  {
+   "id": "Q3",
+   "kind": "planning",
+   "prompt": "the open PROCESS_BACKLOG rows and which is the i61 driver -- bounded fetch"
+  },
+  {
+   "id": "Q4",
+   "kind": "technical",
+   "prompt": "project.map (#44) current version + one narrative-query verb form -- bounded fetch"
+  },
+  {
+   "id": "Q5",
+   "kind": "technical",
+   "prompt": "the retrieval-gate state (wired? floor vs fraction) -- from packet overlay + bounded fetch"
+  },
+  {
+   "id": "Q6",
+   "kind": "technical",
+   "prompt": "one section-level fact from a large core-doc (AUDIT_PIPELINE cadence) via section: -- the case that would otherwise be a whole-doc open"
+  }
+ ],
+ "threshold": 0.8,
+ "trial_epoch": 60,
+ "trial_id": "i61-trial2"
+}
