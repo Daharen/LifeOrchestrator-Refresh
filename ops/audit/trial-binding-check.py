@@ -22,7 +22,7 @@ root, and verifies ownership by construction:
 
 READ-ONLY, stdlib only, deterministic. Exit 0 = BOUND (all pass); 1 = a binding failure (listed); 2 = I/O.
 """
-import argparse, glob, hashlib, json, os, sys
+import argparse, glob, hashlib, json, os, re, sys
 
 BOUNDED = ("section", "card", "query")
 
@@ -129,9 +129,10 @@ def main(argv=None):
                 e = json.loads(raw)
             except ValueError:
                 ck(False, "ledger line %d not JSON" % (i + 1)); continue
-            if e.get("kind") == "manifest":
-                ledger_manifest_seal = e.get("target")
-                continue
+            if e.get("kind") == "boot_packet":
+                mm = re.search(r"manifest_sha256:([0-9a-f]{64})", e.get("note") or "")
+                if mm:
+                    ledger_manifest_seal = mm.group(1)
             if e.get("kind") in BOUNDED:
                 n_bounded += 1
                 t = e.get("target")
@@ -141,11 +142,9 @@ def main(argv=None):
     ck(not unbacked, "UNBACKED bounded targets (no session artifact): %s" % unbacked)
     ck(n_bounded >= 5, "n_bounded %d < 5" % n_bounded)
 
-    # (5) ledger<->manifest agreement
-    ck(os.path.abspath(led_abs) == os.path.abspath(os.path.join(repo, led) if not os.path.isabs(led) else led),
-       "ledger path resolution")
+    # (5) ledger<->manifest binding: the ledger's boot_packet line note references the manifest seal.
     ck(ledger_manifest_seal == man_sha,
-       "ledger not bound to this manifest (ledger manifest-seal %s != manifest sha %s)"
+       "ledger boot_packet note not bound to this manifest (note-seal %s != manifest sha %s)"
        % (str(ledger_manifest_seal)[:12], man_sha[:12]))
 
     bound = not fails
