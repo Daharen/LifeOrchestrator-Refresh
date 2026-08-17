@@ -1,0 +1,11 @@
+{"kind": "whole_doc_open", "target": "core-docs/START_HERE.md", "bytes": 1920, "note": "boot kernel -- required first read (Mode-A boot)"}
+{"kind": "whole_doc_open", "target": "core-docs/COLD_BOOT_CARD.md", "bytes": 4972, "note": "boot recovery card -- edit target (advance mechanical stamps)"}
+{"kind": "whole_doc_open", "target": "ops/close-refold.ps1", "bytes": 8206, "note": "edit target -- harden fold-mode ledger/iteration fail-closed"}
+{"kind": "whole_doc_open", "target": "ops/retrieval/retrieve.ps1", "bytes": 11296, "note": "understand bounded-query affordance to reproduce it via python cores"}
+{"kind": "whole_doc_open", "target": "modules/44-project-map/Invoke-ProjectMap.ps1", "bytes": 6990, "note": "understand project_map.py CLI surface to drive the close"}
+{"kind": "whole_doc_open", "target": "ops/audit/gen-retrieval-monitor.py", "bytes": 17492, "note": "understand gate + ledger schema -- edit target (raise to meaningful-fraction)"}
+{"kind": "query", "target": "entity:module:44/project.map", "bytes": 2838, "note": "orient: #44 project.map current version"}
+{"kind": "card", "target": "card:module:44", "bytes": 1018, "note": "orient: project.map (PCB) card"}
+{"kind": "card", "target": "card:module:30", "bytes": 1231, "note": "orient: orchestrate.fanout card"}
+{"kind": "section", "target": "section:doc:core-docs/AUDIT_PIPELINE.md#Cadence header", "bytes": 2428, "note": "bounded section (the whole-doc-open replacement case)"}
+{"kind": "query", "target": "alias:DOC_PROTOCOL.md", "bytes": 46, "note": "orient: DOC_PROTOCOL alias resolve"}
