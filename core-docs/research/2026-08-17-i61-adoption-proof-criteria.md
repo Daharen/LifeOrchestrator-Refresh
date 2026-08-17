@@ -70,3 +70,18 @@ Q6 (technical): one section-level fact from a large core-doc (e.g. AUDIT_PIPELIN
   `-MinBoundedFraction 0.80` against the genuine TRIAL ledger. The whole-doc-heavy orchestrator/cleanup
   session's own close remains at the zero-bounded floor (the raise judges the ADOPTION trial evidence, not
   the cleanup session).
+
+## RESULT (i61 close, 2026-08-17) -- PASS
+
+Against the corrected HEAD `78ca57cc` (clean tree, PCB verify 0-stale), a genuinely fresh in-session subagent
+(D-0119) whose ledger existed BEFORE its first orientation read booted through START_HERE, verified the PCB,
+read the boot packet, and answered the frozen task suite Q1-Q6 BOUNDED-BY-DEFAULT via the retrieve.ps1
+affordance. Machine judgment (`gen-retrieval-monitor --gate --min-bounded-fraction 0.80 --artifacts-dir`):
+gate PASS; `discretionary_bounded_fraction` **0.8586 >= 0.80**; `n_queries` 5; artifact cross-check **0
+unbacked** (unrecorded 3 = cross-session accumulation noise, WARN); the only whole-doc read beyond the boot
+packet was the START_HERE kernel (recorded with a reason). Raw `bounded_fraction` 0.3686 (packet included) --
+exactly the fixed-boot-cost artifact the discretionary metric is designed to exclude. ALL frozen criteria met
+=> **F-i53-eff CLOSED (D-0158)**. Close-rejection tests fail-closed on: missing / nonexistent / malformed
+ledger, invalid iteration, zero-bounded-alongside-whole-opens, sub-threshold fraction (never mutating the
+tree). RETAINED: whole-doc self-report (bounded side artifact-corroborated, unbacked=0); cross-session
+`unrecorded` (WARN; needs per-session artifact scoping, a future increment).

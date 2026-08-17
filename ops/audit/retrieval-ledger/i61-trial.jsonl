@@ -1,0 +1,7 @@
+{"kind":"whole_doc_open","target":"core-docs/START_HERE.md","bytes":1920,"note":"boot kernel -- required first read (Mode-A)"}
+{"kind":"boot_packet","target":"modules/44-project-map/generated/BOOT_PACKET.md","bytes":18050}
+{"bytes":42,"kind":"query","target":"deeper:decision:D-0118"}
+{"bytes":1018,"kind":"card","target":"card:module:44"}
+{"bytes":2257,"kind":"query","target":"entity:decision:D-0118"}
+{"bytes":5912,"kind":"section","target":"section:doc:core-docs/PROCESS_BACKLOG.md#Open"}
+{"bytes":2428,"kind":"section","target":"section:doc:core-docs/AUDIT_PIPELINE.md#Cadence header"}
