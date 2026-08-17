@@ -82,6 +82,7 @@ CUMULATIVE_DOC_BASENAMES = {"DECISION_LOG.md", "DECISION_LOG_INDEX.md"}
 RELAYER_TRIGGER_BYTES = 40000          # DOC_PROTOCOL s2: "re-layer ~40 KB (PB-7)"
 N4_BOOT_BAR_BYTES = 20000              # D-0140/N4 re-freeze: BOOT_PACKET <= 20,000 B
 GATE_ZERO_BOUNDED = "zero_bounded_opens"   # i60 B fail-closed gate machine reason
+GATE_BELOW_MIN_FRACTION = "below_min_bounded_fraction"  # i61 meaningful-fraction raise (D-0158)
 
 
 class LedgerError(Exception):
@@ -205,7 +206,8 @@ def cross_check(entries, dirs):
     }
 
 
-def compute_row(entries, date, iteration, ledger_source, cross_check_result=None, gate=False):
+def compute_row(entries, date, iteration, ledger_source, cross_check_result=None, gate=False,
+                min_bounded_fraction=None):
     boot_packet_bytes = sum(e["bytes"] for e in entries if e["kind"] == "boot_packet")
     whole_doc = [e for e in entries if e["kind"] == "whole_doc_open"]
     bounded = [e for e in entries if e["kind"] in BOUNDED_KINDS]
@@ -214,6 +216,12 @@ def compute_row(entries, date, iteration, ledger_source, cross_check_result=None
     total_charged_bytes = boot_packet_bytes + whole_doc_open_bytes + bounded_query_bytes
     bounded_fraction = (round(bounded_query_bytes / total_charged_bytes, 4)
                          if total_charged_bytes > 0 else None)
+    # i61 (D-0158) meaningful-fraction raise: the ADOPTION metric EXCLUDES the mandatory boot packet
+    # from both numerator and denominator, so the fixed ~18 KB boot cost cannot distort it -- it answers
+    # "of the DISCRETIONARY retrieval (everything beyond the boot packet), what fraction was bounded?"
+    discretionary_bytes = whole_doc_open_bytes + bounded_query_bytes
+    discretionary_bounded_fraction = (round(bounded_query_bytes / discretionary_bytes, 4)
+                                      if discretionary_bytes > 0 else None)
 
     whole_doc_opens = []
     warnings = []
@@ -248,12 +256,29 @@ def compute_row(entries, date, iteration, ledger_source, cross_check_result=None
         row["gate"] = {"status": "pass", "reason": None}
     if cross_check_result is not None:
         row["cross_check"] = cross_check_result
+    # i61 (D-0158): additive + opt-in -- present ONLY when the meaningful-fraction gate is engaged, so a
+    # default / zero-floor invocation stays byte-identical to the i55/i60 row schema.
+    if min_bounded_fraction is not None:
+        row["discretionary_bounded_fraction"] = discretionary_bounded_fraction
+        row["min_bounded_fraction"] = min_bounded_fraction
     return row
 
 
 def gate_tripped(row):
     """The i60 fail-closed gate condition: docs were whole-opened but ZERO bounded queries were issued."""
     return row["whole_doc_open_bytes"] > 0 and row["bounded_query_bytes"] == 0
+
+
+def fraction_gate_tripped(row, min_bounded_fraction):
+    """The i61 meaningful-fraction gate (D-0158): reject when there is NO bounded retrieval at all, or
+    when the DISCRETIONARY bounded fraction (bounded/(bounded+whole_doc), boot packet excluded) is below
+    the frozen threshold. Stricter than -- and subsuming -- the zero-bounded floor. Deterministic."""
+    if row["bounded_query_bytes"] == 0:
+        return True
+    disc = row["whole_doc_open_bytes"] + row["bounded_query_bytes"]
+    if disc <= 0:
+        return True
+    return (row["bounded_query_bytes"] / disc) < min_bounded_fraction
 
 
 def main(argv=None):
@@ -268,6 +293,13 @@ def main(argv=None):
     ap.add_argument("--artifacts-dir", action="append", default=None, dest="artifacts_dirs",
                     metavar="DIR", help="scan <DIR>/*/result.json for the ledger<->artifact cross-check "
                                         "(repeatable)")
+    ap.add_argument("--min-bounded-fraction", type=float, default=None,
+                    help="i61 meaningful-fraction gate (D-0158): FAIL-CLOSED if the DISCRETIONARY bounded "
+                         "fraction (bounded/(bounded+whole_doc), boot packet excluded) is below THRESHOLD")
+    ap.add_argument("--check-only", action="store_true",
+                    help="i61 (D-0158): evaluate the ledger + gate(s) FAIL-CLOSED but WRITE NOTHING "
+                         "(exit 0 pass / 1 fail). The close-path PRE-RENDER gate so a bad ledger or a "
+                         "sub-threshold session aborts the close BEFORE any render.")
     a = ap.parse_args(argv)
 
     repo = a.repo or os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -289,7 +321,8 @@ def main(argv=None):
         cc = cross_check(entries, a.artifacts_dirs)
 
     ledger_source = os.path.relpath(os.path.abspath(a.ledger), repo).replace("\\", "/")
-    row = compute_row(entries, date, a.iteration, ledger_source, cross_check_result=cc, gate=a.gate)
+    row = compute_row(entries, date, a.iteration, ledger_source, cross_check_result=cc, gate=a.gate,
+                      min_bounded_fraction=a.min_bounded_fraction)
 
     # i60 fail-closed gate: decided AFTER the row is computed, BEFORE anything is written. On a trip we
     # emit a machine reason + exit 1 and write NOTHING (identical no-write discipline to a ledger reject).
@@ -308,6 +341,29 @@ def main(argv=None):
               % (GATE_ZERO_BOUNDED, row["whole_doc_open_bytes"]), file=sys.stderr)
         return 1
 
+    # i61 (D-0158) meaningful-fraction gate: decided AFTER the zero-bounded floor, BEFORE any write.
+    if a.min_bounded_fraction is not None and fraction_gate_tripped(row, a.min_bounded_fraction):
+        disc = row["whole_doc_open_bytes"] + row["bounded_query_bytes"]
+        frac = round(row["bounded_query_bytes"] / disc, 4) if disc > 0 else None
+        reason = {
+            "gate": GATE_BELOW_MIN_FRACTION,
+            "iteration": a.iteration,
+            "min_bounded_fraction": a.min_bounded_fraction,
+            "discretionary_bounded_fraction": frac,
+            "bounded_query_bytes": row["bounded_query_bytes"],
+            "whole_doc_open_bytes": row["whole_doc_open_bytes"],
+            "ledger_source": ledger_source,
+        }
+        print(json.dumps(reason, separators=(",", ":")))
+        print("gen-retrieval-monitor: GATE REJECTED (fail-closed, nothing written): %s "
+              "(discretionary_bounded_fraction=%s < %s)"
+              % (GATE_BELOW_MIN_FRACTION, frac, a.min_bounded_fraction), file=sys.stderr)
+        return 1
+
+    if a.check_only:
+        print("gen-retrieval-monitor: --check-only OK (ledger valid, gate(s) passed; nothing written)")
+        return 0
+
     os.makedirs(out_dir, exist_ok=True)
     log_path = os.path.join(out_dir, "retrieval-bytes-log.jsonl")
     line = json.dumps(row, separators=(",", ":"))
@@ -321,6 +377,9 @@ def main(argv=None):
         row["bounded_fraction"], len(row["warnings"])))
     if a.gate:
         summary += " gate=pass"
+    if a.min_bounded_fraction is not None:
+        summary += " min_bounded_fraction=%s discretionary=%s" % (
+            a.min_bounded_fraction, row.get("discretionary_bounded_fraction"))
     if cc is not None:
         summary += " cross_check(unbacked=%d unrecorded=%d over %d artifacts)" % (
             len(cc["unbacked"]), len(cc["unrecorded"]), cc["artifacts_scanned"])

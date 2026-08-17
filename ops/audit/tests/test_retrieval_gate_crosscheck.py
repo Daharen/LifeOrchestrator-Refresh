@@ -260,5 +260,92 @@ class DoubleRunDeterminismTest(unittest.TestCase):
                 self.assertEqual(run(d1), run(d2))
 
 
+class FractionGateUnitTest(unittest.TestCase):
+    """i61 (D-0158) meaningful-fraction gate: discretionary_bounded_fraction + fraction_gate_tripped."""
+    def test_discretionary_field_is_opt_in(self):
+        entries = MOD.parse_ledger(MIXED)
+        self.assertNotIn("discretionary_bounded_fraction", MOD.compute_row(entries, "d", 60, "x"))
+        r = MOD.compute_row(entries, "d", 61, "x", min_bounded_fraction=0.8)
+        self.assertIn("discretionary_bounded_fraction", r)
+        self.assertEqual(r["min_bounded_fraction"], 0.8)
+
+    def test_discretionary_excludes_boot_packet(self):
+        entries = [{"kind": "boot_packet", "target": "bp", "bytes": 18000, "note": None},
+                   {"kind": "whole_doc_open", "target": "d", "bytes": 1000, "note": None},
+                   {"kind": "query", "target": "q", "bytes": 9000, "note": None}]
+        r = MOD.compute_row(entries, "d", 61, "x", min_bounded_fraction=0.8)
+        self.assertEqual(r["discretionary_bounded_fraction"], 0.9)  # 9000/(9000+1000), boot excluded
+
+    def test_fraction_gate_trips_below_and_on_zero_bounded(self):
+        low = MOD.compute_row([{"kind": "whole_doc_open", "target": "d", "bytes": 9000, "note": None},
+                               {"kind": "query", "target": "q", "bytes": 1000, "note": None}],
+                              "d", 61, "x", min_bounded_fraction=0.8)
+        self.assertTrue(MOD.fraction_gate_tripped(low, 0.8))    # 0.1 < 0.8
+        self.assertFalse(MOD.fraction_gate_tripped(low, 0.05))  # 0.1 >= 0.05
+        zero = MOD.compute_row([{"kind": "whole_doc_open", "target": "d", "bytes": 9000, "note": None}],
+                               "d", 61, "x", min_bounded_fraction=0.8)
+        self.assertTrue(MOD.fraction_gate_tripped(zero, 0.8))   # no bounded at all
+
+    def test_fraction_gate_passes_high(self):
+        hi = MOD.compute_row([{"kind": "whole_doc_open", "target": "d", "bytes": 1000, "note": None},
+                              {"kind": "query", "target": "q", "bytes": 9000, "note": None}],
+                             "d", 61, "x", min_bounded_fraction=0.8)
+        self.assertFalse(MOD.fraction_gate_tripped(hi, 0.8))    # 0.9 >= 0.8
+
+
+class FractionGateCliTest(unittest.TestCase):
+    def _ledger(self, d, bounded, whole):
+        parts = []
+        if whole:   parts.append('{"kind":"whole_doc_open","target":"doc","bytes":%d}' % whole)
+        if bounded: parts.append('{"kind":"query","target":"q:x","bytes":%d}' % bounded)
+        return write(os.path.join(d, "l.jsonl"), "\n".join(parts) + "\n")
+
+    def test_cli_rejects_below_threshold_writes_nothing(self):
+        with tempfile.TemporaryDirectory() as d:
+            led = self._ledger(d, 1000, 9000)  # discretionary fraction 0.1
+            p = run_cli(["--ledger", led, "--iteration", "61", "--out-dir", d, "--gate",
+                         "--min-bounded-fraction", "0.8"])
+            self.assertEqual(p.returncode, 1, p.stderr)
+            self.assertIn(MOD.GATE_BELOW_MIN_FRACTION, p.stdout)
+            reason = json.loads(p.stdout.strip().splitlines()[0])
+            self.assertEqual(reason["gate"], "below_min_bounded_fraction")
+            self.assertEqual(reason["discretionary_bounded_fraction"], 0.1)
+            self.assertFalse(os.path.exists(os.path.join(d, "retrieval-bytes-log.jsonl")))
+
+    def test_cli_passes_above_threshold_writes_row(self):
+        with tempfile.TemporaryDirectory() as d:
+            led = self._ledger(d, 9000, 1000)  # 0.9
+            p = run_cli(["--ledger", led, "--iteration", "61", "--out-dir", d, "--gate",
+                         "--min-bounded-fraction", "0.8"])
+            self.assertEqual(p.returncode, 0, p.stderr)
+            with open(os.path.join(d, "retrieval-bytes-log.jsonl"), encoding="utf-8") as fh:
+                row = json.loads(fh.readline())
+            self.assertEqual(row["discretionary_bounded_fraction"], 0.9)
+            self.assertEqual(row["gate"], {"status": "pass", "reason": None})
+
+    def test_check_only_never_writes(self):
+        with tempfile.TemporaryDirectory() as d:
+            led = self._ledger(d, 9000, 1000)  # passes
+            p = run_cli(["--ledger", led, "--iteration", "61", "--out-dir", d, "--gate",
+                         "--min-bounded-fraction", "0.8", "--check-only"])
+            self.assertEqual(p.returncode, 0, p.stderr)
+            self.assertFalse(os.path.exists(os.path.join(d, "retrieval-bytes-log.jsonl")))
+
+    def test_check_only_rejects_below_threshold_writes_nothing(self):
+        with tempfile.TemporaryDirectory() as d:
+            led = self._ledger(d, 1000, 9000)  # fails
+            p = run_cli(["--ledger", led, "--iteration", "61", "--out-dir", d, "--gate",
+                         "--min-bounded-fraction", "0.8", "--check-only"])
+            self.assertEqual(p.returncode, 1)
+            self.assertFalse(os.path.exists(os.path.join(d, "retrieval-bytes-log.jsonl")))
+
+    def test_check_only_rejects_zero_bounded_floor(self):
+        with tempfile.TemporaryDirectory() as d:
+            led = self._ledger(d, 0, 9000)  # zero bounded, whole-doc present
+            p = run_cli(["--ledger", led, "--iteration", "61", "--out-dir", d, "--gate", "--check-only"])
+            self.assertEqual(p.returncode, 1)
+            self.assertFalse(os.path.exists(os.path.join(d, "retrieval-bytes-log.jsonl")))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -30,7 +30,7 @@ order/status/follow-ons) · `REVIEW_QUEUE.md` (queue) · `FANOUT_ORCHESTRATOR_HA
 - **FROZEN / deferred (D-0080):** durable-supervisor / warm-pool hardening (D-0079 GATE-NO stands; classic
   detached-warm is the trusted default); generator upgrades; `video.interpret` + live composition; deep
   real-time perception (arch 27-49); broad training.
-- **Fan-out loop:** 59 iterations via `orchestrate.fanout` #30 over `res.lease` #29; workers hand-dispatched into
+- **Fan-out loop:** 60 iterations via `orchestrate.fanout` #30 over `res.lease` #29; workers hand-dispatched into
   fresh Cowork sessions. Ledger + wave model: **`FANOUT_ORCHESTRATOR_HANDOFF.md`**.
 - **Boundary (D-0051, amended by D-0080):** the orchestrator never drives another *external/frontier* AI session
   (human-couriered only); a deterministic LOCAL coordinator IS authorized to spawn local contexts (Priority 10).
@@ -128,7 +128,7 @@ registry facts: `TOOL_MODEL_REGISTRY.md`. Roster (all MVP-complete unless noted)
   byte-identical back to 0.7.0) · #41 skill.card 0.2.0 · #42 working.memory 0.1.0 (per-task store, CAS heads,
   ns isolation) · **#43 action.authz 0.4.0** (P0-1 deny-by-default reference monitor + injection suite;
   DESIGN-ONLY; exact-closure-complete, gate incomplete pending ratification — see Phase).
-- **#44 `project.map` 0.4.0** (i52, D-0145; base D-0130/31) -- the PCB: fail-closed map/claims/boot-packet compiler + OPERATIONS canon (i52 N6 + open_rulings render) + narrative queries (purpose; `section:` over SCHEMA_NOTES/doc entities/deeper pointers; `card:`) + alias/short-forms + overlay frontier + single-source verb table. `MODULE_ROADMAP.md` #44.
+- **#44 `project.map` 0.4.1** (i60 FO-6 e4c4fdde; i52 D-0145; base D-0130/31) -- the PCB: fail-closed map/claims/boot-packet compiler + OPERATIONS canon (i52 N6 + open_rulings render) + narrative queries (purpose; `section:` over SCHEMA_NOTES/doc entities/deeper pointers; `card:`) + alias/short-forms + overlay frontier + single-source verb table. `MODULE_ROADMAP.md` #44.
 - **NOT built:** #26 agent.coding — designed + DEFERRED (D-0037; no safe code-exec substrate on this box).
 - **Widgets (native + `launch.bat`, D-0038):** 01 Local Agent Console · 02 Module Launcher · 03 Verification
   Console (durable verdicts, D-0065) · 04 Fan-out Wave Dashboard (live-GUI confirm DONE) · 05 Provenance Map
@@ -360,5 +360,5 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ---
 
-**Last updated:** 2026-08-16 -- i60 CLOSED (D-0156): bounded-ingest + control-plane hardening DELIVERED (A/B/C/D shipped f838952a/88f41dee/e4c4fdde; E recorded; F-i53-eff + gate enforcement + adoption proof -> i61); the first class migration -> i68; D-0157 wired the retrieval --gate fail-closed into the close path (ops/close-refold.ps1).
+**Last updated:** 2026-08-17 -- i60 CLOSED (D-0156): bounded-ingest + control-plane hardening DELIVERED (A/B/C/D shipped; E recorded); D-0157 wired the fail-closed retrieval --gate into the close path -- ENFORCEMENT ACTIVE at the zero-bounded floor (i60); F-i53-eff + adoption proof + meaningful-fraction gate RAISE -> i61; first class migration -> i68.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

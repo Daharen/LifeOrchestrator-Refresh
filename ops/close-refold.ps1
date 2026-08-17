@@ -23,7 +23,9 @@ param(
   [string]$Ledger = '',
   [int]$Iteration = 0,
   [string[]]$ArtifactsDirs = @('modules\44-project-map\runtime\artifacts','modules\30-orchestrate-fanout\runtime\artifacts'),
-  [string]$GateOutDir = ''
+  [string]$GateOutDir = '',
+  [double]$MinBoundedFraction = 0,
+  [string]$Date = ''
 )
 $ErrorActionPreference = 'Stop'
 Set-Location $Repo
@@ -33,6 +35,41 @@ $mapD  = Join-Path $m44 'map'
 $genD  = Join-Path $m44 'generated'
 $work  = Join-Path $m44 'runtime\close-refold'
 New-Item -ItemType Directory -Force -Path $work | Out-Null
+# resolve python once (exclude WindowsApps Store stubs, D-0129); used by reaffirm/gate/manager-view/consistency.
+$pyCands0 = @((Get-Command python3 -ErrorAction SilentlyContinue), (Get-Command python -ErrorAction SilentlyContinue)) |
+  Where-Object { $_ -and ($_.Source -notmatch 'WindowsApps') }
+$py = if ($pyCands0) { @($pyCands0)[0].Source } else { 'python' }
+
+# ---- FOLD-MODE FAIL-CLOSED GUARD (i61, D-0158): the canonical close CANNOT run without a real session
+#      retrieval ledger + a valid iteration. An omitted / nonexistent / malformed ledger or an invalid
+#      iteration MUST fail BEFORE any render -- there is NO silent SKIPPED route through the close.
+#      Verify-only mode stays ledger-independent (this guard is fold-only). ----
+if ($Mode -eq 'fold') {
+  if ([string]::IsNullOrWhiteSpace($Ledger)) {
+    throw 'close-refold fold: -Ledger is MANDATORY (the session retrieval ledger). Refusing to close without measured retrieval evidence -- no silent SKIP.'
+  }
+  if (-not (Test-Path -LiteralPath $Ledger -PathType Leaf)) {
+    throw "close-refold fold: -Ledger not found: $Ledger"
+  }
+  if ($Iteration -le 0) {
+    throw "close-refold fold: -Iteration must be a positive integer (got $Iteration)."
+  }
+  # PRE-RENDER gate (fail-closed, NO write): parse the ledger (malformed -> abort) + assert the gate(s) --
+  # the zero-bounded floor always; the meaningful-fraction raise when -MinBoundedFraction > 0. Runs BEFORE
+  # harvest/render so a bad ledger or an un-adopted session aborts the close BEFORE it renders.
+  $mon0 = Join-Path $Repo 'ops/audit/gen-retrieval-monitor.py'
+  $pre = New-Object System.Collections.Generic.List[string]
+  $pre.Add('--ledger'); $pre.Add($Ledger); $pre.Add('--iteration'); $pre.Add("$Iteration")
+  $pre.Add('--gate'); $pre.Add('--check-only')
+  if ($MinBoundedFraction -gt 0) { $pre.Add('--min-bounded-fraction'); $pre.Add("$MinBoundedFraction") }
+  & $py $mon0 @pre 1> (Join-Path $work 'env-gate-precheck.json') 2> (Join-Path $work 'e-gate-precheck.err')
+  if ($LASTEXITCODE -ne 0) {
+    $pt = (Get-Content -Raw (Join-Path $work 'env-gate-precheck.json') -ErrorAction SilentlyContinue)
+    $pe = (Get-Content -Raw (Join-Path $work 'e-gate-precheck.err') -ErrorAction SilentlyContinue)
+    throw "close-refold fold: PRE-RENDER retrieval gate FAILED (exit $LASTEXITCODE) -- aborting BEFORE render. $pt $pe"
+  }
+  Write-Output 'close-refold: pre-render retrieval gate PASS (ledger valid; gate(s) satisfied).'
+}
 $hv   = Join-Path $work 'harvest-close.json'
 $head = (& git -C $Repo rev-parse HEAD).Trim()
 
@@ -96,6 +133,19 @@ if ($LASTEXITCODE -ne 0) { throw "render -Check crashed (exit $LASTEXITCODE)" }
 $envC = Get-Content -Raw (Join-Path $work 'env-check.json') | ConvertFrom-Json
 if ($envC.status -ne 'ok') { throw "render -Check drift: $($envC.error.code)" }
 
+# 6c. MANAGER_VIEW currency (i61, D-0158): REGENERATE from the (possibly corrected) overlay so a corrected
+#     overlay can NEVER leave MANAGER_VIEW stale (the i60 regression), then assert --check clean. MANAGER_VIEW
+#     is thereby always part of the close/rebuild path.
+$mgrGen = Join-Path $Repo 'ops/manager/gen-manager-view.py'
+$mgrArgs = New-Object System.Collections.Generic.List[string]
+$mgrArgs.Add('--repo'); $mgrArgs.Add($Repo)
+if ($Date) { $mgrArgs.Add('--date'); $mgrArgs.Add($Date) }
+& $py $mgrGen @mgrArgs 1> (Join-Path $work 'env-managerview.json') 2> (Join-Path $work 'e-managerview.err')
+if ($LASTEXITCODE -ne 0) { throw "MANAGER_VIEW regenerate FAILED (exit $LASTEXITCODE): $(Get-Content -Raw (Join-Path $work 'e-managerview.err') -ErrorAction SilentlyContinue)" }
+& $py $mgrGen @mgrArgs --check 1> (Join-Path $work 'env-managerview-check.json') 2> (Join-Path $work 'e-managerview-check.err')
+if ($LASTEXITCODE -ne 0) { throw "MANAGER_VIEW --check drift after regenerate (exit $LASTEXITCODE)" }
+Write-Output 'close-refold: MANAGER_VIEW regenerated + --check clean.'
+
 # 6b. RETRIEVAL GATE (i60, D-0157): wire gen-retrieval-monitor --gate FAIL-CLOSED into the close path.
 #     A session that whole-opened docs with ZERO bounded queries CANNOT close (the zero-bounded floor;
 #     i61 raises it to a meaningful bounded fraction). Also emits the standing retrieval-bytes-log row.
@@ -109,7 +159,8 @@ if ($Ledger -and (Test-Path -LiteralPath $Ledger)) {
   $adArgs = New-Object System.Collections.Generic.List[string]
   foreach ($d in $ArtifactsDirs) { $adArgs.Add('--artifacts-dir'); $adArgs.Add($d) }
   $gout = Join-Path $work 'env-retrieval-gate.json'
-  & $pyG $mon --ledger $Ledger --iteration $Iteration --gate --out-dir $god @adArgs 1> $gout 2> (Join-Path $work 'e-gate.err')
+  $mbf = if ($MinBoundedFraction -gt 0) { @('--min-bounded-fraction', "$MinBoundedFraction") } else { @() }
+  & $pyG $mon --ledger $Ledger --iteration $Iteration --gate --out-dir $god @mbf @adArgs 1> $gout 2> (Join-Path $work 'e-gate.err')
   $grc = $LASTEXITCODE
   $rowTxt = (Get-Content -Raw $gout -ErrorAction SilentlyContinue)
   if ($grc -ne 0) { throw "RETRIEVAL GATE FAILED (exit $grc): zero bounded queries alongside whole-doc opens -- bounded retrieval not adopted this session. Row: $rowTxt" }
@@ -120,8 +171,15 @@ if ($Ledger -and (Test-Path -LiteralPath $Ledger)) {
   Write-Output 'close-refold: retrieval-gate SKIPPED (no -Ledger provided)'
 }
 
+# 6d. CROSS-SURFACE AGREEMENT (i61, D-0158): overlay / BOOT_PACKET / MANAGER_VIEW / CURRENT_STATE / handoff
+#     agree on current iteration, next iteration, retrieval-gate state; + COLD_BOOT_CARD stamp currency.
+$cc = Join-Path $Repo 'ops/audit/close-consistency-check.py'
+& $py $cc --repo $Repo 1> (Join-Path $work 'env-consistency.json') 2> (Join-Path $work 'e-consistency.err')
+if ($LASTEXITCODE -ne 0) { throw "close-refold fold: CROSS-SURFACE CONSISTENCY FAILED (exit $LASTEXITCODE): $(Get-Content -Raw (Join-Path $work 'env-consistency.json') -ErrorAction SilentlyContinue)" }
+Write-Output 'close-refold: cross-surface consistency PASS.'
+
 $pkt = Join-Path $genD 'BOOT_PACKET.md'
 $pktBytes = if (Test-Path $pkt) { (Get-Item $pkt).Length } else { -1 }
 Write-Output ("close-refold: FOLD OK head={0} reaffirmed={1} validate=ok render=ok check=ok packet_bytes={2}" -f $head, $n, $pktBytes)
-Write-Output 'close-refold: now commit map/ + generated/ as the FINAL close commit (git lease; named paths).'
+Write-Output 'close-refold: now commit map/ + generated/ + ops/manager/generated/MANAGER_VIEW.md + ops/out/retrieval-bytes-log.jsonl as the FINAL close commit (git lease; named paths).'
 exit 0
