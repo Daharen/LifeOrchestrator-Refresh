@@ -76,7 +76,8 @@ param(
   [string]$MapEntrypoint,
   [string]$EnvelopeFile,
   [string]$PwshPath,
-  [string]$PythonPath
+  [string]$PythonPath,
+  [string]$ArtifactRoot
 )
 
 Set-StrictMode -Version 3.0
@@ -161,6 +162,9 @@ function Get-EnvelopeText {
   # Forward -Repo (forward-compatible with the FO-6 fix) and -Harvest when present.
   $wrapArgs = @('-NoProfile', '-File', $entry, '-Action', 'query', '-Q', $Q, '-Repo', $Repo)
   if ($Harvest) { $wrapArgs += @('-Harvest', $Harvest) }
+  # i61 (D-0159) evidence binding: forward a SESSION-UNIQUE artifact root so this trial's query artifacts
+  # are scoped to the session (not the accumulated shared runtime/artifacts), enabling ownership binding.
+  if ($ArtifactRoot) { $wrapArgs += @('-ArtifactRoot', $ArtifactRoot) }
 
   # Child stdout carries ONLY the envelope (the worker writes diagnostics to stderr); we keep the last
   # non-empty line, mirroring the wrapper's own Select-Object -Last 1.

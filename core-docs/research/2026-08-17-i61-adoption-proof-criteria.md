@@ -71,7 +71,7 @@ Q6 (technical): one section-level fact from a large core-doc (e.g. AUDIT_PIPELIN
   session's own close remains at the zero-bounded floor (the raise judges the ADOPTION trial evidence, not
   the cleanup session).
 
-## RESULT (i61 close, 2026-08-17) -- PASS
+## RESULT (i61 close, 2026-08-17) -- PASS [SUPERSEDED by D-0159: evidence binding insufficient; see the D-0159 re-proof below]
 
 Against the corrected HEAD `78ca57cc` (clean tree, PCB verify 0-stale), a genuinely fresh in-session subagent
 (D-0119) whose ledger existed BEFORE its first orientation read booted through START_HERE, verified the PCB,
