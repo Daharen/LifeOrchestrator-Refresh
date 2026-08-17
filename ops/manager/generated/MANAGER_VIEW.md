@@ -4,9 +4,9 @@ purpose: observability + steering for Nicholas over canonical map state -- NOT a
 snapshot: 2026-08-17
 
 ## ITERATION + PHASE
-iteration: 60 (frontier -> 61)
-phase: Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; PCB BOOT_PACKET is the DEFAULT orchestrator bootstrap (D-0146). i60 CLOSED (D-0156): bounded-ingest + control-plane hardening DELIVERED (A/B/C/D). NEXT = i61 = bounded-ingest ADOPTION proof + hardening (NOT a class migration; the first class migration DEFERS to i68). AUDIT review_due i62 NON-DISPLACING.
-frontier (one line): i60 CLOSED (D-0156): bounded-ingest + control-plane hardening DELIVERED (A/B/C/D shipped; E recorded; SP3 FAIL -> seal retained, M-03 NOT licensed). NEXT = i61 = bounded-ingest ADOPTION proof + hardening (F-i53-eff OPEN; the fail-closed retrieval gate is WIRED into the close path, D-0157, zero-floor active i60, fraction raise i61); the first PB-7 class migration DEFERS to i68.
+iteration: 61 (frontier -> 62)
+phase: Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; PCB BOOT_PACKET is the DEFAULT orchestrator bootstrap (D-0146). i61 CLOSED (D-0158): bounded-ingest ADOPTION proved (F-i53-eff CLOSED) + the close-path retrieval gate RAISED to the meaningful-fraction gate. NEXT = i62 = PB-9 resumable close transaction. AUDIT review_due i62 NON-DISPLACING.
+frontier (one line): i61 CLOSED (D-0158): bounded-ingest ADOPTION PROVED on a genuinely fresh PCB-booted session (discretionary bounded fraction 0.8586 >= 0.80 frozen; machine-verified; artifact cross-check 0 unbacked) -> F-i53-eff CLOSED; the WIRED close-path gate RAISED off the zero-bounded floor to the meaningful-fraction gate (-MinBoundedFraction). NEXT = i62 = PB-9 resumable close TRANSACTION; the first PB-7 class migration DEFERS to i68.
 
 ## PER-PLANE STATUS ROLLUP
 plane: memory (15) -- mvp-complete=10 | no-status=5
@@ -18,14 +18,14 @@ plane: observability (7) -- mvp-complete=6 | no-status=1
 ## FRONTIER CANDIDATES
 - [OPEN (D-0147/D-0156; M-03 mandate DEFERRED -- NOT licensed)] SEALED_CHECK_47 SP3 doc-budget regression -- i60 re-evaluated (D-0156): integrity VERIFIES intact, SP3 still FAILS (ARCHITECTURE_MAP over); seal retained -> core-docs/SEALED_CHECK_47.md
 - [deferred D-0134] #40 context.compile beam-WIDTH follow-on * PB-2 * the w08 explain-window-close defect -> MODULE_ROADMAP.md #40 / PROCESS_BACKLOG PB-2 / widgets/08-live-run-audit-pathway
-- [i61 -- bounded-ingest ADOPTION proof + hardening (D-0156; NOT a class migration -- that DEFERS to i68)] prove bounded-by-default on a fresh PCB-booted session with machine-verified retrieval evidence (close F-i53-eff); RAISE the wired fail-closed close-path gate… -> core-docs/research/2026-08-16-i60-bounded-ingest-design.md + DECISION_LOG D-0156
+- [i62 -- PB-9 resumable close TRANSACTION (D-0155; Frontier Agent in the Deterministic Loop)] consolidate the close into ONE manifest-driven resumable transaction (appends / replacements / section edits / view rebuilds / validators) so a close cannot ha… -> core-docs/PROCESS_BACKLOG.md PB-9 + research/2026-08-15-i59-roadmap-reconciliation.md
 
 ## OPEN PROCESS_BACKLOG ROWS (6)
 - PB-2: Reserved delegation seam: a DELEGATION_PROTOCOL + bounded delegation-index + subagent brief templates for recurring JUDGMENT doc-hygiene. RESERVE now, BUILD only if licensed. + (D-0101): any spawn em… | trigger: LICENSED (D-0119) -> build per this row when >=3 recurring judgment-hygiene tasks hold + a spare lane (non-displacing).
 - PB-3: Hold the hot docs under budget -- the acute i40 slim DONE (185%->96% etc; snapshots archive/doc-snapshots/2026-08-06/); since i42 the M2-A gate holds it MECHANICALLY at commit (mandate 02 SUNSET i47,… | trigger: Monitor row at each close (the gate holds commits); a >40 KB doc -> re-layer plan (FO-3); SEALED_CHECK_47 SP3/SP4 at i>=54.
 - PB-4: AUDIT_PIPELINE increment (D-0101): tier A2 read-only SHIPPED (widgets/05/06/07; live-GUI CONFIRMED i43, D-0120); PROMOTED to core-docs/AUDIT_PIPELINE.md i44 (D-0121); LRAP v1 = NEW widgets/08 SHIPPED… | trigger: Every wave scoping: review_due reached OR a tier-gate flipped OR a new artifact class appeared; if a lane is spare, scope ONE increment; else bump review_due 1…
 - PB-7: Knowledge Surface Re-layer program (D-0141; DESIGN DONE i55/D-0149; PB-6 decision increment COMPLETE i57/D-0151; universal derived-front-door contract FROZEN + red-teamed i58/D-0153; ROOT migrated i5… | trigger: i59 ROOT migrated (D-0154). i59 RECONCILED (D-0155): the first additional CLASS migration DEFERS i60->i68 -- until bounded-ingest is ADOPTED (F-i53-eff satisfi…
-- PB-8: Bounded-ingest ADOPTION + control-plane hardening (D-0155/D-0156): i60 DELIVERED A/B/C/D -- ops/retrieval/retrieve.ps1 bounded-query affordance (easy path = measured path) + gen-retrieval-monitor --g… | trigger: i61 (adoption proof + hardening); F-i53-eff OPEN until machine-verified bounded-by-default.
+- PB-8: Bounded-ingest ADOPTION + control-plane hardening (D-0155/D-0156): i60 DELIVERED A/B/C/D (D-0156): retrieve.ps1 affordance + gen-retrieval-monitor --gate wired into the close (D-0157) + FO-6 (#44 0.4… | trigger: DELIVERED i61 (D-0158): F-i53-eff CLOSED; follow-on PB-9 (i62).
 - PB-9: The resumable close TRANSACTION -- Frontier Agent in the Deterministic Loop (D-0155; the i62-i67 block): ONE manifest-driven close (appends / replacements / section edits / view rebuilds / validators… | trigger: i62 (after bounded-ingest lands); design-first -> red-team at i62.
 
 ## PROHIBITIONS + OPEN RULINGS + SEALED_CHECK

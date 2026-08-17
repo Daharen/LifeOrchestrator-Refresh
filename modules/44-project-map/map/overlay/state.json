@@ -23,16 +23,16 @@
     "pointer": "MODULE_ROADMAP.md #40 / PROCESS_BACKLOG PB-2 / widgets/08-live-run-audit-pathway"
    },
    {
-    "gate": "i61 -- bounded-ingest ADOPTION proof + hardening (D-0156; NOT a class migration -- that DEFERS to i68)",
-    "item": "prove bounded-by-default on a fresh PCB-booted session with machine-verified retrieval evidence (close F-i53-eff); RAISE the wired fail-closed close-path gate from the zero-bounded floor (D-0157, ACTIVE i60: ops/close-refold.ps1 -Ledger runs gen-retrieval-monitor --gate + aborts a zero-bounded close) to a meaningful bounded fraction; resolve/accept the enforcement residuals (zero-bounded floor vs meaningful fraction; self-reported ledger; query-string artifact reconciliation)",
-    "pointer": "core-docs/research/2026-08-16-i60-bounded-ingest-design.md + DECISION_LOG D-0156"
+    "gate": "i62 -- PB-9 resumable close TRANSACTION (D-0155; Frontier Agent in the Deterministic Loop)",
+    "item": "consolidate the close into ONE manifest-driven resumable transaction (appends / replacements / section edits / view rebuilds / validators) so a close cannot half-land; design-first -> red-team at i62. Bounded-ingest is ADOPTED (F-i53-eff CLOSED i61, D-0158); the first PB-7 class migration follows at i68",
+    "pointer": "core-docs/PROCESS_BACKLOG.md PB-9 + research/2026-08-15-i59-roadmap-reconciliation.md"
    }
   ],
-  "derived_from": "core-docs/CURRENT_STATE.md + DECISION_LOG D-0156 at the i60 close; overlay frontier redirected to i61 = bounded-ingest ADOPTION proof + hardening (D-0156); standing_constraints unchanged (D-0156 adds no prohibition).",
-  "next_iteration": 61,
-  "summary": "i60 CLOSED (D-0156): bounded-ingest + control-plane hardening DELIVERED (A/B/C/D shipped; E recorded; SP3 FAIL -> seal retained, M-03 NOT licensed). NEXT = i61 = bounded-ingest ADOPTION proof + hardening (F-i53-eff OPEN; the fail-closed retrieval gate is WIRED into the close path, D-0157, zero-floor active i60, fraction raise i61); the first PB-7 class migration DEFERS to i68."
+  "derived_from": "core-docs/CURRENT_STATE.md + DECISION_LOG D-0158 at the i61 close; overlay frontier advanced to i62 = PB-9 resumable close transaction (bounded-ingest ADOPTED, F-i53-eff CLOSED); standing_constraints unchanged (D-0158 adds no prohibition).",
+  "next_iteration": 62,
+  "summary": "i61 CLOSED (D-0158): bounded-ingest ADOPTION PROVED on a genuinely fresh PCB-booted session (discretionary bounded fraction 0.8586 >= 0.80 frozen; machine-verified; artifact cross-check 0 unbacked) -> F-i53-eff CLOSED; the WIRED close-path gate RAISED off the zero-bounded floor to the meaningful-fraction gate (-MinBoundedFraction). NEXT = i62 = PB-9 resumable close TRANSACTION; the first PB-7 class migration DEFERS to i68."
  },
- "iteration": 60,
+ "iteration": 61,
  "open_rulings": [
   {
    "ref": "decision:D-0132",
@@ -45,7 +45,7 @@
  ],
  "phase": {
   "ref": "doc:core-docs/CURRENT_STATE.md",
-  "text": "Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; PCB BOOT_PACKET is the DEFAULT orchestrator bootstrap (D-0146). i60 CLOSED (D-0156): bounded-ingest + control-plane hardening DELIVERED (A/B/C/D). NEXT = i61 = bounded-ingest ADOPTION proof + hardening (NOT a class migration; the first class migration DEFERS to i68). AUDIT review_due i62 NON-DISPLACING."
+  "text": "Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; PCB BOOT_PACKET is the DEFAULT orchestrator bootstrap (D-0146). i61 CLOSED (D-0158): bounded-ingest ADOPTION proved (F-i53-eff CLOSED) + the close-path retrieval gate RAISED to the meaningful-fraction gate. NEXT = i62 = PB-9 resumable close transaction. AUDIT review_due i62 NON-DISPLACING."
  },
  "prohibitions": [
   {
