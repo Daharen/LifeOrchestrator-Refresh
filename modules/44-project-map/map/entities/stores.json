@@ -299,6 +299,10 @@
        "by": "orchestrator-i48-close"
       },
       {
+       "at_commit": "305eb833ceb77b17c8401dc395a20300569df730",
+       "by": "orchestrator-close"
+      },
+      {
        "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
        "by": "orchestrator-i48"
       },
@@ -380,7 +384,7 @@
       }
      ],
      "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
-     "sha256": "c7ecdca8d4e26fc74a6d17496314c5d35db29e472776ec9d8ccf743c3eaf29d0"
+     "sha256": "98f955acb917022a09ccfd5e49248b0917edc48b312bd358661a100f286a6d94"
     }
    ]
   },
@@ -405,6 +409,10 @@
       {
        "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
        "by": "orchestrator-i48-close"
+      },
+      {
+       "at_commit": "305eb833ceb77b17c8401dc395a20300569df730",
+       "by": "orchestrator-close"
       },
       {
        "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
@@ -484,7 +492,7 @@
       }
      ],
      "ref": "core-docs/CURRENT_STATE.md",
-     "sha256": "dd8ac45a87216f0c21bc31302f4a4e8fab7e4f123996c14189316b8daaaad4af"
+     "sha256": "0202dbe3548cd4a4208e9de1a6184d2474b8d54b6511bf500a6da5dd936e6550"
     }
    ]
   },
@@ -509,6 +517,10 @@
       {
        "at_commit": "24347fe1f8c8d2e07100c76754a0c54e414c41e8",
        "by": "orchestrator-i48-close"
+      },
+      {
+       "at_commit": "305eb833ceb77b17c8401dc395a20300569df730",
+       "by": "orchestrator-close"
       },
       {
        "at_commit": "4055dc13177eb84d066ce966da4ed2afcb66cb5d",
@@ -592,7 +604,7 @@
       }
      ],
      "ref": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md",
-     "sha256": "c7ecdca8d4e26fc74a6d17496314c5d35db29e472776ec9d8ccf743c3eaf29d0"
+     "sha256": "98f955acb917022a09ccfd5e49248b0917edc48b312bd358661a100f286a6d94"
     }
    ]
   },
