@@ -1,0 +1,5 @@
+# D-0160: pin the i61-trial2 evidence to byte-stable LF so trial-binding-check.py stays
+# reproducible on any checkout (autocrlf must NOT flip the manifest and break its sha256 seal).
+i61-trial2.jsonl -text
+i61-trial2-manifest.json -text
+i61-trial2-manifest.json.sha256 -text
