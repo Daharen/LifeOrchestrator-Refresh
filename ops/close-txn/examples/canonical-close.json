@@ -1,0 +1,147 @@
+{
+  "schema": "lifeorch.close_manifest/0.1",
+  "header": {
+    "transaction_id": "close-i62-example001",
+    "iteration": 62,
+    "base_head": "55da004",
+    "ledger_ref": "modules/44-project-map/runtime/artifacts/ledger-i62.jsonl",
+    "min_bounded_fraction": 0.80,
+    "created_by": "orchestrator-close",
+    "model_provenance": "opus-4.8-extra",
+    "governing_model": "frontier-agent-in-deterministic-loop"
+  },
+  "operations": [
+    {
+      "op_id": "append-dlog",
+      "kind": "append",
+      "target": "core-docs/DECISION_LOG.md",
+      "semantic_owner": "frontier",
+      "eol": "crlf",
+      "region_anchor": { "type": "append_below", "marker": "<!-- LO:DLOG-TAIL -->" },
+      "precondition": { "basis": "native-raw", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
+      "postcondition": null,
+      "payload_ref": "runtime/close-i62/payloads/d-0161.md",
+      "task_spec": { "goal": "author the D-0161 entry", "constraints": ["append-only", "index-row-paired"] },
+      "depends_on": []
+    },
+    {
+      "op_id": "grade-dlog",
+      "kind": "validator",
+      "validator_id": "independent-grader:d-0161",
+      "target": "core-docs/DECISION_LOG.md",
+      "semantic_owner": "deterministic",
+      "payload_ref": { "predicate": "claim-vs-evidence", "evidence": ["research/2026-08-21-i62-close-transaction-hardened.md"] },
+      "depends_on": ["append-dlog"]
+    },
+    {
+      "op_id": "append-dindex",
+      "kind": "append",
+      "target": "core-docs/DECISION_LOG_INDEX.md",
+      "semantic_owner": "frontier",
+      "eol": "crlf",
+      "region_anchor": { "type": "append_below", "marker": "<!-- LO:DINDEX-TAIL -->" },
+      "precondition": { "basis": "native-raw", "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" },
+      "postcondition": null,
+      "payload_ref": "runtime/close-i62/payloads/dindex-0161.md",
+      "task_spec": { "goal": "author the D-0161 index routing row" },
+      "depends_on": []
+    },
+    {
+      "op_id": "grade-dindex",
+      "kind": "validator",
+      "validator_id": "independent-grader:dindex-0161",
+      "target": "core-docs/DECISION_LOG_INDEX.md",
+      "semantic_owner": "deterministic",
+      "payload_ref": { "predicate": "claim-vs-evidence" },
+      "depends_on": ["append-dindex"]
+    },
+    {
+      "op_id": "replace-cs-next",
+      "kind": "replace_section",
+      "target": "core-docs/CURRENT_STATE.md",
+      "semantic_owner": "frontier",
+      "eol": "crlf",
+      "region_anchor": { "type": "heading", "heading": "## Next expected action" },
+      "precondition": { "basis": "native-raw", "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" },
+      "postcondition": null,
+      "payload_ref": "runtime/close-i62/payloads/cs-next.md",
+      "task_spec": { "goal": "replace the Next expected action section for the i62 close" },
+      "depends_on": []
+    },
+    {
+      "op_id": "grade-cs-next",
+      "kind": "validator",
+      "validator_id": "independent-grader:cs-next",
+      "target": "core-docs/CURRENT_STATE.md",
+      "semantic_owner": "deterministic",
+      "payload_ref": { "predicate": "claim-vs-evidence" },
+      "depends_on": ["replace-cs-next"]
+    },
+    {
+      "op_id": "rebuild-map",
+      "kind": "view_rebuild",
+      "target": "view:project.map",
+      "semantic_owner": "deterministic",
+      "payload_ref": { "generator": "ops/close-refold.ps1", "mode": "fold", "double_run": true },
+      "postcondition": { "basis": "native-raw", "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" },
+      "depends_on": ["append-dlog", "append-dindex", "replace-cs-next"]
+    },
+    {
+      "op_id": "val-doc-gate",
+      "kind": "validator",
+      "validator_id": "doc-commit-gate",
+      "semantic_owner": "deterministic",
+      "payload_ref": { "files": ["core-docs/DECISION_LOG.md", "core-docs/DECISION_LOG_INDEX.md", "core-docs/CURRENT_STATE.md"], "no_truncation": true },
+      "depends_on": ["append-dlog", "append-dindex", "replace-cs-next"]
+    },
+    {
+      "op_id": "val-retrieval-gate",
+      "kind": "validator",
+      "validator_id": "gen-retrieval-monitor--gate",
+      "semantic_owner": "deterministic",
+      "payload_ref": { "ledger": "modules/44-project-map/runtime/artifacts/ledger-i62.jsonl", "min_bounded_fraction": 0.80 },
+      "depends_on": ["rebuild-map"]
+    },
+    {
+      "op_id": "val-completeness",
+      "kind": "validator",
+      "validator_id": "inbound-reference-closure",
+      "semantic_owner": "deterministic",
+      "payload_ref": { "targets": ["core-docs/DECISION_LOG.md", "core-docs/CURRENT_STATE.md"] },
+      "depends_on": ["append-dlog", "replace-cs-next"]
+    },
+    {
+      "op_id": "val-consistency",
+      "kind": "validator",
+      "validator_id": "close-consistency-check",
+      "semantic_owner": "deterministic",
+      "payload_ref": { "expect_iteration": 62 },
+      "depends_on": ["rebuild-map"]
+    },
+    {
+      "op_id": "stamp-map-sha",
+      "kind": "stamp",
+      "target": "view:project.map/generated",
+      "semantic_owner": "deterministic",
+      "payload_ref": { "field": "at_commit", "source": "post-cutover-head" },
+      "postcondition": { "basis": "native-raw", "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" },
+      "depends_on": ["val-consistency"]
+    },
+    {
+      "op_id": "mirror-project",
+      "kind": "mirror_reconcile",
+      "target": "mirror:claude-project",
+      "semantic_owner": "deterministic",
+      "payload_ref": { "reconcile": "full", "assert": "project-set==core-docs-set" },
+      "depends_on": []
+    },
+    {
+      "op_id": "mirror-github",
+      "kind": "mirror_reconcile",
+      "target": "mirror:github",
+      "semantic_owner": "deterministic",
+      "payload_ref": { "managed_ref": "main", "force_with_lease": true, "ancestor_check": true },
+      "depends_on": []
+    }
+  ]
+}

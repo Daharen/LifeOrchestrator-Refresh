@@ -1,0 +1,21 @@
+{
+  "schema": "lifeorch.close_manifest/0.1",
+  "header": {
+    "transaction_id": "close-i62-neg-noledger",
+    "iteration": 62,
+    "base_head": "55da004",
+    "min_bounded_fraction": 0.80,
+    "created_by": "orchestrator-close",
+    "model_provenance": "opus-4.8-extra",
+    "governing_model": "frontier-agent-in-deterministic-loop"
+  },
+  "operations": [
+    {
+      "op_id": "noop-ack",
+      "kind": "ack",
+      "semantic_owner": "deterministic",
+      "payload_ref": { "predicate": "true" },
+      "depends_on": []
+    }
+  ]
+}

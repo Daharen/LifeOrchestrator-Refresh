@@ -1,0 +1,256 @@
+#!/usr/bin/env python3
+"""Tests for validate_manifest.py (i62 PB-9 groundwork).
+
+Positive: the shipped example manifests validate clean.
+Negative: each invariant, exercised by a targeted mutation of a valid base, produces its specific finding.
+Also tests the CLI exit codes (0 valid / 1 invalid / 2 usage) and the helper functions.
+
+stdlib unittest; deterministic; no network. Run: python3 -m unittest -v (from ops/close-txn/tests) or
+python3 tests/test_validate_manifest.py
+"""
+import copy
+import io
+import json
+import os
+import sys
+import unittest
+from contextlib import redirect_stdout
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+PKG = os.path.dirname(HERE)
+sys.path.insert(0, PKG)
+import validate_manifest as vm  # noqa: E402
+
+EXAMPLES = os.path.join(PKG, "examples")
+
+
+def load(name):
+    with open(os.path.join(EXAMPLES, name), "r", encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+def findings_contain(findings, needle):
+    return any(needle in f for f in findings)
+
+
+class PositiveExamples(unittest.TestCase):
+    def test_canonical_close_valid(self):
+        self.assertEqual(vm.validate(load("canonical-close.json")), [])
+
+    def test_two_edit_one_file_valid(self):
+        self.assertEqual(vm.validate(load("two-edit-one-file.json")), [])
+
+
+class NegativeMutations(unittest.TestCase):
+    def setUp(self):
+        self.base = load("canonical-close.json")
+        # sanity: base must be clean or the mutation tests are meaningless
+        self.assertEqual(vm.validate(self.base), [])
+
+    def _ops(self, m):
+        return {o["op_id"]: o for o in m["operations"]}
+
+    def test_replace_doc_taxonomy(self):
+        m = copy.deepcopy(self.base)
+        self._ops(m)["replace-cs-next"]["kind"] = "replace_doc"
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "not in the frozen taxonomy"), f)
+
+    def test_duplicate_op_id(self):
+        m = copy.deepcopy(self.base)
+        m["operations"].append(copy.deepcopy(self._ops(m)["mirror-github"]))
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "duplicate op_id"), f)
+
+    def test_cycle(self):
+        m = copy.deepcopy(self.base)
+        self._ops(m)["append-dlog"]["depends_on"] = ["grade-dlog"]
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "CYCLE"), f)
+
+    def test_frontier_no_grader(self):
+        m = copy.deepcopy(self.base)
+        m["operations"] = [o for o in m["operations"] if o["op_id"] != "grade-cs-next"]
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "NO dependent 'independent-grader'"), f)
+
+    def test_frontier_selfhash(self):
+        m = copy.deepcopy(self.base)
+        self._ops(m)["replace-cs-next"]["postcondition"] = {
+            "basis": "native-raw",
+            "sha256": "f" * 64,
+        }
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "must NOT pre-declare a postcondition"), f)
+
+    def test_monotonic_create(self):
+        m = copy.deepcopy(self.base)
+        op = self._ops(m)["append-dlog"]
+        op["kind"] = "create"
+        op["precondition"] = "absent"
+        del op["region_anchor"]
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "create is forbidden on the append-only target"), f)
+
+    def test_monotonic_replace_section_needs_nonhistorical(self):
+        m = copy.deepcopy(self.base)
+        op = self._ops(m)["append-dlog"]
+        op["kind"] = "replace_section"
+        op["region_anchor"] = {"type": "heading", "heading": "## Some Section"}
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "region_class='non-historical'"), f)
+
+    def test_missing_ledger(self):
+        m = copy.deepcopy(self.base)
+        del m["header"]["ledger_ref"]
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "ledger_ref is MANDATORY"), f)
+
+    def test_bad_iteration(self):
+        m = copy.deepcopy(self.base)
+        m["header"]["iteration"] = 0
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "iteration must be an integer >= 1"), f)
+
+    def test_bad_governing_model(self):
+        m = copy.deepcopy(self.base)
+        m["header"]["governing_model"] = "human-in-the-loop"
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "governing_model must be"), f)
+
+    def test_unserialized_multiedit(self):
+        m = copy.deepcopy(self.base)
+        m["operations"].append({
+            "op_id": "cs-phase2",
+            "kind": "replace_section",
+            "target": "core-docs/CURRENT_STATE.md",
+            "semantic_owner": "frontier",
+            "eol": "crlf",
+            "region_anchor": {"type": "heading", "heading": "## Phase + active work"},
+            "precondition": {"basis": "native-raw", "sha256": "9" * 64},
+            "postcondition": None,
+            "payload_ref": "x",
+            "task_spec": {"goal": "phase"},
+            "depends_on": [],
+        })
+        m["operations"].append({
+            "op_id": "grade-cs-phase2",
+            "kind": "validator",
+            "validator_id": "independent-grader:cs-phase2",
+            "semantic_owner": "deterministic",
+            "payload_ref": {"predicate": "claim-vs-evidence"},
+            "depends_on": ["cs-phase2"],
+        })
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "not dependency-serialized"), f)
+
+    def test_shared_anchor_multiedit(self):
+        m = copy.deepcopy(self.base)
+        anchor = {"type": "heading", "heading": "## Next expected action"}
+        m["operations"].append({
+            "op_id": "cs-dup",
+            "kind": "replace_section",
+            "target": "core-docs/CURRENT_STATE.md",
+            "semantic_owner": "frontier",
+            "eol": "crlf",
+            "region_anchor": anchor,
+            "precondition": {"basis": "native-raw", "sha256": "8" * 64},
+            "postcondition": None,
+            "payload_ref": "x",
+            "task_spec": {"goal": "dup"},
+            "depends_on": ["replace-cs-next"],
+        })
+        m["operations"].append({
+            "op_id": "grade-cs-dup",
+            "kind": "validator",
+            "validator_id": "independent-grader:cs-dup",
+            "semantic_owner": "deterministic",
+            "payload_ref": {"predicate": "x"},
+            "depends_on": ["cs-dup"],
+        })
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "identical region_anchor"), f)
+
+    def test_missing_anchor(self):
+        m = copy.deepcopy(self.base)
+        del self._ops(m)["replace-cs-next"]["region_anchor"]
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "requires a region_anchor object"), f)
+
+    def test_content_missing_eol(self):
+        m = copy.deepcopy(self.base)
+        del self._ops(m)["replace-cs-next"]["eol"]
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "content op requires eol"), f)
+
+    def test_frontier_missing_task_spec(self):
+        m = copy.deepcopy(self.base)
+        del self._ops(m)["replace-cs-next"]["task_spec"]
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "requires a task_spec"), f)
+
+    def test_unresolved_depends_on(self):
+        m = copy.deepcopy(self.base)
+        self._ops(m)["rebuild-map"]["depends_on"].append("does-not-exist")
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "unknown op_id"), f)
+
+    def test_nothing_depends_on_mirror(self):
+        m = copy.deepcopy(self.base)
+        self._ops(m)["stamp-map-sha"]["depends_on"].append("mirror-github")
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "mirrors are post-SEAL terminal"), f)
+
+    def test_bad_base_head(self):
+        m = copy.deepcopy(self.base)
+        m["header"]["base_head"] = "ZZZ"
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "base_head must be"), f)
+
+    def test_validator_missing_id(self):
+        m = copy.deepcopy(self.base)
+        del self._ops(m)["val-consistency"]["validator_id"]
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "validator requires validator_id"), f)
+
+
+class Helpers(unittest.TestCase):
+    def test_is_monotonic(self):
+        self.assertTrue(vm.is_monotonic("core-docs/DECISION_LOG.md"))
+        self.assertTrue(vm.is_monotonic("core-docs/DECISION_LOG_INDEX.md"))
+        self.assertTrue(vm.is_monotonic("ops/out/retrieval-bytes-log.jsonl"))
+        self.assertFalse(vm.is_monotonic("core-docs/CURRENT_STATE.md"))
+        self.assertFalse(vm.is_monotonic(None))
+
+    def test_reachable(self):
+        m = load("canonical-close.json")
+        by_id = {o["op_id"]: o for o in m["operations"]}
+        self.assertTrue(vm._reachable("grade-dlog", "append-dlog", by_id))
+        self.assertFalse(vm._reachable("append-dlog", "grade-dlog", by_id))
+
+
+class CLI(unittest.TestCase):
+    def test_exit0_valid(self):
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            rc = vm.main([os.path.join(EXAMPLES, "canonical-close.json")])
+        self.assertEqual(rc, 0)
+        self.assertIn("VALID", buf.getvalue())
+
+    def test_exit2_missing_file(self):
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            rc = vm.main([os.path.join(EXAMPLES, "does-not-exist.json")])
+        self.assertEqual(rc, 2)
+
+    def test_exit1_invalid(self):
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            rc = vm.main([os.path.join(EXAMPLES, "negative-missing-ledger.json")])
+        self.assertEqual(rc, 1)
+        self.assertIn("INVALID", buf.getvalue())
+        self.assertIn("ledger_ref is MANDATORY", buf.getvalue())
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

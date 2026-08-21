@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "lifeorch.close_manifest/0.1",
+  "title": "Life Orchestrator close-transaction manifest (PB-9, i62 hardened contract)",
+  "description": "Declarative description of ONE resumable/idempotent close. i62 FROZEN contract-level schema; the materializer that executes it is i63. Companion: ops/close-txn/validate_manifest.py enforces the invariants a pure JSON-Schema cannot (acyclicity, grader edges, single-file serialization, monotonic-target protection, declared-target closure). See research/2026-08-21-i62-close-transaction-hardened.md.",
+  "type": "object",
+  "required": ["schema", "header", "operations"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "lifeorch.close_manifest/0.1" },
+    "header": {
+      "type": "object",
+      "required": ["transaction_id", "iteration", "base_head", "ledger_ref", "min_bounded_fraction", "created_by", "model_provenance", "governing_model"],
+      "additionalProperties": false,
+      "properties": {
+        "transaction_id": { "type": "string", "minLength": 1, "pattern": "^close-i[0-9]+-[A-Za-z0-9._-]+$" },
+        "iteration": { "type": "integer", "minimum": 1 },
+        "base_head": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+        "ledger_ref": { "type": "string", "minLength": 1 },
+        "min_bounded_fraction": { "type": "number", "minimum": 0, "maximum": 1 },
+        "created_by": { "type": "string", "minLength": 1 },
+        "model_provenance": { "type": "string", "minLength": 1 },
+        "governing_model": { "const": "frontier-agent-in-deterministic-loop" }
+      }
+    },
+    "operations": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/operation" }
+    }
+  },
+  "$defs": {
+    "fingerprint": {
+      "description": "A section 3 native-byte fingerprint. basis is FROZEN to native-raw (no EOL normalization, native git source). 'absent' marks a create precondition. A frontier content op's postcondition may be null (computed on-device at APPLY, F-3).",
+      "oneOf": [
+        { "type": "null" },
+        { "type": "string", "const": "absent" },
+        {
+          "type": "object",
+          "required": ["basis", "sha256"],
+          "additionalProperties": false,
+          "properties": {
+            "basis": { "const": "native-raw" },
+            "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          }
+        }
+      ]
+    },
+    "region_anchor": {
+      "description": "A stable, collision-checked region locator (INV-10). NEVER a byte offset. 'marker' fences a span between two unique comment markers; 'append_below' pins an append immediately below a unique marker line so it is invariant under prior in-manifest appends (INV-11).",
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["marker", "append_below", "heading"] },
+        "open": { "type": "string", "minLength": 1 },
+        "close": { "type": "string", "minLength": 1 },
+        "marker": { "type": "string", "minLength": 1 },
+        "heading": { "type": "string", "minLength": 1 },
+        "region_class": { "enum": ["historical", "non-historical"] }
+      },
+      "additionalProperties": false
+    },
+    "operation": {
+      "type": "object",
+      "required": ["op_id", "kind", "semantic_owner", "depends_on"],
+      "additionalProperties": true,
+      "properties": {
+        "op_id": { "type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9._:-]+$" },
+        "kind": { "enum": ["append", "replace_section", "create", "view_rebuild", "validator", "ack", "mirror_reconcile", "stamp"] },
+        "target": { "type": "string", "minLength": 1 },
+        "semantic_owner": { "enum": ["deterministic", "frontier"] },
+        "eol": { "enum": ["crlf", "lf"] },
+        "region_anchor": { "$ref": "#/$defs/region_anchor" },
+        "payload_ref": {},
+        "precondition": { "$ref": "#/$defs/fingerprint" },
+        "postcondition": { "$ref": "#/$defs/fingerprint" },
+        "validator_id": { "type": "string", "minLength": 1 },
+        "depends_on": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "task_spec": {
+          "description": "REQUIRED for semantic_owner=frontier (auditability; the PB-2 DELEGATION-DECISION shape).",
+          "type": "object"
+        }
+      }
+    }
+  }
+}

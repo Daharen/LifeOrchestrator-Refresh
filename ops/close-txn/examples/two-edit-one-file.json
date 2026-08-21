@@ -1,0 +1,57 @@
+{
+  "schema": "lifeorch.close_manifest/0.1",
+  "header": {
+    "transaction_id": "close-i62-twoedit",
+    "iteration": 62,
+    "base_head": "55da004",
+    "ledger_ref": "runtime/ledger-i62.jsonl",
+    "min_bounded_fraction": 0.80,
+    "created_by": "orchestrator-close",
+    "model_provenance": "opus-4.8-extra",
+    "governing_model": "frontier-agent-in-deterministic-loop"
+  },
+  "operations": [
+    {
+      "op_id": "cs-phase",
+      "kind": "replace_section",
+      "target": "core-docs/CURRENT_STATE.md",
+      "semantic_owner": "frontier",
+      "eol": "crlf",
+      "region_anchor": { "type": "heading", "heading": "## Phase + active work" },
+      "precondition": { "basis": "native-raw", "sha256": "1111111111111111111111111111111111111111111111111111111111111111" },
+      "postcondition": null,
+      "payload_ref": "runtime/close-i62/payloads/cs-phase.md",
+      "task_spec": { "goal": "update the phase/active-work section" },
+      "depends_on": []
+    },
+    {
+      "op_id": "grade-cs-phase",
+      "kind": "validator",
+      "validator_id": "independent-grader:cs-phase",
+      "semantic_owner": "deterministic",
+      "payload_ref": { "predicate": "claim-vs-evidence" },
+      "depends_on": ["cs-phase"]
+    },
+    {
+      "op_id": "cs-next",
+      "kind": "replace_section",
+      "target": "core-docs/CURRENT_STATE.md",
+      "semantic_owner": "frontier",
+      "eol": "crlf",
+      "region_anchor": { "type": "heading", "heading": "## Next expected action" },
+      "precondition": { "basis": "native-raw", "sha256": "2222222222222222222222222222222222222222222222222222222222222222" },
+      "postcondition": null,
+      "payload_ref": "runtime/close-i62/payloads/cs-next.md",
+      "task_spec": { "goal": "update the next-expected-action section" },
+      "depends_on": ["cs-phase"]
+    },
+    {
+      "op_id": "grade-cs-next",
+      "kind": "validator",
+      "validator_id": "independent-grader:cs-next",
+      "semantic_owner": "deterministic",
+      "payload_ref": { "predicate": "claim-vs-evidence" },
+      "depends_on": ["cs-next"]
+    }
+  ]
+}
