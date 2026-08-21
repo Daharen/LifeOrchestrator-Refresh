@@ -79,6 +79,24 @@
         "task_spec": {
           "description": "REQUIRED for semantic_owner=frontier (auditability; the PB-2 DELEGATION-DECISION shape).",
           "type": "object"
+        },
+        "doc_class": {
+          "description": "Artifact classification (INV-15, hardened contract s9). 'projection' = a bounded, routinely-ingested view: REQUIRES budget_bytes + backing_ref. 'backing' = complete canonical source: FORBIDS budget_bytes and MUST NOT be a bootstrap read (boot_read must be false/absent). A projection's ingest budget is never imposed on its backing.",
+          "enum": ["projection", "backing"]
+        },
+        "budget_bytes": {
+          "description": "For doc_class=projection only: the declared ingest byte cap the doc-gate/front-door gate enforces.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "backing_ref": {
+          "description": "For doc_class=projection only: the canonical backing this projection projects (a path/dir).",
+          "type": "string",
+          "minLength": 1
+        },
+        "boot_read": {
+          "description": "Whether this op marks its target as a bootstrap/boot_read (routine) read. A doc_class=backing op MUST NOT set this true.",
+          "type": "boolean"
         }
       }
     }

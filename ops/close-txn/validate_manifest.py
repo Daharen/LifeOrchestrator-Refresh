@@ -148,6 +148,21 @@ def validate(manifest):
             if "payload_ref" not in op:
                 bad("%s stamp requires payload_ref (derivation source)" % loc)
 
+        # INV-15: artifact classification (projection / backing). A projection declares its budget + backing;
+        # a backing carries NO ingest budget and MUST NOT be a bootstrap read.
+        dc = op.get("doc_class")
+        if dc == "projection":
+            bb = op.get("budget_bytes")
+            if not isinstance(bb, int) or isinstance(bb, bool) or bb < 1:
+                bad("%s doc_class=projection requires budget_bytes (int>=1) (INV-15)" % loc)
+            if not op.get("backing_ref"):
+                bad("%s doc_class=projection requires backing_ref (INV-15)" % loc)
+        elif dc == "backing":
+            if "budget_bytes" in op:
+                bad("%s doc_class=backing must NOT carry budget_bytes -- backing has no ingest budget (INV-15)" % loc)
+            if op.get("boot_read") is True:
+                bad("%s doc_class=backing must NOT be marked a bootstrap/boot_read read (INV-15)" % loc)
+
         # INV-12: monotonic targets accept only append / replace_section(non-historical)
         tgt = op.get("target")
         if kind in CONTENT_KINDS and is_monotonic(tgt):

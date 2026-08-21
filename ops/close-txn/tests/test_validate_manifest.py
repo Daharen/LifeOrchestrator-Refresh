@@ -64,12 +64,14 @@ class NegativeMutations(unittest.TestCase):
 
     def test_cycle(self):
         m = copy.deepcopy(self.base)
+        # make append-dlog depend on its own grader -> cycle append-dlog -> grade-dlog -> append-dlog
         self._ops(m)["append-dlog"]["depends_on"] = ["grade-dlog"]
         f = vm.validate(m)
         self.assertTrue(findings_contain(f, "CYCLE"), f)
 
     def test_frontier_no_grader(self):
         m = copy.deepcopy(self.base)
+        # remove the grader edge for replace-cs-next
         m["operations"] = [o for o in m["operations"] if o["op_id"] != "grade-cs-next"]
         f = vm.validate(m)
         self.assertTrue(findings_contain(f, "NO dependent 'independent-grader'"), f)
@@ -120,6 +122,7 @@ class NegativeMutations(unittest.TestCase):
 
     def test_unserialized_multiedit(self):
         m = copy.deepcopy(self.base)
+        # add a second edit to CURRENT_STATE.md that is NOT serialized with replace-cs-next
         m["operations"].append({
             "op_id": "cs-phase2",
             "kind": "replace_section",
@@ -146,6 +149,7 @@ class NegativeMutations(unittest.TestCase):
 
     def test_shared_anchor_multiedit(self):
         m = copy.deepcopy(self.base)
+        # two serialized edits to CURRENT_STATE.md sharing the SAME anchor -> overlap
         anchor = {"type": "heading", "heading": "## Next expected action"}
         m["operations"].append({
             "op_id": "cs-dup",
@@ -213,6 +217,38 @@ class NegativeMutations(unittest.TestCase):
         f = vm.validate(m)
         self.assertTrue(findings_contain(f, "validator requires validator_id"), f)
 
+    # ---- INV-15 artifact classification (projection / backing) ----
+    def test_projection_requires_budget_and_backing(self):
+        m = copy.deepcopy(self.base)
+        self._ops(m)["replace-cs-next"]["doc_class"] = "projection"  # no budget_bytes / backing_ref
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "doc_class=projection requires budget_bytes"), f)
+        self.assertTrue(findings_contain(f, "doc_class=projection requires backing_ref"), f)
+
+    def test_valid_projection_ok(self):
+        m = copy.deepcopy(self.base)
+        op = self._ops(m)["replace-cs-next"]
+        op["doc_class"] = "projection"
+        op["budget_bytes"] = 10000
+        op["backing_ref"] = "ops/close-txn/spec/"
+        self.assertEqual(vm.validate(m), [])  # a well-formed projection adds no finding
+
+    def test_backing_forbids_budget(self):
+        m = copy.deepcopy(self.base)
+        op = self._ops(m)["replace-cs-next"]
+        op["doc_class"] = "backing"
+        op["budget_bytes"] = 10000
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "doc_class=backing must NOT carry budget_bytes"), f)
+
+    def test_backing_forbids_boot_read(self):
+        m = copy.deepcopy(self.base)
+        op = self._ops(m)["replace-cs-next"]
+        op["doc_class"] = "backing"
+        op["boot_read"] = True
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "doc_class=backing must NOT be marked a bootstrap"), f)
+
 
 class Helpers(unittest.TestCase):
     def test_is_monotonic(self):
@@ -244,6 +280,8 @@ class CLI(unittest.TestCase):
         self.assertEqual(rc, 2)
 
     def test_exit1_invalid(self):
+        # a SHIPPED static negative example (no temp-file write/delete: robust on the delete-less mount VM
+        # and the native executor alike). negative-missing-ledger.json omits header.ledger_ref (INV-4).
         buf = io.StringIO()
         with redirect_stdout(buf):
             rc = vm.main([os.path.join(EXAMPLES, "negative-missing-ledger.json")])
