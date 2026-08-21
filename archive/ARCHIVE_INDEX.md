@@ -132,3 +132,4 @@ Pre-slim full snapshots taken before the D-0066 consolidation (byte-exact from d
 | archive/handoffs/2026-08-15-FANOUT_ORCHESTRATOR_HANDOFF-i59.md | the outgoing FANOUT_ORCHESTRATOR_HANDOFF snapshot (i58-close state, rewritten in place at the i59 close) | 2026-08-15 | D-0154 |
 | archive/handoffs/2026-08-15-FANOUT_ORCHESTRATOR_HANDOFF-i59-reconciliation.md | the i59-close handoff snapshot, rewritten in place at the i59 planning reconciliation | 2026-08-15 | D-0155 |
 | archive/doc-snapshots/2026-08-15/MEMORY_ARCHITECTURE.md | the pre-reconciliation MEMORY_ARCHITECTURE (i34 acceptance-pending status), snapshotted before the D-0155 PB-3 slim | 2026-08-15 | D-0155 |
+| archive/handoffs/2026-08-21-FANOUT_ORCHESTRATOR_HANDOFF-i62close.md | the outgoing FANOUT_ORCHESTRATOR_HANDOFF snapshot (i61-close state, rewritten in place at the i62 close) | 2026-08-21 | D-0161 |
