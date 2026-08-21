@@ -1,0 +1,19 @@
+{"bytes":2861,"kind":"query","target":"entity:module:44"}
+{"bytes":4670,"kind":"query","target":"entity:module:40"}
+{"bytes":1540,"kind":"query","target":"entity:module:45"}
+{"bytes":69,"kind":"query","target":"edges:module:44"}
+{"bytes":387,"kind":"query","target":"deeper:module:44"}
+{"bytes": 18055, "kind": "boot_packet", "target": "modules/44-project-map/generated/BOOT_PACKET.md"}
+{"bytes": 33966, "kind": "whole_doc_open", "target": "core-docs/CURRENT_STATE.md"}
+{"bytes": 23949, "kind": "whole_doc_open", "target": "core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md"}
+{"bytes": 2540, "kind": "whole_doc_open", "target": "core-docs/SEALED_CHECK_47.md"}
+{"bytes": 7990, "kind": "whole_doc_open", "target": "core-docs/PROCESS_BACKLOG.md"}
+{"bytes": 32001, "kind": "whole_doc_open", "target": "core-docs/DECISION_LOG_INDEX.md"}
+{"bytes": 20412, "kind": "whole_doc_open", "target": "core-docs/AUDIT_PIPELINE.md"}
+{"bytes": 4982, "kind": "whole_doc_open", "target": "core-docs/COLD_BOOT_CARD.md"}
+{"bytes": 8356, "kind": "whole_doc_open", "target": "core-docs/research/2026-08-15-i59-roadmap-reconciliation.md"}
+{"bytes": 9062, "kind": "whole_doc_open", "target": "core-docs/research/2026-08-12-knowledge-surface-relayer-program.md"}
+{"bytes": 12520, "kind": "whole_doc_open", "target": "ops/close-refold.ps1"}
+{"bytes": 7352, "kind": "whole_doc_open", "target": "ops/audit/close-consistency-check.py"}
+{"bytes": 21243, "kind": "whole_doc_open", "target": "ops/audit/gen-retrieval-monitor.py"}
+{"bytes": 11605, "kind": "whole_doc_open", "target": "ops/retrieval/retrieve.ps1"}
