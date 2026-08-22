@@ -23,16 +23,16 @@
     "pointer": "MODULE_ROADMAP.md #40 / PROCESS_BACKLOG PB-2 / widgets/08-live-run-audit-pathway"
    },
    {
-    "gate": "i63 -- the close manifest/materializer + freshness assertions (D-0155/D-0161; the i62-i67 resumable-close block); i62 delivered the CONTRACT (design->red-team->hardened) + validator groundwork",
-    "item": "build the manifest MATERIALIZER (executes APPLY/REBUILD per the hardened contract) + freshness assertions; then i64 evidence-based impact detection, i65 the two validation stages + bounded Frontier correction, i66 protected mirror reconciliation, i67 fault-inject/resume/idempotence/cutover. i62 shipped ops/close-txn/ (FROZEN schema + fail-closed validator + 26 tests)",
-    "pointer": "core-docs/ops/close-txn/spec/close-transaction-hardened.md + PROCESS_BACKLOG.md PB-9 + ops/close-txn/"
+    "gate": "i64 -- evidence-based impact detection (fingerprints + a dependency graph + targeted-test selection); the i62-i67 resumable-close block continues (i63 delivered the materializer + freshness/overflow seam, D-0162)",
+    "item": "derive the affected-surface set from source fingerprints so a close touches only evidence-linked views (INV-9); then i65 the two validation stages + bounded frontier correction, i66 protected mirror reconciliation, i67 fault-inject/resume/idempotence/the LIVE cutover. i63 shipped ops/close-txn/materialize.py (74 close-txn tests green; live cutover deferred)",
+    "pointer": "ops/close-txn/spec/close-transaction-hardened.md + PROCESS_BACKLOG.md PB-9 + ops/close-txn/"
    }
   ],
-  "derived_from": "core-docs/CURRENT_STATE.md + DECISION_LOG D-0161 at the i62 close; overlay frontier advanced to i63 = the close manifest/materializer (the i62-i67 resumable-close block continues); standing_constraints unchanged (D-0161 adds no prohibition).",
-  "next_iteration": 63,
-  "summary": "i62 CLOSED (D-0161): the PB-9 close-transaction CONTRACT designed -> 3-adversary red-teamed (22 breaks: 5 CRITICAL/5 HIGH/2 MED) -> HARDENED authoritative contract (INV-1..15; Frontier Agent in the Deterministic Loop): staging-ref ff cutover, native-byte fingerprint domain, SEAL-before-RECONCILE, an independent-grader edge on every frontier content op vs self-grading, inbound-reference completeness, double-run determinism, bounded resume-persistent corrections, and the projection/backing separation (INV-15: a doc's ingest budget bounds a projection, never its canonical backing). Manifest schema/validator groundwork SHIPPED (ops/close-txn/; the complete spec is backing at ops/close-txn/spec/; VALIDATES only, materializer=i63). The fail-closed retrieval gate stays WIRED into ops/close-refold.ps1 (this close ran the zero-bounded floor; the 0.80 adoption was proven+CLOSED at i61). NEXT = i63 = the close manifest/materializer + freshness assertions; the first PB-7 class migration DEFERS to i68."
+  "derived_from": "core-docs/CURRENT_STATE.md + DECISION_LOG D-0162 at the i63 close; overlay frontier advanced to i64 = evidence-based impact detection (the i62-i67 resumable-close block continues); standing_constraints unchanged (D-0162 adds no prohibition).",
+  "next_iteration": 64,
+  "summary": "i63 CLOSED (D-0162): the PB-9 close-transaction MATERIALIZER shipped (ops/close-txn/materialize.py) -- PLAN..SEAL, native-byte fingerprint domain, append-only journal, idempotence/resume, and the i63 PRESERVATION seam: projection freshness checkable against real canonical backing + a preflight budget that SPILLS to backing on overflow (never trims or semantic-compresses; the full source stays lossless). Demonstrated on the real hardened-spec<->digest pair; ops/close-txn/spec made discoverable via a narrow repo.intel root. Verified i62-gap fixes folded: repository path-safety, fail-closed missing edit targets, enforced backing/projection classification, the overlay/schema/validator/example pointer repairs, and the removal of the two by-exception HUMAN GATES from the hardened contract (routine close is Frontier-Agent-in-the-Deterministic-Loop; a correction-exhausted budget routes to a bounded frontier-agent replan, never a human). The fail-closed retrieval gate stays WIRED into ops/close-refold.ps1 (this close ran the zero-bounded floor; the 0.80 adoption was proven+CLOSED at i61). The LIVE production cutover stays DEFERRED to i67 (INV-9). NEXT = i64 = evidence-based impact detection; the first PB-7 class migration still DEFERS to i68."
  },
- "iteration": 62,
+ "iteration": 63,
  "open_rulings": [
   {
    "ref": "decision:D-0132",
@@ -45,7 +45,7 @@
  ],
  "phase": {
   "ref": "doc:core-docs/CURRENT_STATE.md",
-  "text": "Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; PCB BOOT_PACKET is the DEFAULT orchestrator bootstrap (D-0146). i62 CLOSED (D-0161): the PB-9 close-transaction CONTRACT designed + red-teamed + hardened (INV-1..15; Frontier Agent in the Deterministic Loop) + manifest schema/validator groundwork shipped (ops/close-txn/). The retrieval gate stays WIRED into the close. NEXT = i63 = the close manifest/materializer + freshness assertions. AUDIT review_due i64 NON-DISPLACING."
+  "text": "Collective Agent on cognitive virtual memory (D-0080); Tier-1 accepted; PCB BOOT_PACKET is the DEFAULT orchestrator bootstrap (D-0146). i63 CLOSED (D-0162): the PB-9 close-transaction MATERIALIZER + freshness/overflow (preservation) seam shipped (ops/close-txn/materialize.py) on the i62 hardened contract; the two by-exception human gates were removed from the contract (Frontier Agent in the Deterministic Loop). The retrieval gate stays WIRED into the close; the LIVE cutover stays deferred to i67 (INV-9). NEXT = i64 = evidence-based impact detection. AUDIT review_due i64 NON-DISPLACING."
  },
  "prohibitions": [
   {
