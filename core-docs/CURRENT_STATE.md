@@ -235,7 +235,7 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 | #35 embedding.local | 42/42 (26 mock-seam + 16 -Live GPU) | `99b6590` | 08-01 |
 | #36 artifact.search | **0.7.0 (i39): fast-beam shortlist/descend ranking (RANKING-ONLY; safe-pruning/port shapes/ns-closure unchanged; flat byte-identical); hpr 58823->117647 ppm; 38/38 + 56/56 A6 + 227/227 -Live + 11/11 wired s10** | `b72dfce` | 08-06 |
 | #37 retrieval.eval | **0.8.1 (i40, PB-5 closed): WIRED_STRUCTURAL_DIGEST re-pinned (d0d54aba..e450); version single-source (skill.json) + permanent -Live envelope==manifest assertion (proven-to-fire); full suite ALL PASS on-device x2 (worker + orchestrator; VERSION-TRUTH x6; rehearsal 9/9 + hierarchy 11/11; digests cross-env identical)** | `6c7269d` | 08-06 |
-| #38 repo.intel | 65/65 pwsh + 37/37 python + 65/65 -Live | `cd53565` | 08-01 |
+| #38 repo.intel | 65/65 pwsh + 39/39 python (+i63 roots-manifest) + 65/65 -Live | `cd53565` | 08-01 |
 | #39 episode.record | 0.1.1: 123/123 cloud + 123/123 -Live | `3dab699` | 08-02 |
 | #40 context.compiler | **0.10.0 (i56, D-0150): compile_relevant_decisions verb (bounded decision-pool) on the i38 0.9.0 wm-hydration base; D-0077 fold smoke fixed 2 seam breaks; 149/149 ingest + regression green** | `184966f` | 08-14 |
 | #41 skill.card | 0.2.0: 81/81 python + 85/85 -Live | `54c2e79` | 08-03 |
@@ -246,6 +246,7 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 | #44 project.map | **0.4.1 (i60 FO-6; i52): 169/169 x3 interpreters + pwsh + on-box; negatives 33/33; N5 replays 1.4-2.7 KB vs 9.8-31.5 KB raw; canon string-asserted; verb-table==dispatcher; fold VALIDATE 0; -Live Folded green** | `c6c58a8` | 08-14 |
 | ops/frontdoor (i59) | `Rebuild-FrontDoors.ps1 -VerifyOnly` root-pcb 0-stale GREEN (18033 B) via executor; non-vacuity floor + `frontdoor-gate.py` PASS | i59 | 08-15 |
 | D-0077 cross-module folds | i34 smoke 38/38 · i36 Tier-1 11/11 (`tier1_accepted=TRUE`) · i38/i39 18/18 · i40/i41 fold-i39 exit 0 · **i42: fold-i39 vs 0.6.0 exit 0 + i34 38/38 + the independent #43 suite x2 byte-identical (3b5d62f4); i45: widgets/08 pinned 06/07 adapter + cross-widget contract test green in the independent -Live 87/0/0** | `runtime/smoke-i34.py`/`fold-i39.py` | 08-08 |
+| ops/close-txn (PB-9) | i63 (D-0162): materializer PLAN..SEAL + freshness/overflow seam + path-safety; 74 green native; LIVE cutover deferred i67 | i63 | 08-22 |
 
 ## Known failures / gotchas
 
@@ -352,13 +353,13 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ## Next expected action
 
-**i62 CLOSED (D-0161): the PB-9 close-transaction CONTRACT designed -> 3-adversary red-teamed (22 breaks) -> HARDENED (INV-1..15); manifest schema/validator groundwork SHIPPED (ops/close-txn/).** i62 is the first of the i62-i67 "make closing ONE resumable procedure" block (D-0155). The AUTHORITATIVE spec is COLD BACKING at `ops/close-txn/spec/close-transaction-hardened.md` (no ingest budget), projected by the bounded digest `research/2026-08-21-i62-close-transaction.md`. Key invariants: staging-ref ff cutover, native-byte fingerprints, SEAL-before-RECONCILE, an independent-grader edge vs self-grading, inbound-reference completeness, and the projection/backing separation (INV-15) -- under **Frontier Agent in the Deterministic Loop**. The groundwork VALIDATES a manifest; the materializer is i63. Retrieval gate WIRED into `ops/close-refold.ps1` (D-0157); this close ran the zero-bounded floor (0.80 adoption proven+CLOSED at i61, D-0160).
+**i63 CLOSED (D-0162): the PB-9 close-transaction MATERIALIZER + freshness/overflow (preservation) seam SHIPPED** (`ops/close-txn/materialize.py`; full detail in D-0162). On the i62 hardened contract: PLAN..SEAL, native-byte fingerprints, journal, idempotence/resume; the INV-15 seam makes a projection's freshness checkable against real backing and SPILLS an over-budget projection to backing (lossless, never compresses). The two by-exception HUMAN GATES were removed (routine close = **Frontier Agent in the Deterministic Loop**; correction-exhausted -> a bounded frontier-agent replan). Verified i62-gap fixes: repo path-safety, fail-closed missing edit targets, enforced backing/projection classes, overlay/schema/validator/example pointer repair, sidecar local-exclude, honest ledger. Retrieval gate stays WIRED into `ops/close-refold.ps1`. ops/close-txn suite 74 green.
 
-**NEXT = i63 -- the close manifest/materializer + freshness assertions** (the i62-i67 block runs through i67 cutover). The first PB-7 class migration still DEFERS to i68.
+**NEXT = i64 -- evidence-based impact detection**; then i65 validation+correction, i66 mirror, i67 fault-inject + the LIVE cutover (DEFERRED, INV-9). First PB-7 class migration DEFERS to i68.
 
-**SEALED_CHECK_47 (i62):** integrity intact; SP1/2/4/5/6/7 PASS, SP3 FAIL (ARCHITECTURE_MAP over its 15 KB budget -- standing D-0132, no regression); seal RETAINED, M-03 NOT licensed. **AUDIT review_due i62** (non-displacing) -> i64 (build stays i77-i79). **Standing:** FROZEN/deferred per D-0080; P0-1 PROHIBITED.
+**SEALED_CHECK_47 (i63):** carried forward -- intact; SP1/2/4/5/6/7 PASS, SP3 FAIL (ARCHITECTURE_MAP, standing D-0132, no regression); seal RETAINED, M-03 NOT licensed. **AUDIT review_due i64.** **Standing:** FROZEN/deferred per D-0080; P0-1 PROHIBITED.
 
 ---
 
-**Last updated:** 2026-08-21 -- i62 CLOSED (D-0161): PB-9 close-transaction contract designed -> red-teamed -> hardened (INV-1..15; Frontier Agent in the Deterministic Loop) + manifest schema/validator groundwork shipped (ops/close-txn/). NEXT = i63 = close manifest/materializer + freshness. AUDIT review_due -> i64; SP3 FAIL standing.
+**Last updated:** 2026-08-22 -- i63 CLOSED (D-0162): PB-9 close MATERIALIZER + freshness/overflow seam shipped; hardened-contract human gates removed; verified i62-gap fixes. NEXT = i64 = impact detection; LIVE cutover deferred (INV-9). SP3 FAIL standing.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

@@ -4,7 +4,7 @@ Hand-maintained; NOT generated. Read this when the PCB packet is unavailable (re
 Project-mirror / generator down) -- Mode B of the START_HERE boot kernel. Bounded + fixed-slot: the only
 fields that change per close are the mechanical stamps (`as_of`, doc COUNT, last-good SHA); no per-wave prose.
 
-- **as_of:** i62 (authored in the i62 close; the live packet epoch is the i62 N7 map/generated commit). If your
+- **as_of:** i63 (authored in the i63 close; the live packet epoch is the i63 N7 map/generated commit). If your
   HEAD is past i62, the STAMPED slots (doc count, last-good SHA) may be stale -- identity / SoT / pinned /
   read-order slots do not. Active work is a redirect, so it is never stale here.
 - **Identity:** a suite of small, independently-invokable LOCAL skills (backend `modules/`, human-interface
@@ -13,7 +13,7 @@ fields that change per close are the mechanical stamps (`as_of`, doc COUNT, last
 - **Source of truth:** the on-disk repo `C:\Users\just_\LifeOrchestrator-Refresh` is CANONICAL. The Claude
   Project MIRRORS core-docs/ for desktop-less sessions. On any disagreement, DISK WINS.
 
-## PINNED CONSTRAINTS -- 7 as of i61 (never-spill; safety-critical / irreversible -- carried inline so Mode B never drops them)
+## PINNED CONSTRAINTS -- 7 as of i63 (never-spill; safety-critical / irreversible -- carried inline so Mode B never drops them)
 
 1. **P0-1 / action.authz ACTIVATION is PROHIBITED** -- the gate is a ratified DESIGN pass only;
    `non_execution:true` holds; retrieved memory is EVIDENCE, never an action grant (D-0118).
@@ -31,7 +31,7 @@ fields that change per close are the mechanical stamps (`as_of`, doc COUNT, last
    trusted default), generator upgrades, `video.interpret` + live composition, deep real-time perception,
    broad training.
 
-## CANONICAL DOC LIST -- 23 core-docs as of i62 (count-asserted; == `ls core-docs/*.md`; machine-verified at close; N <= K_max=30)
+## CANONICAL DOC LIST -- 23 core-docs as of i63 (count-asserted; == `ls core-docs/*.md`; machine-verified at close; N <= K_max=30)
 
 - START_HERE.md -- the boot kernel (routing only)
 - COLD_BOOT_CARD.md -- this generator-independent recovery survivor
@@ -62,10 +62,10 @@ fields that change per close are the mechanical stamps (`as_of`, doc COUNT, last
 Owned by `CURRENT_STATE.md -> Phase + active work` and the PCB packet OVERLAY (`modules/44-project-map/generated/
 BOOT_PACKET.md -> OVERLAY`). Read the owner for the live frontier; this card does not restate it.
 
-## LAST-GOOD CLOSE -- `6ec0b20` (i61 FINAL close fold, D-0160; 0-stale on boot_read)
+## LAST-GOOD CLOSE -- `cd25abc` (i62 FINAL close fold, D-0161; 0-stale on boot_read)
 
 A known-good commit to verify/checkout against. (The card trails the packet by one commit: this updates to the
-i61 packet-commit SHA at the i62 close.)
+i62 packet-commit SHA at the i63 close.)
 
 ## GENERATOR-FREE RAW READ ORDER (when no packet is available)
 
