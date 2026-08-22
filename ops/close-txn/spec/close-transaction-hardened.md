@@ -11,10 +11,12 @@ directory) by folding the 12 red-team hardening items (`close-transaction-redtea
 set (s5), the manifest requirements (s2-s3), and the projection/backing rule (s9) are FROZEN: i63-i67 build against
 them; the `ops/close-txn/` schema + validator groundwork derives from them.
 
-Governing model (D-0155): **Frontier Agent in the Deterministic Loop** -- routine close is NOT human-gated; the
-human steers via a bounded management/audit projection, plus exactly two by-exception human gates named below
-(historical-record deletion; correction-exhausted escalation). The LOCAL repo is canonical; GitHub is an
-end-of-iteration convenience mirror, never updated midflight.
+Governing model (D-0155; i63 D-0162): **Frontier Agent in the Deterministic Loop** -- routine close is NOT
+human-gated and carries NO by-exception human gate. The human steers via a bounded management/audit projection
+(visibility + steering only). Historical-record deletion is PROHIBITED within a normal close (INV-12); a
+correction-exhausted budget writes a durable, safe, resumable failure that routes to a subsequent bounded
+frontier-agent replan -- never a human approval, a human intervention, or a session waiting on a human. The LOCAL
+repo is canonical; GitHub is an end-of-iteration convenience mirror, never updated midflight.
 
 **Scope (roadmap i62-i67).** i62 = this contract + red-team + the schema/validator groundwork. i63 = the
 manifest/materializer + freshness assertions. i64 = evidence-based impact detection (fingerprints + a dependency
@@ -255,7 +257,7 @@ journalled). Correction counters resume from the journal (CB-TERM).
 | `validator-failure` | POST-VALIDATE | a gate exits non-zero (incl. grader verdict, no-truncation, completeness) | HALT pre-cutover (nothing on `main`); bounded Frontier correction targets the failing predicate; resume from POST-VALIDATE |
 | `ship-false-negative` | SHIP | `dev.ship committed=false` but native HEAD/tree shows it (D-0072) | strict-ordered recovery (s5.6); never blind-retry a present commit |
 | `wedge-deadlock` | SHIP | the lease is held by a gone-but-heartbeating task | the wedge detector force-releases the lease; SHIP holds one lease for its whole duration so no reacquire can deadlock |
-| `correction-exhausted` | any correction | per-op or `max_corrections_total` budget hit | write a terminal ABORTED-resumable marker; canonical HEAD untouched (INV-1); the session frees itself; a human's fix is a NEW planned close, not a live-held hang |
+| `correction-exhausted` | any correction | per-op or `max_corrections_total` budget hit | write a terminal ABORTED-resumable marker; canonical HEAD untouched (INV-1); the session frees itself; recovery is a subsequent bounded FRONTIER-AGENT replan (a NEW planned close), never a human approval / intervention / live-held wait |
 | `mirror-divergence` | RECONCILE | remote moved / managed-ref rejected | the LOCAL close STANDS SEALED; retry independently; foreign commits -> `mirror-foreign-commits` (no auto-clobber) |
 | `mirror-foreign-commits` | RECONCILE | remote has commits not descended from a prior SEAL | surface on the audit projection for explicit resolution; never auto-force |
 | crash / pause | any | journal + s4 fingerprint recompute after the s5.9 base_head re-check | resume from the first non-`verified` op |
@@ -278,8 +280,9 @@ journalled). Correction counters resume from the journal (CB-TERM).
   un-seals a local close; a mirror failure is a `deferred` op.
 - **INV-7 The Frontier boundary is ENFORCED, not asserted.** `deterministic` = engine-reproducible (CB-DERIVE);
   `frontier` content ops carry a task spec AND an independent-grader edge (CB-GRADE); the human is out of the routine
-  loop (bounded audit projection only), with exactly two by-exception gates (INV-12 historical deletion;
-  correction-exhausted escalation).
+  loop ENTIRELY (bounded audit projection for visibility + steering only) -- NO by-exception human gate: historical
+  deletion is prohibited by INV-12 (not gated to a human), and a correction-exhausted budget routes to a bounded
+  frontier-agent replan (CB-TERM), never a human approval or wait.
 - **INV-8 Fingerprint domain.** Every fingerprint obeys s4 (native bytes; raw/no-normalize; no plan-time frontier
   sha; anchor-located; the same basis on resume).
 - **INV-9 Inbound-reference completeness.** For every edited target, every `core-docs/` referrer is either a
@@ -291,7 +294,9 @@ journalled). Correction counters resume from the journal (CB-TERM).
   `append` anchors are invariant under prior in-manifest appends to that file.
 - **INV-12 Append-only protection.** `replace_doc` is not in the taxonomy; whole-file rewrite of an append-only /
   monotonic target (DECISION_LOG, its index, any ledger) is forbidden; `doc-commit-gate` asserts no-truncation (prior
-  ids subset of post ids); removal of a historical entry requires explicit human authorization.
+  ids subset of post ids); removal of a historical entry is PROHIBITED within a normal close (no in-close deletion
+  path, human-gated or otherwise) -- a genuine historical correction is an explicitly-authorized out-of-band action
+  outside the close contract, never a step a routine close performs.
 - **INV-13 Double-run determinism.** Canonical-bytes rebuilds assert double-run byte identity with pinned
   determinism knobs; volatile embedded fields are excluded from `--check` and stamped post-cutover.
 - **INV-14 Bounded correction.** Per-op AND transaction-level correction budgets, journalled + resume-persistent;
@@ -312,8 +317,9 @@ producer never grades itself (the D-0107/D-0109 self-grading lesson). The correc
 (scoped to the failing op) and is journalled as a DELEGATION-DECISION (#39 episode shape). **[CB-TERM]** termination
 is bounded by per-op AND `max_corrections_total`, both journalled and resume-persistent; a cross-op flip-flop trips
 the transaction budget. Exhaustion writes `correction-exhausted` (terminal ABORTED-resumable, canonical untouched,
-session freed) and surfaces the failing predicate on the management/audit projection -- the one by-exception human
-touch point for a stuck close (never a live-held wait).
+session freed) and ROUTES the stuck close to a subsequent bounded FRONTIER-AGENT replan (a fresh bounded planning
+pass = a NEW planned close), surfacing the failing predicate on the management/audit projection for steering
+VISIBILITY only -- NOT a human approval, intervention, or a live-held wait. No routine-close step blocks on a human.
 
 ---
 

@@ -1,0 +1,43 @@
+{
+  "schema": "lifeorch.close_manifest/0.1",
+  "header": {
+    "transaction_id": "close-i63-backing-projection",
+    "iteration": 63,
+    "base_head": "cd25abc",
+    "ledger_ref": "ops/audit/retrieval-ledger/i63-orchestrator.jsonl",
+    "min_bounded_fraction": 0.0,
+    "created_by": "orchestrator-close",
+    "model_provenance": "opus-4.8",
+    "governing_model": "frontier-agent-in-deterministic-loop"
+  },
+  "operations": [
+    {
+      "op_id": "edit-backing-humangates",
+      "kind": "replace_section",
+      "target": "ops/close-txn/spec/close-transaction-hardened.md",
+      "semantic_owner": "deterministic",
+      "eol": "lf",
+      "doc_class": "backing",
+      "region_anchor": { "type": "heading", "heading": "## 8. Frontier Agent in the Deterministic Loop -- correction protocol (hardened)" },
+      "precondition": { "basis": "native-raw", "sha256": "1111111111111111111111111111111111111111111111111111111111111111" },
+      "postcondition": { "basis": "native-raw", "sha256": "2222222222222222222222222222222222222222222222222222222222222222" },
+      "payload_ref": "modules/44-project-map/runtime/close-txn/close-i63/payloads/hardened-s8.md",
+      "depends_on": []
+    },
+    {
+      "op_id": "reproject-digest",
+      "kind": "replace_section",
+      "target": "core-docs/research/2026-08-21-i62-close-transaction.md",
+      "semantic_owner": "deterministic",
+      "eol": "lf",
+      "doc_class": "projection",
+      "budget_bytes": 10240,
+      "backing_ref": "ops/close-txn/spec",
+      "region_anchor": { "type": "heading", "heading": "## Backing artifacts (complete, canonical)" },
+      "precondition": { "basis": "native-raw", "sha256": "3333333333333333333333333333333333333333333333333333333333333333" },
+      "postcondition": { "basis": "native-raw", "sha256": "4444444444444444444444444444444444444444444444444444444444444444" },
+      "payload_ref": "modules/44-project-map/runtime/close-txn/close-i63/payloads/digest-backing.md",
+      "depends_on": ["edit-backing-humangates"]
+    }
+  ]
+}

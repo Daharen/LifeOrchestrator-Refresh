@@ -40,6 +40,11 @@ class PositiveExamples(unittest.TestCase):
     def test_two_edit_one_file_valid(self):
         self.assertEqual(vm.validate(load("two-edit-one-file.json")), [])
 
+    def test_i63_backing_projection_valid(self):
+        # a REAL classified backing/projection pair (hardened spec <-> research digest), not a synthetic
+        # mutation: a backing op (no budget, not boot_read) + a projection op (budget + backing_ref).
+        self.assertEqual(vm.validate(load("i63-backing-projection.json")), [])
+
 
 class NegativeMutations(unittest.TestCase):
     def setUp(self):
@@ -248,6 +253,95 @@ class NegativeMutations(unittest.TestCase):
         op["boot_read"] = True
         f = vm.validate(m)
         self.assertTrue(findings_contain(f, "doc_class=backing must NOT be marked a bootstrap"), f)
+
+
+class I63Hardening(unittest.TestCase):
+    """i63 (D-0162): path safety, classification strictness, and fail-closed missing edit targets."""
+
+    def setUp(self):
+        self.base = load("canonical-close.json")
+        self.assertEqual(vm.validate(self.base), [])
+
+    def _ops(self, m):
+        return {o["op_id"]: o for o in m["operations"]}
+
+    def test_target_repo_escape(self):
+        m = copy.deepcopy(self.base)
+        self._ops(m)["replace-cs-next"]["target"] = "../../etc/passwd"
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "target path is unsafe"), f)
+
+    def test_target_windows_drive(self):
+        m = copy.deepcopy(self.base)
+        self._ops(m)["replace-cs-next"]["target"] = "C:/Windows/system32/x.md"
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "drive-absolute"), f)
+
+    def test_backing_ref_repo_escape(self):
+        m = copy.deepcopy(self.base)
+        op = self._ops(m)["replace-cs-next"]
+        op["doc_class"] = "projection"
+        op["budget_bytes"] = 10000
+        op["backing_ref"] = "../../secret"
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "backing_ref path is unsafe"), f)
+
+    def test_payload_ref_repo_escape(self):
+        m = copy.deepcopy(self.base)
+        self._ops(m)["replace-cs-next"]["payload_ref"] = "..\\..\\evil.md"
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "payload_ref path is unsafe"), f)
+
+    def test_unknown_doc_class(self):
+        m = copy.deepcopy(self.base)
+        self._ops(m)["replace-cs-next"]["doc_class"] = "sidecar"
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "doc_class 'sidecar' is unknown"), f)
+
+    def test_projection_fields_without_classification(self):
+        m = copy.deepcopy(self.base)
+        # budget_bytes on an op that is NOT doc_class=projection is a mis-declaration
+        self._ops(m)["replace-cs-next"]["budget_bytes"] = 5000
+        f = vm.validate(m)
+        self.assertTrue(findings_contain(f, "projection fields require the projection classification"), f)
+
+    def test_missing_target_repo_fails_closed(self):
+        # resolve_anchor_spans against a repo dir: an append/replace_section on an ABSENT file is a HARD
+        # finding, not an anchor-check SKIP (Amd2.2).
+        import tempfile
+        repo = tempfile.mkdtemp(prefix="vm-repo-")
+        try:
+            findings = vm.resolve_anchor_spans(self.base, repo)
+            hard = [x for x in findings if not x.startswith("anchor-check SKIP")]
+            self.assertTrue(any("does not exist under --repo" in x for x in hard), findings)
+        finally:
+            import shutil
+            shutil.rmtree(repo, ignore_errors=True)
+
+    def test_created_target_is_deferred_not_failed(self):
+        # a target that a create op in the SAME manifest produces is a deferred SKIP, not a hard fail
+        import tempfile
+        m = copy.deepcopy(self.base)
+        m["operations"].append({
+            "op_id": "make-new", "kind": "create", "target": "core-docs/NEWDOC.md",
+            "semantic_owner": "deterministic", "eol": "lf", "precondition": "absent",
+            "payload_ref": "runtime/new.md", "depends_on": [],
+        })
+        m["operations"].append({
+            "op_id": "app-new", "kind": "append", "target": "core-docs/NEWDOC.md",
+            "semantic_owner": "deterministic", "eol": "lf",
+            "region_anchor": {"type": "append_below", "marker": "<!-- t -->"},
+            "precondition": {"basis": "native-raw", "sha256": "a" * 64},
+            "payload_ref": "runtime/app.md", "depends_on": ["make-new"],
+        })
+        repo = tempfile.mkdtemp(prefix="vm-repo-")
+        try:
+            findings = vm.resolve_anchor_spans(m, repo)
+            self.assertTrue(any("created earlier in this manifest" in x for x in findings), findings)
+            self.assertFalse(any("app-new" in x and "does not exist" in x for x in findings), findings)
+        finally:
+            import shutil
+            shutil.rmtree(repo, ignore_errors=True)
 
 
 class Helpers(unittest.TestCase):

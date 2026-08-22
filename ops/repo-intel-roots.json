@@ -1,0 +1,9 @@
+{
+  "schema": "lifeorch.repo_intel_roots/0.1",
+  "note": "The corpus roots repo.intel (#38 modules/38-repo-intel) indexes for the memory catalog (#36). The ordinary agent corpus is modules/ + core-docs/; ops/close-txn/spec is the close-transaction COLD BACKING (the hardened contract + red-team + design triad, INV-15). Module 38's ordinary roots do NOT cover ops/, so this narrow backing directory is targeted EXPLICITLY here so it is discoverable through the existing indexing/retrieval machinery (i63, D-0162). This is a NARROW backing pointer, NOT a broad ops/ sweep -- add a root only for canonical backing that agents must be able to retrieve.",
+  "roots": [
+    "modules",
+    "core-docs",
+    "ops/close-txn/spec"
+  ]
+}

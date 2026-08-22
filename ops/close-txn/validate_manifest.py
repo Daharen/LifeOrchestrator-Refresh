@@ -1,21 +1,34 @@
 #!/usr/bin/env python3
 """validate_manifest.py -- fail-closed validator for a Life Orchestrator close-transaction manifest.
 
-i62 PB-9 groundwork (D-0161). Enforces the STATICALLY-CHECKABLE invariants of the hardened contract
-(research/2026-08-21-i62-close-transaction-hardened.md, INV-1..INV-14 + CB-* items). It VALIDATES a manifest's
-well-formedness + invariants; it does NOT execute a close (the materializer is i63).
+i62 PB-9 groundwork (D-0161); i63 hardening (D-0162). Enforces the STATICALLY-CHECKABLE invariants of the
+hardened contract (ops/close-txn/spec/close-transaction-hardened.md, INV-1..INV-15 + CB-* items). It
+VALIDATES a manifest's well-formedness + invariants; it does NOT execute a close (the materializer,
+materialize.py, is i63).
 
 READ-ONLY. stdlib only. Deterministic (no clock, no network, no PYTHONHASHSEED dependence). Sorted output.
 Exit 0 = valid; 1 = invariant violation(s) listed on stdout; 2 = I/O / usage error.
 
-Optional --repo <root>: additionally resolve each content op's region_anchor to EXACTLY ONE span in its target
-file (INV-10 span-resolvability). Without --repo, anchor structure is checked but span resolution is skipped
-(noted). Reads native on-disk bytes (F-1); refuses to normalize EOL (F-2).
+i63 additions:
+  - repository path-safety (INV-8 / Amd2.1): every file-path reference (a content op `target`, a
+    `backing_ref`, a string `payload_ref`) is lexically screened by safepath.classify_unsafe -- parent
+    traversal, absolute / Windows-drive / UNC paths, and the protected .git directory are rejected
+    statically (no filesystem needed); with --repo, symlink/junction escapes are also caught.
+  - fail-closed missing edit targets (Amd2.2): with --repo, an append / replace_section whose target file
+    is ABSENT is a HARD finding, not an "anchor-check SKIP" -- a missing edit target invalidates the
+    close. A target that a `create` op in the SAME manifest will produce is exempt (deferred to APPLY).
+
+Optional --repo <root>: additionally resolve each content op's region_anchor to EXACTLY ONE span in its
+target file (INV-10 span-resolvability) and enforce target existence + symlink containment. Reads native
+on-disk bytes (F-1); refuses to normalize EOL (F-2).
 """
 import argparse
 import json
 import os
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import safepath  # noqa: E402
 
 TAXONOMY = {"append", "replace_section", "create", "view_rebuild", "validator", "ack", "mirror_reconcile", "stamp"}
 CONTENT_KINDS = {"append", "replace_section", "create"}
@@ -105,6 +118,23 @@ def validate(manifest):
         if so == "frontier" and not isinstance(op.get("task_spec"), dict):
             bad("%s semantic_owner=frontier requires a task_spec object (INV-7 auditability)" % loc)
 
+        # ---- repository path safety (Amd2.1 / INV-8): screen every file-path reference lexically ----
+        tgt = op.get("target")
+        if kind in CONTENT_KINDS and isinstance(tgt, str):
+            r = safepath.classify_unsafe(tgt)
+            if r:
+                bad("%s target path is unsafe: %s (%r)" % (loc, r, tgt))
+        br = op.get("backing_ref")
+        if isinstance(br, str) and br:
+            r = safepath.classify_unsafe(br)
+            if r:
+                bad("%s backing_ref path is unsafe: %s (%r)" % (loc, r, br))
+        pr = op.get("payload_ref")
+        if isinstance(pr, str) and pr:
+            r = safepath.classify_unsafe(pr)
+            if r:
+                bad("%s payload_ref path is unsafe: %s (%r)" % (loc, r, pr))
+
         # per-kind required fields
         if kind in CONTENT_KINDS:
             if not op.get("target"):
@@ -162,6 +192,15 @@ def validate(manifest):
                 bad("%s doc_class=backing must NOT carry budget_bytes -- backing has no ingest budget (INV-15)" % loc)
             if op.get("boot_read") is True:
                 bad("%s doc_class=backing must NOT be marked a bootstrap/boot_read read (INV-15)" % loc)
+        elif dc is not None:
+            bad("%s doc_class %r is unknown -- must be 'projection' or 'backing' (INV-15)" % (loc, dc))
+
+        # a projection field on an unclassified op is a mis-declaration (Amd2.3: fields need their class)
+        if dc != "projection":
+            for f in ("budget_bytes", "backing_ref"):
+                if f in op:
+                    bad("%s carries %s but is not doc_class=projection -- projection fields require the "
+                        "projection classification (INV-15)" % (loc, f))
 
         # INV-12: monotonic targets accept only append / replace_section(non-historical)
         tgt = op.get("target")
@@ -325,18 +364,38 @@ def _check_single_file_serialization(ops, by_id, bad):
 
 
 def resolve_anchor_spans(manifest, repo):
-    """Optional INV-10 span-resolvability check against native on-disk bytes (F-1, no EOL normalization)."""
+    """Optional INV-10 span-resolvability check against native on-disk bytes (F-1, no EOL normalization).
+
+    i63 (Amd2.2): an append / replace_section whose target is ABSENT is a HARD finding (fail-closed) -- a
+    missing edit target invalidates the close. A target produced by a `create` op in the SAME manifest is
+    exempt (its existence is established during APPLY). Path safety (Amd2.1) applies with repo containment
+    so a symlink/junction escape is caught here too.
+    """
     F = []
-    for op in manifest.get("operations", []):
+    ops = manifest.get("operations", [])
+    created = {op.get("target") for op in ops
+              if isinstance(op, dict) and op.get("kind") == "create" and op.get("target")}
+    for op in ops:
         if not isinstance(op, dict) or op.get("kind") not in ANCHORED_KINDS:
             continue
         tgt = op.get("target")
         ra = op.get("region_anchor") or {}
         if not tgt:
             continue
-        path = os.path.join(repo, tgt.replace("/", os.sep))
+        try:
+            path = safepath.safe_repo_path(repo, tgt)
+        except safepath.PathSafetyError as e:
+            F.append("%s target path is unsafe: %s (%r)" % (op.get("op_id"), e.reason, tgt))
+            continue
         if not os.path.isfile(path):
-            F.append("anchor-check SKIP: %s target %s not found under --repo" % (op.get("op_id"), tgt))
+            if tgt in created:
+                # deferred: the create op establishes this target during APPLY (informational, not a fail)
+                F.append("anchor-check SKIP: %s target %s is created earlier in this manifest "
+                         "(existence deferred to APPLY)" % (op.get("op_id"), tgt))
+                continue
+            F.append("%s %s target %s does not exist under --repo -- append/replace_section requires an "
+                     "existing edit target (fail-closed; a missing target invalidates the close, "
+                     "INV-10/Amd2.2)" % (op.get("op_id"), op.get("kind"), tgt))
             continue
         with open(path, "rb") as fh:
             raw = fh.read()  # native bytes, NOT decoded/normalized (F-1/F-2)
@@ -362,9 +421,10 @@ def resolve_anchor_spans(manifest, repo):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="Validate a close-transaction manifest (i62 PB-9).")
+    ap = argparse.ArgumentParser(description="Validate a close-transaction manifest (i62 PB-9; i63 hardening).")
     ap.add_argument("manifest", help="path to the manifest JSON")
-    ap.add_argument("--repo", default=None, help="optional repo root for INV-10 anchor span resolution")
+    ap.add_argument("--repo", default=None, help="optional repo root for INV-10 anchor span resolution + "
+                                                 "missing-target + symlink-containment checks")
     a = ap.parse_args(argv)
 
     try:

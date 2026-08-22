@@ -30,7 +30,7 @@
       "validator_id": "independent-grader:d-0161",
       "target": "core-docs/DECISION_LOG.md",
       "semantic_owner": "deterministic",
-      "payload_ref": { "predicate": "claim-vs-evidence", "evidence": ["research/2026-08-21-i62-close-transaction-hardened.md"] },
+      "payload_ref": { "predicate": "claim-vs-evidence", "evidence": ["ops/close-txn/spec/close-transaction-hardened.md"] },
       "depends_on": ["append-dlog"]
     },
     {

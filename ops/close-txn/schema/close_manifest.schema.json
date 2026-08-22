@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "lifeorch.close_manifest/0.1",
   "title": "Life Orchestrator close-transaction manifest (PB-9, i62 hardened contract)",
-  "description": "Declarative description of ONE resumable/idempotent close. i62 FROZEN contract-level schema; the materializer that executes it is i63. Companion: ops/close-txn/validate_manifest.py enforces the invariants a pure JSON-Schema cannot (acyclicity, grader edges, single-file serialization, monotonic-target protection, declared-target closure). See research/2026-08-21-i62-close-transaction-hardened.md.",
+  "description": "Declarative description of ONE resumable/idempotent close. i62 FROZEN contract-level schema; the materializer that executes it is i63. Companion: ops/close-txn/validate_manifest.py enforces the invariants a pure JSON-Schema cannot (acyclicity, grader edges, single-file serialization, monotonic-target protection, declared-target closure). See ops/close-txn/spec/close-transaction-hardened.md.",
   "type": "object",
   "required": ["schema", "header", "operations"],
   "additionalProperties": false,

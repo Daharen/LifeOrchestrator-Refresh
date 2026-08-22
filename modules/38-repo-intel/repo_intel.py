@@ -499,6 +499,25 @@ def parse_json_config(text):
 
 
 # ------------------------------------------------------------------ index op
+def _load_roots_manifest(path):
+    """i63 (D-0162): load the declarative corpus-roots manifest (ops/repo-intel-roots.json). Roots are
+    repo-relative + resolve against the manifest's repo root (its grandparent dir), so indexing is
+    CWD-independent. Lets the ordinary corpus (modules/ + core-docs/) plus a NARROW explicit backing root
+    (ops/close-txn/spec) be indexed together, so ops/ backing is discoverable through the machinery (INV-15)."""
+    with open(path, "r", encoding="utf-8") as fh:
+        doc = json.load(fh)
+    roots = doc.get("roots")
+    if not isinstance(roots, list) or not roots:
+        raise RepoError("bad_roots_manifest", "roots manifest %s has no non-empty 'roots' list" % path)
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(path)))
+    out = []
+    for r in roots:
+        if not isinstance(r, str) or not r:
+            raise RepoError("bad_roots_manifest", "roots manifest entry not a non-empty string: %r" % r)
+        out.append(os.path.join(repo_root, r.replace("/", os.sep)))
+    return out
+
+
 def do_index(args):
     op = "index"
     roots = args.get("roots")
@@ -506,7 +525,11 @@ def do_index(args):
         r = args.get("root")
         roots = [r] if r else None
     if not roots:
-        raise RepoError("missing_root", "index needs -Roots/-Root (roots[] or root)")
+        rm = args.get("roots_manifest")
+        if rm:
+            roots = _load_roots_manifest(rm)
+    if not roots:
+        raise RepoError("missing_root", "index needs -Roots/-Root/-RootsManifest (roots[]/root/roots_manifest)")
     namespace = slug(args.get("namespace") or args.get("source_label") or "life-orchestrator")
     exclude_dirs = args.get("exclude_dirs") or DEFAULT_EXCLUDE_DIRS
     exclude_globs = args.get("exclude_globs") or DEFAULT_EXCLUDE_GLOBS

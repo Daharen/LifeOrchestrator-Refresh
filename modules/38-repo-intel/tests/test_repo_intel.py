@@ -175,6 +175,27 @@ def main():
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
+    # i63 (D-0162): the declarative roots manifest makes ops/close-txn/spec (close-txn COLD BACKING)
+    # discoverable through the ordinary indexing machinery -- a NARROW explicit root, not an ops/ sweep.
+    repo_root = os.path.dirname(os.path.dirname(SKILL))
+    rman = os.path.join(repo_root, "ops", "repo-intel-roots.json")
+    if os.path.isfile(rman):
+        rr = ri._load_roots_manifest(rman)
+        spec_root = os.path.join(repo_root, "ops", "close-txn", "spec")
+        check("roots-manifest: ops/close-txn/spec is an explicit indexed root",
+              any(os.path.abspath(r) == os.path.abspath(spec_root) for r in rr))
+        if os.path.isdir(spec_root):
+            tmp2 = tempfile.mkdtemp(prefix="m38-roots-")
+            try:
+                pr = index(spec_root, "life-orchestrator", tmp2)
+                recs = open(os.path.join(tmp2, "records.jsonl"), "r", encoding="utf-8").read()
+                check("roots-manifest: indexing the backing root surfaces the hardened spec",
+                      "close-transaction-hardened.md" in recs and pr["total_records"] > 0)
+            finally:
+                shutil.rmtree(tmp2, ignore_errors=True)
+    else:
+        check("roots-manifest: [skipped: no ops/repo-intel-roots.json]", True)
+
     print("")
     print("RESULT: %d/%d passed  (fail=%d)" % (PASS, PASS + FAIL, FAIL))
     print("ALLPASS=%s" % ("true" if FAIL == 0 else "false"))
