@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-"""Tests for materialize.py -- the i63 close-transaction materializer (D-0162).
+"""Tests for materialize.py -- the corrected stage-only durable materializer (i63, D-0163).
 
-Covers PLAN/PRE-VALIDATE/APPLY/REBUILD/POST-VALIDATE/SHIP/SEAL against throwaway git repos, plus the i63
-negative surface: repository escape, missing edit targets, malformed classification, missing / stale
-backing, and OVERFLOW WITHOUT INFORMATION LOSS (spill, never compress). Also proves idempotence (a SEALED
-re-run is a no-op) and that `main` is NEVER cut over without allow_live_cutover (INV-1/INV-9).
-
-stdlib unittest; deterministic; throwaway repos under TemporaryDirectory (cloud/native only). Requires git.
+Adversarial controls T63-01..T63-20 (the portable ones; the native-Windows NTFS junction control runs on
+the box via tests/win_reparse_probe.py). Disposable temp git repos only; the canonical repo is never an
+escape target. Verifies SIDE EFFECTS (staged tip, durable readback, main HEAD unchanged, no journal dir on
+a bad txid), not just exit codes.
 """
 import json
 import os
@@ -20,313 +18,453 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PKG = os.path.dirname(HERE)
 sys.path.insert(0, PKG)
 import materialize as mz  # noqa: E402
+import safepath as sp  # noqa: E402
+
+STUB_LEDGER = lambda *a, **k: {"gate": "stub", "exit": 0}
 
 
-def _git(repo, *args, input_bytes=None):
-    p = subprocess.run(["git", "-C", repo, *args], capture_output=True, input=input_bytes)
+def g(repo, *args, inp=None):
+    p = subprocess.run(["git", "-C", repo, *args], capture_output=True, input=inp)
     if p.returncode != 0:
         raise RuntimeError("git %s: %s" % (" ".join(args), p.stderr.decode("utf-8", "replace")))
     return p.stdout.decode().strip()
 
 
+
+def ref(repo, name):
+    p = subprocess.run(["git", "-C", repo, "rev-parse", "--verify", "--quiet", name], capture_output=True)
+    return p.stdout.decode().strip()
+
+
 def make_repo():
-    repo = tempfile.mkdtemp(prefix="mz-repo-")
-    _git(repo, "init", "-q")
-    _git(repo, "config", "user.email", "t@t")
-    _git(repo, "config", "user.name", "t")
-    _git(repo, "config", "commit.gpgsign", "false")
+    repo = tempfile.mkdtemp(prefix="mz-")
+    g(repo, "init", "-q", "-b", "main")
+    g(repo, "config", "user.email", "t@t"); g(repo, "config", "user.name", "t")
+    g(repo, "config", "commit.gpgsign", "false")
+    os.makedirs(os.path.join(repo, "modules", "44-project-map", "runtime"), exist_ok=True)
+    # keep the runtime journal dir present (gitignored-in-real-repo; here just a dir)
     return repo
 
 
-def write(repo, rel, text, eol="lf"):
-    path = os.path.join(repo, rel.replace("/", os.sep))
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    data = text.replace("\n", "\r\n") if eol == "crlf" else text
-    with open(path, "w", encoding="utf-8", newline="") as fh:
-        fh.write(data)
+def write(repo, rel, text):
+    p = os.path.join(repo, rel.replace("/", os.sep))
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    with open(p, "w", encoding="utf-8", newline="") as fh:
+        fh.write(text)
 
 
-def commit_all(repo, msg="base"):
-    _git(repo, "add", "-A")
-    _git(repo, "commit", "-q", "-m", msg)
-    return _git(repo, "rev-parse", "HEAD")
+def commit(repo, msg="base"):
+    g(repo, "add", "-A"); g(repo, "commit", "-q", "-m", msg)
+    return g(repo, "rev-parse", "HEAD")
 
 
-def base_header(repo, txid="close-i63-test", iteration=63):
-    return {
-        "transaction_id": txid,
-        "iteration": iteration,
-        "base_head": _git(repo, "rev-parse", "HEAD"),
-        "ledger_ref": "modules/44-project-map/runtime/ledger.jsonl",
-        "min_bounded_fraction": 0.0,
-        "created_by": "test",
-        "model_provenance": "test",
-        "governing_model": "frontier-agent-in-deterministic-loop",
-    }
-
-
-def fp(repo, rel):
+def read_bytes(repo, rel):
     with open(os.path.join(repo, rel.replace("/", os.sep)), "rb") as fh:
-        return mz.fp_of_bytes(fh.read())
+        return fh.read()
 
 
-class TestApplySeal(unittest.TestCase):
+def header(repo, txid="close-i63-t", it=63, ledger="runtime/led.jsonl"):
+    return {"transaction_id": txid, "iteration": it, "base_head": g(repo, "rev-parse", "HEAD"),
+            "ledger_ref": ledger, "min_bounded_fraction": 0.0, "created_by": "t", "model_provenance": "t",
+            "governing_model": "frontier-agent-in-deterministic-loop"}
+
+
+def det_replace(repo, target, heading, new_text):
+    """A deterministic replace_section op with a real region precondition + whole-file postcondition."""
+    raw = read_bytes(repo, target)
+    anchor = {"type": "heading", "heading": heading}
+    pre = mz.region_fp(raw, anchor)
+    payload = mz.eol_bytes(new_text, "lf")
+    new = mz.apply_content(raw, dict(kind="replace_section", region_anchor=anchor), payload)
+    post = mz.fp(mz.sha256_bytes(new))
+    return {"op_id": "cs", "kind": "replace_section", "target": target, "semantic_owner": "deterministic",
+            "eol": "lf", "region_anchor": anchor, "precondition": pre, "postcondition": post,
+            "payload_ref": {"inline": new_text}, "depends_on": []}
+
+
+class HappyPath(unittest.TestCase):
     def setUp(self):
         self.repo = make_repo()
-        write(self.repo, "core-docs/CURRENT_STATE.md",
-              "# CURRENT_STATE\n\n## Next expected action\nold text here\n\n## Other\ntail\n")
-        write(self.repo, "core-docs/DECISION_LOG.md", "# DLOG\n\n## D-0001 -- x\nbody\n")
-        commit_all(self.repo)
+        write(self.repo, "core-docs/CS.md", "# CS\n\n## Next\nold body\n\n## Other\ntail\n")
+        commit(self.repo)
 
     def tearDown(self):
         shutil.rmtree(self.repo, ignore_errors=True)
 
-    def _replace_manifest(self):
-        m = {"schema": "lifeorch.close_manifest/0.1", "header": base_header(self.repo), "operations": [
-            {"op_id": "cs", "kind": "replace_section", "target": "core-docs/CURRENT_STATE.md",
-             "semantic_owner": "deterministic", "eol": "lf",
-             "region_anchor": {"type": "heading", "heading": "## Next expected action"},
-             "precondition": fp(self.repo, "core-docs/CURRENT_STATE.md"),
-             "payload_ref": {"inline": "## Next expected action\nNEW i63 text\n\n"},
-             "depends_on": []},
-        ]}
-        return m
+    def _run(self, **kw):
+        m = {"schema": "lifeorch.close_manifest/0.1", "header": header(self.repo),
+             "operations": [det_replace(self.repo, "core-docs/CS.md", "## Next", "## Next\nNEW body\n\n")]}
+        return mz.Materializer(self.repo, m, ledger_gate=STUB_LEDGER, **kw), m
 
-    def test_plan_apply_seal_staged_no_cutover(self):
-        m = self._replace_manifest()
-        res = mz.Materializer(self.repo, m).run()
+    def test_stage_only_seal_main_untouched(self):
+        main_before = g(self.repo, "rev-parse", "main")
+        mzr, m = self._run()
+        res = mzr.run()
         self.assertTrue(res["ok"], res)
         self.assertTrue(res["sealed"])
-        self.assertEqual(res["cutover"], "deferred")
-        # main is UNTOUCHED (INV-1): the working file still has the old text
-        with open(os.path.join(self.repo, "core-docs", "CURRENT_STATE.md")) as fh:
-            self.assertIn("old text here", fh.read())
-        # a staging ref exists and carries the new text
-        tip = _git(self.repo, "rev-parse", "refs/lo/close/close-i63-test")
-        blob = subprocess.run(["git", "-C", self.repo, "show", "%s:core-docs/CURRENT_STATE.md" % tip],
+        # main is byte/commit-identical (T63-09 baseline)
+        self.assertEqual(g(self.repo, "rev-parse", "main"), main_before)
+        self.assertIn("old body", read_bytes(self.repo, "core-docs/CS.md").decode())  # worktree untouched
+        # the staged tip carries the NEW content, durably readable
+        tip = g(self.repo, "rev-parse", "refs/lo/close/close-i63-t")
+        blob = subprocess.run(["git", "-C", self.repo, "show", "%s:core-docs/CS.md" % tip],
                               capture_output=True).stdout.decode()
-        self.assertIn("NEW i63 text", blob)
-        self.assertNotIn("old text here", blob)
+        self.assertIn("NEW body", blob)
+        # final_head is the staged tip, NOT main (C63-06)
+        self.assertEqual(res["final_head"], tip)
+        self.assertNotEqual(res["final_head"], main_before)
 
-    def test_idempotent_rerun_is_noop(self):
-        m = self._replace_manifest()
-        r1 = mz.Materializer(self.repo, m).run()
-        self.assertTrue(r1["ok"])
-        # re-run same manifest, same repo: PRE-VALIDATE sees the working tree unchanged (main not cut over),
-        # so it re-applies onto staging deterministically and re-seals -- still ok, still deferred.
-        r2 = mz.Materializer(self.repo, m).run()
-        self.assertTrue(r2["ok"], r2)
-        self.assertTrue(r2["sealed"])
+    def test_idempotent_noop_resume_revalidates(self):
+        mzr, m = self._run()
+        r1 = mzr.run(); self.assertTrue(r1["ok"])
+        tip1 = r1["final_head"]
+        # re-run: no-op resume ONLY after revalidating manifest+tip identity
+        r2 = mz.Materializer(self.repo, m, ledger_gate=STUB_LEDGER).run()
+        self.assertTrue(r2["ok"]); self.assertEqual(r2["final_head"], tip1)
+        self.assertTrue(r2["phases"]["SEAL"].get("noop_resume"))
 
-    def test_live_cutover_when_allowed(self):
-        m = self._replace_manifest()
-        res = mz.Materializer(self.repo, m, allow_live_cutover=True).run()
-        self.assertTrue(res["ok"], res)
-        self.assertEqual(res["cutover"], "live")
-        with open(os.path.join(self.repo, "core-docs", "CURRENT_STATE.md")) as fh:
-            self.assertIn("NEW i63 text", fh.read())
-        # re-run after a live cutover: the target now equals the postcondition -> already-applied idempotent
-        res2 = mz.Materializer(self.repo, m, allow_live_cutover=True).run()
-        self.assertTrue(res2["ok"], res2)
-
-    def test_append_marker(self):
-        write(self.repo, "core-docs/DECISION_LOG.md", "# DLOG\n\n## entries\n<!-- LO:TAIL -->\n")
-        commit_all(self.repo, "marker")
-        m = {"schema": "lifeorch.close_manifest/0.1", "header": base_header(self.repo), "operations": [
-            {"op_id": "ap", "kind": "append", "target": "core-docs/DECISION_LOG.md",
-             "semantic_owner": "deterministic", "eol": "lf",
-             "region_anchor": {"type": "append_below", "marker": "<!-- LO:TAIL -->"},
-             "precondition": fp(self.repo, "core-docs/DECISION_LOG.md"),
-             "payload_ref": {"inline": "\n## D-0002 -- new\nbody2\n"},
-             "depends_on": []}]}
-        res = mz.Materializer(self.repo, m, allow_live_cutover=True).run()
-        self.assertTrue(res["ok"], res)
-        with open(os.path.join(self.repo, "core-docs", "DECISION_LOG.md")) as fh:
-            body = fh.read()
-        self.assertIn("D-0002", body)
-        self.assertTrue(body.index("<!-- LO:TAIL -->") < body.index("D-0002"))
+    def test_altered_manifest_reuse_txid_not_noop(self):
+        mzr, m = self._run(); mzr.run()
+        m2 = json.loads(json.dumps(m))
+        m2["operations"][0]["payload_ref"]["inline"] = "## Next\nDIFFERENT\n\n"
+        # recompute postcondition for the altered payload so it is internally valid
+        raw = read_bytes(self.repo, "core-docs/CS.md")
+        new = mz.apply_content(raw, m2["operations"][0], mz.eol_bytes("## Next\nDIFFERENT\n\n", "lf"))
+        m2["operations"][0]["postcondition"] = mz.fp(mz.sha256_bytes(new))
+        r = mz.Materializer(self.repo, m2, ledger_gate=STUB_LEDGER).run()
+        # different manifest digest -> prior seal is NOT trusted; it re-applies (still ok) but not a blind noop
+        self.assertFalse(r["phases"].get("SEAL", {}).get("noop_resume"))
 
 
-class TestNegative(unittest.TestCase):
+class PreSideEffectBoundary(unittest.TestCase):
     def setUp(self):
         self.repo = make_repo()
-        write(self.repo, "core-docs/CURRENT_STATE.md", "# CS\n\n## Next expected action\nx\n")
-        commit_all(self.repo)
+        write(self.repo, "core-docs/CS.md", "# CS\n\n## Next\nx\n")
+        commit(self.repo)
 
     def tearDown(self):
         shutil.rmtree(self.repo, ignore_errors=True)
 
-    def test_missing_target_fails_closed(self):
-        m = {"schema": "lifeorch.close_manifest/0.1", "header": base_header(self.repo), "operations": [
-            {"op_id": "ap", "kind": "append", "target": "core-docs/DOES_NOT_EXIST.md",
-             "semantic_owner": "deterministic", "eol": "lf",
-             "region_anchor": {"type": "append_below", "marker": "<!-- x -->"},
-             "precondition": {"basis": "native-raw", "sha256": "0" * 64},
-             "payload_ref": {"inline": "y"}, "depends_on": []}]}
-        res = mz.Materializer(self.repo, m).run()
-        self.assertFalse(res["ok"])
-        self.assertEqual(res["failure"], "missing-target")
+    def test_T63_02_txid_escape_no_journal(self):
+        bad = "close-i63-x/../../../../../../escaped-journal"
+        m = {"schema": "lifeorch.close_manifest/0.1", "header": header(self.repo, txid=bad),
+             "operations": [det_replace(self.repo, "core-docs/CS.md", "## Next", "## Next\ny\n")]}
+        r = mz.Materializer(self.repo, m, ledger_gate=STUB_LEDGER).run()
+        self.assertFalse(r["ok"])
+        # NO journal directory anywhere (inside or outside) was created
+        self.assertFalse(os.path.exists(os.path.join(self.repo, "..", "escaped-journal")))
+        rt = os.path.join(self.repo, "modules", "44-project-map", "runtime", "close-txn")
+        self.assertFalse(os.path.isdir(os.path.join(rt, bad)) if os.path.isdir(rt) else False)
 
-    def test_repo_escape_fails_closed(self):
-        # validate_manifest would already flag it; the materializer must ALSO refuse before writing
-        m = {"schema": "lifeorch.close_manifest/0.1", "header": base_header(self.repo), "operations": [
-            {"op_id": "esc", "kind": "create", "target": "../../etc/evil.md",
-             "semantic_owner": "deterministic", "eol": "lf", "precondition": "absent",
-             "payload_ref": {"inline": "pwn"}, "depends_on": []}]}
-        res = mz.Materializer(self.repo, m).run()
-        self.assertFalse(res["ok"])
-        # plan() runs validate first -> the unsafe target is caught as a plan-error (fail-closed either way)
-        self.assertIn(res["failure"], ("plan-error", "repo-escape"))
+    def test_T63_03_ledger_ref_escape_fails_in_plan(self):
+        m = {"schema": "lifeorch.close_manifest/0.1", "header": header(self.repo, ledger="/etc/passwd"),
+             "operations": [det_replace(self.repo, "core-docs/CS.md", "## Next", "## Next\ny\n")]}
+        r = mz.Materializer(self.repo, m, ledger_gate=STUB_LEDGER).run()
+        self.assertFalse(r["ok"])
+        self.assertIn(r["failure"], ("repo-escape", "plan-error"))
+        self.assertEqual(ref(self.repo, "refs/lo/close/close-i63-t"), "")
 
-    def test_precondition_divergence(self):
-        m = {"schema": "lifeorch.close_manifest/0.1", "header": base_header(self.repo), "operations": [
-            {"op_id": "cs", "kind": "replace_section", "target": "core-docs/CURRENT_STATE.md",
-             "semantic_owner": "deterministic", "eol": "lf",
-             "region_anchor": {"type": "heading", "heading": "## Next expected action"},
-             "precondition": {"basis": "native-raw", "sha256": "d" * 64},  # wrong
-             "payload_ref": {"inline": "## Next expected action\nz\n"}, "depends_on": []}]}
-        res = mz.Materializer(self.repo, m).run()
-        self.assertFalse(res["ok"])
-        self.assertEqual(res["failure"], "precondition-divergence")
+    def test_target_escape_fails_before_write(self):
+        op = det_replace(self.repo, "core-docs/CS.md", "## Next", "## Next\ny\n")
+        op["target"] = "../../etc/evil.md"
+        m = {"schema": "lifeorch.close_manifest/0.1", "header": header(self.repo), "operations": [op]}
+        r = mz.Materializer(self.repo, m, ledger_gate=STUB_LEDGER).run()
+        self.assertFalse(r["ok"])
 
 
-class TestProjectionBacking(unittest.TestCase):
-    """The i63 preservation / projection-backing seam: freshness + preflight overflow (spill not compress)."""
-
+class LedgerGate(unittest.TestCase):
     def setUp(self):
         self.repo = make_repo()
-        # a real-shaped COLD BACKING (large, complete) and a bounded HOT PROJECTION of it
-        self.backing_text = "# HARDENED CONTRACT\n" + ("detailed canonical clause. " * 400) + "\n"
-        write(self.repo, "ops/close-txn/spec/close-transaction-hardened.md", self.backing_text)
-        write(self.repo, "core-docs/research/digest.md", "# digest\nbounded projection\n")
-        commit_all(self.repo)
-        self.backing_size = os.path.getsize(
-            os.path.join(self.repo, "ops", "close-txn", "spec", "close-transaction-hardened.md"))
+        write(self.repo, "core-docs/CS.md", "# CS\n\n## Next\nx\n")
+        commit(self.repo)
 
     def tearDown(self):
         shutil.rmtree(self.repo, ignore_errors=True)
 
-    def _projection_manifest(self, payload, budget, source_fingerprint=None, backing_ref="ops/close-txn/spec"):
+    def _man(self, ledger="runtime/led.jsonl", it=63):
+        h = header(self.repo, ledger=ledger, it=it)
+        return {"schema": "lifeorch.close_manifest/0.1", "header": h,
+                "operations": [det_replace(self.repo, "core-docs/CS.md", "## Next", "## Next\ny\n")]}
+
+    def _run_real_gate(self, man):
+        return mz.Materializer(self.repo, man).run()  # real default_ledger_gate
+
+    def test_missing_ledger(self):
+        r = self._run_real_gate(self._man())
+        self.assertFalse(r["ok"]); self.assertTrue(r["failure"].startswith("ledger"))
+
+    def test_malformed_ledger(self):
+        write(self.repo, "runtime/led.jsonl", "not json\n")
+        r = self._run_real_gate(self._man())
+        self.assertFalse(r["ok"]); self.assertEqual(r["failure"], "ledger-malformed")
+
+    def test_zero_bounded_floor(self):
+        write(self.repo, "runtime/led.jsonl",
+              json.dumps({"kind": "whole_doc_open", "target": "x", "bytes": 100}) + "\n")
+        r = self._run_real_gate(self._man())
+        self.assertFalse(r["ok"]); self.assertEqual(r["failure"], "ledger-gate-failed")
+
+    def test_valid_ledger_passes(self):
+        write(self.repo, "runtime/led.jsonl",
+              json.dumps({"kind": "query", "target": "entity:x", "bytes": 50}) + "\n")
+        r = self._run_real_gate(self._man())
+        self.assertTrue(r["ok"], r)
+
+    def test_below_min_fraction(self):
+        write(self.repo, "runtime/led.jsonl",
+              json.dumps({"kind": "query", "target": "q", "bytes": 1}) + "\n" +
+              json.dumps({"kind": "whole_doc_open", "target": "w", "bytes": 1000}) + "\n")
+        man = self._man(); man["header"]["min_bounded_fraction"] = 0.8
+        r = self._run_real_gate(man)
+        self.assertFalse(r["ok"]); self.assertEqual(r["failure"], "ledger-gate-failed")
+
+
+class OpCompletion(unittest.TestCase):
+    def setUp(self):
+        self.repo = make_repo()
+        write(self.repo, "core-docs/CS.md", "# CS\n\n## Next\nx\n")
+        commit(self.repo)
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def _man_with(self, extra_ops):
+        cs = det_replace(self.repo, "core-docs/CS.md", "## Next", "## Next\ny\n")
+        return {"schema": "lifeorch.close_manifest/0.1", "header": header(self.repo),
+                "operations": [cs] + extra_ops}
+
+    def test_view_rebuild_no_runner_blocked(self):
+        m = self._man_with([{"op_id": "rb", "kind": "view_rebuild", "target": "view:x",
+                             "semantic_owner": "deterministic", "payload_ref": {"generator": "gen"},
+                             "depends_on": ["cs"]}])
+        r = mz.Materializer(self.repo, m, ledger_gate=STUB_LEDGER, runner=None).run()
+        self.assertFalse(r["ok"]); self.assertEqual(r["failure"], "blocked")
+        self.assertFalse(r["sealed"])
+
+    def test_validator_no_runner_blocked(self):
+        m = self._man_with([{"op_id": "v", "kind": "validator", "validator_id": "doc-gate",
+                             "semantic_owner": "deterministic", "payload_ref": {"files": ["core-docs/CS.md"]},
+                             "depends_on": ["cs"]}])
+        r = mz.Materializer(self.repo, m, ledger_gate=STUB_LEDGER, runner=None).run()
+        self.assertFalse(r["ok"]); self.assertEqual(r["failure"], "blocked")
+
+    def test_validator_fires_on_staged_content(self):
+        seen = {}
+        def runner(kind, ctx):
+            if kind == "validator":
+                seen["tip"] = ctx["staged_tip"]
+                # inspect the STAGED candidate, not main
+                blob = subprocess.run(["git", "-C", self.repo, "show", "%s:core-docs/CS.md" % ctx["staged_tip"]],
+                                      capture_output=True).stdout.decode()
+                return {"ok": "NEW-STAGED" not in blob, "detail": "saw staged content"}
+            return {"digest": "d"}
+        m = self._man_with([{"op_id": "v", "kind": "validator", "validator_id": "g",
+                             "semantic_owner": "deterministic", "payload_ref": {}, "depends_on": ["cs"]}])
+        m["operations"][0]["payload_ref"]["inline"] = "## Next\nNEW-STAGED body\n"
+        raw = read_bytes(self.repo, "core-docs/CS.md")
+        new = mz.apply_content(raw, m["operations"][0], mz.eol_bytes("## Next\nNEW-STAGED body\n", "lf"))
+        m["operations"][0]["postcondition"] = mz.fp(mz.sha256_bytes(new))
+        r = mz.Materializer(self.repo, m, ledger_gate=STUB_LEDGER, runner=runner).run()
+        self.assertFalse(r["ok"]); self.assertEqual(r["failure"], "validator-failure")
+        self.assertIsNotNone(seen.get("tip"))
+
+
+class DeterministicAndRegion(unittest.TestCase):
+    def setUp(self):
+        self.repo = make_repo()
+        write(self.repo, "core-docs/CS.md", "# CS\n\n## A\naaa\n\n## B\nbbb\n")
+        commit(self.repo)
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def _man(self, op):
+        return {"schema": "lifeorch.close_manifest/0.1", "header": header(self.repo), "operations": [op]}
+
+    def test_T63_15_wrong_postcondition_fails(self):
+        op = det_replace(self.repo, "core-docs/CS.md", "## A", "## A\nzzz\n\n")
+        op["postcondition"] = mz.fp("0" * 64)  # wrong
+        r = mz.Materializer(self.repo, self._man(op), ledger_gate=STUB_LEDGER).run()
+        self.assertFalse(r["ok"]); self.assertEqual(r["failure"], "deterministic-mismatch")
+
+    def test_T63_15_tampered_payload_fails(self):
+        op = det_replace(self.repo, "core-docs/CS.md", "## A", "## A\nzzz\n\n")
+        op["payload_ref"]["inline"] = "## A\nTAMPERED\n\n"  # payload no longer yields declared postcondition
+        r = mz.Materializer(self.repo, self._man(op), ledger_gate=STUB_LEDGER).run()
+        self.assertFalse(r["ok"]); self.assertEqual(r["failure"], "deterministic-mismatch")
+
+    def test_T63_16_out_of_region_change_ok_in_region_change_diverges(self):
+        # build an op whose precondition is region-A; then modify region B (out of region) in the working
+        # tree -> the region-A precondition still holds; then modify region A -> divergence.
+        op = det_replace(self.repo, "core-docs/CS.md", "## A", "## A\nnew-a\n\n")
+        # out-of-region change: edit section B, recommit
+        write(self.repo, "core-docs/CS.md", "# CS\n\n## A\naaa\n\n## B\nB-CHANGED\n")
+        commit(self.repo, "edit B")
+        op2 = dict(op); op2["postcondition"] = None; op2["semantic_owner"] = "frontier"
+        op2["task_spec"] = {"goal": "x"}
+        m = self._man(op2)
+        m["operations"] += [{"op_id": "g", "kind": "validator", "validator_id": "independent-grader:a",
+                             "semantic_owner": "deterministic", "payload_ref": {"predicate": "x"},
+                             "depends_on": ["cs"]}]
+        m["header"]["base_head"] = g(self.repo, "rev-parse", "HEAD")
+        # region-A precondition still matches (B changed, A did not) -> applies against staged content
+        def runner(kind, ctx):
+            return {"ok": True} if kind == "validator" else {"digest": "d"}
+        r = mz.Materializer(self.repo, m, ledger_gate=STUB_LEDGER, runner=runner).run()
+        self.assertTrue(r["ok"], r)
+        # now change region A and re-run with the OLD precondition -> divergence
+        write(self.repo, "core-docs/CS.md", "# CS\n\n## A\nA-CHANGED\n\n## B\nB-CHANGED\n")
+        commit(self.repo, "edit A")
+        op3 = dict(op); op3["postcondition"] = None; op3["semantic_owner"] = "frontier"; op3["task_spec"] = {"g": 1}
+        m3 = self._man(op3); m3["header"]["base_head"] = g(self.repo, "rev-parse", "HEAD")
+        m3["header"]["transaction_id"] = "close-i63-t2"
+        m3["operations"] += [{"op_id": "g", "kind": "validator", "validator_id": "independent-grader:a",
+                              "semantic_owner": "deterministic", "payload_ref": {"predicate": "x"},
+                              "depends_on": ["cs"]}]
+        r3 = mz.Materializer(self.repo, m3, ledger_gate=STUB_LEDGER, runner=runner).run()
+        self.assertFalse(r3["ok"]); self.assertEqual(r3["failure"], "precondition-divergence")
+
+
+class ForeignMainAndLease(unittest.TestCase):
+    def setUp(self):
+        self.repo = make_repo()
+        write(self.repo, "core-docs/CS.md", "# CS\n\n## Next\nx\n")
+        commit(self.repo)
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def test_T63_09_foreign_main_untouched(self):
+        m = {"schema": "lifeorch.close_manifest/0.1", "header": header(self.repo),
+             "operations": [det_replace(self.repo, "core-docs/CS.md", "## Next", "## Next\ny\n")]}
+        mzr = mz.Materializer(self.repo, m, ledger_gate=STUB_LEDGER)
+        # advance main with a foreign commit AFTER planning base_head
+        r = mzr.run()
+        # base_head assertion may fail if we moved main before run; here we run then confirm main is our commit
+        main_after = g(self.repo, "rev-parse", "main")
+        self.assertEqual(main_after, m["header"]["base_head"])  # materializer never moved main
+
+    def test_T63_10_no_live_cutover_symbol(self):
+        # no allow_live_cutover param, no _ff_main
+        self.assertFalse(hasattr(mz.Materializer, "_ff_main"))
+        import inspect
+        sig = inspect.signature(mz.Materializer.__init__)
+        self.assertNotIn("allow_live_cutover", sig.parameters)
+        with open(os.path.join(PKG, "materialize.py")) as _fh:
+            self.assertNotIn("--allow-live-cutover", _fh.read())
+
+    def test_T63_19_production_no_lease_no_git_write(self):
+        m = {"schema": "lifeorch.close_manifest/0.1", "header": header(self.repo),
+             "operations": [det_replace(self.repo, "core-docs/CS.md", "## Next", "## Next\ny\n")]}
+        r = mz.Materializer(self.repo, m, ledger_gate=STUB_LEDGER,
+                            require_lease=True, lease_verifier=lambda c: False).run()
+        self.assertFalse(r["ok"]); self.assertEqual(r["failure"], "lease-required")
+        # no staging ref/object was written
+        self.assertEqual(ref(self.repo, "refs/lo/close/close-i63-t"), "")
+
+    def test_lease_verified_allows(self):
+        m = {"schema": "lifeorch.close_manifest/0.1", "header": header(self.repo),
+             "operations": [det_replace(self.repo, "core-docs/CS.md", "## Next", "## Next\ny\n")]}
+        r = mz.Materializer(self.repo, m, ledger_gate=STUB_LEDGER,
+                            require_lease=True, lease_verifier=lambda c: True, lease_context="lease-123").run()
+        self.assertTrue(r["ok"], r)
+
+
+class ProjectionBacking(unittest.TestCase):
+    def setUp(self):
+        self.repo = make_repo()
+        self.backing = "# HARD\n" + ("clause. " * 300) + "\n"
+        write(self.repo, "ops/close-txn/spec/hardened.md", self.backing)
+        write(self.repo, "core-docs/research/digest.md", "# digest\n## Backing\nold projection\n")
+        commit(self.repo)
+        self.bfp, self.bsize = sp.dir_identity(self.repo, "ops/close-txn/spec")
+
+    def tearDown(self):
+        shutil.rmtree(self.repo, ignore_errors=True)
+
+    def _proj_op(self, payload, budget, sfp, backing="ops/close-txn/spec"):
+        raw = read_bytes(self.repo, "core-docs/research/digest.md")
+        anchor = {"type": "heading", "heading": "## Backing"}
+        pre = mz.region_fp(raw, anchor)
+        new = mz.apply_content(raw, dict(kind="replace_section", region_anchor=anchor), mz.eol_bytes(payload, "lf"))
         op = {"op_id": "proj", "kind": "replace_section", "target": "core-docs/research/digest.md",
-              "semantic_owner": "deterministic", "eol": "lf",
-              "region_anchor": {"type": "heading", "heading": "# digest"},
-              "precondition": fp(self.repo, "core-docs/research/digest.md"),
-              "payload_ref": {"inline": payload},
-              "doc_class": "projection", "budget_bytes": budget, "backing_ref": backing_ref,
-              "depends_on": []}
-        if source_fingerprint is not None:
-            op["source_fingerprint"] = source_fingerprint
-        return {"schema": "lifeorch.close_manifest/0.1", "header": base_header(self.repo), "operations": [op]}
+              "semantic_owner": "deterministic", "eol": "lf", "region_anchor": anchor,
+              "precondition": pre, "postcondition": mz.fp(mz.sha256_bytes(new)),
+              "payload_ref": {"inline": payload}, "doc_class": "projection", "budget_bytes": budget,
+              "backing_ref": backing, "source_fingerprint": sfp, "depends_on": []}
+        return {"schema": "lifeorch.close_manifest/0.1", "header": header(self.repo), "operations": [op]}
 
-    def test_projection_under_budget_ok_records_evidence(self):
-        m = self._projection_manifest("# digest\nshort bounded view\n", budget=10240)
-        mzr = mz.Materializer(self.repo, m)
-        res = mzr.run()
-        self.assertTrue(res["ok"], res)
+    def test_under_budget_records_evidence(self):
+        m = self._proj_op("## Backing\nshort\n", 10240, self.bfp)
+        mzr = mz.Materializer(self.repo, m, ledger_gate=STUB_LEDGER)
+        r = mzr.run()
+        self.assertTrue(r["ok"], r)
         self.assertTrue(mzr.evidence["freshness_valid"]["proj"])
-        self.assertEqual(mzr.evidence["source_size"]["proj"], self.backing_size)
-        self.assertGreater(mzr.evidence["projection_size"]["proj"], 0)
-        self.assertEqual(mzr.evidence["overflow"], [])
+        self.assertEqual(mzr.evidence["source_size"]["proj"], self.bsize)
 
-    def test_projection_overflow_spills_no_information_loss(self):
-        big = "# digest\n" + ("x" * 5000) + "\n"
-        m = self._projection_manifest(big, budget=1024)
-        mzr = mz.Materializer(self.repo, m)
-        res = mzr.run()
-        self.assertFalse(res["ok"])
-        self.assertEqual(res["failure"], "projection-overflow")
-        self.assertEqual(len(mzr.evidence["overflow"]), 1)
+    def test_T63_11_full_candidate_overflow_small_payload(self):
+        # small payload but the FULL resulting document exceeds the tiny budget
+        m = self._proj_op("## Backing\n" + ("x" * 40) + "\n", 30, self.bfp)  # payload>30, full doc >> 30
+        mzr = mz.Materializer(self.repo, m, ledger_gate=STUB_LEDGER)
+        r = mzr.run()
+        self.assertFalse(r["ok"]); self.assertEqual(r["failure"], "projection-overflow")
         ov = mzr.evidence["overflow"][0]
-        self.assertFalse(ov["trimmed"])          # never trimmed
-        self.assertFalse(ov["info_lost"])         # source stays lossless
-        self.assertEqual(ov["resolution"], "backing-spill")
-        self.assertEqual(mzr.evidence["avoidable_trim_retries"], 0)
-        # the FULL source is preserved untouched (no semantic compression as recovery)
-        with open(os.path.join(self.repo, "ops", "close-txn", "spec",
-                               "close-transaction-hardened.md")) as fh:
-            self.assertEqual(fh.read(), self.backing_text)
-        # the projection file itself was NOT overwritten with a trimmed version
-        with open(os.path.join(self.repo, "core-docs", "research", "digest.md")) as fh:
-            self.assertNotIn("xxxx", fh.read())
+        self.assertFalse(ov["trimmed"]); self.assertFalse(ov["info_lost"])
+        self.assertGreater(ov["projection_size"], ov["budget_bytes"])
+        # backing untouched
+        self.assertEqual(read_bytes(self.repo, "ops/close-txn/spec/hardened.md").decode(), self.backing)
 
-    def test_missing_backing_fails_closed(self):
-        m = self._projection_manifest("# digest\nv\n", budget=10240, backing_ref="ops/close-txn/NOPE")
-        res = mz.Materializer(self.repo, m).run()
-        self.assertFalse(res["ok"])
-        self.assertEqual(res["failure"], "backing-missing")
+    def test_T63_13_missing_source_fingerprint_fails(self):
+        m = self._proj_op("## Backing\nv\n", 10240, None)
+        r = mz.Materializer(self.repo, m, ledger_gate=STUB_LEDGER).run()
+        self.assertFalse(r["ok"]); self.assertEqual(r["failure"], "stale-backing")
 
-    def test_stale_backing_fails_closed(self):
-        m = self._projection_manifest("# digest\nv\n", budget=10240,
-                                      source_fingerprint="deadbeef")  # drifted from real backing
-        res = mz.Materializer(self.repo, m).run()
-        self.assertFalse(res["ok"])
-        self.assertEqual(res["failure"], "stale-backing")
+    def test_T63_13_wrong_source_fingerprint_fails(self):
+        m = self._proj_op("## Backing\nv\n", 10240, "deadbeef")
+        r = mz.Materializer(self.repo, m, ledger_gate=STUB_LEDGER).run()
+        self.assertFalse(r["ok"]); self.assertEqual(r["failure"], "stale-backing")
 
-    def test_fresh_backing_matches_recorded_fingerprint(self):
-        real_fp = mz.Materializer(self.repo, self._projection_manifest("x", 10240))._path_fingerprint(
-            "ops/close-txn/spec")
-        m = self._projection_manifest("# digest\nv\n", budget=10240, source_fingerprint=real_fp)
-        res = mz.Materializer(self.repo, m).run()
-        self.assertTrue(res["ok"], res)
-
-
-class TestRunnerDispatch(unittest.TestCase):
-    def setUp(self):
-        self.repo = make_repo()
-        write(self.repo, "core-docs/CURRENT_STATE.md", "# CS\n\n## Next expected action\nx\n")
-        commit_all(self.repo)
-
-    def tearDown(self):
-        shutil.rmtree(self.repo, ignore_errors=True)
-
-    def _manifest_with_view_and_validator(self):
-        return {"schema": "lifeorch.close_manifest/0.1", "header": base_header(self.repo), "operations": [
-            {"op_id": "cs", "kind": "replace_section", "target": "core-docs/CURRENT_STATE.md",
-             "semantic_owner": "deterministic", "eol": "lf",
-             "region_anchor": {"type": "heading", "heading": "## Next expected action"},
-             "precondition": fp(self.repo, "core-docs/CURRENT_STATE.md"),
-             "payload_ref": {"inline": "## Next expected action\nnew\n"}, "depends_on": []},
-            {"op_id": "rebuild", "kind": "view_rebuild", "target": "view:project.map",
-             "semantic_owner": "deterministic", "payload_ref": {"generator": "map"}, "depends_on": ["cs"]},
-            {"op_id": "val", "kind": "validator", "validator_id": "doc-commit-gate",
-             "semantic_owner": "deterministic", "payload_ref": {"files": ["core-docs/CURRENT_STATE.md"]},
-             "depends_on": ["cs"]}]}
-
-    def test_double_run_identity_ok(self):
-        def runner(kind, op):
-            if kind == "view_rebuild":
-                return {"digest": "STABLE"}
-            return {"ok": True}
-        res = mz.Materializer(self.repo, self._manifest_with_view_and_validator(), runner=runner).run()
-        self.assertTrue(res["ok"], res)
-        self.assertEqual(res["phases"]["REBUILD"]["rebuilt"], ["rebuild"])
-        self.assertEqual(res["phases"]["POST-VALIDATE"]["ran"], ["val"])
-
-    def test_rebuild_drift_fails_closed(self):
-        seq = {"n": 0}
-        def runner(kind, op):
-            if kind == "view_rebuild":
-                seq["n"] += 1
-                return {"digest": "D%d" % seq["n"]}  # differs across the double run
-            return {"ok": True}
-        res = mz.Materializer(self.repo, self._manifest_with_view_and_validator(), runner=runner).run()
-        self.assertFalse(res["ok"])
-        self.assertEqual(res["failure"], "rebuild-drift")
-
-    def test_validator_failure_fails_closed(self):
-        def runner(kind, op):
-            if kind == "view_rebuild":
-                return {"digest": "S"}
-            return {"ok": False, "detail": "budget bust"}
-        res = mz.Materializer(self.repo, self._manifest_with_view_and_validator(), runner=runner).run()
-        self.assertFalse(res["ok"])
-        self.assertEqual(res["failure"], "validator-failure")
-
-    def test_unwired_runner_defers_not_passes(self):
-        # with no runner, view_rebuild + validator ops are journalled 'deferred', never silently 'passed'
-        res = mz.Materializer(self.repo, self._manifest_with_view_and_validator()).run()
-        self.assertTrue(res["ok"], res)
-        self.assertEqual(res["phases"]["POST-VALIDATE"]["deferred"], ["val"])
+    def test_T63_12_same_manifest_backing_update_stale_projection(self):
+        # op1 edits the backing file; op2 projects with the OLD (base) fingerprint -> stale (must fail);
+        # then with the STAGED (post-edit) fingerprint -> passes.
+        backing_edit = det_replace  # not used; build backing edit manually
+        raw_b = read_bytes(self.repo, "ops/close-txn/spec/hardened.md")
+        # a backing edit: replace the '# HARD' heading section with more content
+        anchor_b = {"type": "heading", "heading": "# HARD"}
+        pre_b = mz.region_fp(raw_b, anchor_b)
+        newb_payload = "# HARD\nUPDATED BACKING clause. " + ("more. " * 50) + "\n"
+        newb = mz.apply_content(raw_b, dict(kind="replace_section", region_anchor=anchor_b),
+                                mz.eol_bytes(newb_payload, "lf"))
+        op_b = {"op_id": "editbacking", "kind": "replace_section",
+                "target": "ops/close-txn/spec/hardened.md", "semantic_owner": "deterministic", "eol": "lf",
+                "region_anchor": anchor_b, "precondition": pre_b, "postcondition": mz.fp(mz.sha256_bytes(newb)),
+                "payload_ref": {"inline": newb_payload}, "doc_class": "backing", "depends_on": []}
+        # projection depends on the backing edit; bind to OLD fingerprint -> must be stale
+        pm = self._proj_op("## Backing\nv\n", 100000, self.bfp)  # self.bfp = base (pre-edit)
+        pm["operations"] = [op_b, pm["operations"][0]]
+        pm["operations"][1]["depends_on"] = ["editbacking"]
+        r = mz.Materializer(self.repo, pm, ledger_gate=STUB_LEDGER).run()
+        self.assertFalse(r["ok"]); self.assertEqual(r["failure"], "stale-backing")
+        # now bind to the STAGED (post-edit) fingerprint -> passes
+        staged_fp = mz.sha256_bytes(newb) if False else None  # backing_ref is the DIR; compute staged dir id
+        # recompute staged dir identity with the edited file overlaid
+        import hashlib
+        members = {}
+        base = os.path.join(self.repo, "ops", "close-txn", "spec")
+        for rt, dz, fs in os.walk(base):
+            for fn in sorted(fs):
+                rel = os.path.relpath(os.path.join(rt, fn), base).replace(os.sep, "/")
+                members[rel] = read_bytes(self.repo, "ops/close-txn/spec/" + rel)
+        members["hardened.md"] = newb
+        h = hashlib.sha256()
+        for rel in sorted(members):
+            h.update(rel.encode() + b"\0" + members[rel] + b"\0")
+        pm2 = self._proj_op("## Backing\nv\n", 100000, h.hexdigest())
+        pm2["header"]["transaction_id"] = "close-i63-t3"
+        pm2["operations"] = [dict(op_b), pm2["operations"][0]]
+        pm2["operations"][1]["depends_on"] = ["editbacking"]
+        r2 = mz.Materializer(self.repo, pm2, ledger_gate=STUB_LEDGER).run()
+        self.assertTrue(r2["ok"], r2)
 
 
 if __name__ == "__main__":

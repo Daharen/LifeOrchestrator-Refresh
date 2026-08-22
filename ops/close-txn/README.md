@@ -1,8 +1,12 @@
-# ops/close-txn -- close-transaction subsystem (i62 contract + i63 materializer, PB-9)
+# ops/close-txn -- close-transaction subsystem (i62 contract + i63 materializer, corrected D-0163, PB-9)
 
-**Status: i62 shipped the CONTRACT + validator groundwork; i63 (D-0162) adds the MATERIALIZER + freshness
-assertions + the preservation/overflow seam.** The LIVE production cutover of `main` remains DEFERRED (i67,
-INV-9): the materializer stages + seals but never fast-forwards `main` without an explicit exercise-only flag.
+**Status: i62 shipped the CONTRACT + validator groundwork; i63 shipped the MATERIALIZER + freshness/preservation
+seam; i63 was then RE-CLOSED corrective (D-0163) after an independent red-team disproved the D-0162 durable-stage-only
+claims with 14 executable counterexamples -- the materializer was rebuilt as a genuinely durable git-staging engine
+(C63-01..14 fixed; T63-01..20 controls; 99 tests green natively AND in the cloud gate).** The LIVE production cutover
+of `main` remains DEFERRED (i67, INV-9): the materializer's ONLY durable effect is a CAS-guarded staging ref
+`refs/lo/close/<txid>`; it NEVER fast-forwards `main` -- the live-cutover code was REMOVED (no `--allow-live-cutover`,
+no `_ff_main`; AST + source-string asserted).
 
 The AUTHORITATIVE, complete contract is COLD BACKING under `spec/` in this directory:
 `spec/close-transaction-hardened.md` (design -> red-team -> hardened triad; D-0161/D-0162). It carries NO ingest
@@ -26,11 +30,17 @@ part of that contract:
   native-byte span resolution AND fail-closed missing-edit-target detection (an `append`/`replace_section` on an
   absent target is a HARD finding, not an anchor-check SKIP; a target a `create` op in the same manifest produces is
   exempt). Exit 0 valid / 1 invalid / 2 usage. It VALIDATES a manifest; it does not execute one.
-- `materialize.py` -- the i63 MATERIALIZER. Executes a validated manifest through
-  `PLAN -> PRE-VALIDATE -> APPLY -> REBUILD -> POST-VALIDATE -> SHIP(staged) -> SEAL` with:
-  the native-byte FINGERPRINT DOMAIN (s4: native on-disk raw bytes, declared-EOL, anchor-located, same basis on
-  resume); an append-only JOURNAL outside the mutated tree (s3.4); IDEMPOTENCE / resume (a SEALED transaction
-  re-runs as a total no-op, INV-3); fail-closed missing edit targets + repo-escape refusal before any write; and
+- `materialize.py` -- the MATERIALIZER (corrective rebuild, D-0163). Executes a validated manifest through
+  `PLAN -> PRE-VALIDATE -> APPLY -> REBUILD -> POST-VALIDATE -> SEAL`; its ONLY durable effect is a private,
+  CAS-guarded staging ref `refs/lo/close/<txid>` built via git plumbing on a throwaway index -- it NEVER touches
+  `main`. Every git object/ref write passes a LEASE write-guard first (a production write with no verified
+  executor/git-lease context is REFUSED fail-closed, C63-14). The CANDIDATE-TREE (git-blob) FINGERPRINT DOMAIN the
+  engine transacts is environment-independent of the checkout (a clone's autocrlf must not drift the source
+  fingerprint; C63-09/D-0163 finding); an append-only DURABLE JOURNAL lives OUTSIDE the candidate tree
+  (`modules/44-project-map/runtime/close-txn`, gitignored) and a record is verified only AFTER a git-object
+  readback -- no in-memory false-seal (C63-05). IDEMPOTENCE / resume (a SEALED transaction re-runs as a total
+  no-op, INV-3); the transaction_id is validated BEFORE any filesystem side effect (C63-01); fail-closed missing
+  edit targets + repo-escape refusal before any write; and
   the i63 PRESERVATION / PROJECTION-BACKING seam -- backing refs must resolve to real canonical source, projection
   freshness is checkable against the source, and a projection is PREFLIGHTED against its budget so an over-budget
   projection returns a precise overflow / **backing-spill** result (the full source stays lossless; the
@@ -45,11 +55,18 @@ part of that contract:
 - `examples/` -- `canonical-close.json` (a full i62-style close), `two-edit-one-file.json` (INV-11 positive), and
   `i63-backing-projection.json` (a REAL classified backing/projection pair: the hardened spec as `backing` + the
   research digest as `projection`).
-- `tests/` -- `test_validate_manifest.py` (validator invariants + i63 path-safety/classification/missing-target),
-  `test_safepath.py` (adversarial repository-escape), `test_materialize.py` (PLAN..SEAL, idempotence, freshness,
-  overflow-without-information-loss, deferred-cutover). All green natively.
+- `tests/` -- `test_validate_manifest.py` (validator invariants + path-safety/classification/missing-target),
+  `test_safepath.py` (adversarial repository-escape incl. the V63-01..14 corpus + txid grammar),
+  `test_materialize.py` (PLAN..SEAL, durable journal, idempotence/resume, DAG-ordered freshness, full-candidate
+  overflow-without-information-loss, no-cutover, lease-gating, deterministic mismatch), `test_real_pair.py` (T63-17:
+  the REAL backing/projection manifest EXECUTES stage-only in a disposable clone + the T63-17b autocrlf-drift
+  regression), and `test_native_junction.py` (T63-14: a REAL native NTFS junction via `mklink /J` is rejected --
+  Windows-only, skips in the Linux gate). 99 green natively on the box AND 99 in the cloud gate. On-box controls
+  (executor-run) also prove the public repo.intel `-RootsManifest` discoverability + #36 catalog retrieval (C63-12)
+  and a REAL `#29` res.lease gating a disposable canonical-repo clone (T63-19).
 
-Run: `python3 -m unittest tests.test_validate_manifest tests.test_safepath tests.test_materialize` (from this dir).
+Run: `python3 -m unittest discover -s tests -p 'test_*.py'` (from this dir; the junction control runs natively on
+Windows and skips elsewhere).
 
 What later iterations own (deferred, per the hardened contract section 9): evidence-based impact derivation (i64);
 the two validation stages + bounded Frontier correction loops + the independent grader wiring (i65); protected

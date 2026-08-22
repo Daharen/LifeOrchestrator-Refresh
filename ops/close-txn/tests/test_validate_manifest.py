@@ -269,13 +269,13 @@ class I63Hardening(unittest.TestCase):
         m = copy.deepcopy(self.base)
         self._ops(m)["replace-cs-next"]["target"] = "../../etc/passwd"
         f = vm.validate(m)
-        self.assertTrue(findings_contain(f, "target path is unsafe"), f)
+        self.assertTrue(findings_contain(f, ".target unsafe"), f)
 
     def test_target_windows_drive(self):
         m = copy.deepcopy(self.base)
         self._ops(m)["replace-cs-next"]["target"] = "C:/Windows/system32/x.md"
         f = vm.validate(m)
-        self.assertTrue(findings_contain(f, "drive-absolute"), f)
+        self.assertTrue(findings_contain(f, "Windows drive"), f)
 
     def test_backing_ref_repo_escape(self):
         m = copy.deepcopy(self.base)
@@ -284,13 +284,13 @@ class I63Hardening(unittest.TestCase):
         op["budget_bytes"] = 10000
         op["backing_ref"] = "../../secret"
         f = vm.validate(m)
-        self.assertTrue(findings_contain(f, "backing_ref path is unsafe"), f)
+        self.assertTrue(findings_contain(f, "backing_ref unsafe"), f)
 
     def test_payload_ref_repo_escape(self):
         m = copy.deepcopy(self.base)
         self._ops(m)["replace-cs-next"]["payload_ref"] = "..\\..\\evil.md"
         f = vm.validate(m)
-        self.assertTrue(findings_contain(f, "payload_ref path is unsafe"), f)
+        self.assertTrue(findings_contain(f, "payload_ref unsafe"), f)
 
     def test_unknown_doc_class(self):
         m = copy.deepcopy(self.base)

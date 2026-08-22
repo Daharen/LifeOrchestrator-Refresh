@@ -73,9 +73,11 @@ def validate(manifest):
 
     # ---- header ----
     txid = header.get("transaction_id")
-    if not isinstance(txid, str) or not txid.startswith("close-i"):
-        bad("header.transaction_id must be a string like 'close-i<N>-<slug>' (got %r)" % txid)
     it = header.get("iteration")
+    try:
+        safepath.validate_txid(txid, it if isinstance(it, int) and not isinstance(it, bool) else None)
+    except safepath.TxidError as e:
+        bad("header.transaction_id invalid: %s" % e)
     if not isinstance(it, int) or isinstance(it, bool) or it < 1:
         bad("header.iteration must be an integer >= 1 (got %r)" % it)
     bh = header.get("base_head")
@@ -118,22 +120,7 @@ def validate(manifest):
         if so == "frontier" and not isinstance(op.get("task_spec"), dict):
             bad("%s semantic_owner=frontier requires a task_spec object (INV-7 auditability)" % loc)
 
-        # ---- repository path safety (Amd2.1 / INV-8): screen every file-path reference lexically ----
-        tgt = op.get("target")
-        if kind in CONTENT_KINDS and isinstance(tgt, str):
-            r = safepath.classify_unsafe(tgt)
-            if r:
-                bad("%s target path is unsafe: %s (%r)" % (loc, r, tgt))
-        br = op.get("backing_ref")
-        if isinstance(br, str) and br:
-            r = safepath.classify_unsafe(br)
-            if r:
-                bad("%s backing_ref path is unsafe: %s (%r)" % (loc, r, br))
-        pr = op.get("payload_ref")
-        if isinstance(pr, str) and pr:
-            r = safepath.classify_unsafe(pr)
-            if r:
-                bad("%s payload_ref path is unsafe: %s (%r)" % (loc, r, pr))
+        # (path safety is screened once, below, via the ONE unified policy -- C63-02)
 
         # per-kind required fields
         if kind in CONTENT_KINDS:
@@ -212,6 +199,18 @@ def validate(manifest):
                 if ra.get("region_class") != "non-historical":
                     bad("%s replace_section on the append-only target %s must set region_anchor.region_class="
                         "'non-historical' (INV-12 no-truncation)" % (loc, tgt))
+
+    # ---- ONE unified path+input policy over EVERY path-bearing field (C63-02): header.ledger_ref, content
+    #      targets, backing_ref, string payload_ref, and nested files/evidence/generator/etc. Static side
+    #      uses the lexical classifier; the materializer applies the same policy with a real repo root. ----
+    path_findings = []
+    for op in ops:
+        if isinstance(op, dict):
+            path_findings += safepath.screen_refs(safepath.op_path_refs(op), safepath.classify_unsafe)
+    path_findings += safepath.screen_refs([("header.ledger_ref", header.get("ledger_ref"))],
+                                          safepath.classify_unsafe)
+    for f in sorted(set(path_findings)):
+        bad(f)
 
     # duplicate op_ids
     for oid, n in sorted(ids.items()):

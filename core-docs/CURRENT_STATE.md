@@ -246,7 +246,7 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 | #44 project.map | **0.4.1 (i60 FO-6; i52): 169/169 x3 interpreters + pwsh + on-box; negatives 33/33; N5 replays 1.4-2.7 KB vs 9.8-31.5 KB raw; canon string-asserted; verb-table==dispatcher; fold VALIDATE 0; -Live Folded green** | `c6c58a8` | 08-14 |
 | ops/frontdoor (i59) | `Rebuild-FrontDoors.ps1 -VerifyOnly` root-pcb 0-stale GREEN (18033 B) via executor; non-vacuity floor + `frontdoor-gate.py` PASS | i59 | 08-15 |
 | D-0077 cross-module folds | i34 smoke 38/38 · i36 Tier-1 11/11 (`tier1_accepted=TRUE`) · i38/i39 18/18 · i40/i41 fold-i39 exit 0 · **i42: fold-i39 vs 0.6.0 exit 0 + i34 38/38 + the independent #43 suite x2 byte-identical (3b5d62f4); i45: widgets/08 pinned 06/07 adapter + cross-widget contract test green in the independent -Live 87/0/0** | `runtime/smoke-i34.py`/`fold-i39.py` | 08-08 |
-| ops/close-txn (PB-9) | i63 (D-0162): materializer PLAN..SEAL + freshness/overflow seam + path-safety; 74 green native; LIVE cutover deferred i67 | i63 | 08-22 |
+| ops/close-txn (PB-9) | i63 corrected (D-0163; D-0162 disproven): durable git-staging materializer, staging-ref only, lease-gated; 99 green (was 74); on-box junction/lease/clone | i63 | 08-22 |
 
 ## Known failures / gotchas
 
@@ -353,7 +353,7 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ## Next expected action
 
-**i63 CLOSED (D-0162): the PB-9 close-transaction MATERIALIZER + freshness/overflow (preservation) seam SHIPPED** (`ops/close-txn/materialize.py`; full detail in D-0162). On the i62 hardened contract: PLAN..SEAL, native-byte fingerprints, journal, idempotence/resume; the INV-15 seam makes a projection's freshness checkable against real backing and SPILLS an over-budget projection to backing (lossless, never compresses). The two by-exception HUMAN GATES were removed (routine close = **Frontier Agent in the Deterministic Loop**; correction-exhausted -> a bounded frontier-agent replan). Verified i62-gap fixes: repo path-safety, fail-closed missing edit targets, enforced backing/projection classes, overlay/schema/validator/example pointer repair, sidecar local-exclude, honest ledger. Retrieval gate stays WIRED into `ops/close-refold.ps1`. ops/close-txn suite 74 green.
+**i63 CLOSED (D-0163, corrective re-close): the D-0162 materializer claims were RED-TEAM DISPROVEN (14 counterexamples); the materializer was REBUILT as a durable git-staging engine** (`ops/close-txn/`; detail in D-0163). Only durable effect = a CAS-guarded staging ref (NEVER main; cutover i67/INV-9); journal outside the tree, verified after a git-object readback. C63-01..14 + T63-01..20 fixed/proven. ON-BOX (native): a REAL NTFS junction (mklink /J) rejected; public repo.intel `-RootsManifest` indexes `ops/close-txn/spec` + #36 catalog FTS returns the hardened spec rank-1; a disposable clone of the CANONICAL repo seals stage-only under a REAL #29 lease + REFUSES fail-closed once released; a worktree-vs-candidate fingerprint drift (autocrlf) found+fixed+locked. 99 green native+cloud (was 74).
 
 **NEXT = i64 -- evidence-based impact detection**; then i65 validation+correction, i66 mirror, i67 fault-inject + the LIVE cutover (DEFERRED, INV-9). First PB-7 class migration DEFERS to i68.
 
@@ -361,5 +361,5 @@ Suite = `modules/<NN>-<name>/tests/Invoke-<Name>Tests.ps1` (widgets: `widgets/<N
 
 ---
 
-**Last updated:** 2026-08-22 -- i63 CLOSED (D-0162): PB-9 close MATERIALIZER + freshness/overflow seam shipped; hardened-contract human gates removed; verified i62-gap fixes. NEXT = i64 = impact detection; LIVE cutover deferred (INV-9). SP3 FAIL standing.
+**Last updated:** 2026-08-22 -- i63 RE-CLOSED (D-0163, corrective): D-0162 materializer claims red-team disproven (14 counterexamples); materializer REBUILT as a durable git-staging engine; C63-01..14 + T63-01..20 controls; 99 green native+cloud (was 74). NEXT = i64 impact detection; cutover deferred (INV-9). SP3 standing.
 *(Rule: REPLACE this line, never append. No `[prior]` chain here or anywhere else in this doc.)*

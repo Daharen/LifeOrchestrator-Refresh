@@ -34,6 +34,7 @@ param(
     [string]$Op = 'index',
     [string[]]$Roots,
     [string]$Root,
+    [string]$RootsManifest,
     [string]$Namespace,
     [string]$SourceLabel,
     [int]$FileBudget,
@@ -130,6 +131,7 @@ try {
         if ((Has $p 'python_path')   -and -not $bound.ContainsKey('PythonPath'))   { $PythonPath = [string]$p.python_path }
         if ((Has $p 'worker_path')   -and -not $bound.ContainsKey('WorkerPath'))   { $WorkerPath = [string]$p.worker_path }
         if ((Has $p 'roots')         -and -not $bound.ContainsKey('Roots'))        { $Roots = @([string[]]($p.roots)) }
+        if ((Has $p 'roots_manifest') -and -not $bound.ContainsKey('RootsManifest')) { $RootsManifest = [string]$p.roots_manifest }
         if ((Has $p 'exclude_dirs')  -and -not $bound.ContainsKey('ExcludeDirs'))  { $ExcludeDirs = @([string[]]($p.exclude_dirs)) }
         if ((Has $p 'exclude_globs') -and -not $bound.ContainsKey('ExcludeGlobs')) { $ExcludeGlobs = @([string[]]($p.exclude_globs)) }
         if ((Has $p 'include_globs') -and -not $bound.ContainsKey('IncludeGlobs')) { $IncludeGlobs = @([string[]]($p.include_globs)) }
@@ -149,6 +151,37 @@ try {
         $rootList = New-Object System.Collections.Generic.List[string]
         if ($null -ne $Roots) { foreach ($r in @([string[]]$Roots)) { if (-not [string]::IsNullOrWhiteSpace($r)) { $rootList.Add($r) } } }
         if (-not [string]::IsNullOrWhiteSpace($Root)) { $rootList.Add($Root) }
+        if ($rootList.Count -eq 0 -and -not [string]::IsNullOrWhiteSpace($RootsManifest)) {
+            # i63 D-0163 (C63-12): the NARROW declarative roots manifest (ops/repo-intel-roots.json) makes
+            # ops/close-txn/spec discoverable through the ordinary public entrypoint. Roots are repo-relative
+            # and resolved against the manifest's repo root; every root is confined + must exist.
+            if (-not (Test-Path -LiteralPath $RootsManifest -PathType Leaf)) {
+                throw [PSCustomObject]@{ code='roots_manifest_not_found'; message="roots manifest not found: $RootsManifest"; retryable=$false }
+            }
+            $rmAbs = (Resolve-Path -LiteralPath $RootsManifest).Path
+            try { $rmDoc = (Get-Content -Raw -LiteralPath $rmAbs | ConvertFrom-Json) } catch { throw [PSCustomObject]@{ code='roots_manifest_malformed'; message='roots manifest is not valid JSON'; retryable=$false } }
+            $rmRoots = @()
+            if (Has $rmDoc 'roots') { $rmRoots = @([string[]]$rmDoc.roots) }
+            if ($rmRoots.Count -eq 0) { throw [PSCustomObject]@{ code='roots_manifest_empty'; message='roots manifest has no roots[]'; retryable=$false } }
+            $repoRoot = (Split-Path -Parent (Split-Path -Parent $rmAbs))
+            $seen = @{}
+            foreach ($rr in $rmRoots) {
+                if ([string]::IsNullOrWhiteSpace($rr) -or ($rr -match '\.\.') -or [System.IO.Path]::IsPathRooted($rr) -or ($rr -match '^[A-Za-z]:')) {
+                    throw [PSCustomObject]@{ code='roots_manifest_unsafe'; message="unsafe root in manifest: $rr"; retryable=$false }
+                }
+                $cand = Join-Path $repoRoot $rr
+                if (-not (Test-Path -LiteralPath $cand -PathType Container)) {
+                    throw [PSCustomObject]@{ code='root_not_found'; message="roots-manifest root not found: $rr"; retryable=$false }
+                }
+                $candAbs = (Resolve-Path -LiteralPath $cand).Path
+                $relToRepo = [System.IO.Path]::GetRelativePath($repoRoot, $candAbs)
+                if ($relToRepo.StartsWith('..') -or [System.IO.Path]::IsPathRooted($relToRepo)) {
+                    throw [PSCustomObject]@{ code='roots_manifest_escape'; message="roots-manifest root escapes repo: $rr"; retryable=$false }
+                }
+                $key = $candAbs.ToLowerInvariant()
+                if (-not $seen.ContainsKey($key)) { $seen[$key] = $true; $rootList.Add($rr) }
+            }
+        }
         if ($rootList.Count -eq 0) {
             throw [PSCustomObject]@{ code='missing_root'; message='index needs -Root or -Roots (or InputsJson.root/roots[])'; retryable=$false }
         }
@@ -173,6 +206,7 @@ try {
     # ---- normalized inputs digest ----
     $normInputs = [ordered]@{
         op=$Op; roots=$rootAbs; namespace=$Namespace; source_label=$SourceLabel;
+        roots_manifest=$(if ([string]::IsNullOrWhiteSpace($RootsManifest)) { $null } else { $RootsManifest });
         file_budget=$(if ($hasBudget) { [int]$FileBudget } else { $null });
         records_path=$(if ($Op -eq 'validate') { $RecordsPath } else { $null });
         exclude_dirs=$(if ($null -ne $ExcludeDirs) { @([string[]]$ExcludeDirs) } else { $null });
