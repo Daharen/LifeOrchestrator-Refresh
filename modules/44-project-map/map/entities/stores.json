@@ -451,6 +451,10 @@
        "by": "orchestrator-i52"
       },
       {
+       "at_commit": "8cd4ba9fbeebb374d895b9470c4a1391a6c60f98",
+       "by": "orchestrator-close"
+      },
+      {
        "at_commit": "99e28a070367fe7361412addb0b29736d16d94a1",
        "by": "orchestrator-i57-close"
       },
@@ -508,7 +512,7 @@
       }
      ],
      "ref": "core-docs/CURRENT_STATE.md",
-     "sha256": "648bcbe79408989364ad5a5501aef76b76824ec59030efc4c7a6a6a2dff6cbbf"
+     "sha256": "659bc183b729d6a9ba9d470101a0910433e9d8d3f49808d0a5d38258cba9a89f"
     }
    ]
   },
