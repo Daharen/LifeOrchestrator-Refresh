@@ -1,0 +1,18 @@
+{"kind":"boot_packet","target":"modules/44-project-map/generated/BOOT_PACKET.md","bytes":18282}
+{"kind":"query","target":"entity:module:44","bytes":3434}
+{"kind":"query","target":"edges:module:44","bytes":501}
+{"kind":"query","target":"deeper:module:44","bytes":838}
+{"kind":"query","target":"entity:ops:doc-commit-gate","bytes":5202}
+{"kind":"whole_doc_open","target":"ops/close-txn/spec/close-transaction-hardened.md","bytes":31965,"note":"deep i63 materializer-implementation read (justified whole-doc)"}
+{"kind":"whole_doc_open","target":"ops/close-txn/validate_manifest.py","bytes":21243,"note":"deep i63 materializer-implementation read (justified whole-doc)"}
+{"kind":"whole_doc_open","target":"ops/close-txn/tests/test_validate_manifest.py","bytes":16064,"note":"deep i63 materializer-implementation read (justified whole-doc)"}
+{"kind":"whole_doc_open","target":"ops/close-txn/schema/close_manifest.schema.json","bytes":5447,"note":"deep i63 materializer-implementation read (justified whole-doc)"}
+{"kind":"whole_doc_open","target":"core-docs/CURRENT_STATE.md","bytes":34330,"note":"deep i63 materializer-implementation read (justified whole-doc)"}
+{"kind":"whole_doc_open","target":"core-docs/FANOUT_ORCHESTRATOR_HANDOFF.md","bytes":24069,"note":"deep i63 materializer-implementation read (justified whole-doc)"}
+{"kind":"whole_doc_open","target":"core-docs/DOC_PROTOCOL.md","bytes":13777,"note":"deep i63 materializer-implementation read (justified whole-doc)"}
+{"kind":"whole_doc_open","target":"core-docs/COLD_BOOT_CARD.md","bytes":5055,"note":"deep i63 materializer-implementation read (justified whole-doc)"}
+{"kind":"whole_doc_open","target":"core-docs/research/2026-08-21-i62-close-transaction.md","bytes":5106,"note":"deep i63 materializer-implementation read (justified whole-doc)"}
+{"kind":"whole_doc_open","target":"ops/manager/gen-manager-view.py","bytes":17785,"note":"deep i63 materializer-implementation read (justified whole-doc)"}
+{"kind":"whole_doc_open","target":"ops/audit/close-consistency-check.py","bytes":7352,"note":"deep i63 materializer-implementation read (justified whole-doc)"}
+{"kind":"whole_doc_open","target":"ops/audit/gen-retrieval-monitor.py","bytes":21243,"note":"deep i63 materializer-implementation read (justified whole-doc)"}
+{"kind":"whole_doc_open","target":"modules/38-repo-intel/repo_intel.py","bytes":56148,"note":"deep i63 materializer-implementation read (justified whole-doc)"}
